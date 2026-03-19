@@ -72,6 +72,11 @@ export function useGRTPrice() {
  * Hook for real epoch info derived from chain block number
  * The subgraph's currentEpoch can lag — this derives the actual epoch from the chain head
  */
+// Ethereum merge reference point for estimating current L1 block from wall-clock time
+const ETH_MERGE_BLOCK = 15537393;
+const ETH_MERGE_TIMESTAMP = 1663224179; // Sept 15, 2022 UTC
+const L1_BLOCK_TIME = 12; // seconds
+
 export function useEpochInfo() {
   const { data: networkData } = useNetworkStats();
 
@@ -81,10 +86,21 @@ export function useEpochInfo() {
     return { epoch: 0, progress: 0, epochLength: 0 };
   }
 
-  // Use the subgraph's authoritative currentEpoch directly.
-  // The epochLength is defined in L1 (Ethereum) blocks, not L2 (Arbitrum) blocks,
-  // so deriving epoch from L2 block numbers produces wildly inflated numbers.
-  return { epoch: network.currentEpoch, progress: 0, epochLength: network.epochLength };
+  // The subgraph's currentEpoch only updates when EpochManager is called on-chain,
+  // so it can lag by several epochs. We derive the real epoch by estimating the
+  // current Ethereum L1 block from wall-clock time (post-merge: exactly 12s/block).
+  // epochLength is in L1 blocks, so this gives an accurate epoch calculation.
+  const now = Math.floor(Date.now() / 1000);
+  const estimatedL1Block = ETH_MERGE_BLOCK + Math.floor((now - ETH_MERGE_TIMESTAMP) / L1_BLOCK_TIME);
+
+  const epoch = network.lastLengthUpdateEpoch +
+    Math.floor((estimatedL1Block - network.lastLengthUpdateBlock) / network.epochLength);
+  const epochStartBlock = network.lastLengthUpdateBlock +
+    (epoch - network.lastLengthUpdateEpoch) * network.epochLength;
+  const blocksIntoEpoch = estimatedL1Block - epochStartBlock;
+  const progress = Math.min((blocksIntoEpoch / network.epochLength) * 100, 100);
+
+  return { epoch, progress, epochLength: network.epochLength };
 }
 
 /**
