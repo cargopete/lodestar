@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useBlockNumber } from 'wagmi';
 import {
   fetchNetworkStats,
   fetchEpochHistory,
@@ -75,23 +74,17 @@ export function useGRTPrice() {
  */
 export function useEpochInfo() {
   const { data: networkData } = useNetworkStats();
-  const { data: blockNumber } = useBlockNumber({ watch: true });
 
   const network = networkData?.graphNetwork;
-  const currentBlock = blockNumber ? Number(blockNumber) : 0;
 
-  if (!network || !currentBlock) {
-    return { epoch: network?.currentEpoch ?? 0, progress: 0, epochLength: network?.epochLength ?? 0 };
+  if (!network) {
+    return { epoch: 0, progress: 0, epochLength: 0 };
   }
 
-  const epoch = network.lastLengthUpdateEpoch +
-    Math.floor((currentBlock - network.lastLengthUpdateBlock) / network.epochLength);
-  const epochStartBlock = network.lastLengthUpdateBlock +
-    (epoch - network.lastLengthUpdateEpoch) * network.epochLength;
-  const blocksIntoEpoch = currentBlock - epochStartBlock;
-  const progress = Math.min((blocksIntoEpoch / network.epochLength) * 100, 100);
-
-  return { epoch, progress, epochLength: network.epochLength };
+  // Use the subgraph's authoritative currentEpoch directly.
+  // The epochLength is defined in L1 (Ethereum) blocks, not L2 (Arbitrum) blocks,
+  // so deriving epoch from L2 block numbers produces wildly inflated numbers.
+  return { epoch: network.currentEpoch, progress: 0, epochLength: network.epochLength };
 }
 
 /**
