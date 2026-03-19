@@ -420,7 +420,7 @@ export default function DelegatorPortfolioPage({
 
                       {/* Eff. Cut */}
                       <td className="text-right py-3 px-4">
-                        <p className="text-sm font-mono text-[var(--text)]">{formatPPM(pos.stake.indexer.indexingRewardCut)}</p>
+                        <p className="text-sm font-mono text-[var(--text)]">{pos.effectiveCut.toFixed(2)}%</p>
                       </td>
 
                       {/* Status */}

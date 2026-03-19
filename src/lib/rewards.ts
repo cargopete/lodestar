@@ -57,7 +57,10 @@ export function calculateUnrealizedRewards(
  * indexer's self-stake dilutes the reward pool.
  *
  * Formula (from grtinfo/Ellipfra):
- *   effectiveCut = 1 - (1 - rawCut) * delegated / (selfStake + delegated)
+ *   effectiveCut = 1 - (1 - rawCut) * (selfStake + delegated) / delegated
+ *
+ * Can be negative when self-stake is high relative to delegation and cut is low,
+ * meaning delegators get more than their proportional share.
  *
  * @param protocolCutPPM - Indexer's advertised reward cut in PPM (0-1000000)
  * @param selfStake - Indexer's own stake (GRT)
@@ -74,11 +77,10 @@ export function calculateEffectiveCut(
   const rawCut = protocolCutPPM / 1000000; // PPM to fraction (0-1)
   const totalStake = selfStake + delegated;
 
-  // Effective cut = 1 - (1 - rawCut) * delegated / totalStake
-  const effectiveCut = 1 - (1 - rawCut) * delegated / totalStake;
+  // Effective cut = 1 - (1 - rawCut) * totalStake / delegated
+  const effectiveCut = 1 - (1 - rawCut) * totalStake / delegated;
 
-  // Clamp to 0-100 range (can go negative if self-stake is very small)
-  return Math.max(effectiveCut * 100, 0);
+  return effectiveCut * 100;
 }
 
 /**
