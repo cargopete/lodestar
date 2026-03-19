@@ -139,7 +139,6 @@ function DelegationCard({
           {/* Indexer info */}
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-semibold text-[var(--text)] truncate">{indexerName}</h3>
-            {indexer.isLegacyIndexer && <Badge variant="default">Legacy</Badge>}
           </div>
           <p className="text-xs text-[var(--text-faint)] font-mono mb-3">
             {shortenAddress(indexer.id)}

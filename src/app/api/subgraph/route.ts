@@ -389,7 +389,6 @@ export async function POST(request: NextRequest) {
                   indexingRewardCut: 100000,
                   queryFeeCut: 100000,
                   delegatorParameterCooldown: 0,
-                  isLegacyIndexer: false,
                 },
               },
               {
@@ -415,7 +414,6 @@ export async function POST(request: NextRequest) {
                   indexingRewardCut: 120000,
                   queryFeeCut: 100000,
                   delegatorParameterCooldown: 0,
-                  isLegacyIndexer: false,
                 },
               },
             ],

@@ -2,10 +2,8 @@
 
 import { use, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { GraphQLClient } from 'graphql-request';
 import Link from 'next/link';
 import {
-  DELEGATOR_PORTFOLIO_QUERY,
   type DelegatorPortfolioResponse,
   type DelegatedStake,
   type Indexer,
@@ -28,18 +26,60 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 
-const client = new GraphQLClient('/api/subgraph');
-
 function useDelegatorPortfolio(address: string | undefined) {
   return useQuery({
     queryKey: ['delegatorPortfolio', address],
     queryFn: async () => {
       if (!address) return null;
-      const data = await client.request<DelegatorPortfolioResponse>(
-        DELEGATOR_PORTFOLIO_QUERY,
-        { id: address.toLowerCase() }
-      );
-      return data.delegator;
+      const query = `
+        {
+          delegator(id: "${address.toLowerCase()}") {
+            id
+            totalStakedTokens
+            totalUnstakedTokens
+            totalRealizedRewards
+            stakesCount
+            activeStakesCount
+            stakes(first: 100, orderBy: stakedTokens, orderDirection: desc) {
+              id
+              stakedTokens
+              shareAmount
+              lockedTokens
+              lockedUntil
+              realizedRewards
+              unstakedTokens
+              createdAt
+              lastUndelegatedAt
+              indexer {
+                id
+                account {
+                  id
+                  defaultDisplayName
+                  metadata {
+                    displayName
+                    description
+                  }
+                }
+                stakedTokens
+                delegatedTokens
+                delegatorShares
+                indexingRewardCut
+                queryFeeCut
+                delegatorParameterCooldown
+              }
+            }
+          }
+        }
+      `;
+      const response = await fetch('/api/subgraph', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+      const json = await response.json();
+      if (json.errors) throw new Error(JSON.stringify(json.errors));
+      return json.data?.delegator ?? null;
     },
     enabled: !!address,
     staleTime: 60 * 1000,

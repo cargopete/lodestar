@@ -198,10 +198,6 @@ export const INDEXERS_HORIZON_QUERY = gql`
       lockedTokens
       allocatedTokens
       tokenCapacity
-      # Horizon fields
-      tokensProvisioned
-      ownStakeRatio
-      isLegacyIndexer
       # Parameters
       indexingRewardCut
       queryFeeCut
@@ -257,8 +253,7 @@ export const DELEGATOR_PORTFOLIO_QUERY = gql`
           indexingRewardCut
           queryFeeCut
           delegatorParameterCooldown
-          isLegacyIndexer
-        }
+            }
       }
     }
   }
@@ -604,9 +599,6 @@ export const THAW_REQUESTS_QUERY = gql`
  */
 export interface IndexerHorizon extends Indexer {
   lockedTokens: string;
-  tokensProvisioned: string | null;
-  ownStakeRatio: string | null;
-  isLegacyIndexer: boolean | null;
 }
 
 /**
@@ -631,8 +623,7 @@ export interface DelegatedStake {
     indexingRewardCut: number;
     queryFeeCut: number;
     delegatorParameterCooldown: number;
-    isLegacyIndexer: boolean | null;
-  };
+    };
 }
 
 /**
