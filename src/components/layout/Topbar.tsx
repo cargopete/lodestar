@@ -2,7 +2,7 @@
 
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { usePathname } from 'next/navigation';
-import { useGRTPrice, useNetworkStats } from '@/hooks/useNetworkStats';
+import { useGRTPrice, useEpochInfo } from '@/hooks/useNetworkStats';
 import { formatUSD, shortenAddress, cn } from '@/lib/utils';
 import { useState, useRef, useEffect } from 'react';
 
@@ -30,7 +30,7 @@ function getPageTitle(pathname: string): string {
 export function Topbar() {
   const pathname = usePathname();
   const { data: priceData, isLoading: priceLoading } = useGRTPrice();
-  const { data: networkData } = useNetworkStats();
+  const { epoch: currentEpoch } = useEpochInfo();
 
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();
@@ -41,7 +41,6 @@ export function Topbar() {
   const connectRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
 
-  const currentEpoch = networkData?.graphNetwork?.currentEpoch;
   const price = priceData?.price ?? 0;
   const change24h = priceData?.change24h ?? 0;
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { useNetworkStats, useGRTPrice, useTVL } from '@/hooks/useNetworkStats';
-import { weiToGRT, formatGRT, formatUSD, formatNumber, formatPPM, calculateEpochProgress } from '@/lib/utils';
+import { useNetworkStats, useGRTPrice, useTVL, useEpochInfo } from '@/hooks/useNetworkStats';
+import { weiToGRT, formatGRT, formatUSD, formatNumber, formatPPM } from '@/lib/utils';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
@@ -21,15 +21,7 @@ export default function ProtocolOverview() {
   const totalSignalled = network ? weiToGRT(network.totalTokensSignalled) : 0;
   const totalAllocated = network ? weiToGRT(network.totalTokensAllocated) : 0;
 
-  // Calculate epoch progress from subgraph block data
-  const currentBlock = networkData?._meta?.block?.number ?? 0;
-  const epochStartBlock = network
-    ? network.lastLengthUpdateBlock +
-      (network.currentEpoch - network.lastLengthUpdateEpoch) * network.epochLength
-    : 0;
-  const epochProgress = network && currentBlock
-    ? calculateEpochProgress(currentBlock, epochStartBlock, network.epochLength)
-    : 0;
+  const { epoch: actualEpoch, progress: epochProgress, epochLength } = useEpochInfo();
 
   return (
     <div className="space-y-6">
@@ -77,13 +69,13 @@ export default function ProtocolOverview() {
             <div className="flex items-center gap-3">
               <span className="text-sm text-[var(--text-muted)]">Current Epoch</span>
               <span className="text-lg font-mono font-semibold text-[var(--accent)]">
-                {network?.currentEpoch ?? '—'}
+                {actualEpoch || '—'}
               </span>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm text-[var(--text-muted)]">Epoch Length</span>
               <span className="text-sm font-mono text-[var(--text)]">
-                {network?.epochLength ? formatNumber(network.epochLength) : '—'} blocks
+                {epochLength ? formatNumber(epochLength) : '—'} blocks
               </span>
             </div>
           </div>
