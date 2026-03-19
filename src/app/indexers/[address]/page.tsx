@@ -466,6 +466,59 @@ export default function IndexerDetailPage({
             </Card>
           )}
 
+          {/* Recent Delegation Activity */}
+          {recentDelegations && recentDelegations.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Delegation Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {recentDelegations.slice(0, 8).map((event) => {
+                    const staked = weiToGRT(event.stakedTokens);
+                    const unstaked = weiToGRT(event.unstakedTokens);
+                    const lastDelegated = event.lastDelegatedAt;
+                    const lastUndelegated = event.lastUndelegatedAt;
+                    const isDelegation = !lastUndelegated || lastDelegated > lastUndelegated;
+                    const actionTime = isDelegation ? lastDelegated : lastUndelegated;
+                    const now = Math.floor(Date.now() / 1000);
+                    const daysAgo = Math.floor((now - actionTime) / 86400);
+                    const timeLabel = daysAgo === 0 ? 'today' : daysAgo === 1 ? '1d ago' : `${daysAgo}d ago`;
+
+                    return (
+                      <div key={event.id} className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-elevated)]">
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn(
+                            'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold',
+                            isDelegation ? 'bg-[var(--green-dim)] text-[var(--green)]' : 'bg-[var(--red-dim)] text-[var(--red)]'
+                          )}>
+                            {isDelegation ? '+' : '−'}
+                          </div>
+                          <div>
+                            <p className="font-mono text-xs text-[var(--text)]">
+                              {shortenAddress(event.delegator.id)}
+                            </p>
+                            <p className="text-[10px] text-[var(--text-faint)]">{timeLabel}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={cn('font-mono text-xs', isDelegation ? 'text-[var(--green)]' : 'text-[var(--red)]')}>
+                            {isDelegation ? '+' : ''}{formatGRT(staked)} GRT
+                          </p>
+                          {unstaked > 0 && (
+                            <p className="text-[10px] text-[var(--text-faint)] font-mono">
+                              −{formatGRT(unstaked)} unstaked
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Parameters */}
           <Card>
             <CardHeader>
@@ -555,60 +608,7 @@ export default function IndexerDetailPage({
         isLoading={provisionsLoading}
       />
 
-      {/* Recent Delegation Activity */}
-      {recentDelegations && recentDelegations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Delegation Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {recentDelegations.slice(0, 8).map((event) => {
-                const staked = weiToGRT(event.stakedTokens);
-                const unstaked = weiToGRT(event.unstakedTokens);
-                const lastDelegated = event.lastDelegatedAt;
-                const lastUndelegated = event.lastUndelegatedAt;
-
-                // Determine if most recent action was delegation or undelegation
-                const isDelegation = !lastUndelegated || lastDelegated > lastUndelegated;
-                const actionTime = isDelegation ? lastDelegated : lastUndelegated;
-                const now = Math.floor(Date.now() / 1000);
-                const daysAgo = Math.floor((now - actionTime) / 86400);
-                const timeLabel = daysAgo === 0 ? 'today' : daysAgo === 1 ? '1d ago' : `${daysAgo}d ago`;
-
-                return (
-                  <div key={event.id} className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-elevated)]">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
-                        isDelegation ? 'bg-[var(--green-dim)] text-[var(--green)]' : 'bg-[var(--red-dim)] text-[var(--red)]'
-                      )}>
-                        {isDelegation ? '+' : '-'}
-                      </div>
-                      <div>
-                        <p className="font-mono text-sm text-[var(--text)]">
-                          {shortenAddress(event.delegator.id)}
-                        </p>
-                        <p className="text-xs text-[var(--text-faint)]">{timeLabel}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={cn('font-mono text-sm', isDelegation ? 'text-[var(--green)]' : 'text-[var(--red)]')}>
-                        {isDelegation ? '+' : ''}{formatGRT(staked)} GRT
-                      </p>
-                      {unstaked > 0 && (
-                        <p className="text-xs text-[var(--text-faint)] font-mono">
-                          -{formatGRT(unstaked)} unstaked
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Recent Delegation Activity — moved to right column above */}
 
       {/* Top Delegators */}
       {indexer.delegators.length > 0 && (

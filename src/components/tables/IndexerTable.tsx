@@ -185,53 +185,49 @@ export function IndexerTable() {
         cell: (info) => {
           const row = info.row.original;
           return (
-            <div className="flex items-start gap-2">
-              <div className="min-w-0">
-                <p className="font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors">
-                  {info.getValue()}
-                </p>
-                <p className="text-xs text-[var(--text-faint)] font-mono">
-                  {shortenAddress(row.address)}
-                </p>
-              </div>
-              <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+            <div>
+              <p className="font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors inline-flex items-center gap-1.5 whitespace-nowrap">
+                {info.getValue()}
                 {/* REO eligibility indicator */}
-                <div className="relative group/reo">
-                  <div className={cn(
-                    'w-2 h-2 rounded-full',
+                <span className="relative group/reo inline-flex">
+                  <span className={cn(
+                    'w-2 h-2 rounded-full inline-block',
                     row.reoStatus === 'eligible' ? 'bg-[var(--green)]' :
                     row.reoStatus === 'warning' ? 'bg-[var(--amber)]' : 'bg-[var(--red)]'
                   )} />
-                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-48 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/reo:opacity-100 transition-opacity z-50 text-[11px]">
-                    <p className="font-semibold text-[var(--text)] mb-1">Rewards Eligibility</p>
-                    <p className={cn(
-                      'font-medium',
+                  <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-48 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/reo:opacity-100 transition-opacity z-50 text-[11px] font-normal">
+                    <span className="block font-semibold text-[var(--text)] mb-1">Rewards Eligibility</span>
+                    <span className={cn(
+                      'block font-medium',
                       row.reoStatus === 'eligible' ? 'text-[var(--green)]' :
                       row.reoStatus === 'warning' ? 'text-[var(--amber)]' : 'text-[var(--red)]'
                     )}>
                       {row.reoStatus === 'eligible' ? 'Likely eligible' :
                        row.reoStatus === 'warning' ? 'At risk' : 'Likely ineligible'}
-                    </p>
-                    <p className="text-[var(--text-faint)] mt-1">
+                    </span>
+                    <span className="block text-[var(--text-faint)] mt-1">
                       {row.allocations > 0 ? '✓' : '✗'} Allocations · {row.selfStake >= MIN_STAKE_REO ? '✓' : '✗'} 100K+ stake
-                    </p>
-                  </div>
-                </div>
+                    </span>
+                  </span>
+                </span>
                 {/* Recent delegation activity indicator */}
                 {row.recentDelegations && (
-                  <div className="relative group/del">
+                  <span className="relative group/del inline-flex">
                     <svg className="w-3 h-3 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
                     </svg>
-                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-44 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/del:opacity-100 transition-opacity z-50 text-[11px]">
-                      <p className="font-semibold text-[var(--text)] mb-1">Recent Activity (7d)</p>
-                      <p className="text-[var(--text-muted)]">
+                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-44 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/del:opacity-100 transition-opacity z-50 text-[11px] font-normal">
+                      <span className="block font-semibold text-[var(--text)] mb-1">Recent Activity (7d)</span>
+                      <span className="block text-[var(--text-muted)]">
                         {row.recentDelegations.count} delegation{row.recentDelegations.count !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
+                      </span>
+                    </span>
+                  </span>
                 )}
-              </div>
+              </p>
+              <p className="text-xs text-[var(--text-faint)] font-mono">
+                {shortenAddress(row.address)}
+              </p>
             </div>
           );
         },

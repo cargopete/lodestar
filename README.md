@@ -8,8 +8,9 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 
 - **Protocol Overview** — Total stake, delegation, signalling, epoch progress, rewards-per-epoch chart, token distribution
 - **Intel Feed** — Live protocol intelligence panel with governance proposals, GIP updates, epoch summaries, and announcements sourced from The Graph Forum, GitHub, and on-chain data
-- **Indexer Directory** — Sortable/filterable table with stake, delegation capacity, reward cuts, and mobile card view
-- **Indexer Profiles** — Detailed view with allocations, delegator breakdown, and Horizon service provisions
+- **Indexer Directory** — Sortable/filterable table with stake, delegation capacity, reward cuts, REO eligibility indicators, recent delegation activity icons, and mobile card view
+- **Indexer Profiles** — Detailed view with allocations, delegator breakdown, Horizon service provisions, REO eligibility assessment, recent delegation activity, and reward cut change alerts
+- **Accurate APR & Effective Cut** — Per-allocation signal-weighted APR calculation and effective cut formula matching [grtinfo](https://github.com/ellipfra/grtinfo)
 - **Delegator Portfolio** — Position tracking, rebalancing insights, underperforming position detection
 - **Curator Portfolio** — Signal positions and query-fee-to-signal ratio analysis
 - **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting
@@ -27,13 +28,14 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 
 ### Planned
 
-- [ ] REO (Rewards Eligibility Oracle) status — surface whether an indexer is eligible for rewards or has been flagged by the oracle
-- [ ] Recent delegation activity — show recent delegations/undelegations that may have moved the needle on an indexer's capacity or economics
-- [ ] Reward cut change alerts — flag indexers who recently changed their reward or query fee cut
 - [ ] PWA support — installable to home screen for daily portfolio checking
 
 ### Shipped
 
+- [x] REO (Rewards Eligibility Oracle) heuristic — eligibility indicators in indexer table and detailed assessment on profiles (GIP-0079)
+- [x] Recent delegation activity — delegation/undelegation events on indexer profiles, activity indicators in the directory
+- [x] Reward cut change alerts — flagged in indexer table and profile when parameters changed within 30 days
+- [x] Accurate APR and effective cut using per-allocation signal-weighted rewards (grtinfo method)
 - [x] Protocol Intelligence Feed with forum governance, GIP commits, epoch summaries
 - [x] Mobile-first responsive overhaul with bottom tab bar and card views
 - [x] Horizon-era Data Services & Provisions pages
