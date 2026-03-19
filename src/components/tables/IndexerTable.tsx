@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import {
   useReactTable,
   getCoreRowModel,
@@ -29,6 +30,66 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Badge } from '@/components/ui/Badge';
 import { IndexerComparison } from '@/components/ui/IndexerComparison';
 
+// Minimum self-stake for REO eligibility (100K GRT)
+const MIN_STAKE_REO = 100000;
+
+/**
+ * Quick client-side REO eligibility check from existing indexer data.
+ * Full assessment (POIs, provisions) requires the /api/reo endpoint.
+ */
+function quickREOStatus(indexer: Indexer): 'eligible' | 'warning' | 'ineligible' {
+  const selfStake = weiToGRT(indexer.stakedTokens);
+  const hasAllocations = indexer.allocationCount > 0;
+  const hasSufficientStake = selfStake >= MIN_STAKE_REO;
+
+  if (hasAllocations && hasSufficientStake) return 'eligible';
+  if (hasAllocations || hasSufficientStake) return 'warning';
+  return 'ineligible';
+}
+
+/**
+ * Hook to fetch recent delegation activity across the network
+ */
+function useRecentDelegationActivity() {
+  return useQuery<Record<string, { count: number; netChange: number }>>({
+    queryKey: ['recentDelegationActivity'],
+    queryFn: async () => {
+      const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
+      const query = `{
+        delegatedStakes(
+          first: 200,
+          orderBy: lastDelegatedAt,
+          orderDirection: desc,
+          where: { lastDelegatedAt_gt: ${sevenDaysAgo} }
+        ) {
+          indexer { id }
+          stakedTokens
+        }
+      }`;
+      const res = await fetch('/api/subgraph', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      if (!res.ok) return {};
+      const json = await res.json();
+      const stakes = json.data?.delegatedStakes ?? [];
+
+      // Aggregate by indexer
+      const map: Record<string, { count: number; netChange: number }> = {};
+      for (const s of stakes) {
+        const id = s.indexer.id;
+        if (!map[id]) map[id] = { count: 0, netChange: 0 };
+        map[id].count++;
+        map[id].netChange += weiToGRT(s.stakedTokens);
+      }
+      return map;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+  });
+}
+
 interface IndexerRow {
   id: string;
   name: string;
@@ -41,6 +102,8 @@ interface IndexerRow {
   allocations: number;
   allocated: number;
   rewards: number;
+  reoStatus: 'eligible' | 'warning' | 'ineligible';
+  recentDelegations: { count: number; netChange: number } | null;
   raw: Indexer;
 }
 
@@ -63,6 +126,7 @@ export function IndexerTable() {
 
   const { data: networkData } = useNetworkStats();
   const delegationRatio = networkData?.graphNetwork?.delegationRatio ?? 16;
+  const { data: recentActivity } = useRecentDelegationActivity();
 
   const tableData: IndexerRow[] = useMemo(() => {
     if (!indexersData?.indexers) return [];
@@ -86,11 +150,13 @@ export function IndexerTable() {
           allocations: indexer.allocationCount,
           allocated,
           rewards,
+          reoStatus: quickREOStatus(indexer),
+          recentDelegations: recentActivity?.[indexer.id] ?? null,
           raw: indexer,
         };
       })
       .filter((row) => row.selfStake >= minStake);
-  }, [indexersData, delegationRatio, minStake]);
+  }, [indexersData, delegationRatio, minStake, recentActivity]);
 
   const columns = useMemo(
     () => [
@@ -116,16 +182,59 @@ export function IndexerTable() {
       }),
       columnHelper.accessor('name', {
         header: 'Indexer',
-        cell: (info) => (
-          <div>
-            <p className="font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors">
-              {info.getValue()}
-            </p>
-            <p className="text-xs text-[var(--text-faint)] font-mono">
-              {shortenAddress(info.row.original.address)}
-            </p>
-          </div>
-        ),
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <div className="flex items-start gap-2">
+              <div className="min-w-0">
+                <p className="font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors">
+                  {info.getValue()}
+                </p>
+                <p className="text-xs text-[var(--text-faint)] font-mono">
+                  {shortenAddress(row.address)}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+                {/* REO eligibility indicator */}
+                <div className="relative group/reo">
+                  <div className={cn(
+                    'w-2 h-2 rounded-full',
+                    row.reoStatus === 'eligible' ? 'bg-[var(--green)]' :
+                    row.reoStatus === 'warning' ? 'bg-[var(--amber)]' : 'bg-[var(--red)]'
+                  )} />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-48 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/reo:opacity-100 transition-opacity z-50 text-[11px]">
+                    <p className="font-semibold text-[var(--text)] mb-1">Rewards Eligibility</p>
+                    <p className={cn(
+                      'font-medium',
+                      row.reoStatus === 'eligible' ? 'text-[var(--green)]' :
+                      row.reoStatus === 'warning' ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                    )}>
+                      {row.reoStatus === 'eligible' ? 'Likely eligible' :
+                       row.reoStatus === 'warning' ? 'At risk' : 'Likely ineligible'}
+                    </p>
+                    <p className="text-[var(--text-faint)] mt-1">
+                      {row.allocations > 0 ? '✓' : '✗'} Allocations · {row.selfStake >= MIN_STAKE_REO ? '✓' : '✗'} 100K+ stake
+                    </p>
+                  </div>
+                </div>
+                {/* Recent delegation activity indicator */}
+                {row.recentDelegations && (
+                  <div className="relative group/del">
+                    <svg className="w-3 h-3 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                    </svg>
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-44 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/del:opacity-100 transition-opacity z-50 text-[11px]">
+                      <p className="font-semibold text-[var(--text)] mb-1">Recent Activity (7d)</p>
+                      <p className="text-[var(--text-muted)]">
+                        {row.recentDelegations.count} delegation{row.recentDelegations.count !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        },
       }),
       columnHelper.accessor('selfStake', {
         header: 'Self-Stake',
@@ -369,9 +478,23 @@ export function IndexerTable() {
                     )}
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <div className="min-w-0 mr-2">
-                        <p className="font-medium text-[var(--text)] truncate">{d.name}</p>
-                        <p className="text-xs text-[var(--text-faint)] font-mono">{shortenAddress(d.address)}</p>
+                      <div className="min-w-0 mr-2 flex items-start gap-1.5">
+                        <div>
+                          <p className="font-medium text-[var(--text)] truncate">{d.name}</p>
+                          <p className="text-xs text-[var(--text-faint)] font-mono">{shortenAddress(d.address)}</p>
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 flex-shrink-0">
+                          <div className={cn(
+                            'w-2 h-2 rounded-full',
+                            d.reoStatus === 'eligible' ? 'bg-[var(--green)]' :
+                            d.reoStatus === 'warning' ? 'bg-[var(--amber)]' : 'bg-[var(--red)]'
+                          )} />
+                          {d.recentDelegations && (
+                            <svg className="w-3 h-3 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                            </svg>
+                          )}
+                        </div>
                       </div>
                       <p className="text-sm font-mono text-[var(--text)] flex-shrink-0">{formatGRT(d.selfStake)}</p>
                     </div>

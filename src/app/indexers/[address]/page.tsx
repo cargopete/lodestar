@@ -258,9 +258,9 @@ export default function IndexerDetailPage({
               Website
             </a>
           )}
-          {/* REO Status Badge */}
+          {/* REO Status Badge with tooltip */}
           {reoData?.status?.status && reoData.status.status !== 'unknown' && (
-            <span title="Lodestar estimate based on on-chain activity — not from the REO contract">
+            <div className="relative group">
               <Badge
                 variant={
                   reoData.status.status === 'eligible' ? 'success' :
@@ -271,7 +271,30 @@ export default function IndexerDetailPage({
                 {reoData.status.status === 'eligible' ? 'Likely Eligible' :
                  reoData.status.status === 'warning' ? 'At Risk' : 'Likely Ineligible'}
               </Badge>
-            </span>
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 p-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50">
+                <p className="text-xs font-semibold text-[var(--text)] mb-2">Rewards Eligibility (GIP-0079)</p>
+                <p className="text-[11px] text-[var(--text-muted)] mb-2.5">
+                  The Rewards Eligibility Oracle determines whether an indexer qualifies for indexing rewards. This is a Lodestar estimate based on on-chain signals — not a direct oracle read.
+                </p>
+                <div className="space-y-1.5">
+                  {[
+                    { label: 'Active allocations', pass: reoData.status.checks?.hasAllocations },
+                    { label: 'Recent POI activity', pass: reoData.status.checks?.hasRecentPOIs },
+                    { label: 'Self-stake ≥ 100K GRT', pass: reoData.status.checks?.hasSufficientStake },
+                    { label: 'Horizon provisions', pass: reoData.status.checks?.hasProvisions },
+                  ].map((check) => (
+                    <div key={check.label} className="flex items-center gap-2 text-[11px]">
+                      <span className={check.pass ? 'text-[var(--green)]' : 'text-[var(--red)]'}>
+                        {check.pass ? '✓' : '✗'}
+                      </span>
+                      <span className={check.pass ? 'text-[var(--text)]' : 'text-[var(--text-muted)]'}>
+                        {check.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
           <Badge variant="accent">
             Active since {createdDate.toLocaleDateString()}
