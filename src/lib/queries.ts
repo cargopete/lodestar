@@ -403,6 +403,8 @@ export interface GraphNetwork {
   delegationTaxPercentage: number;
   maxAllocationEpochs: number;
   thawingPeriod: number;
+  totalSupply?: string;
+  networkGRTIssuancePerBlock?: string;
   // Optional fields for display compatibility
   indexingRewardPercentage?: number;
   queryFeeCut?: number;

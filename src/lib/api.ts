@@ -58,6 +58,8 @@ export async function fetchNetworkStats(): Promise<NetworkStatsResponse> {
         delegationTaxPercentage
         maxAllocationEpochs
         thawingPeriod
+        totalSupply
+        networkGRTIssuancePerBlock
       }
       _meta {
         block {

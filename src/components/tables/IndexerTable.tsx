@@ -164,11 +164,22 @@ export function IndexerTable() {
       }),
       columnHelper.accessor('rewardCut', {
         header: 'Reward Cut',
-        cell: (info) => (
-          <span className="font-mono text-[var(--text)]">
-            {formatPPM(info.getValue())}
-          </span>
-        ),
+        cell: (info) => {
+          const lastUpdate = info.row.original.raw.lastDelegationParameterUpdate;
+          const daysSince = (Date.now() / 1000 - lastUpdate) / 86400;
+          const recentChange = daysSince <= 30;
+          return (
+            <span className="font-mono text-[var(--text)] flex items-center gap-1.5">
+              {formatPPM(info.getValue())}
+              {recentChange && (
+                <span
+                  className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', daysSince <= 7 ? 'bg-[var(--red)]' : 'bg-[var(--amber)]')}
+                  title={`Parameters changed ${Math.floor(daysSince)}d ago`}
+                />
+              )}
+            </span>
+          );
+        },
       }),
       columnHelper.accessor('allocations', {
         header: 'Allocations',
@@ -371,7 +382,15 @@ export function IndexerTable() {
                       </div>
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
                         <p className="text-[10px] text-[var(--text-faint)]">Cut</p>
-                        <p className="text-xs font-mono text-[var(--text)]">{formatPPM(d.rewardCut)}</p>
+                        <p className="text-xs font-mono text-[var(--text)] flex items-center justify-center gap-1">
+                          {formatPPM(d.rewardCut)}
+                          {(() => {
+                            const daysSince = (Date.now() / 1000 - d.raw.lastDelegationParameterUpdate) / 86400;
+                            return daysSince <= 30 ? (
+                              <span className={cn('w-1.5 h-1.5 rounded-full', daysSince <= 7 ? 'bg-[var(--red)]' : 'bg-[var(--amber)]')} />
+                            ) : null;
+                          })()}
+                        </p>
                       </div>
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
                         <p className="text-[10px] text-[var(--text-faint)]">Capacity</p>

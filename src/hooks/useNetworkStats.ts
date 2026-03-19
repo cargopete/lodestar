@@ -143,3 +143,68 @@ export function useServiceProvisions(dataService: string, first = 50, skip = 0) 
     enabled: !!dataService,
   });
 }
+
+/**
+ * Hook for REO (Rewards Eligibility Oracle) status
+ */
+export function useREOStatus(address: string) {
+  return useQuery({
+    queryKey: ['reoStatus', address],
+    queryFn: async () => {
+      const res = await fetch(`/api/reo?address=${address}`);
+      if (!res.ok) throw new Error('Failed to fetch REO status');
+      return res.json();
+    },
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    enabled: !!address,
+  });
+}
+
+/**
+ * Hook for recent delegation activity on an indexer
+ */
+export interface DelegationEvent {
+  id: string;
+  delegator: { id: string };
+  indexer: { id: string };
+  stakedTokens: string;
+  unstakedTokens: string;
+  lastDelegatedAt: number;
+  lastUndelegatedAt: number | null;
+}
+
+export function useRecentDelegations(indexerAddress: string) {
+  return useQuery<DelegationEvent[]>({
+    queryKey: ['recentDelegations', indexerAddress],
+    queryFn: async () => {
+      const query = `{
+        delegatedStakes(
+          first: 10,
+          orderBy: lastDelegatedAt,
+          orderDirection: desc,
+          where: { indexer: "${indexerAddress.toLowerCase()}" }
+        ) {
+          id
+          delegator { id }
+          indexer { id }
+          stakedTokens
+          unstakedTokens
+          lastDelegatedAt
+          lastUndelegatedAt
+        }
+      }`;
+      const response = await fetch('/api/subgraph', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      if (!response.ok) throw new Error('Failed to fetch delegations');
+      const json = await response.json();
+      return json.data?.delegatedStakes ?? [];
+    },
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    enabled: !!indexerAddress,
+  });
+}

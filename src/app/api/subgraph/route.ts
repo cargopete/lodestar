@@ -31,7 +31,9 @@ const MOCK_NETWORK_DATA = {
       protocolFeePercentage: 10000,
       delegationTaxPercentage: 5000,
       maxAllocationEpochs: 28,
-      thawingPeriod: 2419200
+      thawingPeriod: 2419200,
+      totalSupply: '10800000000000000000000000000',
+      networkGRTIssuancePerBlock: '114000000000000000'
     },
     _meta: {
       block: {

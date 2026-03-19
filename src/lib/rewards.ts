@@ -51,13 +51,15 @@ export function calculateUnrealizedRewards(
 /**
  * Calculate effective reward cut percentage
  *
- * The effective cut depends on the ratio of indexer's own stake to delegated stake.
- * Formula: effectiveCut = protocolCut * (delegated / (selfStake + delegated))
+ * The effective cut accounts for the indexer keeping ALL rewards on their self-stake
+ * plus taking their cut percentage from delegation rewards. From the delegator's
+ * perspective, the effective cut is higher than the advertised cut because the
+ * indexer's self-stake dilutes the reward pool.
  *
- * Example: 10% protocol cut with 1:4 self:delegated ratio
- * = 10% * (4 / (1 + 4)) = 10% * 0.8 = 8% effective cut
+ * Formula (from grtinfo/Ellipfra):
+ *   effectiveCut = 1 - (1 - rawCut) * delegated / (selfStake + delegated)
  *
- * @param protocolCutPPM - Indexer's advertised reward cut in PPM
+ * @param protocolCutPPM - Indexer's advertised reward cut in PPM (0-1000000)
  * @param selfStake - Indexer's own stake (GRT)
  * @param delegated - Total delegated to indexer (GRT)
  * @returns Effective cut as a percentage (0-100)
@@ -67,20 +69,20 @@ export function calculateEffectiveCut(
   selfStake: number,
   delegated: number
 ): number {
-  const protocolCutPercent = protocolCutPPM / 10000; // PPM to percent
+  if (delegated === 0) return 100; // No delegators = 100% effective cut
 
-  if (selfStake + delegated === 0) return protocolCutPercent;
+  const rawCut = protocolCutPPM / 1000000; // PPM to fraction (0-1)
+  const totalStake = selfStake + delegated;
 
-  // Proportion of rewards that go to delegators before cut
-  const delegatorProportion = delegated / (selfStake + delegated);
+  // Effective cut = 1 - (1 - rawCut) * delegated / totalStake
+  const effectiveCut = 1 - (1 - rawCut) * delegated / totalStake;
 
-  // Effective cut is the protocol cut applied to delegator's proportion
-  // But we want to show what % the delegator actually loses
-  return protocolCutPercent;
+  // Clamp to 0-100 range (can go negative if self-stake is very small)
+  return Math.max(effectiveCut * 100, 0);
 }
 
 /**
- * Calculate estimated APR for a delegation
+ * Calculate estimated APR for a delegation (simple model)
  *
  * @param indexerRewardsPerYear - Estimated annual rewards for indexer (GRT)
  * @param protocolCutPPM - Indexer's reward cut in PPM
@@ -111,6 +113,56 @@ export function calculateEstimatedAPR(
 
   // APR = rewards / principal * 100
   return (userRewards / userDelegation) * 100;
+}
+
+/**
+ * Calculate delegator APR using per-allocation signal-weighted rewards
+ * (grtinfo / Ellipfra method)
+ *
+ * For each allocation:
+ *   reward = annualIssuance × (subgraphSignal / totalNetworkSignal) × (allocation / subgraphStake)
+ *
+ * Then: delegatorAPR = sum(rewards) × (1 - rawCut) / delegated × 100
+ *
+ * @param allocations - Indexer's active allocations with subgraph signal data
+ * @param protocolCutPPM - Indexer's reward cut in PPM
+ * @param delegated - Total delegated to indexer (GRT)
+ * @param totalNetworkSignal - Total signal across entire network (GRT)
+ * @param annualIssuance - Annual GRT issuance (GRT)
+ */
+export function calculateDelegatorAPR(
+  allocations: Array<{
+    allocatedTokens: string;
+    subgraphDeployment: {
+      signalledTokens: string;
+      stakedTokens: string;
+    };
+  }>,
+  protocolCutPPM: number,
+  delegated: number,
+  totalNetworkSignal: number,
+  annualIssuance: number
+): number {
+  if (delegated === 0 || totalNetworkSignal === 0 || allocations.length === 0) return 0;
+
+  let totalRewards = 0;
+
+  for (const alloc of allocations) {
+    const allocated = weiToGRT(alloc.allocatedTokens);
+    const subgraphSignal = weiToGRT(alloc.subgraphDeployment.signalledTokens);
+    const subgraphStake = weiToGRT(alloc.subgraphDeployment.stakedTokens);
+
+    if (subgraphSignal === 0 || subgraphStake === 0) continue;
+
+    // Per-allocation reward share
+    const reward = annualIssuance * (subgraphSignal / totalNetworkSignal) * (allocated / subgraphStake);
+    totalRewards += reward;
+  }
+
+  const rawCut = protocolCutPPM / 1000000;
+  const delegatorRewards = totalRewards * (1 - rawCut);
+
+  return (delegatorRewards / delegated) * 100;
 }
 
 /**

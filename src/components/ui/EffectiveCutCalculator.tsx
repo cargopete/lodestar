@@ -8,7 +8,7 @@ import { weiToGRT, formatGRT, formatPPM, cn } from '@/lib/utils';
 import {
   calculateDelegationCapacity,
   simulateNewDelegation,
-  calculateEstimatedAPR,
+  calculateDelegatorAPR,
 } from '@/lib/rewards';
 
 interface EffectiveCutCalculatorProps {
@@ -21,15 +21,25 @@ interface EffectiveCutCalculatorProps {
     queryFeeCut: number;
     delegatorParameterCooldown: number;
     lastDelegationParameterUpdate: number;
+    allocations?: Array<{
+      allocatedTokens: string;
+      subgraphDeployment: {
+        signalledTokens: string;
+        stakedTokens: string;
+      };
+    }>;
   };
   delegationRatio?: number;
-  networkRewardsPerYear?: number;
+  totalNetworkSignal?: number;
+  annualIssuance?: number;
 }
+
 
 export function EffectiveCutCalculator({
   indexer,
   delegationRatio = 16,
-  networkRewardsPerYear = 300000000, // 300M GRT annual issuance estimate
+  totalNetworkSignal = 0,
+  annualIssuance = 0,
 }: EffectiveCutCalculatorProps) {
   const [delegationAmount, setDelegationAmount] = useState<string>('10000');
 
@@ -49,22 +59,22 @@ export function EffectiveCutCalculator({
     [indexer.indexingRewardCut, selfStake, currentDelegated, newDelegation]
   );
 
-  // Estimate indexer's share of network rewards (simplified)
-  const totalStake = selfStake + currentDelegated;
-  const indexerRewardsPerYear = (totalStake / 3000000000) * networkRewardsPerYear; // Assume 3B total staked
-
-  // Calculate estimated APR
+  // Calculate estimated APR using per-allocation signal-weighted rewards (grtinfo method)
   const estimatedAPR = useMemo(
-    () =>
-      calculateEstimatedAPR(
-        indexerRewardsPerYear,
+    () => {
+      if (!indexer.allocations?.length || totalNetworkSignal === 0 || annualIssuance === 0) return 0;
+      return calculateDelegatorAPR(
+        indexer.allocations,
         indexer.indexingRewardCut,
-        selfStake,
-        currentDelegated + newDelegation,
-        newDelegation || 1000 // Default to 1000 for display
-      ),
-    [indexerRewardsPerYear, indexer.indexingRewardCut, selfStake, currentDelegated, newDelegation]
+        currentDelegated + newDelegation || currentDelegated || 1,
+        totalNetworkSignal,
+        annualIssuance
+      );
+    },
+    [indexer.allocations, indexer.indexingRewardCut, currentDelegated, newDelegation, totalNetworkSignal, annualIssuance]
   );
+
+  const totalStake = selfStake + currentDelegated;
 
   // Check if parameters are locked (cooldown active)
   const now = Math.floor(Date.now() / 1000);
@@ -202,15 +212,9 @@ export function EffectiveCutCalculator({
             <p className="text-sm text-[var(--text-muted)] mb-3">Annual Rewards Estimate</p>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-[var(--text-faint)]">Gross Rewards</span>
-                <span className="text-sm font-mono text-[var(--text)]">
-                  {formatGRT((newDelegation / (currentDelegated + newDelegation + selfStake)) * indexerRewardsPerYear)} GRT
-                </span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-sm text-[var(--text-faint)]">After Indexer Cut</span>
                 <span className="text-sm font-mono text-[var(--green)]">
-                  ~{formatGRT(newDelegation * (estimatedAPR / 100))} GRT
+                  ~{formatGRT((newDelegation || 1000) * (estimatedAPR / 100))} GRT
                 </span>
               </div>
             </div>
