@@ -411,7 +411,7 @@ export function RedelegationPage({
               >
                 {indexers.map((indexer) => (
                   <option key={indexer.id} value={indexer.id}>
-                    {indexer.name}
+                    {indexer.name} ({(indexer.indexingRewardCut / 10000).toFixed(0)}% cut)
                   </option>
                 ))}
               </select>
@@ -434,7 +434,7 @@ export function RedelegationPage({
                   .filter((i) => i.id !== currentIndexerId)
                   .map((indexer) => (
                     <option key={indexer.id} value={indexer.id}>
-                      {indexer.name}
+                      {indexer.name} ({(indexer.indexingRewardCut / 10000).toFixed(0)}% cut)
                     </option>
                   ))}
               </select>

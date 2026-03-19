@@ -8,8 +8,12 @@ export function cn(...inputs: ClassValue[]) {
  * Convert wei to GRT (18 decimals)
  */
 export function weiToGRT(wei: string | bigint): number {
-  const value = typeof wei === 'string' ? BigInt(wei) : wei;
-  return Number(value) / 1e18;
+  if (typeof wei === 'string') {
+    // Subgraph sometimes returns decimal strings — truncate before BigInt conversion
+    const intPart = wei.split('.')[0];
+    return Number(BigInt(intPart)) / 1e18;
+  }
+  return Number(wei) / 1e18;
 }
 
 /**

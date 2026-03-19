@@ -2,12 +2,7 @@
 
 import { use, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { GraphQLClient } from 'graphql-request';
-import {
-  CURATOR_PORTFOLIO_QUERY,
-  type CuratorPortfolioResponse,
-  type Signal,
-} from '@/lib/queries';
+import { type Signal, type Curator } from '@/lib/queries';
 import {
   weiToGRT,
   formatGRT,
@@ -18,17 +13,49 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 
-const client = new GraphQLClient('/api/subgraph');
-
 function useCuratorPortfolio(address: string) {
-  return useQuery({
+  return useQuery<Curator | null>({
     queryKey: ['curatorPortfolio', address],
     queryFn: async () => {
-      const data = await client.request<CuratorPortfolioResponse>(
-        CURATOR_PORTFOLIO_QUERY,
-        { id: address.toLowerCase() }
-      );
-      return data.curator;
+      const query = `
+        query CuratorPortfolio {
+          curator(id: "${address.toLowerCase()}") {
+            id
+            totalSignalledTokens
+            totalUnsignalledTokens
+            totalNameSignalledTokens
+            totalNameUnsignalledTokens
+            totalWithdrawnTokens
+            realizedRewards
+            signalCount
+            activeSignalCount
+            signals(first: 100, orderBy: signalledTokens, orderDirection: desc) {
+              id
+              signalledTokens
+              unsignalledTokens
+              signal
+              lastSignalChange
+              realizedRewards
+              subgraphDeployment {
+                id
+                ipfsHash
+                signalledTokens
+                queryFeesAmount
+                stakedTokens
+              }
+            }
+          }
+        }
+      `;
+      const response = await fetch('/api/subgraph', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+      const json = await response.json();
+      if (json.errors) throw new Error(JSON.stringify(json.errors));
+      return json.data?.curator ?? null;
     },
     staleTime: 60 * 1000,
   });

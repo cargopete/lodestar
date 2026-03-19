@@ -3,9 +3,6 @@ import {
   NETWORK_STATS_QUERY,
   EPOCH_HISTORY_QUERY,
   INDEXERS_QUERY,
-  DATA_SERVICES_QUERY,
-  INDEXER_PROVISIONS_QUERY,
-  SERVICE_PROVISIONS_QUERY,
   type NetworkStatsResponse,
   type EpochHistoryResponse,
   type IndexersResponse,
@@ -18,6 +15,18 @@ import {
 const SUBGRAPH_URL = '/api/subgraph';
 
 const client = new GraphQLClient(SUBGRAPH_URL);
+
+async function subgraphFetch<T>(query: string): Promise<T> {
+  const response = await fetch(SUBGRAPH_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+  if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+  const json = await response.json();
+  if (json.errors) throw new Error(JSON.stringify(json.errors));
+  return json.data as T;
+}
 
 /**
  * Fetch network statistics
@@ -219,18 +228,51 @@ export async function fetchTVL(): Promise<{
  * Fetch all data services (Horizon multi-service)
  */
 export async function fetchDataServices(first = 20): Promise<DataServicesResponse> {
-  return client.request<DataServicesResponse>(DATA_SERVICES_QUERY, {
-    first,
-  });
+  return subgraphFetch<DataServicesResponse>(`{
+    dataServices(first: ${first}, orderBy: totalTokensProvisioned, orderDirection: desc) {
+      id
+      totalTokensProvisioned
+      totalTokensAllocated
+      totalTokensThawing
+      totalTokensDelegated
+      minimumProvisionTokens
+      maximumVerifierCut
+      minimumVerifierCut
+      minimumThawingPeriod
+      maximumThawingPeriod
+      delegationRatio
+      curationCut
+    }
+  }`);
 }
 
 /**
  * Fetch provisions for a specific indexer
  */
 export async function fetchIndexerProvisions(indexer: string): Promise<IndexerProvisionsResponse> {
-  return client.request<IndexerProvisionsResponse>(INDEXER_PROVISIONS_QUERY, {
-    indexer: indexer.toLowerCase(),
-  });
+  return subgraphFetch<IndexerProvisionsResponse>(`{
+    provisions(
+      where: { indexer: "${indexer.toLowerCase()}" }
+      orderBy: tokensProvisioned
+      orderDirection: desc
+    ) {
+      id
+      tokensProvisioned
+      tokensAllocated
+      tokensThawing
+      maxVerifierCut
+      thawingPeriod
+      createdAt
+      allocationCount
+      dataService {
+        id
+        totalTokensProvisioned
+        totalTokensAllocated
+        minimumThawingPeriod
+        maximumThawingPeriod
+      }
+    }
+  }`);
 }
 
 /**
@@ -241,11 +283,36 @@ export async function fetchServiceProvisions(
   first = 50,
   skip = 0
 ): Promise<ServiceProvisionsResponse> {
-  return client.request<ServiceProvisionsResponse>(SERVICE_PROVISIONS_QUERY, {
-    dataService: dataService.toLowerCase(),
-    first,
-    skip,
-  });
+  return subgraphFetch<ServiceProvisionsResponse>(`{
+    provisions(
+      where: { dataService: "${dataService.toLowerCase()}" }
+      first: ${first}
+      skip: ${skip}
+      orderBy: tokensProvisioned
+      orderDirection: desc
+    ) {
+      id
+      tokensProvisioned
+      tokensAllocated
+      tokensThawing
+      maxVerifierCut
+      thawingPeriod
+      createdAt
+      allocationCount
+      indexer {
+        id
+        account {
+          defaultDisplayName
+          metadata {
+            displayName
+            description
+          }
+        }
+        stakedTokens
+        delegatedTokens
+      }
+    }
+  }`);
 }
 
 /**

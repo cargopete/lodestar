@@ -10,6 +10,15 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { weiToGRT, formatGRT, formatUSD, shortenAddress, resolveIndexerName, cn } from '@/lib/utils';
 import type { DataService, ProvisionWithIndexer } from '@/lib/queries';
 
+// Known data service addresses → friendly names
+const SERVICE_NAMES: Record<string, string> = {
+  '0xb2bb92d0de618878e438b55d5846cfecd9301105': 'Subgraph Service',
+};
+
+function resolveServiceName(id: string): string {
+  return SERVICE_NAMES[id.toLowerCase()] || shortenAddress(id);
+}
+
 export default function ServicesPage() {
   const { data: servicesData, isLoading } = useDataServices();
   const { data: priceData } = useGRTPrice();
@@ -18,16 +27,14 @@ export default function ServicesPage() {
   const grtPrice = priceData?.price ?? 0;
   const services = servicesData?.dataServices ?? [];
 
-  // Calculate totals
   const totalProvisioned = services.reduce(
-    (sum, s) => sum + weiToGRT(s.tokensProvisioned),
+    (sum, s) => sum + weiToGRT(s.totalTokensProvisioned),
     0
   );
   const totalAllocated = services.reduce(
-    (sum, s) => sum + weiToGRT(s.tokensAllocated),
+    (sum, s) => sum + weiToGRT(s.totalTokensAllocated),
     0
   );
-  const totalIndexers = services.reduce((sum, s) => sum + s.provisionCount, 0);
 
   if (isLoading) {
     return (
@@ -55,14 +62,16 @@ export default function ServicesPage() {
           label="Total Allocated"
           value={`${formatGRT(totalAllocated)} GRT`}
           delta={{
-            value: `${((totalAllocated / totalProvisioned) * 100).toFixed(1)}% utilization`,
+            value: totalProvisioned > 0
+              ? `${((totalAllocated / totalProvisioned) * 100).toFixed(1)}% utilization`
+              : '0% utilization',
             positive: true,
           }}
         />
         <StatCard
-          label="Service Providers"
-          value={String(totalIndexers)}
-          delta={{ value: 'unique provisions', positive: true }}
+          label="Delegation Ratio"
+          value={services[0]?.delegationRatio ? `${services[0].delegationRatio}x` : '--'}
+          delta={{ value: 'max delegation multiplier', positive: true }}
         />
       </StatGrid>
 
@@ -126,10 +135,15 @@ interface ServiceCardProps {
 }
 
 function ServiceCard({ service, grtPrice, isSelected, onSelect }: ServiceCardProps) {
-  const provisioned = weiToGRT(service.tokensProvisioned);
-  const allocated = weiToGRT(service.tokensAllocated);
+  const provisioned = weiToGRT(service.totalTokensProvisioned);
+  const allocated = weiToGRT(service.totalTokensAllocated);
+  const thawing = weiToGRT(service.totalTokensThawing);
   const utilization = provisioned > 0 ? (allocated / provisioned) * 100 : 0;
-  const thawingDays = Math.round(service.thawingPeriod / 86400);
+  const minThawDays = Math.round(Number(service.minimumThawingPeriod) / 86400);
+  const maxVerifierCutPct = (Number(service.maximumVerifierCut) / 10000).toFixed(0);
+  const minProvision = weiToGRT(service.minimumProvisionTokens);
+
+  const serviceName = resolveServiceName(service.id);
 
   return (
     <Card
@@ -143,17 +157,13 @@ function ServiceCard({ service, grtPrice, isSelected, onSelect }: ServiceCardPro
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-[var(--text)]">
-              {service.metadata?.name || shortenAddress(service.id)}
+              {serviceName}
             </h3>
-            {service.metadata?.description && (
-              <p className="text-sm text-[var(--text-muted)] mt-1">
-                {service.metadata.description}
-              </p>
-            )}
+            <p className="text-xs text-[var(--text-faint)] font-mono mt-1">
+              {shortenAddress(service.id)}
+            </p>
           </div>
-          <Badge variant={service.provisionCount > 50 ? 'success' : 'default'}>
-            {service.provisionCount} indexers
-          </Badge>
+          <Badge variant="success">Active</Badge>
         </div>
 
         {/* Stats */}
@@ -193,20 +203,22 @@ function ServiceCard({ service, grtPrice, isSelected, onSelect }: ServiceCardPro
         </div>
 
         {/* Parameters */}
-        <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="grid grid-cols-4 gap-2 text-center">
           <div className="p-2 rounded bg-[var(--bg-elevated)]">
-            <p className="text-xs text-[var(--text-faint)]">Thaw Period</p>
-            <p className="text-sm font-mono text-[var(--text)]">{thawingDays}d</p>
+            <p className="text-xs text-[var(--text-faint)]">Min Thaw</p>
+            <p className="text-sm font-mono text-[var(--text)]">{minThawDays}d</p>
           </div>
           <div className="p-2 rounded bg-[var(--bg-elevated)]">
             <p className="text-xs text-[var(--text-faint)]">Max Verifier Cut</p>
-            <p className="text-sm font-mono text-[var(--text)]">
-              {(service.maxVerifierCut / 10000).toFixed(0)}%
-            </p>
+            <p className="text-sm font-mono text-[var(--text)]">{maxVerifierCutPct}%</p>
           </div>
           <div className="p-2 rounded bg-[var(--bg-elevated)]">
-            <p className="text-xs text-[var(--text-faint)]">Allocations</p>
-            <p className="text-sm font-mono text-[var(--text)]">{service.allocationCount}</p>
+            <p className="text-xs text-[var(--text-faint)]">Min Provision</p>
+            <p className="text-sm font-mono text-[var(--text)]">{formatGRT(minProvision)}</p>
+          </div>
+          <div className="p-2 rounded bg-[var(--bg-elevated)]">
+            <p className="text-xs text-[var(--text-faint)]">Thawing</p>
+            <p className="text-sm font-mono text-[var(--amber)]">{formatGRT(thawing)}</p>
           </div>
         </div>
 
@@ -279,7 +291,7 @@ function ServiceProvisionsPanel({ serviceId, grtPrice }: ServiceProvisionsPanelP
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {provisions.map((provision) => {
-                const tokens = weiToGRT(provision.tokens);
+                const tokens = weiToGRT(provision.tokensProvisioned);
                 const thawing = weiToGRT(provision.tokensThawing);
                 const selfStake = weiToGRT(provision.indexer.stakedTokens);
                 const delegated = weiToGRT(provision.indexer.delegatedTokens);
@@ -317,7 +329,7 @@ function ServiceProvisionsPanel({ serviceId, grtPrice }: ServiceProvisionsPanelP
                     </td>
                     <td className="px-4 py-3 text-right">
                       <p className="font-mono text-[var(--text)]">
-                        {(provision.maxVerifierCut / 10000).toFixed(1)}%
+                        {(Number(provision.maxVerifierCut) / 10000).toFixed(1)}%
                       </p>
                     </td>
                     <td className="px-4 py-3 text-right">

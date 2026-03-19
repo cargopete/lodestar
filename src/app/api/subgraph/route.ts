@@ -163,46 +163,18 @@ const MOCK_DATA_SERVICES = {
   data: {
     dataServices: [
       {
-        id: '0xb2Bb92d0DE618878E438b55D5846cfecD9301105', // SubgraphService on Arbitrum
-        tokensProvisioned: '2500000000000000000000000000',
-        tokensAllocated: '1987654321098765432109876543',
-        provisionCount: 178,
-        allocationCount: 2847,
-        maxVerifierCut: 500000, // 50%
-        thawingPeriod: 2419200, // 28 days in seconds
-        registeredAt: 1700000000,
-        metadata: {
-          name: 'Subgraph Service',
-          description: 'Index and query subgraphs on The Graph Network',
-        },
-      },
-      {
-        id: '0x1234567890abcdef1234567890abcdef12345679', // Substreams (hypothetical)
-        tokensProvisioned: '150000000000000000000000000',
-        tokensAllocated: '100000000000000000000000000',
-        provisionCount: 42,
-        allocationCount: 156,
-        maxVerifierCut: 400000, // 40%
-        thawingPeriod: 1209600, // 14 days in seconds
-        registeredAt: 1710000000,
-        metadata: {
-          name: 'Substreams Service',
-          description: 'High-performance streaming data extraction',
-        },
-      },
-      {
-        id: '0xabcdef1234567890abcdef1234567890abcdef13', // Token API (hypothetical)
-        tokensProvisioned: '50000000000000000000000000',
-        tokensAllocated: '35000000000000000000000000',
-        provisionCount: 15,
-        allocationCount: 45,
-        maxVerifierCut: 300000, // 30%
-        thawingPeriod: 604800, // 7 days in seconds
-        registeredAt: 1715000000,
-        metadata: {
-          name: 'Token API Service',
-          description: 'Real-time token data and analytics API',
-        },
+        id: '0xb2Bb92d0DE618878E438b55D5846cfecD9301105',
+        totalTokensProvisioned: '2500000000000000000000000000',
+        totalTokensAllocated: '1987654321098765432109876543',
+        totalTokensThawing: '100000000000000000000000000',
+        totalTokensDelegated: '500000000000000000000000000',
+        minimumProvisionTokens: '100000000000000000000000',
+        maximumVerifierCut: '1000000',
+        minimumVerifierCut: '0',
+        minimumThawingPeriod: '0',
+        maximumThawingPeriod: '18446744073709551615',
+        delegationRatio: 16,
+        curationCut: '100000',
       },
     ],
   },
@@ -214,54 +186,20 @@ const MOCK_INDEXER_PROVISIONS = {
     provisions: [
       {
         id: '0x1234567890abcdef1234567890abcdef12345678-0xb2Bb92d0DE618878E438b55D5846cfecD9301105',
-        tokens: '4500000000000000000000000',
+        tokensProvisioned: '4500000000000000000000000',
+        tokensAllocated: '4000000000000000000000000',
         tokensThawing: '500000000000000000000000',
-        sharesThawing: '490000000000000000000000',
-        maxVerifierCut: 100000, // 10%
-        thawingPeriod: 2419200,
-        createdAt: 1700500000,
+        maxVerifierCut: '100000',
+        thawingPeriod: '2419200',
+        createdAt: '1700500000',
+        allocationCount: 15,
         dataService: {
           id: '0xb2Bb92d0DE618878E438b55D5846cfecD9301105',
-          metadata: {
-            name: 'Subgraph Service',
-            description: 'Index and query subgraphs on The Graph Network',
-          },
-          tokensProvisioned: '2500000000000000000000000000',
-          tokensAllocated: '1987654321098765432109876543',
-          thawingPeriod: 2419200,
+          totalTokensProvisioned: '2500000000000000000000000000',
+          totalTokensAllocated: '1987654321098765432109876543',
+          minimumThawingPeriod: '0',
+          maximumThawingPeriod: '18446744073709551615',
         },
-        thawRequests: [
-          {
-            id: 'thaw-1',
-            shares: '250000000000000000000000',
-            thawEndTimestamp: Math.floor(Date.now() / 1000) + 86400 * 14, // 14 days from now
-          },
-          {
-            id: 'thaw-2',
-            shares: '250000000000000000000000',
-            thawEndTimestamp: Math.floor(Date.now() / 1000) + 86400 * 21, // 21 days from now
-          },
-        ],
-      },
-      {
-        id: '0x1234567890abcdef1234567890abcdef12345678-0x1234567890abcdef1234567890abcdef12345679',
-        tokens: '500000000000000000000000',
-        tokensThawing: '0',
-        sharesThawing: '0',
-        maxVerifierCut: 80000, // 8%
-        thawingPeriod: 1209600,
-        createdAt: 1712000000,
-        dataService: {
-          id: '0x1234567890abcdef1234567890abcdef12345679',
-          metadata: {
-            name: 'Substreams Service',
-            description: 'High-performance streaming data extraction',
-          },
-          tokensProvisioned: '150000000000000000000000000',
-          tokensAllocated: '100000000000000000000000000',
-          thawingPeriod: 1209600,
-        },
-        thawRequests: [],
       },
     ],
   },
@@ -272,10 +210,13 @@ const MOCK_SERVICE_PROVISIONS = {
   data: {
     provisions: namedIndexers.map((indexer, i) => ({
       id: `${indexer.id}-0xb2Bb92d0DE618878E438b55D5846cfecD9301105`,
-      tokens: String(BigInt(indexer.stakedTokens) * BigInt(90) / BigInt(100)),
+      tokensProvisioned: String(BigInt(indexer.stakedTokens) * BigInt(90) / BigInt(100)),
+      tokensAllocated: String(BigInt(indexer.stakedTokens) * BigInt(80) / BigInt(100)),
       tokensThawing: i === 0 ? '500000000000000000000000' : '0',
-      maxVerifierCut: indexer.indexingRewardCut,
-      createdAt: indexer.createdAt + 100000,
+      maxVerifierCut: String(indexer.indexingRewardCut),
+      thawingPeriod: '2419200',
+      createdAt: String(indexer.createdAt + 100000),
+      allocationCount: 10 + i,
       indexer: {
         id: indexer.id,
         account: indexer.account,

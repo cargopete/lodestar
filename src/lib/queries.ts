@@ -475,120 +475,22 @@ export interface IndexersResponse {
 /**
  * Data services registered in the protocol
  */
-export const DATA_SERVICES_QUERY = gql`
-  query DataServices($first: Int!) {
-    dataServices(first: $first, orderBy: tokensProvisioned, orderDirection: desc) {
-      id
-      tokensProvisioned
-      tokensAllocated
-      provisionCount
-      allocationCount
-      maxVerifierCut
-      thawingPeriod
-      registeredAt
-      metadata {
-        name
-        description
-      }
-    }
-  }
-`;
+// DATA_SERVICES_QUERY - use inline fetch in api.ts instead of gql tagged template
 
 /**
  * Provisions for a specific indexer (all services)
  */
-export const INDEXER_PROVISIONS_QUERY = gql`
-  query IndexerProvisions($indexer: String!) {
-    provisions(
-      where: { indexer: $indexer }
-      orderBy: tokens
-      orderDirection: desc
-    ) {
-      id
-      tokens
-      tokensThawing
-      sharesThawing
-      maxVerifierCut
-      thawingPeriod
-      createdAt
-      dataService {
-        id
-        metadata {
-          name
-          description
-        }
-        tokensProvisioned
-        tokensAllocated
-        thawingPeriod
-      }
-      thawRequests(first: 10, orderBy: thawEndTimestamp, orderDirection: asc) {
-        id
-        shares
-        thawEndTimestamp
-      }
-    }
-  }
-`;
+// INDEXER_PROVISIONS_QUERY - use inline fetch in api.ts instead of gql tagged template
 
 /**
  * All provisions for a data service
  */
-export const SERVICE_PROVISIONS_QUERY = gql`
-  query ServiceProvisions($dataService: String!, $first: Int!, $skip: Int!) {
-    provisions(
-      where: { dataService: $dataService }
-      first: $first
-      skip: $skip
-      orderBy: tokens
-      orderDirection: desc
-    ) {
-      id
-      tokens
-      tokensThawing
-      maxVerifierCut
-      createdAt
-      indexer {
-        id
-        account {
-          defaultDisplayName
-          metadata {
-            displayName
-            description
-          }
-        }
-        stakedTokens
-        delegatedTokens
-      }
-    }
-  }
-`;
+// SERVICE_PROVISIONS_QUERY - use inline fetch in api.ts instead of gql tagged template
 
 /**
  * Provision thaw requests
  */
-export const THAW_REQUESTS_QUERY = gql`
-  query ThawRequests($provision: String!) {
-    thawRequests(
-      where: { provision: $provision }
-      orderBy: thawEndTimestamp
-      orderDirection: asc
-    ) {
-      id
-      shares
-      thawEndTimestamp
-      provision {
-        id
-        tokens
-        dataService {
-          id
-          metadata {
-            name
-          }
-        }
-      }
-    }
-  }
-`;
+// THAW_REQUESTS_QUERY - use inline fetch in api.ts instead of gql tagged template
 
 // =============================================================================
 // HORIZON TYPES
@@ -758,24 +660,22 @@ export interface UndelegationRequestsResponse {
 /**
  * Data service metadata
  */
-export interface DataServiceMetadata {
-  name: string | null;
-  description: string | null;
-}
-
 /**
  * Data service entity (e.g., SubgraphService, Substreams)
  */
 export interface DataService {
   id: string;
-  tokensProvisioned: string;
-  tokensAllocated: string;
-  provisionCount: number;
-  allocationCount: number;
-  maxVerifierCut: number;
-  thawingPeriod: number;
-  registeredAt: number;
-  metadata: DataServiceMetadata | null;
+  totalTokensProvisioned: string;
+  totalTokensAllocated: string;
+  totalTokensThawing: string;
+  totalTokensDelegated: string;
+  minimumProvisionTokens: string;
+  maximumVerifierCut: string;
+  minimumVerifierCut: string;
+  minimumThawingPeriod: string;
+  maximumThawingPeriod: string;
+  delegationRatio: number | null;
+  curationCut: string;
 }
 
 /**
@@ -784,15 +684,10 @@ export interface DataService {
 export interface ThawRequest {
   id: string;
   shares: string;
-  thawEndTimestamp: number;
-  provision?: {
-    id: string;
-    tokens: string;
-    dataService: {
-      id: string;
-      metadata: DataServiceMetadata | null;
-    };
-  };
+  tokens: string;
+  thawingUntil: string;
+  type: string;
+  fulfilled: boolean;
 }
 
 /**
@@ -800,26 +695,26 @@ export interface ThawRequest {
  */
 export interface Provision {
   id: string;
-  tokens: string;
+  tokensProvisioned: string;
+  tokensAllocated: string;
   tokensThawing: string;
-  sharesThawing: string;
-  maxVerifierCut: number;
-  thawingPeriod: number;
-  createdAt: number;
+  maxVerifierCut: string;
+  thawingPeriod: string;
+  createdAt: string;
+  allocationCount: number;
   dataService: {
     id: string;
-    metadata: DataServiceMetadata | null;
-    tokensProvisioned: string;
-    tokensAllocated: string;
-    thawingPeriod: number;
+    totalTokensProvisioned: string;
+    totalTokensAllocated: string;
+    minimumThawingPeriod: string;
+    maximumThawingPeriod: string;
   };
-  thawRequests?: ThawRequest[];
 }
 
 /**
  * Provision with indexer info (for service directory)
  */
-export interface ProvisionWithIndexer extends Omit<Provision, 'dataService' | 'thawRequests'> {
+export interface ProvisionWithIndexer extends Omit<Provision, 'dataService'> {
   indexer: {
     id: string;
     account: {

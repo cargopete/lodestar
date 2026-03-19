@@ -7,19 +7,27 @@ import { ProgressBar } from './ProgressBar';
 import { weiToGRT, formatGRT, shortenAddress, cn } from '@/lib/utils';
 import type { Provision } from '@/lib/queries';
 
+// Known data service addresses → friendly names
+const SERVICE_NAMES: Record<string, string> = {
+  '0xb2bb92d0de618878e438b55d5846cfecd9301105': 'Subgraph Service',
+};
+
+function resolveServiceName(id: string): string {
+  return SERVICE_NAMES[id.toLowerCase()] || shortenAddress(id);
+}
+
 interface ProvisionsPanelProps {
   provisions: Provision[];
   isLoading?: boolean;
 }
 
 export function ProvisionsPanel({ provisions, isLoading }: ProvisionsPanelProps) {
-  // Calculate totals
   const totals = useMemo(() => {
     if (!provisions.length) return { provisioned: 0, thawing: 0, available: 0 };
 
     return provisions.reduce(
       (acc, p) => {
-        const tokens = weiToGRT(p.tokens);
+        const tokens = weiToGRT(p.tokensProvisioned);
         const thawing = weiToGRT(p.tokensThawing);
         return {
           provisioned: acc.provisioned + tokens,
@@ -113,19 +121,14 @@ interface ProvisionCardProps {
 }
 
 function ProvisionCard({ provision }: ProvisionCardProps) {
-  const tokens = weiToGRT(provision.tokens);
+  const tokens = weiToGRT(provision.tokensProvisioned);
   const thawing = weiToGRT(provision.tokensThawing);
   const available = tokens - thawing;
   const thawingPercent = tokens > 0 ? (thawing / tokens) * 100 : 0;
 
-  const serviceName = provision.dataService.metadata?.name || shortenAddress(provision.dataService.id);
-  const serviceTokens = weiToGRT(provision.dataService.tokensProvisioned);
+  const serviceName = resolveServiceName(provision.dataService.id);
+  const serviceTokens = weiToGRT(provision.dataService.totalTokensProvisioned);
   const sharePercent = serviceTokens > 0 ? (tokens / serviceTokens) * 100 : 0;
-
-  // Calculate thaw countdown
-  const thawRequests = provision.thawRequests || [];
-  const now = Math.floor(Date.now() / 1000);
-  const nextThaw = thawRequests.find((t) => t.thawEndTimestamp > now);
 
   return (
     <div className="p-4 rounded-lg border border-[var(--border)] hover:border-[var(--accent-hover)] transition-colors">
@@ -173,47 +176,10 @@ function ProvisionCard({ provision }: ProvisionCardProps) {
         <div className="p-2 rounded bg-[var(--bg-elevated)]">
           <p className="text-xs text-[var(--text-faint)]">Thaw Period</p>
           <p className="text-sm font-mono text-[var(--text)]">
-            {Math.round(provision.thawingPeriod / 86400)}d
+            {Math.round(Number(provision.thawingPeriod) / 86400)}d
           </p>
         </div>
       </div>
-
-      {/* Thaw requests */}
-      {thawRequests.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-[var(--border)]">
-          <p className="text-xs text-[var(--text-faint)] mb-2">
-            Active Thaw Requests ({thawRequests.length})
-          </p>
-          <div className="space-y-1">
-            {thawRequests.slice(0, 3).map((req) => {
-              const daysRemaining = Math.max(0, Math.ceil((req.thawEndTimestamp - now) / 86400));
-              return (
-                <div
-                  key={req.id}
-                  className="flex justify-between text-xs p-2 rounded bg-[var(--bg-elevated)]"
-                >
-                  <span className="text-[var(--text-muted)]">
-                    {formatGRT(weiToGRT(req.shares))} shares
-                  </span>
-                  <span
-                    className={cn(
-                      'font-mono',
-                      daysRemaining <= 3 ? 'text-[var(--green)]' : 'text-[var(--text)]'
-                    )}
-                  >
-                    {daysRemaining}d remaining
-                  </span>
-                </div>
-              );
-            })}
-            {thawRequests.length > 3 && (
-              <p className="text-xs text-[var(--text-faint)] text-center">
-                +{thawRequests.length - 3} more
-              </p>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
