@@ -1,0 +1,232 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from './Card';
+import { Badge } from './Badge';
+import { ProgressBar } from './ProgressBar';
+import { weiToGRT, formatGRT, formatPPM, cn } from '@/lib/utils';
+import {
+  calculateDelegationCapacity,
+  simulateNewDelegation,
+  calculateEstimatedAPR,
+} from '@/lib/rewards';
+
+interface EffectiveCutCalculatorProps {
+  indexer: {
+    id: string;
+    name: string;
+    stakedTokens: string;
+    delegatedTokens: string;
+    indexingRewardCut: number;
+    queryFeeCut: number;
+    delegatorParameterCooldown: number;
+    lastDelegationParameterUpdate: number;
+  };
+  delegationRatio?: number;
+  networkRewardsPerYear?: number;
+}
+
+export function EffectiveCutCalculator({
+  indexer,
+  delegationRatio = 16,
+  networkRewardsPerYear = 300000000, // 300M GRT annual issuance estimate
+}: EffectiveCutCalculatorProps) {
+  const [delegationAmount, setDelegationAmount] = useState<string>('10000');
+
+  const selfStake = weiToGRT(indexer.stakedTokens);
+  const currentDelegated = weiToGRT(indexer.delegatedTokens);
+  const newDelegation = parseFloat(delegationAmount) || 0;
+
+  // Calculate capacity
+  const capacity = useMemo(
+    () => calculateDelegationCapacity(selfStake, currentDelegated, delegationRatio),
+    [selfStake, currentDelegated, delegationRatio]
+  );
+
+  // Simulate new delegation impact
+  const simulation = useMemo(
+    () => simulateNewDelegation(indexer.indexingRewardCut, selfStake, currentDelegated, newDelegation),
+    [indexer.indexingRewardCut, selfStake, currentDelegated, newDelegation]
+  );
+
+  // Estimate indexer's share of network rewards (simplified)
+  const totalStake = selfStake + currentDelegated;
+  const indexerRewardsPerYear = (totalStake / 3000000000) * networkRewardsPerYear; // Assume 3B total staked
+
+  // Calculate estimated APR
+  const estimatedAPR = useMemo(
+    () =>
+      calculateEstimatedAPR(
+        indexerRewardsPerYear,
+        indexer.indexingRewardCut,
+        selfStake,
+        currentDelegated + newDelegation,
+        newDelegation || 1000 // Default to 1000 for display
+      ),
+    [indexerRewardsPerYear, indexer.indexingRewardCut, selfStake, currentDelegated, newDelegation]
+  );
+
+  // Check if parameters are locked (cooldown active)
+  const now = Math.floor(Date.now() / 1000);
+  const cooldownEnd = indexer.lastDelegationParameterUpdate + indexer.delegatorParameterCooldown;
+  const isLocked = cooldownEnd > now;
+  const lockDaysRemaining = isLocked ? Math.ceil((cooldownEnd - now) / 86400) : 0;
+
+  // Determine if capacity is available
+  const hasCapacity = capacity.availableCapacity >= newDelegation;
+  const wouldExceedCapacity = newDelegation > capacity.availableCapacity;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Delegation Calculator</CardTitle>
+          {isLocked && (
+            <Badge variant="success">
+              Locked {lockDaysRemaining}d
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Indexer summary */}
+        <div className="grid grid-cols-2 gap-4 mb-6 p-4 rounded-lg bg-[var(--bg-elevated)]">
+          <div>
+            <p className="text-xs text-[var(--text-faint)]">Self-Stake</p>
+            <p className="text-sm font-mono text-[var(--text)]">{formatGRT(selfStake)} GRT</p>
+          </div>
+          <div>
+            <p className="text-xs text-[var(--text-faint)]">Current Delegated</p>
+            <p className="text-sm font-mono text-[var(--text)]">{formatGRT(currentDelegated)} GRT</p>
+          </div>
+          <div>
+            <p className="text-xs text-[var(--text-faint)]">Protocol Cut</p>
+            <p className="text-sm font-mono text-[var(--text)]">{formatPPM(indexer.indexingRewardCut)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-[var(--text-faint)]">Query Fee Cut</p>
+            <p className="text-sm font-mono text-[var(--text)]">{formatPPM(indexer.queryFeeCut)}</p>
+          </div>
+        </div>
+
+        {/* Capacity indicator */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-[var(--text-muted)]">Delegation Capacity</span>
+            <span className="text-sm font-mono text-[var(--text)]">
+              {formatGRT(capacity.availableCapacity)} GRT available
+            </span>
+          </div>
+          <ProgressBar
+            value={capacity.utilizationPercent}
+            max={100}
+            variant={capacity.utilizationPercent > 90 ? 'orange' : 'teal'}
+            size="md"
+          />
+          <p className="text-xs text-[var(--text-faint)] mt-1">
+            {capacity.utilizationPercent.toFixed(1)}% utilized ({delegationRatio}x ratio)
+          </p>
+        </div>
+
+        {/* Input */}
+        <div className="mb-6">
+          <label className="block text-sm text-[var(--text-muted)] mb-2">
+            Delegation Amount (GRT)
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              value={delegationAmount}
+              onChange={(e) => setDelegationAmount(e.target.value)}
+              placeholder="10000"
+              className={cn(
+                'w-full px-4 py-3 text-lg font-mono rounded-lg',
+                'bg-[var(--bg-elevated)] border',
+                wouldExceedCapacity ? 'border-[var(--amber)]' : 'border-[var(--border)]',
+                'text-[var(--text)] placeholder:text-[var(--text-faint)]',
+                'focus:outline-none focus:border-[var(--accent)]'
+              )}
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-faint)]">
+              GRT
+            </span>
+          </div>
+          {wouldExceedCapacity && (
+            <p className="text-xs text-[var(--amber)] mt-1">
+              Exceeds available capacity by {formatGRT(newDelegation - capacity.availableCapacity)} GRT
+            </p>
+          )}
+        </div>
+
+        {/* Results */}
+        <div className="space-y-4">
+          {/* Estimated APR */}
+          <div className="p-4 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-hover)]">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-[var(--text-muted)]">Estimated APR</span>
+              <span className="text-2xl font-mono font-semibold text-[var(--accent)]">
+                {estimatedAPR.toFixed(2)}%
+              </span>
+            </div>
+            <p className="text-xs text-[var(--text-faint)] mt-1">
+              Based on current network rewards distribution
+            </p>
+          </div>
+
+          {/* Effective cut comparison */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
+              <p className="text-xs text-[var(--text-faint)]">Current Effective Cut</p>
+              <p className="text-lg font-mono text-[var(--text)]">
+                {simulation.currentEffectiveCut.toFixed(2)}%
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
+              <p className="text-xs text-[var(--text-faint)]">After Your Delegation</p>
+              <p className="text-lg font-mono text-[var(--text)]">
+                {simulation.newEffectiveCut.toFixed(2)}%
+              </p>
+              {simulation.cutChange !== 0 && (
+                <p className={cn(
+                  'text-xs font-mono',
+                  simulation.cutChange > 0 ? 'text-[var(--amber)]' : 'text-[var(--green)]'
+                )}>
+                  {simulation.cutChange > 0 ? '+' : ''}{simulation.cutChange.toFixed(2)}%
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Rewards breakdown */}
+          <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
+            <p className="text-sm text-[var(--text-muted)] mb-3">Annual Rewards Estimate</p>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-[var(--text-faint)]">Gross Rewards</span>
+                <span className="text-sm font-mono text-[var(--text)]">
+                  {formatGRT((newDelegation / (currentDelegated + newDelegation + selfStake)) * indexerRewardsPerYear)} GRT
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-[var(--text-faint)]">After Indexer Cut</span>
+                <span className="text-sm font-mono text-[var(--green)]">
+                  ~{formatGRT(newDelegation * (estimatedAPR / 100))} GRT
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Warning for high cuts */}
+        {indexer.indexingRewardCut > 200000 && (
+          <div className="mt-4 p-3 rounded-lg bg-[rgba(255,140,66,0.1)] border border-[var(--amber)]">
+            <p className="text-sm text-[var(--amber)]">
+              <strong>High reward cut:</strong> This indexer takes {formatPPM(indexer.indexingRewardCut)} of delegation rewards.
+              Consider comparing with other indexers.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

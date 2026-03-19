@@ -1,65 +1,200 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useNetworkStats, useGRTPrice, useTVL } from '@/hooks/useNetworkStats';
+import { weiToGRT, formatGRT, formatUSD, formatNumber, formatPPM, calculateEpochProgress } from '@/lib/utils';
+import { StatCard, StatGrid } from '@/components/ui/StatCard';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { HorizonParameters } from '@/components/ui/HorizonParameters';
+import { StakingTrendChart } from '@/components/charts/StakingTrendChart';
+import { RewardSplitDonut } from '@/components/charts/RewardSplitDonut';
+
+export default function ProtocolOverview() {
+  const { data: networkData, isLoading: networkLoading } = useNetworkStats();
+  const { data: priceData, isLoading: priceLoading } = useGRTPrice();
+  const { data: tvlData, isLoading: tvlLoading } = useTVL();
+
+  const network = networkData?.graphNetwork;
+
+  const totalStaked = network ? weiToGRT(network.totalTokensStaked) : 0;
+  const totalDelegated = network ? weiToGRT(network.totalDelegatedTokens) : 0;
+  const totalSignalled = network ? weiToGRT(network.totalTokensSignalled) : 0;
+  const totalAllocated = network ? weiToGRT(network.totalTokensAllocated) : 0;
+
+  // Calculate epoch progress from subgraph block data
+  const currentBlock = networkData?._meta?.block?.number ?? 0;
+  const epochStartBlock = network
+    ? network.lastLengthUpdateBlock +
+      (network.currentEpoch - network.lastLengthUpdateEpoch) * network.epochLength
+    : 0;
+  const epochProgress = network && currentBlock
+    ? calculateEpochProgress(currentBlock, epochStartBlock, network.epochLength)
+    : 0;
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="space-y-6">
+      {/* Stat cards row */}
+      <StatGrid>
+        <StatCard
+          label="Total Staked"
+          value={networkLoading ? '—' : `${formatGRT(totalStaked)} GRT`}
+          loading={networkLoading}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <StatCard
+          label="Total Delegated"
+          value={networkLoading ? '—' : `${formatGRT(totalDelegated)} GRT`}
+          loading={networkLoading}
+        />
+        <StatCard
+          label="Total Signalled"
+          value={networkLoading ? '—' : `${formatGRT(totalSignalled)} GRT`}
+          loading={networkLoading}
+        />
+        <StatCard
+          label="GRT Price"
+          value={priceLoading ? '—' : priceData?.price ? formatUSD(priceData.price, 4) : '—'}
+          delta={
+            priceData?.price && priceData.change24h != null
+              ? {
+                  value: `${priceData.change24h.toFixed(2)}%`,
+                  positive: priceData.change24h >= 0,
+                }
+              : undefined
+          }
+          loading={priceLoading}
+        />
+        <StatCard
+          label="Network TVL"
+          value={tvlLoading ? '—' : formatUSD(tvlData?.tvl ?? 0)}
+          loading={tvlLoading}
+        />
+      </StatGrid>
+
+      {/* Epoch progress */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-[var(--text-muted)]">Current Epoch</span>
+              <span className="text-lg font-mono font-semibold text-[var(--accent)]">
+                {network?.currentEpoch ?? '—'}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-[var(--text-muted)]">Epoch Length</span>
+              <span className="text-sm font-mono text-[var(--text)]">
+                {network?.epochLength ? formatNumber(network.epochLength) : '—'} blocks
+              </span>
+            </div>
+          </div>
+          <ProgressBar
+            value={epochProgress}
+            max={100}
+            label="Epoch Progress"
+            showValue
+            variant="accent"
+            size="lg"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <StakingTrendChart />
+        <RewardSplitDonut />
+      </div>
+
+      {/* Bottom panels */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Participant counts */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Network Participants</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-4 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
+                <p className="text-[13px] text-[var(--text-muted)]">Indexers</p>
+                <p className="text-xl font-mono font-semibold text-[var(--accent)] mt-1">
+                  {network?.stakedIndexersCount ?? '—'}
+                </p>
+                <p className="text-xs text-[var(--text-faint)] mt-0.5">
+                  {network?.indexerCount ?? '—'} total
+                </p>
+              </div>
+              <div className="p-4 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
+                <p className="text-[13px] text-[var(--text-muted)]">Delegators</p>
+                <p className="text-xl font-mono font-semibold text-[var(--green)] mt-1">
+                  {network?.activeDelegatorCount ? formatNumber(network.activeDelegatorCount) : '—'}
+                </p>
+              </div>
+              <div className="p-4 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
+                <p className="text-[13px] text-[var(--text-muted)]">Curators</p>
+                <p className="text-xl font-mono font-semibold text-[var(--amber)] mt-1">
+                  {network?.activeCuratorCount ? formatNumber(network.activeCuratorCount) : '—'}
+                </p>
+              </div>
+              <div className="p-4 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
+                <p className="text-[13px] text-[var(--text-muted)]">Active Subgraphs</p>
+                <p className="text-xl font-mono font-semibold text-[var(--text)] mt-1">
+                  {network?.activeSubgraphCount ? formatNumber(network.activeSubgraphCount) : '—'}
+                </p>
+                <p className="text-xs text-[var(--text-faint)] mt-0.5">
+                  {network?.subgraphCount ? formatNumber(network.subgraphCount) : '—'} total
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Protocol parameters */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Protocol Parameters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-0">
+              <div className="flex justify-between items-center py-3 border-b border-[var(--border)]">
+                <span className="text-[13px] text-[var(--text-muted)]">Delegation Ratio</span>
+                <span className="font-mono text-[var(--text)]">
+                  {network?.delegationRatio ?? '—'}x
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-[var(--border)]">
+                <span className="text-[13px] text-[var(--text-muted)]">Protocol Fee %</span>
+                <span className="font-mono text-[var(--text)]">
+                  {network?.protocolFeePercentage
+                    ? formatPPM(network.protocolFeePercentage)
+                    : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-[var(--border)]">
+                <span className="text-[13px] text-[var(--text-muted)]">Total Indexing Rewards</span>
+                <span className="font-mono text-[var(--text)]">
+                  {network?.totalIndexingRewards
+                    ? `${formatGRT(weiToGRT(network.totalIndexingRewards))} GRT`
+                    : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-[var(--border)]">
+                <span className="text-[13px] text-[var(--text-muted)]">Max Allocation Epochs</span>
+                <span className="font-mono text-[var(--text)]">
+                  {network?.maxAllocationEpochs ?? '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-3">
+                <span className="text-[13px] text-[var(--text-muted)]">Total Allocated</span>
+                <span className="font-mono text-[var(--text)]">
+                  {formatGRT(totalAllocated)} GRT
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Horizon Parameters */}
+      <HorizonParameters />
     </div>
   );
 }
