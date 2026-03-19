@@ -39,6 +39,11 @@
   /* Layout */
   --sidebar-width: 220px;
   --topbar-height: 48px;
+  --bottom-nav-height: 64px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --feed-width: 320px;
+  --feed-width-collapsed: 52px;
+  --feed-active-width: var(--feed-width);
 
   /* Radii */
   --radius-card: 10px;
@@ -137,4 +142,31 @@ body {
 ::selection {
   background: var(--accent-dim);
   color: var(--text);
+}
+
+/* Mobile drawer slide-up */
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out;
+}
+
+/* Line clamp utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Hide scrollbar for filter pills */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }

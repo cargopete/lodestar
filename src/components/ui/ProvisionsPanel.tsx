@@ -84,7 +84,7 @@ export function ProvisionsPanel({ provisions, isLoading }: ProvisionsPanelProps)
       </CardHeader>
       <CardContent>
         {/* Summary stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6 p-4 rounded-lg bg-[var(--bg-elevated)]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 p-4 rounded-lg bg-[var(--bg-elevated)]">
           <div className="text-center">
             <p className="text-xs text-[var(--text-faint)]">Total Provisioned</p>
             <p className="text-lg font-mono font-semibold text-[var(--text)]">

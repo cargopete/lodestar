@@ -203,7 +203,7 @@ function ServiceCard({ service, grtPrice, isSelected, onSelect }: ServiceCardPro
         </div>
 
         {/* Parameters */}
-        <div className="grid grid-cols-4 gap-2 text-center">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
           <div className="p-2 rounded bg-[var(--bg-elevated)]">
             <p className="text-xs text-[var(--text-faint)]">Min Thaw</p>
             <p className="text-sm font-mono text-[var(--text)]">{minThawDays}d</p>
@@ -268,7 +268,56 @@ function ServiceProvisionsPanel({ serviceId, grtPrice }: ServiceProvisionsPanelP
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        {/* Mobile cards */}
+        <div className="block md:hidden space-y-3">
+          {provisions.map((provision) => {
+            const tokens = weiToGRT(provision.tokensProvisioned);
+            const thawing = weiToGRT(provision.tokensThawing);
+            const selfStake = weiToGRT(provision.indexer.stakedTokens);
+            const delegated = weiToGRT(provision.indexer.delegatedTokens);
+            const totalStake = selfStake + delegated;
+            const indexerName = resolveIndexerName(provision.indexer.account, provision.indexer.id);
+
+            return (
+              <Link
+                key={provision.id}
+                href={`/indexers/${provision.indexer.id}`}
+                className="block p-4 rounded-lg border border-[var(--border)] hover:border-[var(--accent-hover)] transition-colors"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="font-medium text-[var(--text)]">{indexerName}</p>
+                    <p className="text-xs text-[var(--text-faint)] font-mono">
+                      {shortenAddress(provision.indexer.id)}
+                    </p>
+                  </div>
+                  <p className="font-mono text-[var(--text)] text-sm">{formatGRT(tokens)} GRT</p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded bg-[var(--bg-elevated)]">
+                    <p className="text-[10px] text-[var(--text-faint)]">Thawing</p>
+                    <p className={cn('text-xs font-mono', thawing > 0 ? 'text-[var(--amber)]' : 'text-[var(--text-faint)]')}>
+                      {thawing > 0 ? formatGRT(thawing) : '-'}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded bg-[var(--bg-elevated)]">
+                    <p className="text-[10px] text-[var(--text-faint)]">Cut</p>
+                    <p className="text-xs font-mono text-[var(--text)]">
+                      {(Number(provision.maxVerifierCut) / 10000).toFixed(1)}%
+                    </p>
+                  </div>
+                  <div className="p-2 rounded bg-[var(--bg-elevated)]">
+                    <p className="text-[10px] text-[var(--text-faint)]">Total Stake</p>
+                    <p className="text-xs font-mono text-[var(--text)]">{formatGRT(totalStake)}</p>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border)]">

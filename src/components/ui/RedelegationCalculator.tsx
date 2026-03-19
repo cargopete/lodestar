@@ -282,7 +282,7 @@ export function RedelegationCalculator({
         {/* Projections */}
         <div className="mb-6">
           <h4 className="text-sm font-medium text-[var(--text)] mb-3">Net Gain Projections</h4>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               { label: '30 Days', value: result.netGain30Days },
               { label: '90 Days', value: result.netGain90Days },

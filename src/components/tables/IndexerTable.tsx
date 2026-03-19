@@ -299,8 +299,8 @@ export function IndexerTable() {
 
       <Card className="overflow-hidden">
         {/* Filters */}
-        <div className="p-4 border-b border-[var(--border)] flex flex-wrap gap-4 items-center">
-          <div className="flex-1 min-w-[200px]">
+        <div className="p-4 border-b border-[var(--border)] flex flex-wrap gap-3 md:gap-4 items-center">
+          <div className="flex-1 min-w-0 sm:min-w-[200px]">
             <input
               type="text"
               placeholder="Search by name or address..."
@@ -334,8 +334,61 @@ export function IndexerTable() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile card list */}
+        <div className="block md:hidden">
+          {isLoading ? (
+            <div className="p-4 space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-24 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
+              ))}
+            </div>
+          ) : (
+            <div className="p-3 space-y-2">
+              {table.getRowModel().rows.map((row) => {
+                const d = row.original;
+                return (
+                  <Link
+                    key={row.id}
+                    href={`/indexers/${d.address}`}
+                    className={cn(
+                      'block p-3 rounded-lg border transition-colors',
+                      row.getIsSelected()
+                        ? 'border-[var(--accent)] bg-[var(--accent-dim)]'
+                        : 'border-[var(--border)] hover:border-[var(--accent-hover)]'
+                    )}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="min-w-0 mr-2">
+                        <p className="font-medium text-[var(--text)] truncate">{d.name}</p>
+                        <p className="text-xs text-[var(--text-faint)] font-mono">{shortenAddress(d.address)}</p>
+                      </div>
+                      <p className="text-sm font-mono text-[var(--text)] flex-shrink-0">{formatGRT(d.selfStake)}</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
+                        <p className="text-[10px] text-[var(--text-faint)]">Delegated</p>
+                        <p className="text-xs font-mono text-[var(--green)]">{formatGRT(d.delegated)}</p>
+                      </div>
+                      <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
+                        <p className="text-[10px] text-[var(--text-faint)]">Cut</p>
+                        <p className="text-xs font-mono text-[var(--text)]">{formatPPM(d.rewardCut)}</p>
+                      </div>
+                      <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
+                        <p className="text-[10px] text-[var(--text-faint)]">Capacity</p>
+                        <p className={cn('text-xs font-mono', d.capacity > 90 ? 'text-[var(--amber)]' : 'text-[var(--text)]')}>
+                          {d.capacity.toFixed(0)}%
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[var(--bg-elevated)]">
               {table.getHeaderGroups().map((headerGroup) => (
@@ -400,34 +453,34 @@ export function IndexerTable() {
         {/* Pagination */}
         <div className="p-4 border-t border-[var(--border)] flex items-center justify-between">
           <div className="text-sm text-[var(--text-muted)]">
-            Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
+            <span className="hidden sm:inline">Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
             {Math.min(
               (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
               table.getFilteredRowModel().rows.length
             )}{' '}
-            of {table.getFilteredRowModel().rows.length} indexers
+            of </span>{table.getFilteredRowModel().rows.length} indexers
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
               className={cn(
-                'px-3 py-1 text-sm rounded-[var(--radius-button)]',
+                'px-3 py-1.5 text-sm rounded-[var(--radius-button)]',
                 'border border-[var(--border)]',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
                 'hover:bg-[var(--bg-elevated)] transition-colors'
               )}
             >
-              Previous
+              Prev
             </button>
             <span className="text-sm text-[var(--text-muted)]">
-              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+              {table.getState().pagination.pageIndex + 1}/{table.getPageCount()}
             </span>
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
               className={cn(
-                'px-3 py-1 text-sm rounded-[var(--radius-button)]',
+                'px-3 py-1.5 text-sm rounded-[var(--radius-button)]',
                 'border border-[var(--border)]',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
                 'hover:bg-[var(--bg-elevated)] transition-colors'

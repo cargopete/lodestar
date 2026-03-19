@@ -58,17 +58,17 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="fixed top-0 left-[var(--sidebar-width)] right-0 h-[var(--topbar-height)] bg-[var(--bg)] border-b-[0.5px] border-[var(--border)] z-20">
-      <div className="h-full px-6 flex items-center justify-between">
+    <header className="fixed top-0 left-0 md:left-[var(--sidebar-width)] right-0 h-[var(--topbar-height)] bg-[var(--bg)] border-b-[0.5px] border-[var(--border)] z-20">
+      <div className="h-full px-4 md:px-6 flex items-center justify-between">
         {/* Left side — page title */}
         <span className="text-[15px] font-medium text-[var(--text)]">
           {getPageTitle(pathname)}
         </span>
 
         {/* Right side */}
-        <div className="flex items-center gap-4">
-          {/* Chain pill */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-badge)] bg-[var(--bg-surface)]">
+        <div className="flex items-center gap-3 md:gap-4">
+          {/* Chain pill — hidden on mobile */}
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-badge)] bg-[var(--bg-surface)]">
             <div className="w-1.5 h-1.5 rounded-full bg-[var(--green)]" />
             <span className="text-[11px] font-mono text-[var(--text-muted)]">Arbitrum</span>
           </div>
@@ -99,9 +99,9 @@ export function Topbar() {
             )}
           </div>
 
-          {/* Epoch */}
+          {/* Epoch — hidden on mobile */}
           {currentEpoch && (
-            <span className="text-[11px] font-mono text-[var(--text-muted)]">
+            <span className="hidden md:inline text-[11px] font-mono text-[var(--text-muted)]">
               E{currentEpoch}
             </span>
           )}
@@ -162,7 +162,7 @@ export function Topbar() {
                   isPending && 'opacity-60 cursor-not-allowed'
                 )}
               >
-                {isPending ? 'Connecting...' : 'Connect Wallet'}
+                {isPending ? '...' : <><span className="md:hidden">Connect</span><span className="hidden md:inline">Connect Wallet</span></>}
               </button>
 
               {showConnectMenu && (
