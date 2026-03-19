@@ -19,6 +19,7 @@ import {
   formatGRT,
   formatPPM,
   shortenAddress,
+  resolveIndexerName,
   calculateCapacityUsed,
   cn,
 } from '@/lib/utils';
@@ -75,7 +76,7 @@ export function IndexerTable() {
 
         return {
           id: indexer.id,
-          name: indexer.account?.defaultDisplayName || shortenAddress(indexer.id),
+          name: resolveIndexerName(indexer.account, indexer.id),
           address: indexer.id,
           selfStake,
           delegated,

@@ -9,6 +9,7 @@ import {
   formatGRT,
   formatPPM,
   shortenAddress,
+  resolveIndexerName,
   formatRelativeTime,
   cn,
 } from '@/lib/utils';
@@ -81,7 +82,7 @@ function processIndexer(
 
   return {
     id: indexer.id,
-    name: indexer.account?.defaultDisplayName || shortenAddress(indexer.id),
+    name: resolveIndexerName(indexer.account, indexer.id),
     selfStake,
     delegated,
     delegationCapacity: capacity.utilizationPercent,
@@ -138,7 +139,7 @@ function IndexerSearch({ indexers, selected, onSelect, placeholder }: IndexerSea
   const selectedName = useMemo(() => {
     if (!selected) return null;
     const ix = indexers.find((i) => i.id === selected);
-    return ix?.account?.defaultDisplayName || shortenAddress(selected);
+    return resolveIndexerName(ix?.account, selected);
   }, [indexers, selected]);
 
   return (
@@ -175,7 +176,7 @@ function IndexerSearch({ indexers, selected, onSelect, placeholder }: IndexerSea
           </div>
           <div className="max-h-60 overflow-y-auto">
             {filtered.map((ix) => {
-              const name = ix.account?.defaultDisplayName || shortenAddress(ix.id);
+              const name = resolveIndexerName(ix.account, ix.id);
               return (
                 <button
                   key={ix.id}

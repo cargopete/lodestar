@@ -59,7 +59,7 @@ const MOCK_EPOCH_DATA = {
 
 interface MockIndexer {
   id: string;
-  account: { id: string; defaultDisplayName: string | null };
+  account: { id: string; defaultDisplayName: string | null; metadata: { displayName: string | null; description: string | null } | null };
   stakedTokens: string;
   delegatedTokens: string;
   allocatedTokens: string;
@@ -79,7 +79,7 @@ interface MockIndexer {
 const namedIndexers: MockIndexer[] = [
   {
     id: '0x1234567890abcdef1234567890abcdef12345678',
-    account: { id: '0x1234567890abcdef1234567890abcdef12345678', defaultDisplayName: 'GraphOps' },
+    account: { id: '0x1234567890abcdef1234567890abcdef12345678', defaultDisplayName: 'GraphOps', metadata: { displayName: null, description: 'GraphOps' } },
     stakedTokens: '5000000000000000000000000',
     delegatedTokens: '25000000000000000000000000',
     allocatedTokens: '20000000000000000000000000',
@@ -97,7 +97,7 @@ const namedIndexers: MockIndexer[] = [
   },
   {
     id: '0xabcdef1234567890abcdef1234567890abcdef12',
-    account: { id: '0xabcdef1234567890abcdef1234567890abcdef12', defaultDisplayName: 'Stake.fish' },
+    account: { id: '0xabcdef1234567890abcdef1234567890abcdef12', defaultDisplayName: 'Stake.fish', metadata: { displayName: null, description: 'Stake.fish' } },
     stakedTokens: '4500000000000000000000000',
     delegatedTokens: '18000000000000000000000000',
     allocatedTokens: '15000000000000000000000000',
@@ -115,7 +115,7 @@ const namedIndexers: MockIndexer[] = [
   },
   {
     id: '0x9876543210fedcba9876543210fedcba98765432',
-    account: { id: '0x9876543210fedcba9876543210fedcba98765432', defaultDisplayName: 'P2P.org' },
+    account: { id: '0x9876543210fedcba9876543210fedcba98765432', defaultDisplayName: 'P2P.org', metadata: { displayName: null, description: 'P2P.org' } },
     stakedTokens: '3800000000000000000000000',
     delegatedTokens: '15000000000000000000000000',
     allocatedTokens: '12000000000000000000000000',
@@ -135,7 +135,7 @@ const namedIndexers: MockIndexer[] = [
 
 const generatedIndexers: MockIndexer[] = Array.from({ length: 47 }, (_, i) => ({
   id: `0x${(i + 4).toString(16).padStart(40, '0')}`,
-  account: { id: `0x${(i + 4).toString(16).padStart(40, '0')}`, defaultDisplayName: null },
+  account: { id: `0x${(i + 4).toString(16).padStart(40, '0')}`, defaultDisplayName: null, metadata: null },
   stakedTokens: String(BigInt(3000000 - i * 50000) * BigInt(10 ** 18)),
   delegatedTokens: String(BigInt(10000000 - i * 150000) * BigInt(10 ** 18)),
   allocatedTokens: String(BigInt(8000000 - i * 100000) * BigInt(10 ** 18)),
@@ -381,6 +381,7 @@ export async function POST(request: NextRequest) {
                   account: {
                     id: '0x1234567890abcdef1234567890abcdef12345678',
                     defaultDisplayName: 'GraphOps',
+                    metadata: { displayName: null, description: 'GraphOps' },
                   },
                   stakedTokens: '5000000000000000000000000',
                   delegatedTokens: '25000000000000000000000000',
@@ -406,6 +407,7 @@ export async function POST(request: NextRequest) {
                   account: {
                     id: '0xabcdef1234567890abcdef1234567890abcdef12',
                     defaultDisplayName: 'Stake.fish',
+                    metadata: { displayName: null, description: 'Stake.fish' },
                   },
                   stakedTokens: '4500000000000000000000000',
                   delegatedTokens: '18000000000000000000000000',
@@ -504,6 +506,7 @@ export async function POST(request: NextRequest) {
             account: {
               id: '0x1234567890abcdef1234567890abcdef12345678',
               defaultDisplayName: 'GraphOps',
+              metadata: { displayName: null, description: 'GraphOps' },
             },
             stakedTokens: '5000000000000000000000000',
             delegatedTokens: '25000000000000000000000000',

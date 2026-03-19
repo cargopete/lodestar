@@ -17,6 +17,7 @@ import {
   formatUSD,
   formatPPM,
   shortenAddress,
+  resolveIndexerName,
   cn,
 } from '@/lib/utils';
 import {
@@ -109,7 +110,7 @@ function getPositionInsight(
       // Assume delegation ratio of 16
       const capacity = Math.max(selfStake * 16 - delegated, 0);
       return {
-        name: idx.account?.defaultDisplayName || shortenAddress(idx.id),
+        name: resolveIndexerName(idx.account, idx.id),
         address: idx.id,
         apr,
         availableCapacity: capacity,
@@ -331,7 +332,7 @@ export default function DelegatorPortfolioPage({
               </thead>
               <tbody>
                 {positions.map((pos) => {
-                  const indexerName = pos.stake.indexer.account?.defaultDisplayName || shortenAddress(pos.stake.indexer.id);
+                  const indexerName = resolveIndexerName(pos.stake.indexer.account, pos.stake.indexer.id);
                   const isThawing = weiToGRT(pos.stake.lockedTokens) > 0;
 
                   return (
@@ -418,7 +419,7 @@ export default function DelegatorPortfolioPage({
               .filter((p) => p.insight !== null)
               .map((pos) => {
                 const insight = pos.insight!;
-                const indexerName = pos.stake.indexer.account?.defaultDisplayName || shortenAddress(pos.stake.indexer.id);
+                const indexerName = resolveIndexerName(pos.stake.indexer.account, pos.stake.indexer.id);
 
                 return (
                   <div

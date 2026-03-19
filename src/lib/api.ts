@@ -147,6 +147,10 @@ export async function fetchIndexers(params: {
         account {
           id
           defaultDisplayName
+          metadata {
+            displayName
+            description
+          }
         }
         stakedTokens
         delegatedTokens

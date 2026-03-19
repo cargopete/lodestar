@@ -72,6 +72,10 @@ export const INDEXERS_QUERY = gql`
       account {
         id
         defaultDisplayName
+        metadata {
+          displayName
+          description
+        }
       }
       stakedTokens
       delegatedTokens
@@ -100,6 +104,10 @@ export const INDEXER_DETAILS_QUERY = gql`
       account {
         id
         defaultDisplayName
+        metadata {
+          displayName
+          description
+        }
       }
       stakedTokens
       delegatedTokens
@@ -148,6 +156,10 @@ export const SEARCH_INDEXERS_QUERY = gql`
       account {
         id
         defaultDisplayName
+        metadata {
+          displayName
+          description
+        }
       }
       stakedTokens
       delegatedTokens
@@ -175,6 +187,10 @@ export const INDEXERS_HORIZON_QUERY = gql`
       account {
         id
         defaultDisplayName
+        metadata {
+          displayName
+          description
+        }
       }
       # Core staking
       stakedTokens
@@ -230,6 +246,10 @@ export const DELEGATOR_PORTFOLIO_QUERY = gql`
           account {
             id
             defaultDisplayName
+            metadata {
+              displayName
+              description
+            }
           }
           stakedTokens
           delegatedTokens
@@ -264,6 +284,10 @@ export const UNDELEGATION_REQUESTS_QUERY = gql`
         id
         account {
           defaultDisplayName
+          metadata {
+            displayName
+            description
+          }
         }
       }
     }
@@ -402,9 +426,15 @@ export interface Epoch {
   totalDelegatorRewards: string;
 }
 
+export interface AccountMetadata {
+  displayName?: string | null;
+  description?: string | null;
+}
+
 export interface IndexerAccount {
   id: string;
   defaultDisplayName?: string | null;
+  metadata?: AccountMetadata | null;
 }
 
 export interface Indexer {
@@ -526,6 +556,10 @@ export const SERVICE_PROVISIONS_QUERY = gql`
         id
         account {
           defaultDisplayName
+          metadata {
+            displayName
+            description
+          }
         }
         stakedTokens
         delegatedTokens
@@ -625,6 +659,7 @@ export interface UndelegationRequest {
     id: string;
     account: {
       defaultDisplayName?: string | null;
+      metadata?: AccountMetadata | null;
     };
   };
 }
@@ -798,6 +833,7 @@ export interface ProvisionWithIndexer extends Omit<Provision, 'dataService' | 't
     id: string;
     account: {
       defaultDisplayName?: string | null;
+      metadata?: AccountMetadata | null;
     };
     stakedTokens: string;
     delegatedTokens: string;

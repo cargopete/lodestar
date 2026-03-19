@@ -3,7 +3,7 @@
 import { useIndexers } from '@/hooks/useNetworkStats';
 import { useGRTPrice } from '@/hooks/useNetworkStats';
 import { RedelegationPage } from '@/components/ui/RedelegationCalculator';
-import { weiToGRT, shortenAddress } from '@/lib/utils';
+import { weiToGRT, shortenAddress, resolveIndexerName } from '@/lib/utils';
 import type { Indexer } from '@/lib/queries';
 
 export default function CalculatorPage() {
@@ -26,7 +26,7 @@ export default function CalculatorPage() {
 
   const indexers = (indexersData?.indexers || []).map((indexer: Indexer) => ({
     id: indexer.id,
-    name: indexer.account?.defaultDisplayName || shortenAddress(indexer.id),
+    name: resolveIndexerName(indexer.account, indexer.id),
     stakedTokens: indexer.stakedTokens,
     delegatedTokens: indexer.delegatedTokens,
     indexingRewardCut: indexer.indexingRewardCut,

@@ -19,6 +19,7 @@ import {
   formatUSD,
   formatPPM,
   shortenAddress,
+  resolveIndexerName,
   cn,
 } from '@/lib/utils';
 import {
@@ -100,7 +101,7 @@ function DelegationCard({
   const lockedGRT = weiToGRT(stake.lockedTokens);
   const realizedGRT = weiToGRT(stake.realizedRewards);
   const indexer = stake.indexer;
-  const indexerName = indexer.account?.defaultDisplayName || shortenAddress(indexer.id);
+  const indexerName = resolveIndexerName(indexer.account, indexer.id);
 
   // Calculate unrealized rewards
   const unrealizedGRT = calculateUnrealizedRewards(
@@ -239,7 +240,7 @@ export default function ProfilePage() {
       unrealized += unrealizedGRT;
 
       data.push({
-        indexerName: stake.indexer.account?.defaultDisplayName || shortenAddress(stake.indexer.id),
+        indexerName: resolveIndexerName(stake.indexer.account, stake.indexer.id),
         indexerAddress: stake.indexer.id,
         stakedTokens: stakedGRT,
         realizedRewards: realizedGRT,

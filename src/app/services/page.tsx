@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
-import { weiToGRT, formatGRT, formatUSD, shortenAddress, cn } from '@/lib/utils';
+import { weiToGRT, formatGRT, formatUSD, shortenAddress, resolveIndexerName, cn } from '@/lib/utils';
 import type { DataService, ProvisionWithIndexer } from '@/lib/queries';
 
 export default function ServicesPage() {
@@ -284,9 +284,7 @@ function ServiceProvisionsPanel({ serviceId, grtPrice }: ServiceProvisionsPanelP
                 const selfStake = weiToGRT(provision.indexer.stakedTokens);
                 const delegated = weiToGRT(provision.indexer.delegatedTokens);
                 const totalStake = selfStake + delegated;
-                const indexerName =
-                  provision.indexer.account.defaultDisplayName ||
-                  shortenAddress(provision.indexer.id);
+                const indexerName = resolveIndexerName(provision.indexer.account, provision.indexer.id);
 
                 return (
                   <tr key={provision.id} className="hover:bg-[var(--bg-elevated)]">

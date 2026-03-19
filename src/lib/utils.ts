@@ -80,6 +80,28 @@ export function shortenAddress(address: string, chars = 4): string {
 }
 
 /**
+ * Resolve indexer display name from account data
+ * Priority: defaultDisplayName > metadata.displayName > first line of metadata.description > shortened address
+ */
+export function resolveIndexerName(
+  account: { defaultDisplayName?: string | null; metadata?: { displayName?: string | null; description?: string | null } | null } | null | undefined,
+  address: string
+): string {
+  if (account?.defaultDisplayName) return account.defaultDisplayName;
+  if (account?.metadata?.displayName) return account.metadata.displayName;
+  if (account?.metadata?.description) {
+    // Use description but truncate to a reasonable name length
+    const desc = account.metadata.description;
+    // Take first sentence or first 40 chars, whichever is shorter
+    const firstSentence = desc.split(/[.!,\-–—]/).filter(Boolean)[0]?.trim();
+    if (firstSentence && firstSentence.length <= 40) return firstSentence;
+    if (desc.length <= 40) return desc;
+    return desc.slice(0, 37) + '...';
+  }
+  return shortenAddress(address);
+}
+
+/**
  * Calculate epoch progress percentage
  */
 export function calculateEpochProgress(

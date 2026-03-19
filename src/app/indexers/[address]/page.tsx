@@ -12,6 +12,7 @@ import {
   formatUSD,
   formatPPM,
   shortenAddress,
+  resolveIndexerName,
   cn,
 } from '@/lib/utils';
 import { calculateDelegationCapacity } from '@/lib/rewards';
@@ -30,6 +31,7 @@ interface IndexerDetailsResponse {
     account: {
       id: string;
       defaultDisplayName: string | null;
+      metadata?: { displayName?: string | null; description?: string | null } | null;
     };
     stakedTokens: string;
     delegatedTokens: string;
@@ -118,7 +120,7 @@ export default function IndexerDetailPage({
     );
   }
 
-  const name = indexer.account?.defaultDisplayName || shortenAddress(indexer.id);
+  const name = resolveIndexerName(indexer.account, indexer.id);
   const selfStake = weiToGRT(indexer.stakedTokens);
   const delegated = weiToGRT(indexer.delegatedTokens);
   const allocated = weiToGRT(indexer.allocatedTokens);
