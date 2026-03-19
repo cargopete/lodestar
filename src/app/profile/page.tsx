@@ -100,7 +100,7 @@ function DelegationCard({
   const lockedGRT = weiToGRT(stake.lockedTokens);
   const realizedGRT = weiToGRT(stake.realizedRewards);
   const indexer = stake.indexer;
-  const indexerName = indexer.account?.defaultName?.name || shortenAddress(indexer.id);
+  const indexerName = indexer.account?.defaultDisplayName || shortenAddress(indexer.id);
 
   // Calculate unrealized rewards
   const unrealizedGRT = calculateUnrealizedRewards(
@@ -239,7 +239,7 @@ export default function ProfilePage() {
       unrealized += unrealizedGRT;
 
       data.push({
-        indexerName: stake.indexer.account?.defaultName?.name || shortenAddress(stake.indexer.id),
+        indexerName: stake.indexer.account?.defaultDisplayName || shortenAddress(stake.indexer.id),
         indexerAddress: stake.indexer.id,
         stakedTokens: stakedGRT,
         realizedRewards: realizedGRT,

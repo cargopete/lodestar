@@ -29,7 +29,7 @@ interface IndexerDetailsResponse {
     id: string;
     account: {
       id: string;
-      defaultName: { id: string; name: string } | null;
+      defaultDisplayName: string | null;
     };
     stakedTokens: string;
     delegatedTokens: string;
@@ -118,7 +118,7 @@ export default function IndexerDetailPage({
     );
   }
 
-  const name = indexer.account?.defaultName?.name || shortenAddress(indexer.id);
+  const name = indexer.account?.defaultDisplayName || shortenAddress(indexer.id);
   const selfStake = weiToGRT(indexer.stakedTokens);
   const delegated = weiToGRT(indexer.delegatedTokens);
   const allocated = weiToGRT(indexer.allocatedTokens);

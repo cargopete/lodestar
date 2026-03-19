@@ -81,7 +81,7 @@ function processIndexer(
 
   return {
     id: indexer.id,
-    name: indexer.account?.defaultName?.name || shortenAddress(indexer.id),
+    name: indexer.account?.defaultDisplayName || shortenAddress(indexer.id),
     selfStake,
     delegated,
     delegationCapacity: capacity.utilizationPercent,
@@ -131,14 +131,14 @@ function IndexerSearch({ indexers, selected, onSelect, placeholder }: IndexerSea
     return indexers.filter(
       (ix) =>
         ix.id.toLowerCase().includes(q) ||
-        (ix.account?.defaultName?.name ?? '').toLowerCase().includes(q),
+        (ix.account?.defaultDisplayName ?? '').toLowerCase().includes(q),
     ).slice(0, 20);
   }, [indexers, query]);
 
   const selectedName = useMemo(() => {
     if (!selected) return null;
     const ix = indexers.find((i) => i.id === selected);
-    return ix?.account?.defaultName?.name || shortenAddress(selected);
+    return ix?.account?.defaultDisplayName || shortenAddress(selected);
   }, [indexers, selected]);
 
   return (
@@ -175,7 +175,7 @@ function IndexerSearch({ indexers, selected, onSelect, placeholder }: IndexerSea
           </div>
           <div className="max-h-60 overflow-y-auto">
             {filtered.map((ix) => {
-              const name = ix.account?.defaultName?.name || shortenAddress(ix.id);
+              const name = ix.account?.defaultDisplayName || shortenAddress(ix.id);
               return (
                 <button
                   key={ix.id}

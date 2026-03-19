@@ -26,7 +26,7 @@ export default function CalculatorPage() {
 
   const indexers = (indexersData?.indexers || []).map((indexer: Indexer) => ({
     id: indexer.id,
-    name: indexer.account?.defaultName?.name || shortenAddress(indexer.id),
+    name: indexer.account?.defaultDisplayName || shortenAddress(indexer.id),
     stakedTokens: indexer.stakedTokens,
     delegatedTokens: indexer.delegatedTokens,
     indexingRewardCut: indexer.indexingRewardCut,

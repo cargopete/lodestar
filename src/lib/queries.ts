@@ -71,10 +71,7 @@ export const INDEXERS_QUERY = gql`
       id
       account {
         id
-        defaultName {
-          id
-          name
-        }
+        defaultDisplayName
       }
       stakedTokens
       delegatedTokens
@@ -102,10 +99,7 @@ export const INDEXER_DETAILS_QUERY = gql`
       id
       account {
         id
-        defaultName {
-          id
-          name
-        }
+        defaultDisplayName
       }
       stakedTokens
       delegatedTokens
@@ -153,10 +147,7 @@ export const SEARCH_INDEXERS_QUERY = gql`
       id
       account {
         id
-        defaultName {
-          id
-          name
-        }
+        defaultDisplayName
       }
       stakedTokens
       delegatedTokens
@@ -183,10 +174,7 @@ export const INDEXERS_HORIZON_QUERY = gql`
       id
       account {
         id
-        defaultName {
-          id
-          name
-        }
+        defaultDisplayName
       }
       # Core staking
       stakedTokens
@@ -241,10 +229,7 @@ export const DELEGATOR_PORTFOLIO_QUERY = gql`
           id
           account {
             id
-            defaultName {
-              id
-              name
-            }
+            defaultDisplayName
           }
           stakedTokens
           delegatedTokens
@@ -278,9 +263,7 @@ export const UNDELEGATION_REQUESTS_QUERY = gql`
       indexer {
         id
         account {
-          defaultName {
-            name
-          }
+          defaultDisplayName
         }
       }
     }
@@ -421,10 +404,7 @@ export interface Epoch {
 
 export interface IndexerAccount {
   id: string;
-  defaultName?: {
-    id: string;
-    name: string;
-  } | null;
+  defaultDisplayName?: string | null;
 }
 
 export interface Indexer {
@@ -545,9 +525,7 @@ export const SERVICE_PROVISIONS_QUERY = gql`
       indexer {
         id
         account {
-          defaultName {
-            name
-          }
+          defaultDisplayName
         }
         stakedTokens
         delegatedTokens
@@ -646,9 +624,7 @@ export interface UndelegationRequest {
   indexer: {
     id: string;
     account: {
-      defaultName: {
-        name: string;
-      } | null;
+      defaultDisplayName?: string | null;
     };
   };
 }
@@ -821,9 +797,7 @@ export interface ProvisionWithIndexer extends Omit<Provision, 'dataService' | 't
   indexer: {
     id: string;
     account: {
-      defaultName: {
-        name: string;
-      } | null;
+      defaultDisplayName?: string | null;
     };
     stakedTokens: string;
     delegatedTokens: string;

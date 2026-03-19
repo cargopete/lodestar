@@ -285,7 +285,7 @@ function ServiceProvisionsPanel({ serviceId, grtPrice }: ServiceProvisionsPanelP
                 const delegated = weiToGRT(provision.indexer.delegatedTokens);
                 const totalStake = selfStake + delegated;
                 const indexerName =
-                  provision.indexer.account.defaultName?.name ||
+                  provision.indexer.account.defaultDisplayName ||
                   shortenAddress(provision.indexer.id);
 
                 return (

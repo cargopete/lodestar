@@ -75,7 +75,7 @@ export function IndexerTable() {
 
         return {
           id: indexer.id,
-          name: indexer.account?.defaultName?.name || shortenAddress(indexer.id),
+          name: indexer.account?.defaultDisplayName || shortenAddress(indexer.id),
           address: indexer.id,
           selfStake,
           delegated,

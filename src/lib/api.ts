@@ -146,10 +146,7 @@ export async function fetchIndexers(params: {
         id
         account {
           id
-          defaultName {
-            id
-            name
-          }
+          defaultDisplayName
         }
         stakedTokens
         delegatedTokens
