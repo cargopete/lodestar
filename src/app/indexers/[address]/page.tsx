@@ -218,23 +218,23 @@ export default function IndexerDetailPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           {/* Avatar */}
-          <div className="w-16 h-16 rounded-xl bg-[var(--accent-dim)] flex items-center justify-center">
-            <span className="text-2xl font-bold text-[var(--accent)]">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0">
+            <span className="text-xl sm:text-2xl font-bold text-[var(--accent)]">
               {name.slice(0, 2).toUpperCase()}
             </span>
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-[var(--text)]">{name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-semibold text-[var(--text)] truncate">{name}</h1>
             <div className="flex items-center gap-2 mt-1">
-              <p className="text-sm text-[var(--text-faint)] font-mono">{indexer.id}</p>
+              <p className="text-xs sm:text-sm text-[var(--text-faint)] font-mono truncate">{indexer.id}</p>
               <a
                 href={`https://arbiscan.io/address/${indexer.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--accent)] hover:underline"
+                className="text-[var(--accent)] hover:underline flex-shrink-0"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -243,7 +243,7 @@ export default function IndexerDetailPage({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
           {indexer.url && (
             <a
               href={indexer.url}

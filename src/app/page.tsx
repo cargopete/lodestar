@@ -65,7 +65,7 @@ export default function ProtocolOverview() {
       {/* Epoch progress */}
       <Card>
         <CardContent className="py-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-3">
             <div className="flex items-center gap-3">
               <span className="text-sm text-[var(--text-muted)]">Current Epoch</span>
               <span className="text-lg font-mono font-semibold text-[var(--accent)]">
