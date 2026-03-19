@@ -2,8 +2,6 @@
 
 import { use } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { GraphQLClient } from 'graphql-request';
-import { INDEXER_DETAILS_QUERY } from '@/lib/queries';
 import { useGRTPrice, useNetworkStats, useIndexerProvisions } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
@@ -23,55 +21,99 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { EffectiveCutCalculator } from '@/components/ui/EffectiveCutCalculator';
 import { ProvisionsPanel } from '@/components/ui/ProvisionsPanel';
 
-const client = new GraphQLClient('/api/subgraph');
-
-interface IndexerDetailsResponse {
-  indexer: {
+interface IndexerDetail {
+  id: string;
+  account: {
     id: string;
-    account: {
-      id: string;
-      defaultDisplayName: string | null;
-      metadata?: { displayName?: string | null; description?: string | null } | null;
-    };
-    stakedTokens: string;
-    delegatedTokens: string;
+    defaultDisplayName: string | null;
+    metadata?: { displayName?: string | null; description?: string | null } | null;
+  };
+  stakedTokens: string;
+  delegatedTokens: string;
+  allocatedTokens: string;
+  tokenCapacity: string;
+  allocationCount: number;
+  indexingRewardCut: number;
+  queryFeeCut: number;
+  rewardsEarned: string;
+  delegatorShares: string;
+  url: string | null;
+  geoHash: string | null;
+  createdAt: number;
+  allocations: Array<{
+    id: string;
     allocatedTokens: string;
-    tokenCapacity: string;
-    allocationCount: number;
-    indexingRewardCut: number;
-    queryFeeCut: number;
-    rewardsEarned: string;
-    delegatorShares: string;
-    url: string | null;
-    geoHash: string | null;
-    createdAt: number;
-    allocations: Array<{
+    createdAtEpoch: number;
+    subgraphDeployment: {
       id: string;
-      allocatedTokens: string;
-      createdAtEpoch: number;
-      subgraphDeployment: {
-        id: string;
-        signalledTokens: string;
-        stakedTokens: string;
-      };
-    }>;
-    delegators: Array<{
-      id: string;
+      signalledTokens: string;
       stakedTokens: string;
-      shareAmount: string;
-      delegator: { id: string };
-    }>;
-  } | null;
+    };
+  }>;
+  delegators: Array<{
+    id: string;
+    stakedTokens: string;
+    shareAmount: string;
+    delegator: { id: string };
+  }>;
 }
 
 function useIndexerDetails(address: string) {
-  return useQuery({
+  return useQuery<IndexerDetail | null>({
     queryKey: ['indexerDetails', address],
     queryFn: async () => {
-      const data = await client.request<IndexerDetailsResponse>(INDEXER_DETAILS_QUERY, {
-        id: address.toLowerCase(),
+      const query = `
+        query IndexerDetails {
+          indexer(id: "${address.toLowerCase()}") {
+            id
+            account {
+              id
+              defaultDisplayName
+              metadata {
+                displayName
+                description
+              }
+            }
+            stakedTokens
+            delegatedTokens
+            allocatedTokens
+            tokenCapacity
+            allocationCount
+            indexingRewardCut
+            queryFeeCut
+            rewardsEarned
+            delegatorShares
+            url
+            geoHash
+            createdAt
+            allocations(first: 100, where: { status: Active }) {
+              id
+              allocatedTokens
+              createdAtEpoch
+              subgraphDeployment {
+                id
+                signalledTokens
+                stakedTokens
+              }
+            }
+            delegators(first: 100) {
+              id
+              stakedTokens
+              shareAmount
+              delegator { id }
+            }
+          }
+        }
+      `;
+      const response = await fetch('/api/subgraph', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
       });
-      return data.indexer;
+      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+      const json = await response.json();
+      if (json.errors) throw new Error(JSON.stringify(json.errors));
+      return json.data?.indexer ?? null;
     },
     staleTime: 60 * 1000,
   });
