@@ -3,12 +3,9 @@
 import { useState, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
-import { GraphQLClient } from 'graphql-request';
 import {
-  DELEGATOR_PORTFOLIO_QUERY,
-  CURATOR_PORTFOLIO_QUERY,
-  type DelegatorPortfolioResponse,
-  type CuratorPortfolioResponse,
+  type Delegator,
+  type Curator,
   type DelegatedStake,
 } from '@/lib/queries';
 import { useGRTPrice } from '@/hooks/useNetworkStats';
@@ -37,18 +34,51 @@ import { ExportButton } from '@/components/ui/ExportButton';
 import { WalletManager } from '@/components/ui/WalletManager';
 import { PortfolioChart, generateMockPortfolioHistory } from '@/components/charts/PortfolioChart';
 
-const client = new GraphQLClient('/api/subgraph');
-
 function useDelegatorPortfolio(address: string | undefined) {
-  return useQuery({
+  return useQuery<Delegator | null>({
     queryKey: ['delegatorPortfolio', address],
     queryFn: async () => {
       if (!address) return null;
-      const data = await client.request<DelegatorPortfolioResponse>(
-        DELEGATOR_PORTFOLIO_QUERY,
-        { id: address.toLowerCase() }
-      );
-      return data.delegator;
+      const query = `{
+        delegator(id: "${address.toLowerCase()}") {
+          id
+          totalStakedTokens
+          totalUnstakedTokens
+          totalRealizedRewards
+          stakesCount
+          activeStakesCount
+          stakes(first: 100, orderBy: stakedTokens, orderDirection: desc) {
+            id
+            stakedTokens
+            lockedTokens
+            lockedUntil
+            shareAmount
+            realizedRewards
+            createdAt
+            indexer {
+              id
+              account {
+                defaultDisplayName
+                metadata { displayName description }
+              }
+              stakedTokens
+              delegatedTokens
+              delegatorShares
+              indexingRewardCut
+              queryFeeCut
+            }
+          }
+        }
+      }`;
+      const response = await fetch('/api/subgraph', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+      const json = await response.json();
+      if (json.errors) throw new Error(JSON.stringify(json.errors));
+      return json.data?.delegator ?? null;
     },
     enabled: !!address,
     staleTime: 60 * 1000,
@@ -56,15 +86,44 @@ function useDelegatorPortfolio(address: string | undefined) {
 }
 
 function useCuratorPortfolio(address: string | undefined) {
-  return useQuery({
+  return useQuery<Curator | null>({
     queryKey: ['curatorPortfolio', address],
     queryFn: async () => {
       if (!address) return null;
-      const data = await client.request<CuratorPortfolioResponse>(
-        CURATOR_PORTFOLIO_QUERY,
-        { id: address.toLowerCase() }
-      );
-      return data.curator;
+      const query = `{
+        curator(id: "${address.toLowerCase()}") {
+          id
+          totalSignalledTokens
+          totalUnsignalledTokens
+          realizedRewards
+          signalCount
+          activeSignalCount
+          signals(first: 100, orderBy: signalledTokens, orderDirection: desc) {
+            id
+            signalledTokens
+            unsignalledTokens
+            signal
+            lastSignalChange
+            realizedRewards
+            subgraphDeployment {
+              id
+              ipfsHash
+              signalledTokens
+              queryFeesAmount
+              stakedTokens
+            }
+          }
+        }
+      }`;
+      const response = await fetch('/api/subgraph', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+      const json = await response.json();
+      if (json.errors) throw new Error(JSON.stringify(json.errors));
+      return json.data?.curator ?? null;
     },
     enabled: !!address,
     staleTime: 60 * 1000,

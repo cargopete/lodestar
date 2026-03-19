@@ -186,7 +186,7 @@ export function WalletManager({ onSelectWallet, selectedWallet }: WalletManagerP
         {/* Add wallet form */}
         <div className="pt-4 border-t border-[var(--border)]">
           <p className="text-xs text-[var(--text-faint)] mb-2">Add wallet to watch</p>
-          <div className="flex gap-2">
+          <div className="space-y-2">
             <input
               type="text"
               placeholder="0x..."
@@ -196,35 +196,37 @@ export function WalletManager({ onSelectWallet, selectedWallet }: WalletManagerP
                 setError('');
               }}
               className={cn(
-                'flex-1 px-3 py-2 text-sm rounded-[var(--radius-button)]',
+                'w-full px-3 py-2 text-sm rounded-[var(--radius-button)]',
                 'bg-[var(--bg-elevated)] border border-[var(--border)]',
                 'text-[var(--text)] placeholder:text-[var(--text-faint)]',
                 'focus:outline-none focus:border-[var(--accent)]',
                 error && 'border-red-400'
               )}
             />
-            <input
-              type="text"
-              placeholder="Label"
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              className={cn(
-                'w-24 px-3 py-2 text-sm rounded-[var(--radius-button)]',
-                'bg-[var(--bg-elevated)] border border-[var(--border)]',
-                'text-[var(--text)] placeholder:text-[var(--text-faint)]',
-                'focus:outline-none focus:border-[var(--accent)]'
-              )}
-            />
-            <button
-              onClick={handleAddWallet}
-              className={cn(
-                'px-3 py-2 text-sm font-medium rounded-[var(--radius-button)]',
-                'bg-[var(--accent)] text-white',
-                'hover:opacity-90 transition-opacity'
-              )}
-            >
-              Add
-            </button>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Label (optional)"
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                className={cn(
+                  'flex-1 min-w-0 px-3 py-2 text-sm rounded-[var(--radius-button)]',
+                  'bg-[var(--bg-elevated)] border border-[var(--border)]',
+                  'text-[var(--text)] placeholder:text-[var(--text-faint)]',
+                  'focus:outline-none focus:border-[var(--accent)]'
+                )}
+              />
+              <button
+                onClick={handleAddWallet}
+                className={cn(
+                  'px-4 py-2 text-sm font-medium rounded-[var(--radius-button)]',
+                  'bg-[var(--accent)] text-white flex-shrink-0',
+                  'hover:opacity-90 transition-opacity'
+                )}
+              >
+                Add
+              </button>
+            </div>
           </div>
           {error && <p className="text-xs text-[var(--red)] mt-1">{error}</p>}
         </div>
