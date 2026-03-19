@@ -90,13 +90,17 @@ export function resolveIndexerName(
   if (account?.defaultDisplayName) return account.defaultDisplayName;
   if (account?.metadata?.displayName) return account.metadata.displayName;
   if (account?.metadata?.description) {
-    // Use description but truncate to a reasonable name length
-    const desc = account.metadata.description;
-    // Take first sentence or first 40 chars, whichever is shorter
-    const firstSentence = desc.split(/[.!,\-–—]/).filter(Boolean)[0]?.trim();
-    if (firstSentence && firstSentence.length <= 40) return firstSentence;
-    if (desc.length <= 40) return desc;
-    return desc.slice(0, 37) + '...';
+    const desc = account.metadata.description.trim();
+    // Try to extract org name before common bio patterns
+    const bioPattern = /^(.+?)\s+(?:is |are |was |has been |operates |provides |runs |offers |serves )/i;
+    const match = desc.match(bioPattern);
+    if (match && match[1].length >= 3 && match[1].length <= 30) return match[1];
+    // If description is short enough, use it directly
+    if (desc.length <= 30) return desc;
+    // Fall back to first word(s) before punctuation
+    const firstChunk = desc.split(/[.!,\-–—:]/)[0]?.trim();
+    if (firstChunk && firstChunk.length <= 30) return firstChunk;
+    return desc.slice(0, 27) + '...';
   }
   return shortenAddress(address);
 }
