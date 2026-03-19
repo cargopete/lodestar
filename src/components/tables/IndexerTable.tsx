@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
 import {
   useReactTable,
   getCoreRowModel,
@@ -14,7 +13,7 @@ import {
   type SortingState,
   type RowSelectionState,
 } from '@tanstack/react-table';
-import { useIndexers, useNetworkStats } from '@/hooks/useNetworkStats';
+import { useEnrichedIndexers, useIndexers, useNetworkStats } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
   formatGRT,
@@ -25,6 +24,7 @@ import {
   cn,
 } from '@/lib/utils';
 import type { Indexer } from '@/lib/queries';
+import type { EnrichedIndexer } from '@/lib/enriched';
 import { Card } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Badge } from '@/components/ui/Badge';
@@ -47,49 +47,6 @@ function quickREOStatus(indexer: Indexer): 'eligible' | 'warning' | 'ineligible'
   return 'ineligible';
 }
 
-/**
- * Hook to fetch recent delegation activity across the network
- */
-function useRecentDelegationActivity() {
-  return useQuery<Record<string, { count: number; netChange: number }>>({
-    queryKey: ['recentDelegationActivity'],
-    queryFn: async () => {
-      const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
-      const query = `{
-        delegatedStakes(
-          first: 200,
-          orderBy: lastDelegatedAt,
-          orderDirection: desc,
-          where: { lastDelegatedAt_gt: ${sevenDaysAgo} }
-        ) {
-          indexer { id }
-          stakedTokens
-        }
-      }`;
-      const res = await fetch('/api/subgraph', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
-      if (!res.ok) return {};
-      const json = await res.json();
-      const stakes = json.data?.delegatedStakes ?? [];
-
-      // Aggregate by indexer
-      const map: Record<string, { count: number; netChange: number }> = {};
-      for (const s of stakes) {
-        const id = s.indexer.id;
-        if (!map[id]) map[id] = { count: 0, netChange: 0 };
-        map[id].count++;
-        map[id].netChange += weiToGRT(s.stakedTokens);
-      }
-      return map;
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-  });
-}
-
 interface IndexerRow {
   id: string;
   name: string;
@@ -104,6 +61,8 @@ interface IndexerRow {
   rewards: number;
   reoStatus: 'eligible' | 'warning' | 'ineligible';
   recentDelegations: { count: number; netChange: number } | null;
+  effectiveCut: number | null;
+  apr: number | null;
   raw: Indexer;
 }
 
@@ -118,7 +77,9 @@ export function IndexerTable() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [showComparison, setShowComparison] = useState(false);
 
-  const { data: indexersData, isLoading } = useIndexers({
+  // Try enriched data first (pre-computed by cron), fall back to raw indexers
+  const { data: enrichedData, isLoading: enrichedLoading } = useEnrichedIndexers();
+  const { data: indexersData, isLoading: indexersLoading } = useIndexers({
     first: 100,
     orderBy: 'stakedTokens',
     orderDirection: 'desc',
@@ -126,9 +87,55 @@ export function IndexerTable() {
 
   const { data: networkData } = useNetworkStats();
   const delegationRatio = networkData?.graphNetwork?.delegationRatio ?? 16;
-  const { data: recentActivity } = useRecentDelegationActivity();
+
+  const hasEnriched = !!enrichedData?.indexers?.length;
+  const isLoading = hasEnriched ? false : (enrichedLoading || indexersLoading);
 
   const tableData: IndexerRow[] = useMemo(() => {
+    // Prefer enriched data from cron (includes APR, effective cut, activity — zero N+1 queries)
+    if (hasEnriched) {
+      return enrichedData!.indexers
+        .map((e: EnrichedIndexer): IndexerRow => ({
+          id: e.id,
+          name: e.name,
+          address: e.id,
+          selfStake: e.selfStakeGRT,
+          delegated: e.delegatedGRT,
+          capacity: e.delegationCapacity.utilizationPercent,
+          rewardCut: e.indexingRewardCut,
+          queryCut: e.queryFeeCut,
+          allocations: e.allocationCount,
+          allocated: weiToGRT(e.allocatedTokens),
+          rewards: weiToGRT(e.rewardsEarned),
+          reoStatus: e.reoStatus,
+          recentDelegations: e.recentActivity.delegationsIn7d > 0
+            ? { count: e.recentActivity.delegationsIn7d, netChange: e.recentActivity.netFlowGRT }
+            : null,
+          effectiveCut: e.effectiveCutPercent,
+          apr: e.delegatorAPR,
+          // Reconstruct raw Indexer shape for comparison panel
+          raw: {
+            id: e.id,
+            account: { id: e.id, defaultDisplayName: e.name, metadata: null },
+            stakedTokens: e.stakedTokens,
+            delegatedTokens: e.delegatedTokens,
+            allocatedTokens: e.allocatedTokens,
+            allocationCount: e.allocationCount,
+            indexingRewardCut: e.indexingRewardCut,
+            queryFeeCut: e.queryFeeCut,
+            delegatorParameterCooldown: e.delegatorParameterCooldown,
+            lastDelegationParameterUpdate: e.lastDelegationParameterUpdate,
+            rewardsEarned: e.rewardsEarned,
+            delegatorShares: e.delegatorShares,
+            url: e.url,
+            geoHash: e.geoHash,
+            createdAt: e.createdAt,
+          },
+        }))
+        .filter((row) => row.selfStake >= minStake);
+    }
+
+    // Fallback: raw indexer data (no APR, no effective cut, no activity)
     if (!indexersData?.indexers) return [];
 
     return indexersData.indexers
@@ -151,12 +158,14 @@ export function IndexerTable() {
           allocated,
           rewards,
           reoStatus: quickREOStatus(indexer),
-          recentDelegations: recentActivity?.[indexer.id] ?? null,
+          recentDelegations: null,
+          effectiveCut: null,
+          apr: null,
           raw: indexer,
         };
       })
       .filter((row) => row.selfStake >= minStake);
-  }, [indexersData, delegationRatio, minStake, recentActivity]);
+  }, [enrichedData, hasEnriched, indexersData, delegationRatio, minStake]);
 
   const columns = useMemo(
     () => [
@@ -206,7 +215,7 @@ export function IndexerTable() {
                        row.reoStatus === 'warning' ? 'At risk' : 'Likely ineligible'}
                     </span>
                     <span className="block text-[var(--text-faint)] mt-1">
-                      {row.allocations > 0 ? '✓' : '✗'} Allocations · {row.selfStake >= MIN_STAKE_REO ? '✓' : '✗'} 100K+ stake
+                      {row.allocations > 0 ? '\u2713' : '\u2717'} Allocations · {row.selfStake >= MIN_STAKE_REO ? '\u2713' : '\u2717'} 100K+ stake
                     </span>
                   </span>
                 </span>
@@ -270,18 +279,41 @@ export function IndexerTable() {
       columnHelper.accessor('rewardCut', {
         header: 'Reward Cut',
         cell: (info) => {
-          const lastUpdate = info.row.original.raw.lastDelegationParameterUpdate;
+          const row = info.row.original;
+          const lastUpdate = row.raw.lastDelegationParameterUpdate;
           const daysSince = (Date.now() / 1000 - lastUpdate) / 86400;
           const recentChange = daysSince <= 30;
           return (
-            <span className="font-mono text-[var(--text)] flex items-center gap-1.5">
-              {formatPPM(info.getValue())}
-              {recentChange && (
-                <span
-                  className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', daysSince <= 7 ? 'bg-[var(--red)]' : 'bg-[var(--amber)]')}
-                  title={`Parameters changed ${Math.floor(daysSince)}d ago`}
-                />
+            <div>
+              <span className="font-mono text-[var(--text)] flex items-center gap-1.5">
+                {formatPPM(info.getValue())}
+                {recentChange && (
+                  <span
+                    className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', daysSince <= 7 ? 'bg-[var(--red)]' : 'bg-[var(--amber)]')}
+                    title={`Parameters changed ${Math.floor(daysSince)}d ago`}
+                  />
+                )}
+              </span>
+              {row.effectiveCut !== null && (
+                <span className="text-[10px] text-[var(--text-faint)] block">
+                  eff. {row.effectiveCut.toFixed(1)}%
+                </span>
               )}
+            </div>
+          );
+        },
+      }),
+      columnHelper.accessor('apr', {
+        header: 'APR',
+        cell: (info) => {
+          const value = info.getValue();
+          if (value === null) return <span className="text-[var(--text-faint)]">—</span>;
+          return (
+            <span className={cn(
+              'font-mono',
+              value > 5 ? 'text-[var(--green)]' : 'text-[var(--text)]'
+            )}>
+              {value.toFixed(1)}%
             </span>
           );
         },
@@ -494,7 +526,7 @@ export function IndexerTable() {
                       </div>
                       <p className="text-sm font-mono text-[var(--text)] flex-shrink-0">{formatGRT(d.selfStake)}</p>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="grid grid-cols-4 gap-2 text-center">
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
                         <p className="text-[10px] text-[var(--text-faint)]">Delegated</p>
                         <p className="text-xs font-mono text-[var(--green)]">{formatGRT(d.delegated)}</p>
@@ -509,6 +541,12 @@ export function IndexerTable() {
                               <span className={cn('w-1.5 h-1.5 rounded-full', daysSince <= 7 ? 'bg-[var(--red)]' : 'bg-[var(--amber)]')} />
                             ) : null;
                           })()}
+                        </p>
+                      </div>
+                      <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
+                        <p className="text-[10px] text-[var(--text-faint)]">APR</p>
+                        <p className={cn('text-xs font-mono', d.apr && d.apr > 5 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
+                          {d.apr !== null ? `${d.apr.toFixed(1)}%` : '—'}
                         </p>
                       </div>
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
@@ -544,7 +582,7 @@ export function IndexerTable() {
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {header.column.getIsSorted() && (
                           <span className="text-[var(--accent)]">
-                            {header.column.getIsSorted() === 'asc' ? '↑' : '↓'}
+                            {header.column.getIsSorted() === 'asc' ? '\u2191' : '\u2193'}
                           </span>
                         )}
                       </div>

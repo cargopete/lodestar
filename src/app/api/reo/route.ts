@@ -128,9 +128,7 @@ async function assessEligibility(address: string): Promise<REOStatus> {
   };
 }
 
-// In-memory cache
-const cache = new Map<string, { data: REOStatus; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000;
+import { cached } from '@/lib/cache';
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get('address');
@@ -145,15 +143,12 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const cacheKey = address.toLowerCase();
-  const cached = cache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return NextResponse.json({ status: cached.data, source: 'heuristic' });
-  }
-
   try {
-    const reoStatus = await assessEligibility(address);
-    cache.set(cacheKey, { data: reoStatus, timestamp: Date.now() });
+    const reoStatus = await cached(
+      `lodestar:reo:${address.toLowerCase()}`,
+      300,
+      () => assessEligibility(address)
+    );
     return NextResponse.json({ status: reoStatus, source: 'heuristic' });
   } catch {
     return NextResponse.json({

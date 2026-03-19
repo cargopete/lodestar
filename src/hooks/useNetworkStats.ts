@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import {
   fetchNetworkStats,
   fetchEpochHistory,
@@ -10,9 +10,11 @@ import {
   fetchDataServices,
   fetchIndexerProvisions,
   fetchServiceProvisions,
+  fetchEnrichedIndexers,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
+const TEN_MINUTES = 1000 * 60 * 10;
 const THIRTY_SECONDS = 1000 * 30;
 
 /**
@@ -22,8 +24,9 @@ export function useNetworkStats() {
   return useQuery({
     queryKey: ['networkStats'],
     queryFn: fetchNetworkStats,
-    staleTime: FIVE_MINUTES,
+    staleTime: TEN_MINUTES,
     refetchInterval: FIVE_MINUTES,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -34,8 +37,9 @@ export function useEpochHistory(count = 30) {
   return useQuery({
     queryKey: ['epochHistory', count],
     queryFn: () => fetchEpochHistory(count),
-    staleTime: FIVE_MINUTES,
+    staleTime: TEN_MINUTES,
     refetchInterval: FIVE_MINUTES,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -53,6 +57,20 @@ export function useIndexers(params: {
     queryFn: () => fetchIndexers(params),
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Hook for enriched indexers (pre-computed by cron, the big win)
+ */
+export function useEnrichedIndexers() {
+  return useQuery({
+    queryKey: ['enrichedIndexers'],
+    queryFn: fetchEnrichedIndexers,
+    staleTime: TEN_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -112,6 +130,7 @@ export function useTVL() {
     queryFn: fetchTVL,
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
+    placeholderData: keepPreviousData,
   });
 }
 

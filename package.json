@@ -12,6 +12,7 @@
     "@rainbow-me/rainbowkit": "^2.2.10",
     "@tanstack/react-query": "^5.91.0",
     "@tanstack/react-table": "^8.21.3",
+    "@upstash/redis": "^1.37.0",
     "clsx": "^2.1.1",
     "graphql-request": "^7.4.0",
     "next": "16.1.7",

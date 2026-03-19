@@ -1,14 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { FeedItem } from '@/lib/feed';
 
-// ── In-memory cache ──────────────────────────────────────────────
-interface CacheEntry {
-  items: FeedItem[];
-  timestamp: number;
-}
-
-let cache: CacheEntry | null = null;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+import { cached } from '@/lib/cache';
 
 // ── Forum config ─────────────────────────────────────────────────
 const FORUM_BASE = 'https://forum.thegraph.com';
@@ -193,35 +186,20 @@ async function fetchEpochSummaries(): Promise<FeedItem[]> {
 // ── Route handler ────────────────────────────────────────────────
 
 export async function GET() {
-  // Serve from cache if fresh
-  if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
-    return NextResponse.json(
-      { items: cache.items },
-      {
-        headers: {
-          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
-        },
-      }
-    );
-  }
+  const items = await cached('lodestar:feed', 300, async () => {
+    const [forumItems, gipItems, epochItems] = await Promise.all([
+      fetchForumTopics(),
+      fetchGIPCommits(),
+      fetchEpochSummaries(),
+    ]);
 
-  // Fetch all sources in parallel
-  const [forumItems, gipItems, epochItems] = await Promise.all([
-    fetchForumTopics(),
-    fetchGIPCommits(),
-    fetchEpochSummaries(),
-  ]);
-
-  // Merge, sort by timestamp descending, cap at 40
-  const allItems = [...forumItems, ...gipItems, ...epochItems]
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 40);
-
-  // Update cache
-  cache = { items: allItems, timestamp: Date.now() };
+    return [...forumItems, ...gipItems, ...epochItems]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 40);
+  });
 
   return NextResponse.json(
-    { items: allItems },
+    { items },
     {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',

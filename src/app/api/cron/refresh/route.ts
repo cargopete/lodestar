@@ -1,0 +1,270 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { cacheSet } from '@/lib/cache';
+import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { weiToGRT, resolveIndexerName } from '@/lib/utils';
+import {
+  calculateEffectiveCut,
+  calculateDelegatorAPR,
+  calculateDelegationCapacity,
+} from '@/lib/rewards';
+import type { EnrichedIndexer } from '@/lib/enriched';
+
+// Verify cron secret in production
+function isAuthorized(request: NextRequest): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) return true; // Allow in dev
+  return request.headers.get('authorization') === `Bearer ${cronSecret}`;
+}
+
+// Minimum self-stake for REO eligibility (100K GRT)
+const MIN_STAKE_REO = 100000;
+
+interface SubgraphIndexer {
+  id: string;
+  account: {
+    id: string;
+    defaultDisplayName?: string | null;
+    metadata?: { displayName?: string | null; description?: string | null } | null;
+  };
+  stakedTokens: string;
+  delegatedTokens: string;
+  allocatedTokens: string;
+  allocationCount: number;
+  indexingRewardCut: number;
+  queryFeeCut: number;
+  delegatorParameterCooldown: number;
+  lastDelegationParameterUpdate: number;
+  rewardsEarned: string;
+  delegatorShares: string;
+  url: string | null;
+  geoHash: string | null;
+  createdAt: number;
+}
+
+interface AllocationData {
+  allocatedTokens: string;
+  indexer: { id: string };
+  subgraphDeployment: {
+    signalledTokens: string;
+    stakedTokens: string;
+  };
+}
+
+interface DelegationActivityData {
+  indexer: { id: string };
+  stakedTokens: string;
+}
+
+export async function GET(request: NextRequest) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!hasSubgraphAccess()) {
+    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
+  }
+
+  const startTime = Date.now();
+
+  try {
+    // Step 1: Fetch top 100 indexers + network stats in parallel
+    const [indexersResult, networkResult] = await Promise.all([
+      subgraphQuery<{ indexers: SubgraphIndexer[] }>(`{
+        indexers(
+          first: 100
+          orderBy: stakedTokens
+          orderDirection: desc
+          where: { stakedTokens_gt: "0" }
+        ) {
+          id
+          account {
+            id
+            defaultDisplayName
+            metadata {
+              displayName
+              description
+            }
+          }
+          stakedTokens
+          delegatedTokens
+          allocatedTokens
+          allocationCount
+          indexingRewardCut
+          queryFeeCut
+          delegatorParameterCooldown
+          lastDelegationParameterUpdate
+          rewardsEarned
+          delegatorShares
+          url
+          geoHash
+          createdAt
+        }
+      }`),
+      subgraphQuery<{
+        graphNetwork: {
+          totalTokensSignalled: string;
+          networkGRTIssuancePerBlock?: string;
+          delegationRatio: number;
+        };
+      }>(`{
+        graphNetwork(id: "1") {
+          totalTokensSignalled
+          networkGRTIssuancePerBlock
+          delegationRatio
+        }
+      }`),
+    ]);
+
+    const indexers = indexersResult.indexers;
+    const network = networkResult.graphNetwork;
+    const totalNetworkSignal = weiToGRT(network.totalTokensSignalled);
+    const delegationRatio = network.delegationRatio;
+
+    // Annual issuance: issuancePerBlock * blocks_per_year
+    // Arbitrum: ~0.25s block time = ~126_144_000 blocks/year
+    // But networkGRTIssuancePerBlock is L1-based (12s blocks) = ~2_628_000 blocks/year
+    const issuancePerBlock = network.networkGRTIssuancePerBlock
+      ? weiToGRT(network.networkGRTIssuancePerBlock)
+      : 0;
+    const L1_BLOCKS_PER_YEAR = 2_628_000;
+    const annualIssuance = issuancePerBlock * L1_BLOCKS_PER_YEAR;
+
+    // Step 2: Fetch allocations in batches of 20 indexer IDs
+    const indexerIds = indexers.map((i) => i.id);
+    const allocationMap = new Map<string, AllocationData[]>();
+
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < indexerIds.length; i += BATCH_SIZE) {
+      const batch = indexerIds.slice(i, i + BATCH_SIZE);
+      const idList = batch.map((id) => `"${id}"`).join(', ');
+      const result = await subgraphQuery<{ allocations: AllocationData[] }>(`{
+        allocations(
+          first: 1000
+          where: { indexer_in: [${idList}], status: Active }
+        ) {
+          allocatedTokens
+          indexer { id }
+          subgraphDeployment {
+            signalledTokens
+            stakedTokens
+          }
+        }
+      }`);
+
+      for (const alloc of result.allocations) {
+        const existing = allocationMap.get(alloc.indexer.id) ?? [];
+        existing.push(alloc);
+        allocationMap.set(alloc.indexer.id, existing);
+      }
+    }
+
+    // Step 3: Fetch recent delegation activity (7d)
+    const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
+    let delegationActivity: Record<string, { count: number; netFlowGRT: number }> = {};
+    try {
+      const activityResult = await subgraphQuery<{ delegatedStakes: DelegationActivityData[] }>(`{
+        delegatedStakes(
+          first: 500
+          orderBy: lastDelegatedAt
+          orderDirection: desc
+          where: { lastDelegatedAt_gt: ${sevenDaysAgo} }
+        ) {
+          indexer { id }
+          stakedTokens
+        }
+      }`);
+
+      for (const s of activityResult.delegatedStakes) {
+        const id = s.indexer.id;
+        if (!delegationActivity[id]) delegationActivity[id] = { count: 0, netFlowGRT: 0 };
+        delegationActivity[id].count++;
+        delegationActivity[id].netFlowGRT += weiToGRT(s.stakedTokens);
+      }
+    } catch (e) {
+      console.warn('Delegation activity fetch failed, continuing without:', e);
+    }
+
+    // Step 4: Compute enriched data for each indexer
+    const enriched: EnrichedIndexer[] = indexers.map((indexer) => {
+      const selfStake = weiToGRT(indexer.stakedTokens);
+      const delegated = weiToGRT(indexer.delegatedTokens);
+
+      const effectiveCut = calculateEffectiveCut(
+        indexer.indexingRewardCut,
+        selfStake,
+        delegated
+      );
+
+      const allocations = (allocationMap.get(indexer.id) ?? []).map((a) => ({
+        allocatedTokens: a.allocatedTokens,
+        subgraphDeployment: a.subgraphDeployment,
+      }));
+
+      const apr = calculateDelegatorAPR(
+        allocations,
+        indexer.indexingRewardCut,
+        delegated,
+        totalNetworkSignal,
+        annualIssuance
+      );
+
+      const capacity = calculateDelegationCapacity(selfStake, delegated, delegationRatio);
+
+      // Quick REO check (same logic as client-side)
+      const hasAllocations = indexer.allocationCount > 0;
+      const hasSufficientStake = selfStake >= MIN_STAKE_REO;
+      let reoStatus: 'eligible' | 'warning' | 'ineligible' = 'ineligible';
+      if (hasAllocations && hasSufficientStake) reoStatus = 'eligible';
+      else if (hasAllocations || hasSufficientStake) reoStatus = 'warning';
+
+      const activity = delegationActivity[indexer.id] ?? { count: 0, netFlowGRT: 0 };
+
+      return {
+        id: indexer.id,
+        name: resolveIndexerName(indexer.account, indexer.id),
+        stakedTokens: indexer.stakedTokens,
+        delegatedTokens: indexer.delegatedTokens,
+        allocatedTokens: indexer.allocatedTokens,
+        allocationCount: indexer.allocationCount,
+        indexingRewardCut: indexer.indexingRewardCut,
+        queryFeeCut: indexer.queryFeeCut,
+        delegatorParameterCooldown: indexer.delegatorParameterCooldown,
+        lastDelegationParameterUpdate: indexer.lastDelegationParameterUpdate,
+        rewardsEarned: indexer.rewardsEarned,
+        delegatorShares: indexer.delegatorShares,
+        url: indexer.url,
+        geoHash: indexer.geoHash,
+        createdAt: indexer.createdAt,
+        selfStakeGRT: selfStake,
+        delegatedGRT: delegated,
+        effectiveCutPercent: effectiveCut,
+        delegatorAPR: apr,
+        delegationCapacity: capacity,
+        reoStatus,
+        recentActivity: {
+          delegationsIn7d: activity.count,
+          netFlowGRT: activity.netFlowGRT,
+        },
+        computedAt: Date.now(),
+      };
+    });
+
+    // Step 5: Write to Redis
+    await cacheSet('lodestar:indexers-enriched', enriched, 600);
+
+    const duration = Date.now() - startTime;
+    console.log(`Cron refresh completed: ${enriched.length} indexers enriched in ${duration}ms`);
+
+    return NextResponse.json({
+      ok: true,
+      count: enriched.length,
+      durationMs: duration,
+    });
+  } catch (error) {
+    console.error('Cron refresh failed:', error);
+    return NextResponse.json(
+      { error: 'Cron refresh failed', details: String(error) },
+      { status: 500 }
+    );
+  }
+}

@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
+import { cached } from '@/lib/cache';
 
 const COINGECKO_URL =
   'https://api.coingecko.com/api/v3/simple/price?ids=the-graph&vs_currencies=usd&include_24hr_change=true';
 
 const DEFILLAMA_URL =
   'https://coins.llama.fi/prices/current/coingecko:the-graph';
-
-let cachedPrice: { price: number; change24h: number; timestamp: number } | null = null;
-const CACHE_DURATION = 60 * 1000; // 60 seconds
 
 async function fetchFromCoinGecko(): Promise<{ price: number; change24h: number } | null> {
   try {
@@ -41,33 +39,13 @@ async function fetchFromDefiLlama(): Promise<{ price: number; change24h: number 
 }
 
 export async function GET() {
-  // Return cached price if still valid
-  if (cachedPrice && Date.now() - cachedPrice.timestamp < CACHE_DURATION) {
-    return NextResponse.json({
-      price: cachedPrice.price,
-      change24h: cachedPrice.change24h,
-    });
-  }
+  const result = await cached('lodestar:price', 60, async () => {
+    return (await fetchFromCoinGecko()) ?? (await fetchFromDefiLlama()) ?? { price: null, change24h: null };
+  });
 
-  // Try CoinGecko first (has 24h change), fall back to DefiLlama
-  const result = (await fetchFromCoinGecko()) ?? (await fetchFromDefiLlama());
-
-  if (result) {
-    cachedPrice = { ...result, timestamp: Date.now() };
-    return NextResponse.json(result, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
-      },
-    });
-  }
-
-  // Both failed — return stale cache or null price
-  if (cachedPrice) {
-    return NextResponse.json({
-      price: cachedPrice.price,
-      change24h: cachedPrice.change24h,
-    });
-  }
-
-  return NextResponse.json({ price: null, change24h: null });
+  return NextResponse.json(result, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+    },
+  });
 }

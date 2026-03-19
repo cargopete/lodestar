@@ -10,8 +10,9 @@ import {
   type IndexerProvisionsResponse,
   type ServiceProvisionsResponse,
 } from './queries';
+import type { EnrichedIndexer } from './enriched';
 
-// The Graph Network subgraph on Arbitrum
+// The Graph Network subgraph on Arbitrum (kept for user-specific POST queries)
 const SUBGRAPH_URL = '/api/subgraph';
 
 const client = new GraphQLClient(SUBGRAPH_URL);
@@ -29,72 +30,75 @@ async function subgraphFetch<T>(query: string): Promise<T> {
 }
 
 /**
- * Fetch network statistics
+ * Fetch network statistics via GET endpoint (CDN-cacheable)
  */
 export async function fetchNetworkStats(): Promise<NetworkStatsResponse> {
-  const queryString = `
-    query NetworkStats {
-      graphNetwork(id: "1") {
-        totalTokensStaked
-        totalDelegatedTokens
-        totalTokensSignalled
-        totalTokensAllocated
-        totalIndexingRewards
-        totalQueryFees
-        currentEpoch
-        epochLength
-        lastLengthUpdateEpoch
-        lastLengthUpdateBlock
-        indexerCount
-        stakedIndexersCount
-        delegatorCount
-        activeDelegatorCount
-        curatorCount
-        activeCuratorCount
-        subgraphCount
-        activeSubgraphCount
-        delegationRatio
-        protocolFeePercentage
-        delegationTaxPercentage
-        maxAllocationEpochs
-        thawingPeriod
-        totalSupply
-        networkGRTIssuancePerBlock
-      }
-      _meta {
-        block {
-          number
-        }
-      }
-    }
-  `;
-
-  const response = await fetch('/api/subgraph', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: queryString }),
-  });
+  const response = await fetch('/api/network-stats');
 
   if (!response.ok) {
-    throw new Error(`HTTP error: ${response.status}`);
+    // Fall back to POST if GET endpoint unavailable (e.g. no API key)
+    const queryString = `
+      query NetworkStats {
+        graphNetwork(id: "1") {
+          totalTokensStaked
+          totalDelegatedTokens
+          totalTokensSignalled
+          totalTokensAllocated
+          totalIndexingRewards
+          totalQueryFees
+          currentEpoch
+          epochLength
+          lastLengthUpdateEpoch
+          lastLengthUpdateBlock
+          indexerCount
+          stakedIndexersCount
+          delegatorCount
+          activeDelegatorCount
+          curatorCount
+          activeCuratorCount
+          subgraphCount
+          activeSubgraphCount
+          delegationRatio
+          protocolFeePercentage
+          delegationTaxPercentage
+          maxAllocationEpochs
+          thawingPeriod
+          totalSupply
+          networkGRTIssuancePerBlock
+        }
+        _meta {
+          block {
+            number
+          }
+        }
+      }
+    `;
+
+    const fallback = await fetch('/api/subgraph', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: queryString }),
+    });
+
+    if (!fallback.ok) throw new Error(`HTTP error: ${fallback.status}`);
+    const json = await fallback.json();
+    if (json.errors) throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
+    return json.data as NetworkStatsResponse;
   }
 
   const json = await response.json();
-
-  if (json.errors) {
-    throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
-  }
-
   return json.data as NetworkStatsResponse;
 }
 
 /**
- * Fetch epoch history for charts
+ * Fetch epoch history via GET endpoint (CDN-cacheable)
  */
 export async function fetchEpochHistory(count = 30): Promise<EpochHistoryResponse> {
-  // Inline the variable to avoid escape character issues with $ in GraphQL
-  const queryString = `
-    {
+  const response = await fetch(`/api/epochs?count=${count}`);
+
+  if (!response.ok) {
+    // Fall back to POST
+    const queryString = `{
       epoches(first: ${count}, orderBy: startBlock, orderDirection: desc) {
         id
         startBlock
@@ -106,30 +110,26 @@ export async function fetchEpochHistory(count = 30): Promise<EpochHistoryRespons
         totalIndexerRewards
         totalDelegatorRewards
       }
-    }
-  `;
+    }`;
 
-  const response = await fetch('/api/subgraph', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: queryString }),
-  });
+    const fallback = await fetch('/api/subgraph', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: queryString }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error: ${response.status}`);
+    if (!fallback.ok) throw new Error(`HTTP error: ${fallback.status}`);
+    const json = await fallback.json();
+    if (json.errors) throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
+    return json.data as EpochHistoryResponse;
   }
 
   const json = await response.json();
-
-  if (json.errors) {
-    throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
-  }
-
   return json.data as EpochHistoryResponse;
 }
 
 /**
- * Fetch indexers with pagination and sorting
+ * Fetch indexers via GET endpoint (CDN-cacheable)
  */
 export async function fetchIndexers(params: {
   first?: number;
@@ -144,9 +144,18 @@ export async function fetchIndexers(params: {
     orderDirection = 'desc',
   } = params;
 
-  // Inline variables to avoid escape character issues with $ in GraphQL
-  const queryString = `
-    {
+  const qs = new URLSearchParams({
+    first: String(first),
+    skip: String(skip),
+    orderBy,
+    orderDirection,
+  });
+
+  const response = await fetch(`/api/indexers?${qs}`);
+
+  if (!response.ok) {
+    // Fall back to POST
+    const queryString = `{
       indexers(
         first: ${first}
         skip: ${skip}
@@ -177,26 +186,34 @@ export async function fetchIndexers(params: {
         geoHash
         createdAt
       }
-    }
-  `;
+    }`;
 
-  const response = await fetch('/api/subgraph', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: queryString }),
-  });
+    const fallback = await fetch('/api/subgraph', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: queryString }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error: ${response.status}`);
+    if (!fallback.ok) throw new Error(`HTTP error: ${fallback.status}`);
+    const json = await fallback.json();
+    if (json.errors) throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
+    return json.data as IndexersResponse;
   }
 
   const json = await response.json();
-
-  if (json.errors) {
-    throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
-  }
-
   return json.data as IndexersResponse;
+}
+
+/**
+ * Fetch enriched indexers (pre-computed by cron job)
+ */
+export async function fetchEnrichedIndexers(): Promise<{
+  indexers: EnrichedIndexer[];
+  computedAt: number;
+}> {
+  const response = await fetch('/api/indexers-enriched');
+  if (!response.ok) throw new Error('Enriched data not available');
+  return response.json();
 }
 
 /**
