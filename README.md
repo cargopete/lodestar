@@ -1,21 +1,45 @@
 # Lodestar
 
-Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network metrics, indexer comparison, delegation tools, and portfolio tracking for the Horizon era.
+Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network metrics, indexer intelligence, delegation tools, and portfolio tracking for the Horizon era.
 
 **Live:** [lodestar-dashboard.com](https://lodestar-dashboard.com)
 
 ## Features
 
-- **Protocol Overview** — Total stake, delegation, signalling, epoch progress (live from chain), rewards-per-epoch chart, token distribution
-- **Indexer Directory** — Sortable table of all active indexers with stake, delegation capacity, reward cuts, and estimated APR
-- **Indexer Profiles** — Detailed view with allocations, delegator breakdown, and provisions
+- **Protocol Overview** — Total stake, delegation, signalling, epoch progress, rewards-per-epoch chart, token distribution
+- **Intel Feed** — Live protocol intelligence panel with governance proposals, GIP updates, epoch summaries, and announcements sourced from The Graph Forum, GitHub, and on-chain data
+- **Indexer Directory** — Sortable/filterable table with stake, delegation capacity, reward cuts, and mobile card view
+- **Indexer Profiles** — Detailed view with allocations, delegator breakdown, and Horizon service provisions
 - **Delegator Portfolio** — Position tracking, rebalancing insights, underperforming position detection
 - **Curator Portfolio** — Signal positions and query-fee-to-signal ratio analysis
 - **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting
-- **Delegation Calculator** — Model redelegation scenarios with thawing period cost analysis
+- **Data Services & Provisions** — Horizon-era service providers, provisioned stake, thawing status, verifier cuts
+- **Delegation Calculator** — Model redelegation scenarios with thawing period cost analysis and net gain projections
 - **Compare Indexers** — Side-by-side comparison of up to 3 indexers
-- **Horizon Parameters** — Explainers for Horizon-era protocol changes (maxPOIStaleness, deprecated delegation tax, legacy allocation epochs)
 - **Wallet Connection** — Connect via MetaMask, WalletConnect, or Coinbase Wallet (Arbitrum only)
+- **Mobile-First Layout** — Bottom tab navigation, table-to-card patterns, responsive grids, touch-friendly targets
+
+## Roadmap
+
+### In Progress
+
+- [ ] Historical Trend Charts — query fee distribution, staking/signal trends, epoch sparklines, reward cut history (1,200+ epochs of data available)
+
+### Planned
+
+- [ ] REO (Rewards Eligibility Oracle) status — surface whether an indexer is eligible for rewards or has been flagged by the oracle
+- [ ] Recent delegation activity — show recent delegations/undelegations that may have moved the needle on an indexer's capacity or economics
+- [ ] Reward cut change alerts — flag indexers who recently changed their reward or query fee cut
+- [ ] PWA support — installable to home screen for daily portfolio checking
+
+### Shipped
+
+- [x] Protocol Intelligence Feed with forum governance, GIP commits, epoch summaries
+- [x] Mobile-first responsive overhaul with bottom tab bar and card views
+- [x] Horizon-era Data Services & Provisions pages
+- [x] Delegation calculator with redelegation cost modelling
+- [x] Indexer comparison tool (up to 3 side-by-side)
+- [x] Real subgraph data throughout (no mock data in production)
 
 ## Tech Stack
 
@@ -24,8 +48,8 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - wagmi v3 + viem (Arbitrum One)
 - @tanstack/react-query + @tanstack/react-table
 - Recharts (area charts, donut charts)
-- graphql-request (Graph Network subgraph)
 - CoinGecko + DefiLlama (price/TVL data)
+- The Graph Network subgraph (Arbitrum, inline fetch)
 
 ## Getting Started
 
@@ -50,7 +74,7 @@ Without `GRAPH_API_KEY`, the dashboard runs with mock data for development.
 ```
 src/
   app/           # Next.js pages and API routes
-    api/         # Price, subgraph proxy, TVL endpoints
+    api/         # Price, subgraph proxy, TVL, feed endpoints
     calculator/  # Redelegation calculator
     compare/     # Indexer comparison tool
     curators/    # Curator portfolio
@@ -59,10 +83,14 @@ src/
     profile/     # Connected wallet portfolio
     services/    # Data services (Horizon)
     subgraphs/   # Subgraph directory
-  components/    # UI components, layout, charts, tables
+  components/    # UI components, layout, charts, tables, feed
   hooks/         # React Query hooks
   lib/           # API clients, queries, utilities, wallet config
 ```
+
+## Contributing
+
+Issues and feedback welcome at [github.com/cargopete/lodestar/issues](https://github.com/cargopete/lodestar/issues).
 
 ## License
 
