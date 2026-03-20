@@ -20,7 +20,6 @@ import {
 } from '@/lib/utils';
 import {
   calculateUnrealizedRewards,
-  calculateEffectiveCut,
 } from '@/lib/rewards';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -204,7 +203,6 @@ export default function DelegatorPortfolioPage({
       currentValue: number;
       unrealizedGRT: number;
       realizedGRT: number;
-      effectiveCut: number;
       apr: number;
       insight: PositionInsight | null;
       isActive: boolean;
@@ -220,9 +218,6 @@ export default function DelegatorPortfolioPage({
         stake.indexer.delegatorShares
       );
       const currentValue = stakedGRT + unrealizedGRT;
-      const selfStake = weiToGRT(stake.indexer.stakedTokens);
-      const delegated = weiToGRT(stake.indexer.delegatedTokens);
-      const effectiveCut = calculateEffectiveCut(stake.indexer.indexingRewardCut, selfStake, delegated);
       const isActive = stakedGRT > 0;
 
       // Estimate APR for this position's indexer
@@ -245,7 +240,6 @@ export default function DelegatorPortfolioPage({
         currentValue,
         unrealizedGRT,
         realizedGRT,
-        effectiveCut,
         apr: posAPR,
         insight,
         isActive,
@@ -366,7 +360,7 @@ export default function DelegatorPortfolioPage({
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Current Value</th>
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Unrealized P&amp;L</th>
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Realized</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Eff. Cut</th>
+                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Reward Cut</th>
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 pl-4">Status</th>
                 </tr>
               </thead>
@@ -418,9 +412,14 @@ export default function DelegatorPortfolioPage({
                         </p>
                       </td>
 
-                      {/* Eff. Cut */}
+                      {/* Reward Cut */}
                       <td className="text-right py-3 px-4">
-                        <p className="text-sm font-mono text-[var(--text)]">{pos.effectiveCut.toFixed(2)}%</p>
+                        <p className="text-sm font-mono text-[var(--text)]">{formatPPM(pos.stake.indexer.indexingRewardCut)}</p>
+                        {pos.stake.indexer.indexingRewardEffectiveCut && (
+                          <p className="text-[11px] font-mono text-[var(--text-faint)]">
+                            eff. {(parseFloat(pos.stake.indexer.indexingRewardEffectiveCut) * 100).toFixed(1)}%
+                          </p>
+                        )}
                       </td>
 
                       {/* Status */}

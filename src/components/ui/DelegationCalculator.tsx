@@ -7,11 +7,10 @@ import { ProgressBar } from './ProgressBar';
 import { weiToGRT, formatGRT, formatPPM, cn } from '@/lib/utils';
 import {
   calculateDelegationCapacity,
-  simulateNewDelegation,
   calculateDelegatorAPR,
 } from '@/lib/rewards';
 
-interface EffectiveCutCalculatorProps {
+interface DelegationCalculatorProps {
   indexer: {
     id: string;
     name: string;
@@ -35,12 +34,12 @@ interface EffectiveCutCalculatorProps {
 }
 
 
-export function EffectiveCutCalculator({
+export function DelegationCalculator({
   indexer,
   delegationRatio = 16,
   totalNetworkSignal = 0,
   annualIssuance = 0,
-}: EffectiveCutCalculatorProps) {
+}: DelegationCalculatorProps) {
   const [delegationAmount, setDelegationAmount] = useState<string>('10000');
 
   const selfStake = weiToGRT(indexer.stakedTokens);
@@ -51,12 +50,6 @@ export function EffectiveCutCalculator({
   const capacity = useMemo(
     () => calculateDelegationCapacity(selfStake, currentDelegated, delegationRatio),
     [selfStake, currentDelegated, delegationRatio]
-  );
-
-  // Simulate new delegation impact
-  const simulation = useMemo(
-    () => simulateNewDelegation(indexer.indexingRewardCut, selfStake, currentDelegated, newDelegation),
-    [indexer.indexingRewardCut, selfStake, currentDelegated, newDelegation]
   );
 
   // Calculate estimated APR using per-allocation signal-weighted rewards (grtinfo method)
@@ -74,8 +67,6 @@ export function EffectiveCutCalculator({
     [indexer.allocations, indexer.indexingRewardCut, currentDelegated, newDelegation, totalNetworkSignal, annualIssuance]
   );
 
-  const totalStake = selfStake + currentDelegated;
-
   // Check if parameters are locked (cooldown active)
   const now = Math.floor(Date.now() / 1000);
   const cooldownEnd = indexer.lastDelegationParameterUpdate + indexer.delegatorParameterCooldown;
@@ -83,7 +74,6 @@ export function EffectiveCutCalculator({
   const lockDaysRemaining = isLocked ? Math.ceil((cooldownEnd - now) / 86400) : 0;
 
   // Determine if capacity is available
-  const hasCapacity = capacity.availableCapacity >= newDelegation;
   const wouldExceedCapacity = newDelegation > capacity.availableCapacity;
 
   return (
@@ -110,7 +100,7 @@ export function EffectiveCutCalculator({
             <p className="text-sm font-mono text-[var(--text)]">{formatGRT(currentDelegated)} GRT</p>
           </div>
           <div>
-            <p className="text-xs text-[var(--text-faint)]">Protocol Cut</p>
+            <p className="text-xs text-[var(--text-faint)]">Reward Cut</p>
             <p className="text-sm font-mono text-[var(--text)]">{formatPPM(indexer.indexingRewardCut)}</p>
           </div>
           <div>
@@ -183,30 +173,6 @@ export function EffectiveCutCalculator({
             </p>
           </div>
 
-          {/* Effective cut comparison */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
-              <p className="text-xs text-[var(--text-faint)]">Current Effective Cut</p>
-              <p className="text-lg font-mono text-[var(--text)]">
-                {simulation.currentEffectiveCut.toFixed(2)}%
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
-              <p className="text-xs text-[var(--text-faint)]">After Your Delegation</p>
-              <p className="text-lg font-mono text-[var(--text)]">
-                {simulation.newEffectiveCut.toFixed(2)}%
-              </p>
-              {simulation.cutChange !== 0 && (
-                <p className={cn(
-                  'text-xs font-mono',
-                  simulation.cutChange > 0 ? 'text-[var(--amber)]' : 'text-[var(--green)]'
-                )}>
-                  {simulation.cutChange > 0 ? '+' : ''}{simulation.cutChange.toFixed(2)}%
-                </p>
-              )}
-            </div>
-          </div>
-
           {/* Rewards breakdown */}
           <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
             <p className="text-sm text-[var(--text-muted)] mb-3">Annual Rewards Estimate</p>
@@ -225,7 +191,7 @@ export function EffectiveCutCalculator({
         {indexer.indexingRewardCut > 200000 && (
           <div className="mt-4 p-3 rounded-lg bg-[rgba(255,140,66,0.1)] border border-[var(--amber)]">
             <p className="text-sm text-[var(--amber)]">
-              <strong>High reward cut:</strong> This indexer takes {formatPPM(indexer.indexingRewardCut)} of delegation rewards.
+              <strong>High reward cut:</strong> This indexer takes {formatPPM(indexer.indexingRewardCut)} of indexing rewards.
               Consider comparing with other indexers.
             </p>
           </div>

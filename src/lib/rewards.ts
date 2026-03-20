@@ -49,41 +49,6 @@ export function calculateUnrealizedRewards(
 }
 
 /**
- * Calculate effective reward cut percentage
- *
- * The effective cut accounts for the indexer keeping ALL rewards on their self-stake
- * plus taking their cut percentage from delegation rewards. From the delegator's
- * perspective, the effective cut is higher than the advertised cut because the
- * indexer's self-stake dilutes the reward pool.
- *
- * Formula (from grtinfo/Ellipfra):
- *   effectiveCut = 1 - (1 - rawCut) * (selfStake + delegated) / delegated
- *
- * Can be negative when self-stake is high relative to delegation and cut is low,
- * meaning delegators get more than their proportional share.
- *
- * @param protocolCutPPM - Indexer's advertised reward cut in PPM (0-1000000)
- * @param selfStake - Indexer's own stake (GRT)
- * @param delegated - Total delegated to indexer (GRT)
- * @returns Effective cut as a percentage (0-100)
- */
-export function calculateEffectiveCut(
-  protocolCutPPM: number,
-  selfStake: number,
-  delegated: number
-): number {
-  if (delegated === 0) return 100; // No delegators = 100% effective cut
-
-  const rawCut = protocolCutPPM / 1000000; // PPM to fraction (0-1)
-  const totalStake = selfStake + delegated;
-
-  // Effective cut = 1 - (1 - rawCut) * totalStake / delegated
-  const effectiveCut = 1 - (1 - rawCut) * totalStake / delegated;
-
-  return effectiveCut * 100;
-}
-
-/**
  * Calculate estimated APR for a delegation (simple model)
  *
  * @param indexerRewardsPerYear - Estimated annual rewards for indexer (GRT)
@@ -190,29 +155,6 @@ export function calculateDelegationCapacity(
     usedCapacity,
     availableCapacity,
     utilizationPercent: Math.min(utilizationPercent, 100),
-  };
-}
-
-/**
- * Calculate how a new delegation would affect the effective cut
- */
-export function simulateNewDelegation(
-  protocolCutPPM: number,
-  selfStake: number,
-  currentDelegated: number,
-  newDelegation: number
-): {
-  currentEffectiveCut: number;
-  newEffectiveCut: number;
-  cutChange: number;
-} {
-  const currentEffectiveCut = calculateEffectiveCut(protocolCutPPM, selfStake, currentDelegated);
-  const newEffectiveCut = calculateEffectiveCut(protocolCutPPM, selfStake, currentDelegated + newDelegation);
-
-  return {
-    currentEffectiveCut,
-    newEffectiveCut,
-    cutChange: newEffectiveCut - currentEffectiveCut,
   };
 }
 

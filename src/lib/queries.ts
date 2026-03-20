@@ -90,6 +90,12 @@ export const INDEXERS_QUERY = gql`
       url
       geoHash
       createdAt
+      indexingRewardEffectiveCut
+      overDelegationDilution
+      ownStakeRatio
+      delegatedStakeRatio
+      indexerRewardsOwnGenerationRatio
+      provisionedTokens
     }
   }
 `;
@@ -121,6 +127,12 @@ export const INDEXER_DETAILS_QUERY = gql`
       url
       geoHash
       createdAt
+      indexingRewardEffectiveCut
+      overDelegationDilution
+      ownStakeRatio
+      delegatedStakeRatio
+      indexerRewardsOwnGenerationRatio
+      provisionedTokens
       allocations(first: 100, where: { status: Active }) {
         id
         allocatedTokens
@@ -211,6 +223,13 @@ export const INDEXERS_HORIZON_QUERY = gql`
       url
       geoHash
       createdAt
+      # Horizon metrics
+      indexingRewardEffectiveCut
+      overDelegationDilution
+      ownStakeRatio
+      delegatedStakeRatio
+      indexerRewardsOwnGenerationRatio
+      provisionedTokens
     }
   }
 `;
@@ -253,6 +272,7 @@ export const DELEGATOR_PORTFOLIO_QUERY = gql`
           indexingRewardCut
           queryFeeCut
           delegatorParameterCooldown
+          indexingRewardEffectiveCut
             }
       }
     }
@@ -451,6 +471,13 @@ export interface Indexer {
   url: string | null;
   geoHash: string | null;
   createdAt: number;
+  // Horizon metrics (pre-computed by subgraph)
+  indexingRewardEffectiveCut?: string;
+  overDelegationDilution?: string;
+  ownStakeRatio?: string;
+  delegatedStakeRatio?: string;
+  indexerRewardsOwnGenerationRatio?: string;
+  provisionedTokens?: string;
 }
 
 export interface NetworkStatsResponse {
@@ -527,6 +554,7 @@ export interface DelegatedStake {
     indexingRewardCut: number;
     queryFeeCut: number;
     delegatorParameterCooldown: number;
+    indexingRewardEffectiveCut?: string;
     };
 }
 

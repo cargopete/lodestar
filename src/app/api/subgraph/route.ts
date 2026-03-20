@@ -76,6 +76,12 @@ interface MockIndexer {
   url: string | null;
   geoHash: string | null;
   createdAt: number;
+  indexingRewardEffectiveCut: string;
+  overDelegationDilution: string;
+  ownStakeRatio: string;
+  delegatedStakeRatio: string;
+  indexerRewardsOwnGenerationRatio: string;
+  provisionedTokens: string;
 }
 
 const namedIndexers: MockIndexer[] = [
@@ -96,6 +102,12 @@ const namedIndexers: MockIndexer[] = [
     url: 'https://graphops.xyz',
     geoHash: 'u4pruydqqvj',
     createdAt: 1600000000,
+    indexingRewardEffectiveCut: '0.12',
+    overDelegationDilution: '0',
+    ownStakeRatio: '0.1667',
+    delegatedStakeRatio: '0.8333',
+    indexerRewardsOwnGenerationRatio: '0.85',
+    provisionedTokens: '5000000000000000000000000',
   },
   {
     id: '0xabcdef1234567890abcdef1234567890abcdef12',
@@ -114,6 +126,12 @@ const namedIndexers: MockIndexer[] = [
     url: 'https://stake.fish',
     geoHash: 'gcpvj0ebps',
     createdAt: 1600100000,
+    indexingRewardEffectiveCut: '0.15',
+    overDelegationDilution: '0',
+    ownStakeRatio: '0.2000',
+    delegatedStakeRatio: '0.8000',
+    indexerRewardsOwnGenerationRatio: '0.90',
+    provisionedTokens: '4500000000000000000000000',
   },
   {
     id: '0x9876543210fedcba9876543210fedcba98765432',
@@ -132,6 +150,12 @@ const namedIndexers: MockIndexer[] = [
     url: 'https://p2p.org',
     geoHash: 'ucfv0j848r',
     createdAt: 1600200000,
+    indexingRewardEffectiveCut: '0.10',
+    overDelegationDilution: '0',
+    ownStakeRatio: '0.2024',
+    delegatedStakeRatio: '0.7976',
+    indexerRewardsOwnGenerationRatio: '0.82',
+    provisionedTokens: '3800000000000000000000000',
   },
 ];
 
@@ -152,6 +176,12 @@ const generatedIndexers: MockIndexer[] = Array.from({ length: 47 }, (_, i) => ({
   url: null,
   geoHash: null,
   createdAt: 1600000000 + i * 100000,
+  indexingRewardEffectiveCut: (0.1 + i * 0.005).toFixed(4),
+  overDelegationDilution: (i > 30 ? (i - 30) * 0.02 : 0).toFixed(4),
+  ownStakeRatio: (0.2 - i * 0.002).toFixed(4),
+  delegatedStakeRatio: (0.8 + i * 0.002).toFixed(4),
+  indexerRewardsOwnGenerationRatio: (0.9 + i * 0.005).toFixed(4),
+  provisionedTokens: String(BigInt(3000000 - i * 50000) * BigInt(10 ** 18)),
 }));
 
 const MOCK_INDEXERS_DATA = {
@@ -331,6 +361,7 @@ export async function POST(request: NextRequest) {
                   delegatorShares: '24000000000000000000000000',
                   indexingRewardCut: 100000,
                   queryFeeCut: 100000,
+                  indexingRewardEffectiveCut: '0.12',
                   delegatorParameterCooldown: 0,
                 },
               },
@@ -357,6 +388,7 @@ export async function POST(request: NextRequest) {
                   indexingRewardCut: 120000,
                   queryFeeCut: 100000,
                   delegatorParameterCooldown: 0,
+                  indexingRewardEffectiveCut: '0.15',
                 },
               },
             ],
@@ -461,6 +493,12 @@ export async function POST(request: NextRequest) {
             url: 'https://graphops.xyz',
             geoHash: 'u4pruydqqvj',
             createdAt: 1600000000,
+            indexingRewardEffectiveCut: '0.12',
+            overDelegationDilution: '0',
+            ownStakeRatio: '0.1667',
+            delegatedStakeRatio: '0.8333',
+            indexerRewardsOwnGenerationRatio: '0.85',
+            provisionedTokens: '5000000000000000000000000',
             allocations: [
               {
                 id: 'alloc-1',

@@ -23,7 +23,6 @@ export interface EnrichedIndexer {
   // Pre-computed fields
   selfStakeGRT: number;
   delegatedGRT: number;
-  effectiveCutPercent: number;
   delegatorAPR: number;
   delegationCapacity: {
     maxCapacity: number;
@@ -36,5 +35,11 @@ export interface EnrichedIndexer {
     delegationsIn7d: number;
     netFlowGRT: number;
   };
+  // Horizon metrics (from subgraph)
+  effectiveCut: number | null;
+  overDelegationDilution: number | null;
+  ownStakeRatio: number | null;
+  indexerRewardsOwnGenerationRatio: number | null;
+  provisionedGRT: number | null;
   computedAt: number;
 }

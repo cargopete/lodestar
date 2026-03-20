@@ -18,7 +18,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { EffectiveCutCalculator } from '@/components/ui/EffectiveCutCalculator';
+import { DelegationCalculator } from '@/components/ui/DelegationCalculator';
 import { ProvisionsPanel } from '@/components/ui/ProvisionsPanel';
 
 interface IndexerDetail {
@@ -42,6 +42,13 @@ interface IndexerDetail {
   url: string | null;
   geoHash: string | null;
   createdAt: number;
+  // Horizon metrics
+  indexingRewardEffectiveCut?: string;
+  overDelegationDilution?: string;
+  ownStakeRatio?: string;
+  delegatedStakeRatio?: string;
+  indexerRewardsOwnGenerationRatio?: string;
+  provisionedTokens?: string;
   allocations: Array<{
     id: string;
     allocatedTokens: string;
@@ -91,6 +98,12 @@ function useIndexerDetails(address: string) {
             url
             geoHash
             createdAt
+            indexingRewardEffectiveCut
+            overDelegationDilution
+            ownStakeRatio
+            delegatedStakeRatio
+            indexerRewardsOwnGenerationRatio
+            provisionedTokens
             delegators(first: 100) {
               id
               stakedTokens
@@ -364,7 +377,7 @@ export default function IndexerDetailPage({
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left column - Calculator */}
-        <EffectiveCutCalculator
+        <DelegationCalculator
           indexer={{
             id: indexer.id,
             name,
@@ -530,6 +543,12 @@ export default function IndexerDetailPage({
                   <span className="text-sm text-[var(--text-muted)]">Indexing Reward Cut</span>
                   <span className="font-mono text-[var(--text)]">{formatPPM(indexer.indexingRewardCut)}</span>
                 </div>
+                {indexer.indexingRewardEffectiveCut && (
+                  <div className="flex justify-between items-center py-2 border-b border-[var(--border)]">
+                    <span className="text-sm text-[var(--text-muted)]">Effective Cut</span>
+                    <span className="font-mono text-[var(--text)]">{(parseFloat(indexer.indexingRewardEffectiveCut) * 100).toFixed(2)}%</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center py-2 border-b border-[var(--border)]">
                   <span className="text-sm text-[var(--text-muted)]">Query Fee Cut</span>
                   <span className="font-mono text-[var(--text)]">{formatPPM(indexer.queryFeeCut)}</span>
@@ -545,6 +564,48 @@ export default function IndexerDetailPage({
               </div>
             </CardContent>
           </Card>
+
+          {/* Horizon Metrics */}
+          {(indexer.overDelegationDilution || indexer.ownStakeRatio || indexer.provisionedTokens) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Horizon Metrics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {indexer.ownStakeRatio && (
+                    <div className="flex justify-between items-center py-2 border-b border-[var(--border)]">
+                      <span className="text-sm text-[var(--text-muted)]">Own Stake Ratio</span>
+                      <span className="font-mono text-[var(--text)]">{(parseFloat(indexer.ownStakeRatio) * 100).toFixed(1)}%</span>
+                    </div>
+                  )}
+                  {indexer.indexerRewardsOwnGenerationRatio && (
+                    <div className="flex justify-between items-center py-2 border-b border-[var(--border)]">
+                      <span className="text-sm text-[var(--text-muted)]">Rewards Own Generation</span>
+                      <span className={cn(
+                        'font-mono',
+                        parseFloat(indexer.indexerRewardsOwnGenerationRatio) > 1 ? 'text-[var(--amber)]' : 'text-[var(--text)]'
+                      )}>
+                        {(parseFloat(indexer.indexerRewardsOwnGenerationRatio) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                  {indexer.overDelegationDilution && parseFloat(indexer.overDelegationDilution) > 0 && (
+                    <div className="flex justify-between items-center py-2 border-b border-[var(--border)]">
+                      <span className="text-sm text-[var(--amber)]">Overdelegation Dilution</span>
+                      <span className="font-mono text-[var(--amber)]">{(parseFloat(indexer.overDelegationDilution) * 100).toFixed(1)}%</span>
+                    </div>
+                  )}
+                  {indexer.provisionedTokens && (
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-[var(--text-muted)]">Provisioned Stake</span>
+                      <span className="font-mono text-[var(--text)]">{formatGRT(weiToGRT(indexer.provisionedTokens))} GRT</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

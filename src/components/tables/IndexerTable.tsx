@@ -61,8 +61,9 @@ interface IndexerRow {
   rewards: number;
   reoStatus: 'eligible' | 'warning' | 'ineligible';
   recentDelegations: { count: number; netChange: number } | null;
-  effectiveCut: number | null;
   apr: number | null;
+  effectiveCut: number | null;
+  overDelegationDilution: number | null;
   raw: Indexer;
 }
 
@@ -111,8 +112,9 @@ export function IndexerTable() {
           recentDelegations: e.recentActivity.delegationsIn7d > 0
             ? { count: e.recentActivity.delegationsIn7d, netChange: e.recentActivity.netFlowGRT }
             : null,
-          effectiveCut: e.effectiveCutPercent,
           apr: e.delegatorAPR,
+          effectiveCut: e.effectiveCut,
+          overDelegationDilution: e.overDelegationDilution,
           // Reconstruct raw Indexer shape for comparison panel
           raw: {
             id: e.id,
@@ -159,8 +161,9 @@ export function IndexerTable() {
           rewards,
           reoStatus: quickREOStatus(indexer),
           recentDelegations: null,
-          effectiveCut: null,
           apr: null,
+          effectiveCut: null,
+          overDelegationDilution: null,
           raw: indexer,
         };
       })
@@ -297,6 +300,9 @@ export function IndexerTable() {
               {row.effectiveCut !== null && (
                 <span className="text-[10px] text-[var(--text-faint)] block">
                   eff. {row.effectiveCut.toFixed(1)}%
+                  {row.overDelegationDilution !== null && row.overDelegationDilution > 0 && (
+                    <span className="text-[var(--amber)]" title={`${row.overDelegationDilution.toFixed(1)}% overdelegation dilution`}> OD</span>
+                  )}
                 </span>
               )}
             </div>

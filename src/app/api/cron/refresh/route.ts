@@ -3,7 +3,6 @@ import { cacheSet } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT, resolveIndexerName } from '@/lib/utils';
 import {
-  calculateEffectiveCut,
   calculateDelegatorAPR,
   calculateDelegationCapacity,
 } from '@/lib/rewards';
@@ -39,6 +38,12 @@ interface SubgraphIndexer {
   url: string | null;
   geoHash: string | null;
   createdAt: number;
+  // Horizon metrics
+  indexingRewardEffectiveCut?: string;
+  overDelegationDilution?: string;
+  ownStakeRatio?: string;
+  indexerRewardsOwnGenerationRatio?: string;
+  provisionedTokens?: string;
 }
 
 interface AllocationData {
@@ -98,6 +103,11 @@ export async function GET(request: NextRequest) {
           url
           geoHash
           createdAt
+          indexingRewardEffectiveCut
+          overDelegationDilution
+          ownStakeRatio
+          indexerRewardsOwnGenerationRatio
+          provisionedTokens
         }
       }`),
       subgraphQuery<{
@@ -189,12 +199,6 @@ export async function GET(request: NextRequest) {
       const selfStake = weiToGRT(indexer.stakedTokens);
       const delegated = weiToGRT(indexer.delegatedTokens);
 
-      const effectiveCut = calculateEffectiveCut(
-        indexer.indexingRewardCut,
-        selfStake,
-        delegated
-      );
-
       const allocations = (allocationMap.get(indexer.id) ?? []).map((a) => ({
         allocatedTokens: a.allocatedTokens,
         subgraphDeployment: a.subgraphDeployment,
@@ -237,7 +241,6 @@ export async function GET(request: NextRequest) {
         createdAt: indexer.createdAt,
         selfStakeGRT: selfStake,
         delegatedGRT: delegated,
-        effectiveCutPercent: effectiveCut,
         delegatorAPR: apr,
         delegationCapacity: capacity,
         reoStatus,
@@ -245,6 +248,21 @@ export async function GET(request: NextRequest) {
           delegationsIn7d: activity.count,
           netFlowGRT: activity.netFlowGRT,
         },
+        effectiveCut: indexer.indexingRewardEffectiveCut
+          ? parseFloat(indexer.indexingRewardEffectiveCut) * 100
+          : null,
+        overDelegationDilution: indexer.overDelegationDilution
+          ? parseFloat(indexer.overDelegationDilution) * 100
+          : null,
+        ownStakeRatio: indexer.ownStakeRatio
+          ? parseFloat(indexer.ownStakeRatio) * 100
+          : null,
+        indexerRewardsOwnGenerationRatio: indexer.indexerRewardsOwnGenerationRatio
+          ? parseFloat(indexer.indexerRewardsOwnGenerationRatio)
+          : null,
+        provisionedGRT: indexer.provisionedTokens
+          ? weiToGRT(indexer.provisionedTokens)
+          : null,
         computedAt: Date.now(),
       };
     });
