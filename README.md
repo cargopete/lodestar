@@ -1,4 +1,7 @@
-# Lodestar
+# Lodestar 🌟
+_Stay oriented_
+
+![Screen Recording 2026-03-20 at 13 49 40](https://github.com/user-attachments/assets/be8e5a1b-91c6-4544-96fc-47542d18abf7)
 
 Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network metrics, indexer intelligence, delegation tools, and portfolio tracking for the Horizon era.
 
