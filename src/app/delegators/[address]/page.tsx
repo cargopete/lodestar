@@ -490,11 +490,18 @@ export default function DelegatorPortfolioPage({
                       {/* Reward Cut */}
                       <td className="text-right py-3 px-4">
                         <p className="text-sm font-mono text-[var(--text)]">{formatPPM(pos.stake.indexer.indexingRewardCut)}</p>
-                        {pos.stake.indexer.indexingRewardEffectiveCut && (
-                          <p className="text-[11px] font-mono text-[var(--text-faint)]">
-                            eff. {(parseFloat(pos.stake.indexer.indexingRewardEffectiveCut) * 100).toFixed(1)}%
-                          </p>
-                        )}
+                        {(() => {
+                          const selfStake = weiToGRT(pos.stake.indexer.stakedTokens);
+                          const delegated = weiToGRT(pos.stake.indexer.delegatedTokens);
+                          if (delegated <= 0) return null;
+                          const rawCut = pos.stake.indexer.indexingRewardCut / 1_000_000;
+                          const effCut = (1 - (1 - rawCut) * (selfStake + delegated) / delegated) * 100;
+                          return (
+                            <p className={cn('text-[11px] font-mono', effCut < 0 ? 'text-[var(--green)]' : 'text-[var(--text-faint)]')}>
+                              eff. {effCut.toFixed(1)}%
+                            </p>
+                          );
+                        })()}
                       </td>
 
                       {/* Status */}
