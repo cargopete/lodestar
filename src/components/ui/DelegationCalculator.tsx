@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from './Card';
 import { Badge } from './Badge';
 import { ProgressBar } from './ProgressBar';
-import { weiToGRT, formatGRT, formatPPM, cn } from '@/lib/utils';
+import { weiToGRT, formatGRT, formatPPM, formatPercent, cn } from '@/lib/utils';
 import {
   calculateDelegationCapacity,
   calculateDelegatorAPR,
@@ -66,6 +66,20 @@ export function DelegationCalculator({
     },
     [indexer.allocations, indexer.indexingRewardCut, currentDelegated, newDelegation, totalNetworkSignal, annualIssuance]
   );
+
+  // Effective cut: what delegators effectively pay, accounting for self-stake in the pool
+  // Formula: effectiveCut = 1 - (1 - rawCut) × (selfStake + delegated) / delegated
+  const rawCut = indexer.indexingRewardCut / 1_000_000;
+  const currentEffectiveCut = useMemo(() => {
+    if (currentDelegated <= 0) return null;
+    return (1 - (1 - rawCut) * (selfStake + currentDelegated) / currentDelegated) * 100;
+  }, [rawCut, selfStake, currentDelegated]);
+
+  const afterEffectiveCut = useMemo(() => {
+    const totalDelegated = currentDelegated + newDelegation;
+    if (totalDelegated <= 0) return null;
+    return (1 - (1 - rawCut) * (selfStake + totalDelegated) / totalDelegated) * 100;
+  }, [rawCut, selfStake, currentDelegated, newDelegation]);
 
   // Check if parameters are locked (cooldown active)
   const now = Math.floor(Date.now() / 1000);
@@ -172,6 +186,38 @@ export function DelegationCalculator({
               Based on current network rewards distribution
             </p>
           </div>
+
+          {/* Effective cut simulation */}
+          {currentEffectiveCut !== null && (
+            <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
+              <p className="text-sm text-[var(--text-muted)] mb-3">Effective Reward Cut</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-[var(--text-faint)] mb-1">Current</p>
+                  <p className={cn(
+                    'text-lg font-mono font-semibold',
+                    currentEffectiveCut < 0 ? 'text-[var(--green)]' : 'text-[var(--text)]'
+                  )}>
+                    {formatPercent(currentEffectiveCut)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--text-faint)] mb-1">After Your Delegation</p>
+                  <p className={cn(
+                    'text-lg font-mono font-semibold',
+                    afterEffectiveCut !== null && afterEffectiveCut < 0 ? 'text-[var(--green)]' : 'text-[var(--text)]'
+                  )}>
+                    {afterEffectiveCut !== null ? formatPercent(afterEffectiveCut) : '—'}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-[var(--text-faint)] mt-2">
+                {currentEffectiveCut < 0
+                  ? 'Negative = indexer self-stake is subsidising delegator returns'
+                  : 'Accounts for indexer self-stake share of the delegation pool'}
+              </p>
+            </div>
+          )}
 
           {/* Rewards breakdown */}
           <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
