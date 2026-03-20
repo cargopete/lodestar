@@ -34,6 +34,7 @@ export interface EnrichedIndexer {
   recentActivity: {
     delegationsIn7d: number;
     undelegationsIn7d: number;
+    netFlowGRT: number;
   };
   // Horizon metrics (from subgraph)
   effectiveCut: number | null;

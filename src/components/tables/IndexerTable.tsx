@@ -60,7 +60,7 @@ interface IndexerRow {
   allocated: number;
   rewards: number;
   reoStatus: 'eligible' | 'warning' | 'ineligible';
-  recentDelegations: { delegations: number; undelegations: number } | null;
+  recentDelegations: { delegations: number; undelegations: number; netFlowGRT: number } | null;
   apr: number | null;
   effectiveCut: number | null;
   overDelegationDilution: number | null;
@@ -110,7 +110,7 @@ export function IndexerTable() {
           rewards: weiToGRT(e.rewardsEarned),
           reoStatus: e.reoStatus,
           recentDelegations: (e.recentActivity.delegationsIn7d > 0 || e.recentActivity.undelegationsIn7d > 0)
-            ? { delegations: e.recentActivity.delegationsIn7d, undelegations: e.recentActivity.undelegationsIn7d }
+            ? { delegations: e.recentActivity.delegationsIn7d, undelegations: e.recentActivity.undelegationsIn7d, netFlowGRT: e.recentActivity.netFlowGRT }
             : null,
           apr: e.delegatorAPR,
           effectiveCut: e.effectiveCut,
@@ -229,17 +229,20 @@ export function IndexerTable() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
                     </svg>
                     <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-48 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/del:opacity-100 transition-opacity z-50 text-[11px] font-normal">
-                      <span className="block font-semibold text-[var(--text)] mb-1">Active Positions (7d)</span>
+                      <span className="block font-semibold text-[var(--text)] mb-1">Delegation Activity (7d)</span>
                       {row.recentDelegations.delegations > 0 && (
                         <span className="block text-[var(--green)]">
-                          {row.recentDelegations.delegations} delegating
+                          {row.recentDelegations.delegations} delegation{row.recentDelegations.delegations !== 1 ? 's' : ''}
                         </span>
                       )}
                       {row.recentDelegations.undelegations > 0 && (
                         <span className="block text-[var(--red)]">
-                          {row.recentDelegations.undelegations} undelegating
+                          {row.recentDelegations.undelegations} undelegation{row.recentDelegations.undelegations !== 1 ? 's' : ''}
                         </span>
                       )}
+                      <span className={`block font-mono mt-0.5 ${row.recentDelegations.netFlowGRT >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+                        {row.recentDelegations.netFlowGRT >= 0 ? '+' : ''}{formatGRT(row.recentDelegations.netFlowGRT)} GRT
+                      </span>
                     </span>
                   </span>
                 )}

@@ -487,15 +487,13 @@ export default function IndexerDetailPage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {recentDelegations.slice(0, 8).map((event) => {
-                    const staked = weiToGRT(event.stakedTokens);
-                    const unstaked = weiToGRT(event.unstakedTokens);
-                    const lastDelegated = event.lastDelegatedAt;
-                    const lastUndelegated = event.lastUndelegatedAt;
-                    const isDelegation = !lastUndelegated || lastDelegated > lastUndelegated;
-                    const actionTime = isDelegation ? lastDelegated : lastUndelegated;
+                  {recentDelegations.slice(0, 10).map((event) => {
+                    const tokens = weiToGRT(event.tokens);
+                    const isDelegation = event.eventType === 'delegation';
+                    const isWithdrawal = event.eventType === 'withdrawal';
+                    const timestamp = parseInt(event.timestamp);
                     const now = Math.floor(Date.now() / 1000);
-                    const daysAgo = Math.floor((now - actionTime) / 86400);
+                    const daysAgo = Math.floor((now - timestamp) / 86400);
                     const timeLabel = daysAgo === 0 ? 'today' : daysAgo === 1 ? '1d ago' : `${daysAgo}d ago`;
 
                     return (
@@ -509,20 +507,17 @@ export default function IndexerDetailPage({
                           </div>
                           <div>
                             <p className="font-mono text-xs text-[var(--text)]">
-                              {shortenAddress(event.delegator.id)}
+                              {shortenAddress(event.delegator)}
                             </p>
-                            <p className="text-[10px] text-[var(--text-faint)]">{timeLabel}</p>
+                            <p className="text-[10px] text-[var(--text-faint)]">
+                              {timeLabel} · {isWithdrawal ? 'withdrawal' : event.eventType}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className={cn('font-mono text-xs', isDelegation ? 'text-[var(--green)]' : 'text-[var(--red)]')}>
-                            {isDelegation ? '+' : ''}{formatGRT(staked)} GRT
+                            {isDelegation ? '+' : '−'}{formatGRT(tokens)} GRT
                           </p>
-                          {unstaked > 0 && (
-                            <p className="text-[10px] text-[var(--text-faint)] font-mono">
-                              −{formatGRT(unstaked)} unstaked
-                            </p>
-                          )}
                         </div>
                       </div>
                     );

@@ -190,16 +190,17 @@ export function useREOStatus(address: string) {
 }
 
 /**
- * Hook for recent delegation activity on an indexer
+ * Hook for recent delegation events on an indexer
+ * Sources from Paolo Diomede's delegation events subgraph for discrete event data
  */
 export interface DelegationEvent {
   id: string;
-  delegator: { id: string };
-  indexer: { id: string };
-  stakedTokens: string;
-  unstakedTokens: string;
-  lastDelegatedAt: number;
-  lastUndelegatedAt: number | null;
+  eventType: string;
+  indexer: string;
+  delegator: string;
+  tokens: string;
+  timestamp: string;
+  txHash: string;
 }
 
 export function useRecentDelegations(indexerAddress: string) {
@@ -207,29 +208,29 @@ export function useRecentDelegations(indexerAddress: string) {
     queryKey: ['recentDelegations', indexerAddress],
     queryFn: async () => {
       const query = `{
-        delegatedStakes(
-          first: 10,
-          orderBy: lastDelegatedAt,
+        delegationEvents(
+          first: 20,
+          orderBy: timestamp,
           orderDirection: desc,
           where: { indexer: "${indexerAddress.toLowerCase()}" }
         ) {
           id
-          delegator { id }
-          indexer { id }
-          stakedTokens
-          unstakedTokens
-          lastDelegatedAt
-          lastUndelegatedAt
+          eventType
+          indexer
+          delegator
+          tokens
+          timestamp
+          txHash
         }
       }`;
-      const response = await fetch('/api/subgraph', {
+      const response = await fetch('/api/delegation-events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
       });
-      if (!response.ok) throw new Error('Failed to fetch delegations');
+      if (!response.ok) throw new Error('Failed to fetch delegation events');
       const json = await response.json();
-      return json.data?.delegatedStakes ?? [];
+      return json.data?.delegationEvents ?? [];
     },
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
