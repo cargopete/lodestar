@@ -42,7 +42,7 @@ export function StatCard({
           {delta && !loading && (
             <p
               className={cn(
-                'text-[11px] font-mono mt-1.5 px-1.5 py-0.5 rounded-[var(--radius-badge)] inline-block',
+                'text-[11px] font-mono mt-3 px-1.5 py-0.5 rounded-[var(--radius-badge)] inline-block',
                 delta.positive ? 'text-[var(--green)] bg-[var(--green-dim)]' : 'text-[var(--red)] bg-[var(--red-dim)]'
               )}
             >
