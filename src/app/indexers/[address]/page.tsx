@@ -320,22 +320,22 @@ export default function IndexerDetailPage({
         <StatCard
           label="Self-Stake"
           value={`${formatGRT(selfStake)} GRT`}
-          delta={{ value: formatUSD(selfStake * grtPrice), positive: true }}
+          subtitle={formatUSD(selfStake * grtPrice)}
         />
         <StatCard
           label="Total Delegated"
           value={`${formatGRT(delegated)} GRT`}
-          delta={{ value: formatUSD(delegated * grtPrice), positive: true }}
+          subtitle={formatUSD(delegated * grtPrice)}
         />
         <StatCard
           label="Allocated"
           value={`${formatGRT(allocated)} GRT`}
-          delta={{ value: `${indexer.allocationCount} allocations`, positive: true }}
+          subtitle={`${indexer.allocationCount} allocations`}
         />
         <StatCard
           label="Total Rewards Earned"
           value={`${formatGRT(totalRewards)} GRT`}
-          delta={{ value: formatUSD(totalRewards * grtPrice), positive: true }}
+          subtitle={formatUSD(totalRewards * grtPrice)}
         />
       </StatGrid>
 

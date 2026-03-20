@@ -10,6 +10,7 @@ interface StatCardProps {
     value: string;
     positive?: boolean;
   };
+  subtitle?: string;
   icon?: React.ReactNode;
   loading?: boolean;
   className?: string;
@@ -19,6 +20,7 @@ export function StatCard({
   label,
   value,
   delta,
+  subtitle,
   icon,
   loading = false,
   className,
@@ -45,6 +47,11 @@ export function StatCard({
               )}
             >
               {delta.positive ? '+' : ''}{delta.value}
+            </p>
+          )}
+          {subtitle && !loading && (
+            <p className="text-[11px] font-mono mt-1.5 text-[var(--text-muted)]">
+              {subtitle}
             </p>
           )}
         </div>

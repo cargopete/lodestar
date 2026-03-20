@@ -349,22 +349,22 @@ export default function DelegatorPortfolioPage({
         <StatCard
           label="Total Delegated"
           value={`${formatGRT(totalStaked)} GRT`}
-          delta={{ value: formatUSD(totalStaked * grtPrice), positive: true }}
+          subtitle={formatUSD(totalStaked * grtPrice)}
         />
         <StatCard
           label="Unrealized Rewards"
           value={`${formatGRT(totalUnrealized)} GRT`}
-          delta={{ value: formatUSD(totalUnrealized * grtPrice), positive: true }}
+          subtitle={formatUSD(totalUnrealized * grtPrice)}
         />
         <StatCard
           label="Realized Rewards"
           value={`${formatGRT(totalRealized)} GRT`}
-          delta={{ value: formatUSD(totalRealized * grtPrice), positive: true }}
+          subtitle={formatUSD(totalRealized * grtPrice)}
         />
         <StatCard
           label="Portfolio Value"
           value={`${formatGRT(portfolioValue)} GRT`}
-          delta={{ value: formatUSD(portfolioValue * grtPrice), positive: true }}
+          subtitle={formatUSD(portfolioValue * grtPrice)}
         />
       </StatGrid>
 

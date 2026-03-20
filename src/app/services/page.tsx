@@ -56,7 +56,7 @@ export default function ServicesPage() {
         <StatCard
           label="Total Provisioned"
           value={`${formatGRT(totalProvisioned)} GRT`}
-          delta={{ value: formatUSD(totalProvisioned * grtPrice), positive: true }}
+          subtitle={formatUSD(totalProvisioned * grtPrice)}
         />
         <StatCard
           label="Total Allocated"

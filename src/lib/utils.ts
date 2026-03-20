@@ -68,13 +68,13 @@ export function formatPercent(value: number, decimals = 2): string {
  */
 export function formatUSD(amount: number, decimals = 2): string {
   if (decimals <= 2 && amount >= 1e9) {
-    return `$${(amount / 1e9).toFixed(2)}B`;
+    return `$ ${(amount / 1e9).toFixed(2)}B`;
   }
   if (decimals <= 2 && amount >= 1e6) {
-    return `$${(amount / 1e6).toFixed(2)}M`;
+    return `$ ${(amount / 1e6).toFixed(2)}M`;
   }
   if (decimals <= 2 && amount >= 1e3) {
-    return `$${(amount / 1e3).toFixed(2)}K`;
+    return `$ ${(amount / 1e3).toFixed(2)}K`;
   }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
