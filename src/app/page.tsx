@@ -169,6 +169,18 @@ export default function ProtocolOverview() {
                 </span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-[var(--border)]">
+                <span className="text-[13px] text-[var(--text-muted)]">Fee-to-Inflation Ratio</span>
+                <span className="font-mono text-[var(--text)]">
+                  {network?.totalQueryFees && network?.totalIndexingRewards
+                    ? (() => {
+                        const fees = weiToGRT(network.totalQueryFees);
+                        const rewards = weiToGRT(network.totalIndexingRewards);
+                        return rewards > 0 ? `${((fees / rewards) * 100).toFixed(2)}%` : '—';
+                      })()
+                    : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-[var(--border)]">
                 <span className="text-[13px] text-[var(--text-muted)]">Max Allocation Epochs</span>
                 <span className="font-mono text-[var(--text)]">
                   {network?.maxAllocationEpochs ?? '—'}

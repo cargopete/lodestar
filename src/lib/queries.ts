@@ -272,6 +272,7 @@ export const DELEGATOR_PORTFOLIO_QUERY = gql`
           indexingRewardCut
           queryFeeCut
           delegatorParameterCooldown
+          allocationCount
           indexingRewardEffectiveCut
             }
       }
@@ -554,6 +555,7 @@ export interface DelegatedStake {
     indexingRewardCut: number;
     queryFeeCut: number;
     delegatorParameterCooldown: number;
+    allocationCount?: number;
     indexingRewardEffectiveCut?: string;
     };
 }

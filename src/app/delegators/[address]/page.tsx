@@ -65,6 +65,8 @@ function useDelegatorPortfolio(address: string | undefined) {
                 indexingRewardCut
                 queryFeeCut
                 delegatorParameterCooldown
+                allocationCount
+                indexingRewardEffectiveCut
               }
             }
           }
@@ -188,10 +190,13 @@ export default function DelegatorPortfolioPage({
     return median(aprs);
   }, [allIndexers]);
 
+  // Minimum self-stake for REO eligibility (100K GRT)
+  const MIN_STAKE_REO = 100000;
+
   // Calculate totals and per-position data
-  const { totalStaked, totalRealized, totalUnrealized, positions } = useMemo(() => {
+  const { totalStaked, totalRealized, totalUnrealized, positions, portfolioHealth } = useMemo(() => {
     if (!delegator) {
-      return { totalStaked: 0, totalRealized: 0, totalUnrealized: 0, positions: [] };
+      return { totalStaked: 0, totalRealized: 0, totalUnrealized: 0, positions: [], portfolioHealth: null };
     }
 
     let staked = 0;
@@ -246,7 +251,30 @@ export default function DelegatorPortfolioPage({
       });
     }
 
-    return { totalStaked: staked, totalRealized: realized, totalUnrealized: unrealized, positions: posData };
+    // Portfolio health: REO risk + concentration
+    const activePositions = posData.filter((p) => p.isActive);
+    let reoEligibleGRT = 0;
+    let largestPositionGRT = 0;
+
+    for (const pos of activePositions) {
+      const selfStake = weiToGRT(pos.stake.indexer.stakedTokens);
+      const hasAllocations = (pos.stake.indexer.allocationCount ?? 0) > 0;
+      const hasSufficientStake = selfStake >= MIN_STAKE_REO;
+      if (hasAllocations && hasSufficientStake) {
+        reoEligibleGRT += pos.stakedGRT;
+      }
+      if (pos.stakedGRT > largestPositionGRT) {
+        largestPositionGRT = pos.stakedGRT;
+      }
+    }
+
+    const health = staked > 0 ? {
+      reoEligiblePercent: (reoEligibleGRT / staked) * 100,
+      activeIndexerCount: activePositions.length,
+      topConcentration: (largestPositionGRT / staked) * 100,
+    } : null;
+
+    return { totalStaked: staked, totalRealized: realized, totalUnrealized: unrealized, positions: posData, portfolioHealth: health };
   }, [delegator, allIndexers, networkMedianAPR]);
 
   const portfolioValue = totalStaked + totalUnrealized;
@@ -339,6 +367,53 @@ export default function DelegatorPortfolioPage({
           delta={{ value: formatUSD(portfolioValue * grtPrice), positive: true }}
         />
       </StatGrid>
+
+      {/* Portfolio Health */}
+      {portfolioHealth && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className={cn(
+            'p-4 rounded-lg border',
+            portfolioHealth.reoEligiblePercent >= 80
+              ? 'bg-[rgba(0,200,150,0.06)] border-[var(--green)]'
+              : portfolioHealth.reoEligiblePercent >= 50
+              ? 'bg-[rgba(255,140,66,0.06)] border-[var(--amber)]'
+              : 'bg-[rgba(255,80,80,0.06)] border-[var(--red)]'
+          )}>
+            <p className="text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">REO Coverage</p>
+            <p className={cn(
+              'text-xl font-mono font-semibold',
+              portfolioHealth.reoEligiblePercent >= 80 ? 'text-[var(--green)]'
+                : portfolioHealth.reoEligiblePercent >= 50 ? 'text-[var(--amber)]'
+                : 'text-[var(--red)]'
+            )}>
+              {portfolioHealth.reoEligiblePercent.toFixed(0)}%
+            </p>
+            <p className="text-[11px] text-[var(--text-faint)] mt-1">of delegation with REO-eligible indexers</p>
+          </div>
+          <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]">
+            <p className="text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">Diversification</p>
+            <p className="text-xl font-mono font-semibold text-[var(--text)]">
+              {portfolioHealth.activeIndexerCount} indexer{portfolioHealth.activeIndexerCount !== 1 ? 's' : ''}
+            </p>
+            <p className="text-[11px] text-[var(--text-faint)] mt-1">active delegation positions</p>
+          </div>
+          <div className={cn(
+            'p-4 rounded-lg border',
+            portfolioHealth.topConcentration > 80
+              ? 'bg-[rgba(255,140,66,0.06)] border-[var(--amber)]'
+              : 'border-[var(--border)] bg-[var(--bg-surface)]'
+          )}>
+            <p className="text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">Top Concentration</p>
+            <p className={cn(
+              'text-xl font-mono font-semibold',
+              portfolioHealth.topConcentration > 80 ? 'text-[var(--amber)]' : 'text-[var(--text)]'
+            )}>
+              {portfolioHealth.topConcentration.toFixed(0)}%
+            </p>
+            <p className="text-[11px] text-[var(--text-faint)] mt-1">in largest single position</p>
+          </div>
+        </div>
+      )}
 
       {/* Positions table */}
       <Card>
