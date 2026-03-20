@@ -104,7 +104,7 @@ export function DelegationCalculator({
       </CardHeader>
       <CardContent>
         {/* Indexer summary */}
-        <div className="grid grid-cols-2 gap-4 mb-6 p-4 rounded-lg bg-[var(--bg-elevated)]">
+        <div className="grid grid-cols-3 gap-4 mb-6 p-4 rounded-lg bg-[var(--bg-elevated)]">
           <div>
             <p className="text-xs text-[var(--text-faint)]">Self-Stake</p>
             <p className="text-sm font-mono text-[var(--text)]">{formatGRT(selfStake)} GRT</p>
@@ -114,14 +114,31 @@ export function DelegationCalculator({
             <p className="text-sm font-mono text-[var(--text)]">{formatGRT(currentDelegated)} GRT</p>
           </div>
           <div>
-            <p className="text-xs text-[var(--text-faint)]">Reward Cut</p>
+            <p className="text-xs text-[var(--text-faint)]">Reward Cut (Raw)</p>
             <p className="text-sm font-mono text-[var(--text)]">{formatPPM(indexer.indexingRewardCut)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-[var(--text-faint)]">Effective Cut (Current)</p>
+            <p className={cn('text-sm font-mono', currentEffectiveCut !== null && currentEffectiveCut < 0 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
+              {currentEffectiveCut !== null ? formatPercent(currentEffectiveCut) : '—'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-[var(--text-faint)]">Effective Cut (After)</p>
+            <p className={cn('text-sm font-mono', afterEffectiveCut !== null && afterEffectiveCut < 0 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
+              {afterEffectiveCut !== null ? formatPercent(afterEffectiveCut) : '—'}
+            </p>
           </div>
           <div>
             <p className="text-xs text-[var(--text-faint)]">Query Fee Cut</p>
             <p className="text-sm font-mono text-[var(--text)]">{formatPPM(indexer.queryFeeCut)}</p>
           </div>
         </div>
+        {currentEffectiveCut !== null && currentEffectiveCut < 0 && (
+          <p className="text-xs text-[var(--green)] -mt-4 mb-6 px-1">
+            Negative effective cut = indexer self-stake is subsidising delegator returns
+          </p>
+        )}
 
         {/* Capacity indicator */}
         <div className="mb-6">
@@ -186,38 +203,6 @@ export function DelegationCalculator({
               Based on current network rewards distribution
             </p>
           </div>
-
-          {/* Effective cut simulation */}
-          {currentEffectiveCut !== null && (
-            <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
-              <p className="text-sm text-[var(--text-muted)] mb-3">Effective Reward Cut</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-[var(--text-faint)] mb-1">Current</p>
-                  <p className={cn(
-                    'text-lg font-mono font-semibold',
-                    currentEffectiveCut < 0 ? 'text-[var(--green)]' : 'text-[var(--text)]'
-                  )}>
-                    {formatPercent(currentEffectiveCut)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-[var(--text-faint)] mb-1">After Your Delegation</p>
-                  <p className={cn(
-                    'text-lg font-mono font-semibold',
-                    afterEffectiveCut !== null && afterEffectiveCut < 0 ? 'text-[var(--green)]' : 'text-[var(--text)]'
-                  )}>
-                    {afterEffectiveCut !== null ? formatPercent(afterEffectiveCut) : '—'}
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-[var(--text-faint)] mt-2">
-                {currentEffectiveCut < 0
-                  ? 'Negative = indexer self-stake is subsidising delegator returns'
-                  : 'Accounts for indexer self-stake share of the delegation pool'}
-              </p>
-            </div>
-          )}
 
           {/* Rewards breakdown */}
           <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
