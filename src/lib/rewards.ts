@@ -89,10 +89,15 @@ export function calculateEstimatedAPR(
  * For each allocation:
  *   reward = annualIssuance × (subgraphSignal / totalNetworkSignal) × (allocation / subgraphStake)
  *
- * Then: delegatorAPR = sum(rewards) × (1 - rawCut) / delegated × 100
+ * Reward distribution:
+ *   1. Indexer takes rawCut of total rewards
+ *   2. Remaining (1 - rawCut) goes to the delegation pool
+ *   3. Self-stake participates in the pool, so delegators get their proportional share
+ *   delegatorAPR = sum(rewards) × (1 - rawCut) / (selfStake + delegated) × 100
  *
  * @param allocations - Indexer's active allocations with subgraph signal data
  * @param protocolCutPPM - Indexer's reward cut in PPM
+ * @param selfStake - Indexer's own stake (GRT)
  * @param delegated - Total delegated to indexer (GRT)
  * @param totalNetworkSignal - Total signal across entire network (GRT)
  * @param annualIssuance - Annual GRT issuance (GRT)
@@ -106,11 +111,13 @@ export function calculateDelegatorAPR(
     };
   }>,
   protocolCutPPM: number,
+  selfStake: number,
   delegated: number,
   totalNetworkSignal: number,
   annualIssuance: number
 ): number {
-  if (delegated === 0 || totalNetworkSignal === 0 || allocations.length === 0) return 0;
+  const totalStake = selfStake + delegated;
+  if (delegated === 0 || totalStake === 0 || totalNetworkSignal === 0 || allocations.length === 0) return 0;
 
   let totalRewards = 0;
 
@@ -127,7 +134,8 @@ export function calculateDelegatorAPR(
   }
 
   const rawCut = protocolCutPPM / 1000000;
-  const delegatorRewards = totalRewards * (1 - rawCut);
+  // After indexer cut, remaining goes to delegation pool where self-stake also participates
+  const delegatorRewards = totalRewards * (1 - rawCut) * (delegated / totalStake);
 
   return (delegatorRewards / delegated) * 100;
 }

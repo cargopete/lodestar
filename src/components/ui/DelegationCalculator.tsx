@@ -59,6 +59,7 @@ export function DelegationCalculator({
       return calculateDelegatorAPR(
         indexer.allocations,
         indexer.indexingRewardCut,
+        selfStake,
         currentDelegated + newDelegation || currentDelegated || 1,
         totalNetworkSignal,
         annualIssuance
