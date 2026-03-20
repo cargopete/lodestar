@@ -33,7 +33,7 @@ export interface EnrichedIndexer {
   reoStatus: 'eligible' | 'warning' | 'ineligible';
   recentActivity: {
     delegationsIn7d: number;
-    netFlowGRT: number;
+    undelegationsIn7d: number;
   };
   // Horizon metrics (from subgraph)
   effectiveCut: number | null;

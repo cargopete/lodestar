@@ -57,7 +57,8 @@ interface AllocationData {
 
 interface DelegationActivityData {
   indexer: { id: string };
-  stakedTokens: string;
+  lastDelegatedAt: number;
+  lastUndelegatedAt: number;
 }
 
 export async function GET(request: NextRequest) {
@@ -169,10 +170,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 3: Fetch recent delegation activity (7d)
+    // We query positions touched recently (delegated OR undelegated) and count
+    // distinct positions per indexer. Note: the subgraph has no discrete event
+    // entity for delegations, so this counts active positions, not transactions.
     const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
-    let delegationActivity: Record<string, { count: number; netFlowGRT: number }> = {};
+    let delegationActivity: Record<string, { delegations: number; undelegations: number }> = {};
     try {
-      const activityResult = await subgraphQuery<{ delegatedStakes: DelegationActivityData[] }>(`{
+      // Fetch positions with recent delegation activity
+      const delegatedResult = await subgraphQuery<{ delegatedStakes: DelegationActivityData[] }>(`{
         delegatedStakes(
           first: 500
           orderBy: lastDelegatedAt
@@ -180,15 +185,37 @@ export async function GET(request: NextRequest) {
           where: { lastDelegatedAt_gt: ${sevenDaysAgo} }
         ) {
           indexer { id }
-          stakedTokens
+          lastDelegatedAt
+          lastUndelegatedAt
         }
       }`);
 
-      for (const s of activityResult.delegatedStakes) {
+      for (const s of delegatedResult.delegatedStakes) {
         const id = s.indexer.id;
-        if (!delegationActivity[id]) delegationActivity[id] = { count: 0, netFlowGRT: 0 };
-        delegationActivity[id].count++;
-        delegationActivity[id].netFlowGRT += weiToGRT(s.stakedTokens);
+        if (!delegationActivity[id]) delegationActivity[id] = { delegations: 0, undelegations: 0 };
+        delegationActivity[id].delegations++;
+      }
+
+      // Fetch positions with recent undelegation activity
+      const undelegatedResult = await subgraphQuery<{ delegatedStakes: DelegationActivityData[] }>(`{
+        delegatedStakes(
+          first: 500
+          orderBy: lastUndelegatedAt
+          orderDirection: desc
+          where: { lastUndelegatedAt_gt: ${sevenDaysAgo} }
+        ) {
+          indexer { id }
+          lastDelegatedAt
+          lastUndelegatedAt
+        }
+      }`);
+
+      for (const s of undelegatedResult.delegatedStakes) {
+        const id = s.indexer.id;
+        if (!delegationActivity[id]) delegationActivity[id] = { delegations: 0, undelegations: 0 };
+        // Only count as undelegation if it wasn't already counted as a delegation
+        // (position could have both in the same 7d window)
+        delegationActivity[id].undelegations++;
       }
     } catch (e) {
       console.warn('Delegation activity fetch failed, continuing without:', e);
@@ -221,7 +248,7 @@ export async function GET(request: NextRequest) {
       if (hasAllocations && hasSufficientStake) reoStatus = 'eligible';
       else if (hasAllocations || hasSufficientStake) reoStatus = 'warning';
 
-      const activity = delegationActivity[indexer.id] ?? { count: 0, netFlowGRT: 0 };
+      const activity = delegationActivity[indexer.id] ?? { delegations: 0, undelegations: 0 };
 
       return {
         id: indexer.id,
@@ -245,8 +272,8 @@ export async function GET(request: NextRequest) {
         delegationCapacity: capacity,
         reoStatus,
         recentActivity: {
-          delegationsIn7d: activity.count,
-          netFlowGRT: activity.netFlowGRT,
+          delegationsIn7d: activity.delegations,
+          undelegationsIn7d: activity.undelegations,
         },
         effectiveCut: indexer.indexingRewardEffectiveCut
           ? parseFloat(indexer.indexingRewardEffectiveCut) * 100

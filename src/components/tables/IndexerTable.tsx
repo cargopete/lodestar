@@ -60,7 +60,7 @@ interface IndexerRow {
   allocated: number;
   rewards: number;
   reoStatus: 'eligible' | 'warning' | 'ineligible';
-  recentDelegations: { count: number; netChange: number } | null;
+  recentDelegations: { delegations: number; undelegations: number } | null;
   apr: number | null;
   effectiveCut: number | null;
   overDelegationDilution: number | null;
@@ -109,8 +109,8 @@ export function IndexerTable() {
           allocated: weiToGRT(e.allocatedTokens),
           rewards: weiToGRT(e.rewardsEarned),
           reoStatus: e.reoStatus,
-          recentDelegations: e.recentActivity.delegationsIn7d > 0
-            ? { count: e.recentActivity.delegationsIn7d, netChange: e.recentActivity.netFlowGRT }
+          recentDelegations: (e.recentActivity.delegationsIn7d > 0 || e.recentActivity.undelegationsIn7d > 0)
+            ? { delegations: e.recentActivity.delegationsIn7d, undelegations: e.recentActivity.undelegationsIn7d }
             : null,
           apr: e.delegatorAPR,
           effectiveCut: e.effectiveCut,
@@ -228,11 +228,18 @@ export function IndexerTable() {
                     <svg className="w-3 h-3 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
                     </svg>
-                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-44 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/del:opacity-100 transition-opacity z-50 text-[11px] font-normal">
-                      <span className="block font-semibold text-[var(--text)] mb-1">Recent Activity (7d)</span>
-                      <span className="block text-[var(--text-muted)]">
-                        {row.recentDelegations.count} delegation{row.recentDelegations.count !== 1 ? 's' : ''}
-                      </span>
+                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-48 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/del:opacity-100 transition-opacity z-50 text-[11px] font-normal">
+                      <span className="block font-semibold text-[var(--text)] mb-1">Active Positions (7d)</span>
+                      {row.recentDelegations.delegations > 0 && (
+                        <span className="block text-[var(--green)]">
+                          {row.recentDelegations.delegations} delegating
+                        </span>
+                      )}
+                      {row.recentDelegations.undelegations > 0 && (
+                        <span className="block text-[var(--red)]">
+                          {row.recentDelegations.undelegations} undelegating
+                        </span>
+                      )}
                     </span>
                   </span>
                 )}
