@@ -235,6 +235,7 @@ export async function GET(request: NextRequest) {
       const apr = calculateDelegatorAPR(
         allocations,
         indexer.indexingRewardCut,
+        selfStake,
         delegated,
         totalNetworkSignal,
         annualIssuance
