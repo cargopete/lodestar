@@ -219,11 +219,11 @@ export function DelegationCalculator({
           </div>
         </div>
 
-        {/* Warning for high cuts */}
-        {indexer.indexingRewardCut > 200000 && (
+        {/* Warning based on effective cut, not raw cut */}
+        {currentEffectiveCut !== null && currentEffectiveCut > 50 && (
           <div className="mt-4 p-3 rounded-lg bg-[rgba(255,140,66,0.1)] border border-[var(--amber)]">
             <p className="text-sm text-[var(--amber)]">
-              <strong>High reward cut:</strong> This indexer takes {formatPPM(indexer.indexingRewardCut)} of indexing rewards.
+              <strong>High effective cut:</strong> Delegators are effectively paying {formatPercent(currentEffectiveCut)} after accounting for self-stake.
               Consider comparing with other indexers.
             </p>
           </div>
