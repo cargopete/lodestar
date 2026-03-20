@@ -28,6 +28,7 @@ interface ProcessedIndexer {
   delegated: number;
   delegationCapacity: number;
   rewardCut: number;
+  effectiveCut: number;
   queryFeeCut: number;
   estimatedAPR: number;
   totalRewards: number;
@@ -47,7 +48,8 @@ const METRICS: MetricDef[] = [
   { key: 'selfStake', label: 'Self Stake', format: 'grt', highlight: 'higher' },
   { key: 'delegated', label: 'Total Delegated', format: 'grt', highlight: 'higher' },
   { key: 'delegationCapacity', label: 'Delegation Capacity', format: 'percent', highlight: 'lower' },
-  { key: 'rewardCut', label: 'Reward Cut (%)', format: 'ppm', highlight: 'lower' },
+  { key: 'rewardCut', label: 'Reward Cut (Raw)', format: 'ppm', highlight: 'lower' },
+  { key: 'effectiveCut', label: 'Effective Cut', format: 'percent', highlight: 'lower' },
   { key: 'queryFeeCut', label: 'Query Fee Cut (%)', format: 'ppm', highlight: 'lower' },
   { key: 'estimatedAPR', label: 'Estimated Delegator APR', format: 'percent', highlight: 'higher' },
   { key: 'totalRewards', label: 'Total Rewards Earned', format: 'grt', highlight: 'higher' },
@@ -80,6 +82,12 @@ function processIndexer(
     10_000, // reference delegation of 10K GRT
   );
 
+  // Effective cut: what delegators effectively pay, accounting for self-stake
+  const rawCut = indexer.indexingRewardCut / 1_000_000;
+  const effectiveCut = delegated > 0
+    ? (1 - (1 - rawCut) * (selfStake + delegated) / delegated) * 100
+    : rawCut * 100;
+
   return {
     id: indexer.id,
     name: resolveIndexerName(indexer.account, indexer.id),
@@ -87,6 +95,7 @@ function processIndexer(
     delegated,
     delegationCapacity: capacity.utilizationPercent,
     rewardCut: indexer.indexingRewardCut,
+    effectiveCut,
     queryFeeCut: indexer.queryFeeCut,
     estimatedAPR,
     totalRewards,
