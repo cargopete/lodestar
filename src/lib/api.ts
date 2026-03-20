@@ -11,6 +11,8 @@ import {
   type ServiceProvisionsResponse,
 } from './queries';
 import type { EnrichedIndexer } from './enriched';
+import type { ManifestAnalysis } from './manifest';
+import type { POIOverview, POIDeploymentDetail } from './poi';
 
 // The Graph Network subgraph on Arbitrum (kept for user-specific POST queries)
 const SUBGRAPH_URL = '/api/subgraph';
@@ -332,6 +334,64 @@ export async function fetchServiceProvisions(
       }
     }
   }`);
+}
+
+/**
+ * Fetch subgraph deployments via GET endpoint
+ */
+export async function fetchSubgraphDeployments(params: {
+  first?: number;
+  skip?: number;
+  orderBy?: string;
+  orderDirection?: 'asc' | 'desc';
+} = {}): Promise<{
+  id: string;
+  ipfsHash: string;
+  signalledTokens: string;
+  stakedTokens: string;
+  queryFeesAmount: string;
+  indexerAllocations: { id: string }[];
+  curatorSignals: { id: string }[];
+}[]> {
+  const qs = new URLSearchParams();
+  if (params.first) qs.set('first', String(params.first));
+  if (params.skip) qs.set('skip', String(params.skip));
+  if (params.orderBy) qs.set('orderBy', params.orderBy);
+  if (params.orderDirection) qs.set('orderDirection', params.orderDirection);
+  const response = await fetch(`/api/subgraph-deployments?${qs}`);
+  if (!response.ok) throw new Error(`Deployments fetch failed: ${response.status}`);
+  const json = await response.json();
+  return json.data;
+}
+
+/**
+ * Fetch manifest complexity analysis for an IPFS hash
+ */
+export async function fetchManifestAnalysis(hash: string): Promise<ManifestAnalysis> {
+  const response = await fetch(`/api/manifest?hash=${encodeURIComponent(hash)}`);
+  if (!response.ok) throw new Error(`Manifest analysis failed: ${response.status}`);
+  const json = await response.json();
+  return json.data;
+}
+
+/**
+ * Fetch POI consensus overview
+ */
+export async function fetchPOIOverview(): Promise<POIOverview> {
+  const response = await fetch('/api/poi');
+  if (!response.ok) throw new Error(`POI overview failed: ${response.status}`);
+  const json = await response.json();
+  return json.data;
+}
+
+/**
+ * Fetch POI detail for a specific deployment
+ */
+export async function fetchPOIDeployment(deployment: string): Promise<POIDeploymentDetail> {
+  const response = await fetch(`/api/poi?deployment=${encodeURIComponent(deployment)}`);
+  if (!response.ok) throw new Error(`POI detail failed: ${response.status}`);
+  const json = await response.json();
+  return json.data;
 }
 
 /**

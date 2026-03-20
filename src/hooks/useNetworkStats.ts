@@ -11,11 +11,16 @@ import {
   fetchIndexerProvisions,
   fetchServiceProvisions,
   fetchEnrichedIndexers,
+  fetchSubgraphDeployments,
+  fetchManifestAnalysis,
+  fetchPOIOverview,
+  fetchPOIDeployment,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
 const TEN_MINUTES = 1000 * 60 * 10;
 const THIRTY_SECONDS = 1000 * 30;
+const ONE_HOUR = 1000 * 60 * 60;
 
 /**
  * Hook for network statistics
@@ -169,6 +174,62 @@ export function useServiceProvisions(dataService: string, first = 50, skip = 0) 
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
     enabled: !!dataService,
+  });
+}
+
+/**
+ * Hook for subgraph deployments
+ */
+export function useSubgraphDeployments(params: {
+  first?: number;
+  skip?: number;
+  orderBy?: string;
+  orderDirection?: 'asc' | 'desc';
+} = {}) {
+  return useQuery({
+    queryKey: ['subgraphDeployments', params],
+    queryFn: () => fetchSubgraphDeployments(params),
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Hook for manifest complexity analysis
+ */
+export function useManifestAnalysis(hash: string | null) {
+  return useQuery({
+    queryKey: ['manifestAnalysis', hash],
+    queryFn: () => fetchManifestAnalysis(hash!),
+    staleTime: ONE_HOUR,
+    enabled: !!hash,
+    retry: 1,
+  });
+}
+
+/**
+ * Hook for POI consensus overview
+ */
+export function usePOIOverview() {
+  return useQuery({
+    queryKey: ['poiOverview'],
+    queryFn: fetchPOIOverview,
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Hook for POI detail for a specific deployment
+ */
+export function usePOIDeployment(deployment: string | null) {
+  return useQuery({
+    queryKey: ['poiDeployment', deployment],
+    queryFn: () => fetchPOIDeployment(deployment!),
+    staleTime: FIVE_MINUTES,
+    enabled: !!deployment,
   });
 }
 
