@@ -55,6 +55,7 @@ const moreItems = [
   { label: 'Subgraphs', href: '/subgraphs' },
   { label: 'Calculator', href: '/calculator' },
   { label: 'Compare', href: '/compare' },
+  { label: 'POI Explorer', href: '/poi' },
 ];
 
 export function BottomNav() {

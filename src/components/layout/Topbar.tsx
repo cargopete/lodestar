@@ -16,6 +16,7 @@ const pageTitles: Record<string, string> = {
   '/compare': 'Compare Indexers',
   '/profile': 'Portfolio',
   '/services': 'Data Services',
+  '/poi': 'POI Explorer',
 };
 
 function getPageTitle(pathname: string): string {
@@ -24,6 +25,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith('/delegators/')) return 'Delegator Portfolio';
   if (pathname.startsWith('/curators/')) return 'Curator Profile';
   if (pathname.startsWith('/subgraphs/')) return 'Subgraph Detail';
+  if (pathname.startsWith('/poi/')) return 'POI Analysis';
   return 'Lodestar';
 }
 
