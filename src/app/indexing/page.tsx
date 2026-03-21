@@ -46,34 +46,10 @@ function useSubgraphSearch(query: string) {
     setIsSearching(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const gql = `{
-          subgraphs(
-            first: 10
-            orderBy: signalledTokens
-            orderDirection: desc
-            where: { metadata_: { displayName_contains_nocase: "${trimmed.replace(/"/g, '')}" }, currentVersion_not: null }
-          ) {
-            id
-            metadata { displayName description }
-            currentVersion {
-              subgraphDeployment {
-                ipfsHash
-                signalledTokens
-                stakedTokens
-              }
-            }
-          }
-        }`;
-
-        const res = await fetch('/api/subgraph', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: gql }),
-        });
-
+        const res = await fetch(`/api/subgraph-search?q=${encodeURIComponent(trimmed)}`);
         if (!res.ok) { setResults([]); return; }
         const json = await res.json();
-        setResults(json.data?.subgraphs ?? []);
+        setResults(json.data ?? []);
       } catch {
         setResults([]);
       } finally {
