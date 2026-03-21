@@ -12,6 +12,7 @@ import {
   createColumnHelper,
   type SortingState,
   type RowSelectionState,
+  type FilterFn,
 } from '@tanstack/react-table';
 import { useEnrichedIndexers, useIndexers, useNetworkStats } from '@/hooks/useNetworkStats';
 import {
@@ -67,6 +68,15 @@ interface IndexerRow {
   raw: Indexer;
 }
 
+// Search across name and address (default global filter only checks column accessors)
+const nameAddressFilter: FilterFn<IndexerRow> = (row, _columnId, filterValue) => {
+  const search = (filterValue as string).toLowerCase();
+  return (
+    row.original.name.toLowerCase().includes(search) ||
+    row.original.address.toLowerCase().includes(search)
+  );
+};
+
 const columnHelper = createColumnHelper<IndexerRow>();
 
 export function IndexerTable() {
@@ -81,7 +91,7 @@ export function IndexerTable() {
   // Try enriched data first (pre-computed by cron), fall back to raw indexers
   const { data: enrichedData, isLoading: enrichedLoading } = useEnrichedIndexers();
   const { data: indexersData, isLoading: indexersLoading } = useIndexers({
-    first: 100,
+    first: 500,
     orderBy: 'stakedTokens',
     orderDirection: 'desc',
   });
@@ -368,6 +378,7 @@ export function IndexerTable() {
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: nameAddressFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),

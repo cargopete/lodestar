@@ -75,14 +75,31 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Step 1: Fetch top 100 indexers + network stats in parallel
-    const [indexersResult, networkResult] = await Promise.all([
-      subgraphQuery<{ indexers: SubgraphIndexer[] }>(`{
+    // Step 1: Fetch ALL indexers (paginated) + network stats
+    const networkResult = await subgraphQuery<{
+      graphNetwork: {
+        totalTokensSignalled: string;
+        networkGRTIssuancePerBlock?: string;
+        delegationRatio: number;
+      };
+    }>(`{
+      graphNetwork(id: "1") {
+        totalTokensSignalled
+        networkGRTIssuancePerBlock
+        delegationRatio
+      }
+    }`);
+
+    // Paginate through all indexers using id_gt cursor
+    const indexers: SubgraphIndexer[] = [];
+    let lastId = '';
+    while (true) {
+      const page = await subgraphQuery<{ indexers: SubgraphIndexer[] }>(`{
         indexers(
-          first: 100
-          orderBy: stakedTokens
-          orderDirection: desc
-          where: { stakedTokens_gt: "0" }
+          first: 1000
+          orderBy: id
+          orderDirection: asc
+          where: { stakedTokens_gt: "0"${lastId ? `, id_gt: "${lastId}"` : ''} }
         ) {
           id
           account {
@@ -112,23 +129,11 @@ export async function GET(request: NextRequest) {
           indexerRewardsOwnGenerationRatio
           provisionedTokens
         }
-      }`),
-      subgraphQuery<{
-        graphNetwork: {
-          totalTokensSignalled: string;
-          networkGRTIssuancePerBlock?: string;
-          delegationRatio: number;
-        };
-      }>(`{
-        graphNetwork(id: "1") {
-          totalTokensSignalled
-          networkGRTIssuancePerBlock
-          delegationRatio
-        }
-      }`),
-    ]);
-
-    const indexers = indexersResult.indexers;
+      }`);
+      indexers.push(...page.indexers);
+      if (page.indexers.length < 1000) break;
+      lastId = page.indexers[page.indexers.length - 1].id;
+    }
     const network = networkResult.graphNetwork;
     const totalNetworkSignal = weiToGRT(network.totalTokensSignalled);
     const delegationRatio = network.delegationRatio;

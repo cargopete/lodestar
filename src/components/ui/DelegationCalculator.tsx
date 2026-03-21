@@ -52,7 +52,23 @@ export function DelegationCalculator({
     [selfStake, currentDelegated, delegationRatio]
   );
 
-  // Calculate estimated APR using per-allocation signal-weighted rewards (grtinfo method)
+  // Current APR (what the table shows — no hypothetical delegation added)
+  const currentAPR = useMemo(
+    () => {
+      if (!indexer.allocations?.length || totalNetworkSignal === 0 || annualIssuance === 0) return 0;
+      return calculateDelegatorAPR(
+        indexer.allocations,
+        indexer.indexingRewardCut,
+        selfStake,
+        currentDelegated || 1,
+        totalNetworkSignal,
+        annualIssuance
+      );
+    },
+    [indexer.allocations, indexer.indexingRewardCut, selfStake, currentDelegated, totalNetworkSignal, annualIssuance]
+  );
+
+  // Projected APR after user's hypothetical delegation
   const estimatedAPR = useMemo(
     () => {
       if (!indexer.allocations?.length || totalNetworkSignal === 0 || annualIssuance === 0) return 0;
@@ -65,7 +81,7 @@ export function DelegationCalculator({
         annualIssuance
       );
     },
-    [indexer.allocations, indexer.indexingRewardCut, currentDelegated, newDelegation, totalNetworkSignal, annualIssuance]
+    [indexer.allocations, indexer.indexingRewardCut, selfStake, currentDelegated, newDelegation, totalNetworkSignal, annualIssuance]
   );
 
   // Effective cut: what delegators effectively pay, accounting for self-stake in the pool
@@ -192,31 +208,44 @@ export function DelegationCalculator({
 
         {/* Results */}
         <div className="space-y-4">
-          {/* Estimated APR */}
+          {/* APR */}
           <div className="p-4 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-hover)]">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-[var(--text-muted)]">Estimated APR</span>
+              <span className="text-sm text-[var(--text-muted)]">Current APR</span>
               <span className="text-2xl font-mono font-semibold text-[var(--accent)]">
-                {estimatedAPR.toFixed(2)}%
+                {currentAPR.toFixed(2)}%
               </span>
             </div>
+            {newDelegation > 0 && estimatedAPR !== currentAPR && (
+              <div className="flex justify-between items-center mt-2 pt-2 border-t border-[var(--accent-hover)]">
+                <span className="text-xs text-[var(--text-faint)]">After +{formatGRT(newDelegation)} GRT</span>
+                <span className={cn(
+                  'text-sm font-mono font-medium',
+                  estimatedAPR >= currentAPR ? 'text-[var(--green)]' : 'text-[var(--amber)]'
+                )}>
+                  {estimatedAPR.toFixed(2)}%
+                </span>
+              </div>
+            )}
             <p className="text-xs text-[var(--text-faint)] mt-1">
               Based on current network rewards distribution
             </p>
           </div>
 
           {/* Rewards breakdown */}
-          <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
-            <p className="text-sm text-[var(--text-muted)] mb-3">Annual Rewards Estimate</p>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-[var(--text-faint)]">After Indexer Cut</span>
-                <span className="text-sm font-mono text-[var(--green)]">
-                  ~{formatGRT((newDelegation || 1000) * (estimatedAPR / 100))} GRT
-                </span>
+          {newDelegation > 0 && (
+            <div className="p-4 rounded-lg bg-[var(--bg-elevated)]">
+              <p className="text-sm text-[var(--text-muted)] mb-3">Annual Rewards Estimate</p>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-[var(--text-faint)]">On {formatGRT(newDelegation)} GRT</span>
+                  <span className="text-sm font-mono text-[var(--green)]">
+                    ~{formatGRT(newDelegation * (estimatedAPR / 100))} GRT
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Warning based on effective cut, not raw cut */}
