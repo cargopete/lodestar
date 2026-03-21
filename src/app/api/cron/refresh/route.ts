@@ -227,21 +227,25 @@ export async function GET(request: NextRequest) {
       console.warn('Delegation events fetch failed, continuing without:', e);
     }
 
-    // Step 4: Resolve ENS names for all indexers
+    // Step 4: Resolve ENS names for all indexers (batched — large arrays hit query limits)
     let ensNames: Record<string, string> = {};
     try {
-      const addresses = indexers.map((i) => `"${i.id}"`).join(', ');
-      const ensResult = await ensQuery<{ domains: Array<{ name: string; resolvedAddress: { id: string } }> }>(`{
-        domains(first: 1000, where: { resolvedAddress_in: [${addresses}], name_not: null }) {
-          name
-          resolvedAddress { id }
-        }
-      }`);
-      for (const domain of ensResult.domains) {
-        const addr = domain.resolvedAddress.id.toLowerCase();
-        // Prefer shorter .eth names (primary name) over longer subdomains
-        if (!ensNames[addr] || domain.name.length < ensNames[addr].length) {
-          ensNames[addr] = domain.name;
+      const ENS_BATCH = 20;
+      for (let i = 0; i < indexerIds.length; i += ENS_BATCH) {
+        const batch = indexerIds.slice(i, i + ENS_BATCH);
+        const idList = batch.map((id) => `"${id}"`).join(', ');
+        const ensResult = await ensQuery<{ domains: Array<{ name: string; resolvedAddress: { id: string } }> }>(`{
+          domains(first: 1000, where: { resolvedAddress_in: [${idList}], name_not: null }) {
+            name
+            resolvedAddress { id }
+          }
+        }`);
+        for (const domain of ensResult.domains) {
+          const addr = domain.resolvedAddress.id.toLowerCase();
+          // Prefer shorter .eth names (primary name) over longer subdomains
+          if (!ensNames[addr] || domain.name.length < ensNames[addr].length) {
+            ensNames[addr] = domain.name;
+          }
         }
       }
       console.log(`ENS: resolved ${Object.keys(ensNames).length} names`);
