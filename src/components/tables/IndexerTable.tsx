@@ -343,7 +343,7 @@ export function IndexerTable() {
               'font-mono',
               value > 5 ? 'text-[var(--green)]' : 'text-[var(--text)]'
             )}>
-              {value.toFixed(1)}%
+              {value.toFixed(2)}%
             </span>
           );
         },
@@ -577,7 +577,7 @@ export function IndexerTable() {
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
                         <p className="text-[10px] text-[var(--text-faint)]">APR</p>
                         <p className={cn('text-xs font-mono', d.apr && d.apr > 5 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
-                          {d.apr !== null ? `${d.apr.toFixed(1)}%` : '—'}
+                          {d.apr !== null ? `${d.apr.toFixed(2)}%` : '—'}
                         </p>
                       </div>
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
