@@ -47,6 +47,7 @@ interface SubgraphIndexer {
 }
 
 interface AllocationData {
+  id: string;
   allocatedTokens: string;
   indexer: { id: string };
   subgraphDeployment: {
@@ -147,32 +148,43 @@ export async function GET(request: NextRequest) {
     const L1_BLOCKS_PER_YEAR = 2_628_000;
     const annualIssuance = issuancePerBlock * L1_BLOCKS_PER_YEAR;
 
-    // Step 2: Fetch allocations in batches of 20 indexer IDs
+    // Step 2: Fetch allocations in batches of 10 indexer IDs (paginated to catch all)
     const indexerIds = indexers.map((i) => i.id);
     const allocationMap = new Map<string, AllocationData[]>();
 
-    const BATCH_SIZE = 20;
+    const BATCH_SIZE = 10;
     for (let i = 0; i < indexerIds.length; i += BATCH_SIZE) {
       const batch = indexerIds.slice(i, i + BATCH_SIZE);
       const idList = batch.map((id) => `"${id}"`).join(', ');
-      const result = await subgraphQuery<{ allocations: AllocationData[] }>(`{
-        allocations(
-          first: 1000
-          where: { indexer_in: [${idList}], status: Active }
-        ) {
-          allocatedTokens
-          indexer { id }
-          subgraphDeployment {
-            signalledTokens
-            stakedTokens
-          }
-        }
-      }`);
 
-      for (const alloc of result.allocations) {
-        const existing = allocationMap.get(alloc.indexer.id) ?? [];
-        existing.push(alloc);
-        allocationMap.set(alloc.indexer.id, existing);
+      // Paginate with id_gt cursor — large indexers can have 700+ allocations
+      let lastId = '';
+      while (true) {
+        const result = await subgraphQuery<{ allocations: AllocationData[] }>(`{
+          allocations(
+            first: 1000
+            orderBy: id
+            orderDirection: asc
+            where: { indexer_in: [${idList}], status: Active${lastId ? `, id_gt: "${lastId}"` : ''} }
+          ) {
+            id
+            allocatedTokens
+            indexer { id }
+            subgraphDeployment {
+              signalledTokens
+              stakedTokens
+            }
+          }
+        }`);
+
+        for (const alloc of result.allocations) {
+          const existing = allocationMap.get(alloc.indexer.id) ?? [];
+          existing.push(alloc);
+          allocationMap.set(alloc.indexer.id, existing);
+        }
+
+        if (result.allocations.length < 1000) break;
+        lastId = result.allocations[result.allocations.length - 1].id;
       }
     }
 
