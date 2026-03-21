@@ -153,10 +153,16 @@ export function buildIndexerStatus(
     blocksBehind = Math.max(chainHead - latest, 0);
   }
 
+  // The graph-node `synced` flag means "has caught up at some point" — not
+  // "is currently at the chain head."  An indexer can report synced=true while
+  // being thousands of blocks behind if it fell behind after initially syncing.
+  // We use blocksBehind as the ground truth: <= 50 blocks is effectively synced.
+  const effectivelySynced = blocksBehind !== undefined ? blocksBehind <= 50 : !!s.synced;
+
   let status: IndexerStatusResult['status'] = 'syncing';
   if (s.health === 'failed' || s.fatalError) {
     status = 'failed';
-  } else if (s.synced) {
+  } else if (effectivelySynced) {
     status = 'synced';
   }
 
