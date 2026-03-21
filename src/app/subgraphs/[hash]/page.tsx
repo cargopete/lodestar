@@ -2,13 +2,25 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import { useManifestAnalysis } from '@/hooks/useNetworkStats';
+import { useIndexingStatus, useManifestAnalysis } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { cn, formatNumber } from '@/lib/utils';
+import { cn, formatNumber, formatGRT, weiToGRT, shortenAddress } from '@/lib/utils';
+import type { IndexerStatusResult } from '@/lib/indexing-status';
 import type { ComplexityCategory, DataSourceSignal, TemplateSignal } from '@/lib/manifest';
+
+// ---------------------------------------------------------------------------
+// Shared constants
+// ---------------------------------------------------------------------------
+
+const STATUS_CONFIG = {
+  synced: { label: 'Synced', variant: 'success' as const, dot: 'bg-[var(--green)]' },
+  syncing: { label: 'Syncing', variant: 'warning' as const, dot: 'bg-[var(--amber)]' },
+  failed: { label: 'Failed', variant: 'error' as const, dot: 'bg-[var(--red)]' },
+  unreachable: { label: 'Unreachable', variant: 'default' as const, dot: 'bg-[var(--text-faint)]' },
+};
 
 const CATEGORY_VARIANT: Record<ComplexityCategory, 'success' | 'default' | 'warning' | 'error'> = {
   Light: 'success',
@@ -28,6 +40,20 @@ function scoreVariant(score: number, max: number): 'accent' | 'teal' | 'orange' 
   if (pct < 0.4) return SCORE_BAR_VARIANT.low;
   if (pct < 0.7) return SCORE_BAR_VARIANT.mid;
   return SCORE_BAR_VARIANT.high;
+}
+
+// ---------------------------------------------------------------------------
+// Small helper components
+// ---------------------------------------------------------------------------
+
+function StatusBadge({ status }: { status: IndexerStatusResult['status'] }) {
+  const cfg = STATUS_CONFIG[status];
+  return (
+    <Badge variant={cfg.variant}>
+      <span className={cn('w-1.5 h-1.5 rounded-full inline-block mr-1', cfg.dot)} />
+      {cfg.label}
+    </Badge>
+  );
 }
 
 function HandlerCounts({ source }: { source: DataSourceSignal | TemplateSignal }) {
@@ -52,41 +78,355 @@ function HandlerCounts({ source }: { source: DataSourceSignal | TemplateSignal }
   );
 }
 
-export default function ManifestDetailPage({
-  params,
-}: {
-  params: Promise<{ hash: string }>;
-}) {
-  const { hash } = use(params);
+// ---------------------------------------------------------------------------
+// Indexing Health Section
+// ---------------------------------------------------------------------------
+
+function IndexingHealthSection({ hash }: { hash: string }) {
+  const { data, isLoading, error } = useIndexingStatus(hash);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Indexing Health</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-12">
+            <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+            <span className="ml-3 text-sm text-[var(--text-muted)]">Querying indexer status endpoints...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Indexing Health</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-[var(--text-muted)] py-4">
+            {error instanceof Error && error.message.includes('404')
+              ? 'No active allocations found for this deployment.'
+              : 'Unable to fetch indexing status. The deployment may not have active allocations.'}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const syncingCount = data.totalIndexers - data.syncedCount - data.failedCount - data.unreachableCount;
+
+  return (
+    <>
+      {/* Summary stats */}
+      <StatGrid className="lg:grid-cols-5 xl:grid-cols-5">
+        <StatCard
+          label="Active Indexers"
+          value={String(data.totalAllocations)}
+          subtitle={`${data.totalIndexers} unique`}
+        />
+        <StatCard
+          label="Synced"
+          value={String(data.syncedCount)}
+          delta={data.syncedCount > 0
+            ? { value: `${Math.round((data.syncedCount / data.totalIndexers) * 100)}%`, positive: true }
+            : undefined
+          }
+        />
+        <StatCard
+          label="Syncing"
+          value={String(syncingCount)}
+          delta={syncingCount > 0 ? { value: 'In progress', positive: true } : undefined}
+        />
+        <StatCard
+          label="Failed"
+          value={String(data.failedCount)}
+          delta={data.failedCount > 0 ? { value: 'Needs attention', positive: false } : undefined}
+        />
+        <StatCard
+          label="Unreachable"
+          value={String(data.unreachableCount)}
+          subtitle={data.unreachableCount > 0 ? 'No URL or timeout' : 'All responding'}
+        />
+      </StatGrid>
+
+      {/* Deployment info */}
+      <StatGrid className="lg:grid-cols-2 xl:grid-cols-2">
+        <StatCard
+          label="Signal"
+          value={formatGRT(weiToGRT(data.signalledTokens))}
+          subtitle="GRT signalled"
+        />
+        <StatCard
+          label="Stake"
+          value={formatGRT(weiToGRT(data.stakedTokens))}
+          subtitle="GRT staked"
+        />
+      </StatGrid>
+
+      {/* Per-indexer breakdown */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Indexer Status</CardTitle>
+            <span className="text-xs text-[var(--text-faint)]">
+              Refreshes every 30s
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {data.indexers.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] py-4">
+              No indexers have active allocations on this deployment.
+            </p>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Indexer</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Status</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Sync Progress</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Blocks Behind</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Entities</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Stake</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border)]">
+                    {data.indexers.map((indexer) => (
+                      <tr key={indexer.indexerId} className="hover:bg-[var(--bg-elevated)] transition-colors">
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/indexers/${indexer.indexerId}`}
+                            className="hover:text-[var(--accent)] transition-colors"
+                          >
+                            <p className="font-medium text-[var(--text)] text-sm">
+                              {indexer.indexerName ?? shortenAddress(indexer.indexerId)}
+                            </p>
+                          </Link>
+                          <p className="text-[10px] text-[var(--text-faint)] font-mono">
+                            {shortenAddress(indexer.indexerId, 6)}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={indexer.status} />
+                        </td>
+                        <td className="px-4 py-3">
+                          {indexer.syncProgress !== undefined ? (
+                            <div className="min-w-[140px]">
+                              <ProgressBar
+                                value={indexer.syncProgress}
+                                max={100}
+                                size="sm"
+                                variant={
+                                  indexer.status === 'failed' ? 'orange' :
+                                  indexer.syncProgress >= 99.9 ? 'teal' : 'accent'
+                                }
+                              />
+                              <div className="flex justify-between mt-1">
+                                <span className="text-[10px] font-mono text-[var(--text-faint)]">
+                                  {formatNumber(indexer.latestBlock ?? 0)}
+                                </span>
+                                <span className="text-[10px] font-mono text-[var(--text-faint)]">
+                                  {indexer.syncProgress.toFixed(2)}%
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-[var(--text-faint)]">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {indexer.blocksBehind !== undefined ? (
+                            <span className={cn(
+                              'text-sm font-mono',
+                              indexer.blocksBehind === 0 ? 'text-[var(--green)]' :
+                              indexer.blocksBehind < 100 ? 'text-[var(--amber)]' :
+                              'text-[var(--red)]'
+                            )}>
+                              {indexer.blocksBehind === 0 ? 'Caught up' : formatNumber(indexer.blocksBehind)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-[var(--text-faint)]">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {indexer.entityCount ? (
+                            <span className="text-sm font-mono text-[var(--text)]">
+                              {formatNumber(Number(indexer.entityCount))}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-[var(--text-faint)]">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-mono text-[var(--text)]">
+                            {formatGRT(weiToGRT(indexer.allocatedTokens))}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Fatal error callouts */}
+              {data.indexers.filter((i) => i.fatalError).length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <h4 className="text-xs font-medium text-[var(--red)] uppercase tracking-wide">Fatal Errors</h4>
+                  {data.indexers
+                    .filter((i) => i.fatalError)
+                    .map((indexer) => (
+                      <div
+                        key={`err-${indexer.indexerId}`}
+                        className="p-3 rounded-lg border border-[var(--red)] border-opacity-20 bg-[var(--red-dim)]"
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-[var(--text)]">
+                            {indexer.indexerName ?? shortenAddress(indexer.indexerId)}
+                          </span>
+                          {indexer.fatalError?.handler && (
+                            <Badge variant="error">{indexer.fatalError.handler}</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-[var(--text-muted)] font-mono break-all">
+                          {indexer.fatalError?.message}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-3">
+                {data.indexers.map((indexer) => (
+                  <div
+                    key={`m-${indexer.indexerId}`}
+                    className="p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <Link
+                        href={`/indexers/${indexer.indexerId}`}
+                        className="hover:text-[var(--accent)] transition-colors"
+                      >
+                        <p className="font-medium text-sm text-[var(--text)]">
+                          {indexer.indexerName ?? shortenAddress(indexer.indexerId)}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-faint)] font-mono">
+                          {shortenAddress(indexer.indexerId, 6)}
+                        </p>
+                      </Link>
+                      <StatusBadge status={indexer.status} />
+                    </div>
+
+                    {indexer.syncProgress !== undefined && (
+                      <div className="mb-3">
+                        <ProgressBar
+                          value={indexer.syncProgress}
+                          max={100}
+                          size="sm"
+                          variant={
+                            indexer.status === 'failed' ? 'orange' :
+                            indexer.syncProgress >= 99.9 ? 'teal' : 'accent'
+                          }
+                        />
+                        <div className="flex justify-between mt-1">
+                          <span className="text-[10px] font-mono text-[var(--text-faint)]">
+                            Block {formatNumber(indexer.latestBlock ?? 0)}
+                          </span>
+                          <span className="text-[10px] font-mono text-[var(--text-faint)]">
+                            {indexer.syncProgress.toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="p-1.5 rounded bg-[var(--bg-surface)]">
+                        <p className="text-[10px] text-[var(--text-faint)]">Behind</p>
+                        <p className={cn(
+                          'text-xs font-mono',
+                          indexer.blocksBehind === 0 ? 'text-[var(--green)]' :
+                          (indexer.blocksBehind ?? 0) < 100 ? 'text-[var(--amber)]' :
+                          'text-[var(--text)]'
+                        )}>
+                          {indexer.blocksBehind !== undefined ? formatNumber(indexer.blocksBehind) : '—'}
+                        </p>
+                      </div>
+                      <div className="p-1.5 rounded bg-[var(--bg-surface)]">
+                        <p className="text-[10px] text-[var(--text-faint)]">Entities</p>
+                        <p className="text-xs font-mono text-[var(--text)]">
+                          {indexer.entityCount ? formatNumber(Number(indexer.entityCount)) : '—'}
+                        </p>
+                      </div>
+                      <div className="p-1.5 rounded bg-[var(--bg-surface)]">
+                        <p className="text-[10px] text-[var(--text-faint)]">Stake</p>
+                        <p className="text-xs font-mono text-[var(--text)]">
+                          {formatGRT(weiToGRT(indexer.allocatedTokens))}
+                        </p>
+                      </div>
+                    </div>
+
+                    {indexer.fatalError && (
+                      <div className="mt-3 p-2 rounded bg-[var(--red-dim)] border border-[var(--red)] border-opacity-20">
+                        <p className="text-[10px] text-[var(--red)] font-medium mb-0.5">Fatal Error</p>
+                        <p className="text-[10px] text-[var(--text-muted)] font-mono break-all">
+                          {indexer.fatalError.message}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Manifest Analysis Section (preserved from original page)
+// ---------------------------------------------------------------------------
+
+function ManifestSection({ hash }: { hash: string }) {
   const { data: analysis, isLoading, error } = useManifestAnalysis(hash);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Manifest Analysis</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+            <span className="ml-3 text-sm text-[var(--text-muted)]">Analysing manifest...</span>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (error || !analysis) {
     return (
-      <div className="text-center py-24">
-        <h2 className="text-xl font-semibold text-[var(--text)] mb-2">Manifest Not Found</h2>
-        <p className="text-[var(--text-muted)]">
-          Could not fetch or parse the manifest for this deployment.
-        </p>
-        <p className="text-xs text-[var(--text-faint)] font-mono mt-2">{hash}</p>
-        <Link
-          href="/subgraphs"
-          className={cn(
-            'inline-flex items-center gap-2 mt-6 px-4 py-2 text-sm font-medium',
-            'rounded-[var(--radius-button)] border border-[var(--border)]',
-            'hover:border-[var(--accent-hover)] transition-colors'
-          )}
-        >
-          Back to Subgraphs
-        </Link>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Manifest Analysis</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-[var(--text-muted)] py-4">
+            Could not fetch or parse the manifest for this deployment.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -100,44 +440,8 @@ export default function ManifestDetailPage({
   const startBlock = lowestStart === Number.MAX_SAFE_INTEGER ? 0 : lowestStart;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-xl sm:text-2xl font-semibold text-[var(--text)]">Manifest Analysis</h1>
-            <Badge variant={CATEGORY_VARIANT[analysis.category]}>{analysis.category}</Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <p className="text-xs sm:text-sm text-[var(--text-faint)] font-mono truncate">{hash}</p>
-            <button
-              onClick={() => navigator.clipboard.writeText(hash)}
-              className="text-[var(--accent)] hover:text-[var(--text)] transition-colors flex-shrink-0"
-              title="Copy hash"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            </button>
-          </div>
-          <div className="flex items-center gap-2 mt-1.5">
-            <Badge variant="accent">{analysis.network}</Badge>
-            <span className="text-xs text-[var(--text-faint)]">spec {analysis.specVersion}</span>
-          </div>
-        </div>
-        <Link
-          href="/subgraphs"
-          className={cn(
-            'px-3 py-2 text-sm rounded-[var(--radius-button)]',
-            'border border-[var(--border)] hover:border-[var(--accent-hover)]',
-            'transition-colors flex-shrink-0'
-          )}
-        >
-          Back to Subgraphs
-        </Link>
-      </div>
-
-      {/* Stats */}
+    <>
+      {/* Complexity Stats */}
       <StatGrid className="lg:grid-cols-4 xl:grid-cols-4">
         <StatCard
           label="Overall Score"
@@ -330,6 +634,64 @@ export default function ManifestDetailPage({
           </div>
         </CardContent>
       </Card>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
+export default function DeploymentPage({
+  params,
+}: {
+  params: Promise<{ hash: string }>;
+}) {
+  const { hash } = use(params);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold text-[var(--text)] mb-2">
+            Deployment
+          </h1>
+          <div className="flex items-center gap-2">
+            <p className="text-xs sm:text-sm text-[var(--text-faint)] font-mono truncate">{hash}</p>
+            <button
+              onClick={() => navigator.clipboard.writeText(hash)}
+              className="text-[var(--accent)] hover:text-[var(--text)] transition-colors flex-shrink-0"
+              title="Copy hash"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <Link
+          href="/subgraphs"
+          className={cn(
+            'px-3 py-2 text-sm rounded-[var(--radius-button)]',
+            'border border-[var(--border)] hover:border-[var(--accent-hover)]',
+            'transition-colors flex-shrink-0'
+          )}
+        >
+          Back to Subgraphs
+        </Link>
+      </div>
+
+      {/* Indexing Health — the main event */}
+      <IndexingHealthSection hash={hash} />
+
+      {/* Manifest Analysis — secondary section */}
+      <div className="pt-2">
+        <h2 className="text-lg font-semibold text-[var(--text)] mb-4">Manifest Analysis</h2>
+        <div className="space-y-6">
+          <ManifestSection hash={hash} />
+        </div>
+      </div>
     </div>
   );
 }

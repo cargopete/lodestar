@@ -15,6 +15,7 @@ import {
   fetchManifestAnalysis,
   fetchPOIOverview,
   fetchPOIDeployment,
+  fetchIndexingStatus,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -230,6 +231,20 @@ export function usePOIDeployment(deployment: string | null) {
     queryFn: () => fetchPOIDeployment(deployment!),
     staleTime: FIVE_MINUTES,
     enabled: !!deployment,
+  });
+}
+
+/**
+ * Hook for indexing status of a subgraph deployment
+ */
+export function useIndexingStatus(hash: string | null) {
+  return useQuery({
+    queryKey: ['indexingStatus', hash],
+    queryFn: () => fetchIndexingStatus(hash!),
+    staleTime: THIRTY_SECONDS,
+    refetchInterval: THIRTY_SECONDS,
+    enabled: !!hash,
+    retry: 1,
   });
 }
 

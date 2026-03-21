@@ -13,6 +13,7 @@ import {
 import type { EnrichedIndexer } from './enriched';
 import type { ManifestAnalysis } from './manifest';
 import type { POIOverview, POIDeploymentDetail } from './poi';
+import type { DeploymentIndexingStatus } from './indexing-status';
 
 // The Graph Network subgraph on Arbitrum (kept for user-specific POST queries)
 const SUBGRAPH_URL = '/api/subgraph';
@@ -390,6 +391,16 @@ export async function fetchPOIOverview(): Promise<POIOverview> {
 export async function fetchPOIDeployment(deployment: string): Promise<POIDeploymentDetail> {
   const response = await fetch(`/api/poi?deployment=${encodeURIComponent(deployment)}`);
   if (!response.ok) throw new Error(`POI detail failed: ${response.status}`);
+  const json = await response.json();
+  return json.data;
+}
+
+/**
+ * Fetch indexing status for a subgraph deployment
+ */
+export async function fetchIndexingStatus(hash: string): Promise<DeploymentIndexingStatus> {
+  const response = await fetch(`/api/indexing-status/${encodeURIComponent(hash)}`);
+  if (!response.ok) throw new Error(`Indexing status failed: ${response.status}`);
   const json = await response.json();
   return json.data;
 }
