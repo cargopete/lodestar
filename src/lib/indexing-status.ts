@@ -21,6 +21,7 @@ export interface IndexerStatusResult {
   network?: string;
   entityCount?: string;
   fatalError?: { message: string; handler?: string | null };
+  nonFatalErrors?: string[];
   nonFatalErrorCount?: number;
   syncProgress?: number; // 0-100
   blocksBehind?: number;
@@ -172,6 +173,9 @@ export function buildIndexerStatus(
     network: chain?.network ?? undefined,
     entityCount: s.entityCount,
     fatalError: s.fatalError ?? undefined,
+    nonFatalErrors: s.nonFatalErrors?.length
+      ? s.nonFatalErrors.slice(-5).map((e) => e.message)
+      : undefined,
     nonFatalErrorCount: s.nonFatalErrors?.length ?? 0,
     syncProgress,
     blocksBehind,

@@ -215,7 +215,14 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                           </p>
                         </td>
                         <td className="px-4 py-3">
-                          <StatusBadge status={indexer.status} />
+                          <div className="flex items-center gap-1.5">
+                            <StatusBadge status={indexer.status} />
+                            {(indexer.nonFatalErrorCount ?? 0) > 0 && !indexer.fatalError && (
+                              <span className="text-[10px] font-mono text-[var(--amber)]" title={`${indexer.nonFatalErrorCount} non-fatal errors`}>
+                                {indexer.nonFatalErrorCount} err
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           {indexer.syncProgress !== undefined ? (
@@ -276,28 +283,75 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                 </table>
               </div>
 
-              {/* Fatal error callouts */}
-              {data.indexers.filter((i) => i.fatalError).length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <h4 className="text-xs font-medium text-[var(--red)] uppercase tracking-wide">Fatal Errors</h4>
+              {/* Error & warning log */}
+              {data.indexers.some((i) => i.fatalError || (i.nonFatalErrors?.length ?? 0) > 0) && (
+                <div className="mt-4 space-y-3">
+                  <h4 className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">
+                    Errors &amp; Warnings
+                  </h4>
                   {data.indexers
-                    .filter((i) => i.fatalError)
+                    .filter((i) => i.fatalError || (i.nonFatalErrors?.length ?? 0) > 0)
                     .map((indexer) => (
                       <div
                         key={`err-${indexer.indexerId}`}
-                        className="p-3 rounded-lg border border-[var(--red)] border-opacity-20 bg-[var(--red-dim)]"
+                        className={cn(
+                          'p-3 rounded-lg border',
+                          indexer.fatalError
+                            ? 'border-[var(--red)] border-opacity-20 bg-[var(--red-dim)]'
+                            : 'border-[var(--amber)] border-opacity-20 bg-[var(--amber-dim)]',
+                        )}
                       >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-[var(--text)]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Link
+                            href={`/indexers/${indexer.indexerId}`}
+                            className="text-xs font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+                          >
                             {indexer.indexerName ?? shortenAddress(indexer.indexerId)}
-                          </span>
-                          {indexer.fatalError?.handler && (
-                            <Badge variant="error">{indexer.fatalError.handler}</Badge>
+                          </Link>
+                          <StatusBadge status={indexer.status} />
+                          {(indexer.nonFatalErrorCount ?? 0) > 0 && (
+                            <span className="text-[10px] text-[var(--text-faint)]">
+                              {indexer.nonFatalErrorCount} non-fatal error{indexer.nonFatalErrorCount === 1 ? '' : 's'}
+                            </span>
                           )}
                         </div>
-                        <p className="text-xs text-[var(--text-muted)] font-mono break-all">
-                          {indexer.fatalError?.message}
-                        </p>
+
+                        {indexer.fatalError && (
+                          <div className="mb-2">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-[10px] font-semibold text-[var(--red)] uppercase">Fatal</span>
+                              {indexer.fatalError.handler && (
+                                <Badge variant="error">{indexer.fatalError.handler}</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-[var(--text-muted)] font-mono break-all leading-relaxed">
+                              {indexer.fatalError.message}
+                            </p>
+                          </div>
+                        )}
+
+                        {indexer.nonFatalErrors && indexer.nonFatalErrors.length > 0 && (
+                          <div className="space-y-1.5">
+                            {!indexer.fatalError && (
+                              <span className="text-[10px] font-semibold text-[var(--amber)] uppercase">
+                                Non-fatal{indexer.nonFatalErrors.length > 1 ? ` (latest ${indexer.nonFatalErrors.length})` : ''}
+                              </span>
+                            )}
+                            {indexer.fatalError && indexer.nonFatalErrors.length > 0 && (
+                              <span className="text-[10px] font-semibold text-[var(--amber)] uppercase">
+                                Non-fatal ({indexer.nonFatalErrors.length})
+                              </span>
+                            )}
+                            {indexer.nonFatalErrors.map((msg, i) => (
+                              <p
+                                key={i}
+                                className="text-xs text-[var(--text-muted)] font-mono break-all leading-relaxed pl-2 border-l-2 border-[var(--amber)] border-opacity-30"
+                              >
+                                {msg}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                 </div>
@@ -379,6 +433,19 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                         <p className="text-[10px] text-[var(--text-muted)] font-mono break-all">
                           {indexer.fatalError.message}
                         </p>
+                      </div>
+                    )}
+
+                    {!indexer.fatalError && indexer.nonFatalErrors && indexer.nonFatalErrors.length > 0 && (
+                      <div className="mt-3 p-2 rounded bg-[var(--amber-dim)] border border-[var(--amber)] border-opacity-20">
+                        <p className="text-[10px] text-[var(--amber)] font-medium mb-1">
+                          {indexer.nonFatalErrorCount} non-fatal error{indexer.nonFatalErrorCount === 1 ? '' : 's'}
+                        </p>
+                        {indexer.nonFatalErrors.map((msg, i) => (
+                          <p key={i} className="text-[10px] text-[var(--text-muted)] font-mono break-all leading-relaxed">
+                            {msg}
+                          </p>
+                        ))}
                       </div>
                     )}
                   </div>
