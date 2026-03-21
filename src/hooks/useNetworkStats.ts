@@ -298,3 +298,19 @@ export function useRecentDelegations(indexerAddress: string) {
     enabled: !!indexerAddress,
   });
 }
+
+/**
+ * Hook for ENS name resolution
+ */
+export function useENSName(address: string) {
+  return useQuery<{ ensName: string | null }>({
+    queryKey: ['ensName', address],
+    queryFn: async () => {
+      const res = await fetch(`/api/ens?address=${address}`);
+      if (!res.ok) return { ensName: null };
+      return res.json();
+    },
+    staleTime: ONE_HOUR,
+    enabled: !!address,
+  });
+}

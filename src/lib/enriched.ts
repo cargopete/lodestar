@@ -20,6 +20,9 @@ export interface EnrichedIndexer {
   geoHash: string | null;
   createdAt: number;
 
+  // ENS name (resolved from ENS subgraph, highest priority for display)
+  ensName: string | null;
+
   // Pre-computed fields
   selfStakeGRT: number;
   delegatedGRT: number;

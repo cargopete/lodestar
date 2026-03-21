@@ -39,6 +39,34 @@ export async function subgraphQuery<T = Record<string, unknown>>(query: string):
   return json.data as T;
 }
 
+// ENS subgraph (Ethereum mainnet names — reverse-resolves addresses to .eth names)
+const ENS_SUBGRAPH_URL = process.env.GRAPH_API_KEY
+  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/5XqPmWe6gjyrJtFn9cLy237i4cWw2j9HcUJEXsP5qGtH`
+  : null;
+
+export async function ensQuery<T = Record<string, unknown>>(query: string): Promise<T> {
+  if (!ENS_SUBGRAPH_URL) {
+    throw new Error('GRAPH_API_KEY not configured');
+  }
+
+  const res = await fetch(ENS_SUBGRAPH_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`ENS subgraph request failed: ${res.status}`);
+  }
+
+  const json = await res.json();
+  if (json.errors) {
+    throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
+  }
+
+  return json.data as T;
+}
+
 export async function delegationEventsQuery<T = Record<string, unknown>>(query: string): Promise<T> {
   if (!DELEGATION_EVENTS_URL) {
     throw new Error('GRAPH_API_KEY not configured');

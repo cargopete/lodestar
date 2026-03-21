@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cacheSet } from '@/lib/cache';
-import { subgraphQuery, delegationEventsQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { subgraphQuery, delegationEventsQuery, ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT, resolveIndexerName } from '@/lib/utils';
 import {
   calculateDelegatorAPR,
@@ -227,7 +227,29 @@ export async function GET(request: NextRequest) {
       console.warn('Delegation events fetch failed, continuing without:', e);
     }
 
-    // Step 4: Compute enriched data for each indexer
+    // Step 4: Resolve ENS names for all indexers
+    let ensNames: Record<string, string> = {};
+    try {
+      const addresses = indexers.map((i) => `"${i.id}"`).join(', ');
+      const ensResult = await ensQuery<{ domains: Array<{ name: string; resolvedAddress: { id: string } }> }>(`{
+        domains(first: 1000, where: { resolvedAddress_in: [${addresses}], name_not: null }) {
+          name
+          resolvedAddress { id }
+        }
+      }`);
+      for (const domain of ensResult.domains) {
+        const addr = domain.resolvedAddress.id.toLowerCase();
+        // Prefer shorter .eth names (primary name) over longer subdomains
+        if (!ensNames[addr] || domain.name.length < ensNames[addr].length) {
+          ensNames[addr] = domain.name;
+        }
+      }
+      console.log(`ENS: resolved ${Object.keys(ensNames).length} names`);
+    } catch (e) {
+      console.warn('ENS lookup failed, continuing without:', e);
+    }
+
+    // Step 5: Compute enriched data for each indexer
     const enriched: EnrichedIndexer[] = indexers.map((indexer) => {
       const selfStake = weiToGRT(indexer.stakedTokens);
       const delegated = weiToGRT(indexer.delegatedTokens);
@@ -257,9 +279,12 @@ export async function GET(request: NextRequest) {
 
       const activity = delegationActivity[indexer.id] ?? { delegations: 0, undelegations: 0, netFlowGRT: 0 };
 
+      const ens = ensNames[indexer.id] ?? null;
+
       return {
         id: indexer.id,
-        name: resolveIndexerName(indexer.account, indexer.id),
+        name: ens || resolveIndexerName(indexer.account, indexer.id),
+        ensName: ens,
         stakedTokens: indexer.stakedTokens,
         delegatedTokens: indexer.delegatedTokens,
         allocatedTokens: indexer.allocatedTokens,

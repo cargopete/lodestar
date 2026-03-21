@@ -2,7 +2,7 @@
 
 import { use } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations } from '@/hooks/useNetworkStats';
+import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
   formatGRT,
@@ -177,6 +177,7 @@ export default function IndexerDetailPage({
   const { data: provisionsData, isLoading: provisionsLoading } = useIndexerProvisions(address);
   const { data: reoData } = useREOStatus(address);
   const { data: recentDelegations } = useRecentDelegations(address);
+  const { data: ensData } = useENSName(address);
 
   const grtPrice = priceData?.price ?? 0;
   const network = networkData?.graphNetwork;
@@ -218,7 +219,7 @@ export default function IndexerDetailPage({
     );
   }
 
-  const name = resolveIndexerName(indexer.account, indexer.id);
+  const name = ensData?.ensName || resolveIndexerName(indexer.account, indexer.id);
   const selfStake = weiToGRT(indexer.stakedTokens);
   const delegated = weiToGRT(indexer.delegatedTokens);
   const allocated = weiToGRT(indexer.allocatedTokens);
