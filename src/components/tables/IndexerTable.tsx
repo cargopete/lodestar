@@ -52,6 +52,7 @@ interface IndexerRow {
   id: string;
   name: string;
   address: string;
+  url: string | null;
   selfStake: number;
   delegated: number;
   capacity: number;
@@ -68,12 +69,13 @@ interface IndexerRow {
   raw: Indexer;
 }
 
-// Search across name and address (default global filter only checks column accessors)
+// Search across name, address, and URL (many indexers have no display name set)
 const nameAddressFilter: FilterFn<IndexerRow> = (row, _columnId, filterValue) => {
   const search = (filterValue as string).toLowerCase();
   return (
     row.original.name.toLowerCase().includes(search) ||
-    row.original.address.toLowerCase().includes(search)
+    row.original.address.toLowerCase().includes(search) ||
+    (row.original.url?.toLowerCase().includes(search) ?? false)
   );
 };
 
@@ -110,6 +112,7 @@ export function IndexerTable() {
           id: e.id,
           name: e.name,
           address: e.id,
+          url: e.url,
           selfStake: e.selfStakeGRT,
           delegated: e.delegatedGRT,
           capacity: e.delegationCapacity.utilizationPercent,
@@ -161,6 +164,7 @@ export function IndexerTable() {
           id: indexer.id,
           name: resolveIndexerName(indexer.account, indexer.id),
           address: indexer.id,
+          url: indexer.url,
           selfStake,
           delegated,
           capacity: calculateCapacityUsed(selfStake, delegated, delegationRatio),
@@ -478,7 +482,7 @@ export function IndexerTable() {
           <div className="flex-1 min-w-0 sm:min-w-[200px]">
             <input
               type="text"
-              placeholder="Search by name or address..."
+              placeholder="Search by name, address, or URL..."
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className={cn(
