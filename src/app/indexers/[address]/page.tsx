@@ -471,7 +471,7 @@ export default function IndexerDetailPage({
                 {reoData.status.source === 'oracle' ? (
                   <div className="space-y-3">
                     {/* Renewal countdown */}
-                    {reoData.status.daysRemaining !== undefined && (
+                    {reoData.status.daysRemaining !== undefined && reoData.status.renewalTimestamp > 0 && (
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-sm text-[var(--text-muted)]">Eligibility renewal</span>
@@ -482,7 +482,7 @@ export default function IndexerDetailPage({
                           )}>
                             {reoData.status.daysRemaining > 0
                               ? `${reoData.status.daysRemaining.toFixed(1)} days remaining`
-                              : 'Overdue'}
+                              : 'Renewal overdue'}
                           </span>
                         </div>
                         {reoData.status.eligibilityPeriod && reoData.status.daysRemaining > 0 && (
@@ -492,6 +492,11 @@ export default function IndexerDetailPage({
                           />
                         )}
                       </div>
+                    )}
+                    {reoData.status.renewalTimestamp === 0 && reoData.status.isEligible === false && (
+                      <p className="text-sm text-[var(--text-muted)]">
+                        Never enrolled — this indexer has not been assessed by the oracle.
+                      </p>
                     )}
                     {/* Timestamps */}
                     <div className="grid grid-cols-2 gap-3 text-[11px]">
@@ -503,7 +508,7 @@ export default function IndexerDetailPage({
                           </p>
                         </div>
                       )}
-                      {reoData.status.expiresAt > 0 && (
+                      {reoData.status.renewalTimestamp > 0 && reoData.status.expiresAt > 0 && (
                         <div>
                           <p className="text-[var(--text-faint)]">Expires</p>
                           <p className="text-[var(--text)] font-mono">

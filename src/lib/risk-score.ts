@@ -85,8 +85,8 @@ function scoreSelfStake(ownStakeRatio: number | null, selfStakeGRT: number): num
   const ratio = ownStakeRatio ?? 0;
   if (ratio >= 50) return 100;
   if (ratio >= 25) return 80;
-  if (ratio >= 10) return 50 + ((ratio - 10) / 15) * 30; // 50–80 linear
-  if (ratio >= 1) return 10 + ((ratio - 1) / 9) * 40;    // 10–50 linear
+  if (ratio >= 10) return Math.round(50 + ((ratio - 10) / 15) * 30); // 50–80 linear
+  if (ratio >= 1) return Math.round(10 + ((ratio - 1) / 9) * 40);    // 10–50 linear
   return 5;
 }
 
