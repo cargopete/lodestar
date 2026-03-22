@@ -33,7 +33,11 @@ export interface EnrichedIndexer {
     availableCapacity: number;
     utilizationPercent: number;
   };
-  reoStatus: 'eligible' | 'warning' | 'ineligible';
+  reoStatus: 'eligible' | 'ineligible' | 'unknown';
+  reoSource: 'oracle' | 'heuristic';
+  reoRenewalTimestamp: number | null;   // unix seconds — last oracle renewal
+  reoExpiresAt: number | null;          // unix seconds — when eligibility expires
+  reoDaysRemaining: number | null;      // days until expiry (negative = expired)
   recentActivity: {
     delegationsIn7d: number;
     undelegationsIn7d: number;

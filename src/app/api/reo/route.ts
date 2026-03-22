@@ -1,36 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cached } from '@/lib/cache';
+import { checkOracleEligibility, type OracleEligibility } from '@/lib/reo-contract';
 
-// Rewards Eligibility Oracle — Heuristic Assessment
+// Rewards Eligibility Oracle — Direct Contract Read
 //
-// The on-chain REO contract (GIP-0079) isn't deployed on mainnet yet.
-// We replicate its logic using subgraph data:
-//   1. Active allocations — indexer must be actively indexing
-//   2. Recent POI submissions — must be submitting proofs of indexing
-//   3. Provisioned stake — must have provisioned to Horizon data services
-//   4. Sufficient stake — must have meaningful self-stake
-//
-// When the contract deploys, we can switch to on-chain calls via
-// REO_CONTRACT_ADDRESS env var.
+// Reads from the on-chain REO contract (GIP-0079) at 0x8ec2...f304 on Arbitrum One.
+// Falls back to subgraph heuristics if the contract call fails.
 
 const SUBGRAPH_URL = process.env.GRAPH_API_KEY
   ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/DZz4kDTdmzWLWsV373w2bSmoar3umKKH9y82SUKr5qmp`
   : null;
 
-interface REOStatus {
+interface REOResponse {
   address: string;
-  status: 'eligible' | 'warning' | 'ineligible' | 'unknown';
+  status: 'eligible' | 'ineligible' | 'unknown';
   isEligible: boolean;
-  reasons: string[];
-  checks: {
+  source: 'oracle' | 'heuristic';
+  // Oracle-sourced fields (only present when source === 'oracle')
+  renewalTimestamp?: number;
+  eligibilityPeriod?: number;
+  expiresAt?: number;
+  daysRemaining?: number;
+  // Heuristic-sourced fields (only present when source === 'heuristic')
+  checks?: {
     hasAllocations: boolean;
     hasRecentPOIs: boolean;
     hasProvisions: boolean;
     hasSufficientStake: boolean;
   };
+  reasons?: string[];
 }
 
-// Minimum self-stake threshold (100K GRT in wei)
-const MIN_STAKE_WEI = '100000000000000000000000';
+// --- Oracle path ---
+
+async function assessFromOracle(address: string): Promise<REOResponse> {
+  const result: OracleEligibility = await checkOracleEligibility(address);
+  return {
+    address: result.address,
+    status: result.isEligible ? 'eligible' : 'ineligible',
+    isEligible: result.isEligible,
+    source: 'oracle',
+    renewalTimestamp: result.renewalTimestamp,
+    eligibilityPeriod: result.eligibilityPeriod,
+    expiresAt: result.expiresAt,
+    daysRemaining: result.daysRemaining,
+  };
+}
+
+// --- Heuristic fallback (subgraph-based, same as before) ---
+
+const MIN_STAKE_WEI = '100000000000000000000000'; // 100K GRT
 
 async function subgraphQuery(query: string) {
   if (!SUBGRAPH_URL) return null;
@@ -45,10 +64,9 @@ async function subgraphQuery(query: string) {
   return json.data;
 }
 
-async function assessEligibility(address: string): Promise<REOStatus> {
+async function assessFromHeuristics(address: string): Promise<REOResponse> {
   const addr = address.toLowerCase();
 
-  // Fetch all signals in parallel
   const [indexerData, poiData, provisionData] = await Promise.all([
     subgraphQuery(`{
       indexer(id: "${addr}") {
@@ -83,25 +101,19 @@ async function assessEligibility(address: string): Promise<REOStatus> {
       address: addr,
       status: 'unknown',
       isEligible: false,
+      source: 'heuristic',
       reasons: ['Indexer not found'],
       checks: { hasAllocations: false, hasRecentPOIs: false, hasProvisions: false, hasSufficientStake: false },
     };
   }
 
-  // Run checks
   const hasAllocations = (indexer.allocationCount ?? 0) > 0;
-  const allocations = poiData?.allocations ?? [];
-  const hasRecentPOIs = allocations.length > 0;
-  const provisions = provisionData?.provisions ?? [];
-  const hasProvisions = provisions.length > 0;
-
+  const hasRecentPOIs = (poiData?.allocations ?? []).length > 0;
+  const hasProvisions = (provisionData?.provisions ?? []).length > 0;
   const stakedBigInt = BigInt(indexer.stakedTokens?.split('.')[0] || '0');
-  const minStakeBigInt = BigInt(MIN_STAKE_WEI);
-  const hasSufficientStake = stakedBigInt >= minStakeBigInt;
+  const hasSufficientStake = stakedBigInt >= BigInt(MIN_STAKE_WEI);
 
   const checks = { hasAllocations, hasRecentPOIs, hasProvisions, hasSufficientStake };
-
-  // Determine status
   const reasons: string[] = [];
   if (!hasSufficientStake) reasons.push('Stake below 100K GRT');
   if (!hasAllocations) reasons.push('No active allocations');
@@ -109,26 +121,28 @@ async function assessEligibility(address: string): Promise<REOStatus> {
   if (!hasProvisions) reasons.push('No Horizon service provisions');
 
   const passCount = [hasAllocations, hasRecentPOIs, hasSufficientStake].filter(Boolean).length;
-
-  let status: REOStatus['status'];
-  if (passCount === 3) {
-    status = 'eligible';
-  } else if (passCount >= 2) {
-    status = 'warning';
-  } else {
-    status = 'ineligible';
-  }
+  const isEligible = passCount === 3;
 
   return {
     address: addr,
-    status,
-    isEligible: status === 'eligible',
-    reasons,
+    status: isEligible ? 'eligible' : 'ineligible',
+    isEligible,
+    source: 'heuristic',
     checks,
+    reasons,
   };
 }
 
-import { cached } from '@/lib/cache';
+// --- Combined: oracle first, heuristic fallback ---
+
+async function assessEligibility(address: string): Promise<REOResponse> {
+  try {
+    return await assessFromOracle(address);
+  } catch (err) {
+    console.warn(`REO oracle call failed for ${address}, falling back to heuristics:`, err);
+    return assessFromHeuristics(address);
+  }
+}
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get('address');
@@ -136,25 +150,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'address parameter required' }, { status: 400 });
   }
 
-  if (!SUBGRAPH_URL) {
-    return NextResponse.json({
-      status: { address, status: 'unknown', isEligible: false, reasons: ['No API key configured'], checks: {} },
-      source: 'none',
-    });
-  }
-
   try {
+    // Cache for 5 minutes — oracle data doesn't change more often than daily renewals
     const reoStatus = await cached(
       `lodestar:reo:${address.toLowerCase()}`,
       300,
       () => assessEligibility(address)
     );
-    return NextResponse.json({ status: reoStatus, source: 'heuristic' });
+    return NextResponse.json({ status: reoStatus });
   } catch {
     return NextResponse.json({
-      status: { address, status: 'unknown', isEligible: false, reasons: ['Assessment failed'], checks: {} },
-      source: 'heuristic',
-      error: 'Failed to assess eligibility',
+      status: {
+        address: address.toLowerCase(),
+        status: 'unknown',
+        isEligible: false,
+        source: 'heuristic',
+        reasons: ['Assessment failed'],
+      },
     });
   }
 }

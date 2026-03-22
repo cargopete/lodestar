@@ -31,21 +31,18 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Badge } from '@/components/ui/Badge';
 import { IndexerComparison } from '@/components/ui/IndexerComparison';
 
-// Minimum self-stake for REO eligibility (100K GRT)
+// Minimum self-stake for REO eligibility heuristic fallback (100K GRT)
 const MIN_STAKE_REO = 100000;
 
 /**
- * Quick client-side REO eligibility check from existing indexer data.
- * Full assessment (POIs, provisions) requires the /api/reo endpoint.
+ * Quick client-side REO eligibility heuristic — used only when enriched
+ * (oracle-sourced) data isn't available yet. Not authoritative.
  */
-function quickREOStatus(indexer: Indexer): 'eligible' | 'warning' | 'ineligible' {
+function quickREOStatus(indexer: Indexer): 'eligible' | 'ineligible' | 'unknown' {
   const selfStake = weiToGRT(indexer.stakedTokens);
   const hasAllocations = indexer.allocationCount > 0;
   const hasSufficientStake = selfStake >= MIN_STAKE_REO;
-
-  if (hasAllocations && hasSufficientStake) return 'eligible';
-  if (hasAllocations || hasSufficientStake) return 'warning';
-  return 'ineligible';
+  return (hasAllocations && hasSufficientStake) ? 'eligible' : 'ineligible';
 }
 
 interface IndexerRow {
@@ -61,7 +58,9 @@ interface IndexerRow {
   allocations: number;
   allocated: number;
   rewards: number;
-  reoStatus: 'eligible' | 'warning' | 'ineligible';
+  reoStatus: 'eligible' | 'ineligible' | 'unknown';
+  reoSource: 'oracle' | 'heuristic' | null;
+  reoDaysRemaining: number | null;
   recentDelegations: { delegations: number; undelegations: number; netFlowGRT: number } | null;
   apr: number | null;
   effectiveCut: number | null;
@@ -122,6 +121,8 @@ export function IndexerTable() {
           allocated: weiToGRT(e.allocatedTokens),
           rewards: weiToGRT(e.rewardsEarned),
           reoStatus: e.reoStatus,
+          reoSource: e.reoSource ?? null,
+          reoDaysRemaining: e.reoDaysRemaining ?? null,
           recentDelegations: (e.recentActivity.delegationsIn7d > 0 || e.recentActivity.undelegationsIn7d > 0)
             ? { delegations: e.recentActivity.delegationsIn7d, undelegations: e.recentActivity.undelegationsIn7d, netFlowGRT: e.recentActivity.netFlowGRT }
             : null,
@@ -174,6 +175,8 @@ export function IndexerTable() {
           allocated,
           rewards,
           reoStatus: quickREOStatus(indexer),
+          reoSource: null,
+          reoDaysRemaining: null,
           recentDelegations: null,
           apr: null,
           effectiveCut: null,
@@ -218,22 +221,26 @@ export function IndexerTable() {
                 <span className="relative group/reo inline-flex">
                   <span className={cn(
                     'w-2 h-2 rounded-full inline-block',
-                    row.reoStatus === 'eligible' ? 'bg-[var(--green)]' :
-                    row.reoStatus === 'warning' ? 'bg-[var(--amber)]' : 'bg-[var(--red)]'
+                    row.reoStatus === 'eligible' ? 'bg-[var(--green)]' : 'bg-[var(--red)]'
                   )} />
-                  <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-48 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/reo:opacity-100 transition-opacity z-50 text-[11px] font-normal">
-                    <span className="block font-semibold text-[var(--text)] mb-1">Rewards Eligibility</span>
+                  <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-52 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/reo:opacity-100 transition-opacity z-50 text-[11px] font-normal">
+                    <span className="block font-semibold text-[var(--text)] mb-1">Rewards Eligibility (GIP-0079)</span>
                     <span className={cn(
                       'block font-medium',
-                      row.reoStatus === 'eligible' ? 'text-[var(--green)]' :
-                      row.reoStatus === 'warning' ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                      row.reoStatus === 'eligible' ? 'text-[var(--green)]' : 'text-[var(--red)]'
                     )}>
-                      {row.reoStatus === 'eligible' ? 'Likely eligible' :
-                       row.reoStatus === 'warning' ? 'At risk' : 'Likely ineligible'}
+                      {row.reoStatus === 'eligible' ? 'Eligible' : 'Ineligible'}
                     </span>
-                    <span className="block text-[var(--text-faint)] mt-1">
-                      {row.allocations > 0 ? '\u2713' : '\u2717'} Allocations · {row.selfStake >= MIN_STAKE_REO ? '\u2713' : '\u2717'} 100K+ stake
-                    </span>
+                    {row.reoSource === 'oracle' && row.reoDaysRemaining !== null && (
+                      <span className="block text-[var(--text-faint)] mt-1">
+                        {row.reoDaysRemaining > 0
+                          ? `Renews in ${row.reoDaysRemaining.toFixed(1)}d`
+                          : 'Renewal overdue'}
+                      </span>
+                    )}
+                    {row.reoSource !== 'oracle' && (
+                      <span className="block text-[var(--text-faint)] mt-1">Estimate — oracle data pending</span>
+                    )}
                   </span>
                 </span>
                 {/* Recent delegation activity indicator */}
@@ -545,8 +552,7 @@ export function IndexerTable() {
                         <div className="flex items-center gap-1 mt-1 flex-shrink-0">
                           <div className={cn(
                             'w-2 h-2 rounded-full',
-                            d.reoStatus === 'eligible' ? 'bg-[var(--green)]' :
-                            d.reoStatus === 'warning' ? 'bg-[var(--amber)]' : 'bg-[var(--red)]'
+                            d.reoStatus === 'eligible' ? 'bg-[var(--green)]' : 'bg-[var(--red)]'
                           )} />
                           {d.recentDelegations && (
                             <svg className="w-3 h-3 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

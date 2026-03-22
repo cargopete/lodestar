@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cacheSet } from '@/lib/cache';
 import { subgraphQuery, delegationEventsQuery, ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT, resolveIndexerName } from '@/lib/utils';
+import { batchCheckEligibility, type OracleEligibility } from '@/lib/reo-contract';
 import {
   calculateDelegatorAPR,
   calculateDelegationCapacity,
@@ -265,7 +266,18 @@ export async function GET(request: NextRequest) {
       console.warn('ENS lookup failed, continuing without:', e);
     }
 
-    // Step 5: Compute enriched data for each indexer
+    // Step 5: Batch-read REO oracle for all indexers (single multicall RPC round-trip)
+    let reoMap = new Map<string, OracleEligibility>();
+    let reoSource: 'oracle' | 'heuristic' = 'heuristic';
+    try {
+      reoMap = await batchCheckEligibility(indexerIds);
+      reoSource = 'oracle';
+      console.log(`REO oracle: checked ${reoMap.size} indexers`);
+    } catch (e) {
+      console.warn('REO oracle batch call failed, falling back to heuristics:', e);
+    }
+
+    // Step 6: Compute enriched data for each indexer
     const enriched: EnrichedIndexer[] = indexers.map((indexer) => {
       const selfStake = weiToGRT(indexer.stakedTokens);
       const delegated = weiToGRT(indexer.delegatedTokens);
@@ -286,12 +298,26 @@ export async function GET(request: NextRequest) {
 
       const capacity = calculateDelegationCapacity(selfStake, delegated, delegationRatio);
 
-      // Quick REO check (same logic as client-side)
-      const hasAllocations = indexer.allocationCount > 0;
-      const hasSufficientStake = selfStake >= MIN_STAKE_REO;
-      let reoStatus: 'eligible' | 'warning' | 'ineligible' = 'ineligible';
-      if (hasAllocations && hasSufficientStake) reoStatus = 'eligible';
-      else if (hasAllocations || hasSufficientStake) reoStatus = 'warning';
+      // REO status: oracle data if available, heuristic fallback
+      const oracle = reoMap.get(indexer.id);
+      let reoStatus: 'eligible' | 'ineligible' | 'unknown';
+      let reoRenewalTimestamp: number | null = null;
+      let reoExpiresAt: number | null = null;
+      let reoDaysRemaining: number | null = null;
+      let thisReoSource = reoSource;
+
+      if (oracle) {
+        reoStatus = oracle.isEligible ? 'eligible' : 'ineligible';
+        reoRenewalTimestamp = oracle.renewalTimestamp;
+        reoExpiresAt = oracle.expiresAt;
+        reoDaysRemaining = oracle.daysRemaining;
+      } else {
+        // Heuristic fallback
+        const hasAllocations = indexer.allocationCount > 0;
+        const hasSufficientStake = selfStake >= MIN_STAKE_REO;
+        reoStatus = (hasAllocations && hasSufficientStake) ? 'eligible' : 'ineligible';
+        thisReoSource = 'heuristic';
+      }
 
       const activity = delegationActivity[indexer.id] ?? { delegations: 0, undelegations: 0, netFlowGRT: 0 };
 
@@ -319,6 +345,10 @@ export async function GET(request: NextRequest) {
         delegatorAPR: apr,
         delegationCapacity: capacity,
         reoStatus,
+        reoSource: thisReoSource,
+        reoRenewalTimestamp,
+        reoExpiresAt,
+        reoDaysRemaining,
         recentActivity: {
           delegationsIn7d: activity.delegations,
           undelegationsIn7d: activity.undelegations,
@@ -343,7 +373,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Step 5: Write to Redis
+    // Step 7: Write to Redis
     await cacheSet('lodestar:indexers-enriched', enriched, 600);
 
     const duration = Date.now() - startTime;

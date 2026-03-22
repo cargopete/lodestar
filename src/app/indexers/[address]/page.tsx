@@ -276,37 +276,35 @@ export default function IndexerDetailPage({
           {reoData?.status?.status && reoData.status.status !== 'unknown' && (
             <div className="relative group">
               <Badge
-                variant={
-                  reoData.status.status === 'eligible' ? 'success' :
-                  reoData.status.status === 'warning' ? 'warning' : 'error'
-                }
+                variant={reoData.status.status === 'eligible' ? 'success' : 'error'}
                 className="cursor-help"
               >
-                {reoData.status.status === 'eligible' ? 'Likely Eligible' :
-                 reoData.status.status === 'warning' ? 'At Risk' : 'Likely Ineligible'}
+                {reoData.status.status === 'eligible' ? 'Eligible' : 'Ineligible'}
               </Badge>
               <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 p-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50">
                 <p className="text-xs font-semibold text-[var(--text)] mb-2">Rewards Eligibility (GIP-0079)</p>
-                <p className="text-[11px] text-[var(--text-muted)] mb-2.5">
-                  The Rewards Eligibility Oracle determines whether an indexer qualifies for indexing rewards. This is a Lodestar estimate based on on-chain signals — not a direct oracle read.
-                </p>
-                <div className="space-y-1.5">
-                  {[
-                    { label: 'Active allocations', pass: reoData.status.checks?.hasAllocations },
-                    { label: 'Recent POI activity', pass: reoData.status.checks?.hasRecentPOIs },
-                    { label: 'Self-stake ≥ 100K GRT', pass: reoData.status.checks?.hasSufficientStake },
-                    { label: 'Horizon provisions', pass: reoData.status.checks?.hasProvisions },
-                  ].map((check) => (
-                    <div key={check.label} className="flex items-center gap-2 text-[11px]">
-                      <span className={check.pass ? 'text-[var(--green)]' : 'text-[var(--red)]'}>
-                        {check.pass ? '✓' : '✗'}
-                      </span>
-                      <span className={check.pass ? 'text-[var(--text)]' : 'text-[var(--text-muted)]'}>
-                        {check.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {reoData.status.source === 'oracle' ? (
+                  <>
+                    <p className="text-[11px] text-[var(--text-muted)] mb-2">
+                      Direct read from the on-chain REO oracle contract.
+                    </p>
+                    {reoData.status.daysRemaining !== undefined && (
+                      <p className={cn(
+                        'text-[11px] font-medium',
+                        reoData.status.daysRemaining > 3 ? 'text-[var(--green)]' :
+                        reoData.status.daysRemaining > 0 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                      )}>
+                        {reoData.status.daysRemaining > 0
+                          ? `Renewal in ${reoData.status.daysRemaining.toFixed(1)} days`
+                          : 'Renewal overdue'}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    Estimate based on on-chain signals (oracle data pending).
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -429,53 +427,100 @@ export default function IndexerDetailPage({
             </CardContent>
           </Card>
 
-          {/* REO Eligibility Assessment */}
+          {/* REO Eligibility — direct oracle read */}
           {reoData?.status?.status && reoData.status.status !== 'unknown' && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Rewards Eligibility</CardTitle>
-                  <Badge variant={
-                    reoData.status.status === 'eligible' ? 'success' :
-                    reoData.status.status === 'warning' ? 'warning' : 'error'
-                  }>
-                    {reoData.status.status === 'eligible' ? 'Likely Eligible' :
-                     reoData.status.status === 'warning' ? 'At Risk' : 'Likely Ineligible'}
+                  <Badge variant={reoData.status.status === 'eligible' ? 'success' : 'error'}>
+                    {reoData.status.status === 'eligible' ? 'Eligible' : 'Ineligible'}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2.5">
-                  {[
-                    { label: 'Active allocations', pass: reoData.status.checks?.hasAllocations },
-                    { label: 'Recent POI activity', pass: reoData.status.checks?.hasRecentPOIs },
-                    { label: 'Sufficient self-stake (100K+)', pass: reoData.status.checks?.hasSufficientStake },
-                    { label: 'Horizon provisions', pass: reoData.status.checks?.hasProvisions },
-                  ].map((check) => (
-                    <div key={check.label} className="flex items-center gap-2.5">
-                      <div className={cn(
-                        'w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0',
-                        check.pass ? 'bg-[var(--green-dim)]' : 'bg-[var(--red-dim)]'
-                      )}>
-                        {check.pass ? (
-                          <svg className="w-2.5 h-2.5 text-[var(--green)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        ) : (
-                          <svg className="w-2.5 h-2.5 text-[var(--red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
+                {reoData.status.source === 'oracle' ? (
+                  <div className="space-y-3">
+                    {/* Renewal countdown */}
+                    {reoData.status.daysRemaining !== undefined && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-sm text-[var(--text-muted)]">Eligibility renewal</span>
+                          <span className={cn(
+                            'text-sm font-medium',
+                            reoData.status.daysRemaining > 3 ? 'text-[var(--green)]' :
+                            reoData.status.daysRemaining > 0 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                          )}>
+                            {reoData.status.daysRemaining > 0
+                              ? `${reoData.status.daysRemaining.toFixed(1)} days remaining`
+                              : 'Overdue'}
+                          </span>
+                        </div>
+                        {reoData.status.eligibilityPeriod && reoData.status.daysRemaining > 0 && (
+                          <ProgressBar
+                            value={Math.max(0, (reoData.status.daysRemaining / (reoData.status.eligibilityPeriod / 86400)) * 100)}
+                            variant={reoData.status.daysRemaining > 3 ? 'teal' : 'orange'}
+                          />
                         )}
                       </div>
-                      <span className={cn('text-sm', check.pass ? 'text-[var(--text)]' : 'text-[var(--text-muted)]')}>
-                        {check.label}
-                      </span>
+                    )}
+                    {/* Timestamps */}
+                    <div className="grid grid-cols-2 gap-3 text-[11px]">
+                      {reoData.status.renewalTimestamp > 0 && (
+                        <div>
+                          <p className="text-[var(--text-faint)]">Last renewed</p>
+                          <p className="text-[var(--text)] font-mono">
+                            {new Date(reoData.status.renewalTimestamp * 1000).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
+                      {reoData.status.expiresAt > 0 && (
+                        <div>
+                          <p className="text-[var(--text-faint)]">Expires</p>
+                          <p className="text-[var(--text)] font-mono">
+                            {new Date(reoData.status.expiresAt * 1000).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-                <p className="text-[10px] text-[var(--text-faint)] mt-3 leading-relaxed">
-                  Lodestar estimate based on on-chain activity. Not from the REO oracle contract (GIP-0079), which is pending mainnet deployment.
-                </p>
+                    <p className="text-[10px] text-[var(--text-faint)] leading-relaxed">
+                      Source: REO oracle contract (GIP-0079). The oracle evaluates indexer service quality — HTTP status, response speed, and data freshness — over 28-day windows with 14-day renewal cycles.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {/* Heuristic fallback — show basic checks */}
+                    {reoData.status.checks && [
+                      { label: 'Active allocations', pass: reoData.status.checks.hasAllocations },
+                      { label: 'Recent POI activity', pass: reoData.status.checks.hasRecentPOIs },
+                      { label: 'Sufficient self-stake (100K+)', pass: reoData.status.checks.hasSufficientStake },
+                      { label: 'Horizon provisions', pass: reoData.status.checks.hasProvisions },
+                    ].map((check) => (
+                      <div key={check.label} className="flex items-center gap-2.5">
+                        <div className={cn(
+                          'w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0',
+                          check.pass ? 'bg-[var(--green-dim)]' : 'bg-[var(--red-dim)]'
+                        )}>
+                          {check.pass ? (
+                            <svg className="w-2.5 h-2.5 text-[var(--green)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            <svg className="w-2.5 h-2.5 text-[var(--red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className={cn('text-sm', check.pass ? 'text-[var(--text)]' : 'text-[var(--text-muted)]')}>
+                          {check.label}
+                        </span>
+                      </div>
+                    ))}
+                    <p className="text-[10px] text-[var(--text-faint)] mt-3 leading-relaxed">
+                      Estimate based on on-chain signals — oracle read unavailable.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

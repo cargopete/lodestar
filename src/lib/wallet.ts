@@ -28,6 +28,8 @@ export const CONTRACTS = {
   grt: '0x9623063377AD1B27544C965cCd7342f7EA7e88C7' as const,
   // Graph Token Gateway (L2)
   gateway: '0x2F5e2E19A91d53Aa17f1F1D9B5C5C5dF5E92A508' as const,
+  // Rewards Eligibility Oracle (GIP-0079)
+  reo: '0x8ec2767a9d9ba02b4e09e8ff4fac2e14a340f304' as const,
 } as const;
 
 // Graph Network Subgraph ID on Arbitrum
