@@ -65,6 +65,8 @@ interface IndexerRow {
   apr: number | null;
   effectiveCut: number | null;
   overDelegationDilution: number | null;
+  score: number | null;
+  scoreGrade: 'A' | 'B' | 'C' | 'D' | 'F' | null;
   raw: Indexer;
 }
 
@@ -129,6 +131,8 @@ export function IndexerTable() {
           apr: e.delegatorAPR,
           effectiveCut: e.effectiveCut,
           overDelegationDilution: e.overDelegationDilution,
+          score: e.score ?? null,
+          scoreGrade: e.scoreGrade ?? null,
           // Reconstruct raw Indexer shape for comparison panel
           raw: {
             id: e.id,
@@ -181,6 +185,8 @@ export function IndexerTable() {
           apr: null,
           effectiveCut: null,
           overDelegationDilution: null,
+          score: null,
+          scoreGrade: null,
           raw: indexer,
         };
       })
@@ -274,6 +280,24 @@ export function IndexerTable() {
             </div>
           );
         },
+      }),
+      columnHelper.accessor('score', {
+        header: 'Score',
+        cell: (info) => {
+          const row = info.row.original;
+          const score = info.getValue();
+          if (score === null) return <span className="text-[var(--text-faint)]">—</span>;
+          const color = score >= 80 ? 'var(--green)' : score >= 65 ? 'var(--teal, var(--green))' : score >= 50 ? 'var(--amber)' : 'var(--red)';
+          return (
+            <span className="font-mono font-semibold" style={{ color }}>
+              {score}
+              {row.scoreGrade && (
+                <span className="ml-1 text-[11px] font-medium opacity-70">{row.scoreGrade}</span>
+              )}
+            </span>
+          );
+        },
+        sortUndefined: 'last',
       }),
       columnHelper.accessor('selfStake', {
         header: 'Self-Stake',
@@ -561,7 +585,17 @@ export function IndexerTable() {
                           )}
                         </div>
                       </div>
-                      <p className="text-sm font-mono text-[var(--text)] flex-shrink-0">{formatGRT(d.selfStake)}</p>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {d.score !== null && (
+                          <span className={cn(
+                            'text-sm font-mono font-semibold',
+                            d.score >= 80 ? 'text-[var(--green)]' : d.score >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                          )}>
+                            {d.score}{d.scoreGrade && <span className="text-[10px] ml-0.5 opacity-70">{d.scoreGrade}</span>}
+                          </span>
+                        )}
+                        <p className="text-sm font-mono text-[var(--text)]">{formatGRT(d.selfStake)}</p>
+                      </div>
                     </div>
                     <div className="grid grid-cols-4 gap-2 text-center">
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">

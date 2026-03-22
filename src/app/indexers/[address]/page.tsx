@@ -20,6 +20,7 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { DelegationCalculator } from '@/components/ui/DelegationCalculator';
 import { ProvisionsPanel } from '@/components/ui/ProvisionsPanel';
+import { calculateIndexerScore, SCORE_WEIGHTS, SCORE_LABELS, type IndexerScore } from '@/lib/risk-score';
 
 interface IndexerDetail {
   id: string;
@@ -228,6 +229,34 @@ export default function IndexerDetailPage({
 
   // Check parameter lock status
   const createdDate = new Date(indexer.createdAt * 1000);
+
+  // Compute risk score from available data
+  const provisionedGRT = indexer.provisionedTokens ? weiToGRT(indexer.provisionedTokens) : null;
+  const ownStakeRatio = indexer.ownStakeRatio ? parseFloat(indexer.ownStakeRatio) * 100 : null;
+  const netFlowGRT = recentDelegations?.reduce((sum, e) => {
+    const tokens = weiToGRT(e.tokens);
+    return e.eventType === 'delegation' ? sum + tokens : sum - tokens;
+  }, 0) ?? 0;
+
+  const indexerScore: IndexerScore | null = reoData?.status ? calculateIndexerScore({
+    reoStatus: reoData.status.status === 'unknown' ? 'unknown' : reoData.status.status,
+    reoDaysRemaining: reoData.status.daysRemaining ?? null,
+    reoSource: reoData.status.source ?? 'heuristic',
+    ownStakeRatio,
+    selfStakeGRT: selfStake,
+    lastDelegationParameterUpdate: indexer.lastDelegationParameterUpdate,
+    delegatorParameterCooldown: indexer.delegatorParameterCooldown,
+    allocationCount: indexer.allocationCount,
+    allocatedTokens: indexer.allocatedTokens,
+    provisionedGRT,
+    delegationUtilization: capacity.utilizationPercent,
+    ensName: ensData?.ensName ?? null,
+    url: indexer.url,
+    name,
+    id: indexer.id,
+    netFlowGRT,
+    delegatedGRT: delegated,
+  }) : null;
 
   return (
     <div className="space-y-6">
@@ -521,6 +550,73 @@ export default function IndexerDetailPage({
                     </p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Indexer Score Breakdown */}
+          {indexerScore && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Indexer Score</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      'text-2xl font-mono font-bold',
+                      indexerScore.composite >= 80 ? 'text-[var(--green)]' :
+                      indexerScore.composite >= 65 ? 'text-[var(--teal, var(--green))]' :
+                      indexerScore.composite >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                    )}>
+                      {indexerScore.composite}
+                    </span>
+                    <Badge variant={
+                      indexerScore.grade === 'A' ? 'success' :
+                      indexerScore.grade === 'B' ? 'accent' :
+                      indexerScore.grade === 'C' ? 'warning' : 'error'
+                    }>
+                      {indexerScore.grade}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {(Object.keys(SCORE_WEIGHTS) as Array<keyof typeof SCORE_WEIGHTS>).map((key) => {
+                    const dimScore = indexerScore.breakdown[key];
+                    const weight = SCORE_WEIGHTS[key];
+                    const label = SCORE_LABELS[key];
+                    return (
+                      <div key={key}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-[var(--text-muted)]">
+                            {label}
+                            <span className="text-[var(--text-faint)] ml-1">({weight}%)</span>
+                          </span>
+                          <span className={cn(
+                            'text-xs font-mono font-medium',
+                            dimScore >= 80 ? 'text-[var(--green)]' :
+                            dimScore >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                          )}>
+                            {dimScore}
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+                          <div
+                            className={cn(
+                              'h-full rounded-full transition-all duration-500',
+                              dimScore >= 80 ? 'bg-[var(--green)]' :
+                              dimScore >= 50 ? 'bg-[var(--amber)]' : 'bg-[var(--red)]'
+                            )}
+                            style={{ width: `${dimScore}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
+                  Composite score from 7 on-chain dimensions. Weights reflect delegator priorities: REO compliance (25%), self-stake (20%), cut stability (15%), allocation efficiency (15%), delegation safety (10%), transparency (10%), delegation trend (5%). Higher = better for delegators.
+                </p>
               </CardContent>
             </Card>
           )}

@@ -7,6 +7,7 @@ import {
   calculateDelegatorAPR,
   calculateDelegationCapacity,
 } from '@/lib/rewards';
+import { calculateIndexerScore } from '@/lib/risk-score';
 import type { EnrichedIndexer } from '@/lib/enriched';
 
 // Verify cron secret in production
@@ -322,10 +323,39 @@ export async function GET(request: NextRequest) {
       const activity = delegationActivity[indexer.id] ?? { delegations: 0, undelegations: 0, netFlowGRT: 0 };
 
       const ens = ensNames[indexer.id] ?? null;
+      const displayName = ens || resolveIndexerName(indexer.account, indexer.id);
+
+      const ownStakeRatio = indexer.ownStakeRatio
+        ? parseFloat(indexer.ownStakeRatio) * 100
+        : null;
+      const provisionedGRT = indexer.provisionedTokens
+        ? weiToGRT(indexer.provisionedTokens)
+        : null;
+
+      // Composite risk score
+      const indexerScore = calculateIndexerScore({
+        reoStatus,
+        reoDaysRemaining,
+        reoSource: thisReoSource,
+        ownStakeRatio,
+        selfStakeGRT: selfStake,
+        lastDelegationParameterUpdate: indexer.lastDelegationParameterUpdate,
+        delegatorParameterCooldown: indexer.delegatorParameterCooldown,
+        allocationCount: indexer.allocationCount,
+        allocatedTokens: indexer.allocatedTokens,
+        provisionedGRT,
+        delegationUtilization: capacity.utilizationPercent,
+        ensName: ens,
+        url: indexer.url,
+        name: displayName,
+        id: indexer.id,
+        netFlowGRT: activity.netFlowGRT,
+        delegatedGRT: delegated,
+      });
 
       return {
         id: indexer.id,
-        name: ens || resolveIndexerName(indexer.account, indexer.id),
+        name: displayName,
         ensName: ens,
         stakedTokens: indexer.stakedTokens,
         delegatedTokens: indexer.delegatedTokens,
@@ -360,15 +390,14 @@ export async function GET(request: NextRequest) {
         overDelegationDilution: indexer.overDelegationDilution
           ? parseFloat(indexer.overDelegationDilution) * 100
           : null,
-        ownStakeRatio: indexer.ownStakeRatio
-          ? parseFloat(indexer.ownStakeRatio) * 100
-          : null,
+        ownStakeRatio,
         indexerRewardsOwnGenerationRatio: indexer.indexerRewardsOwnGenerationRatio
           ? parseFloat(indexer.indexerRewardsOwnGenerationRatio)
           : null,
-        provisionedGRT: indexer.provisionedTokens
-          ? weiToGRT(indexer.provisionedTokens)
-          : null,
+        provisionedGRT,
+        score: indexerScore.composite,
+        scoreGrade: indexerScore.grade,
+        scoreBreakdown: indexerScore.breakdown,
         computedAt: Date.now(),
       };
     });

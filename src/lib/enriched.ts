@@ -49,5 +49,17 @@ export interface EnrichedIndexer {
   ownStakeRatio: number | null;
   indexerRewardsOwnGenerationRatio: number | null;
   provisionedGRT: number | null;
+  // Composite risk score (computed from all dimensions above)
+  score: number;               // 0–100 composite
+  scoreGrade: 'A' | 'B' | 'C' | 'D' | 'F';
+  scoreBreakdown: {
+    reo: number;
+    selfStake: number;
+    cutStability: number;
+    allocationEfficiency: number;
+    overDelegation: number;
+    transparency: number;
+    delegationTrend: number;
+  };
   computedAt: number;
 }
