@@ -493,9 +493,9 @@ export default function IndexerDetailPage({
                         )}
                       </div>
                     )}
-                    {reoData.status.renewalTimestamp === 0 && reoData.status.isEligible === false && (
+                    {reoData.status.renewalTimestamp === 0 && (
                       <p className="text-sm text-[var(--text-muted)]">
-                        Never enrolled — this indexer has not been assessed by the oracle.
+                        No renewal on record — this indexer has not yet met the oracle&apos;s quality thresholds (HTTP 200, &lt;5s response, &lt;50K blocks behind chain head).
                       </p>
                     )}
                     {/* Timestamps */}
