@@ -804,6 +804,7 @@ export default function IndexerDetailPage({
       <ProvisionsPanel
         provisions={provisionsData?.provisions ?? []}
         isLoading={provisionsLoading}
+        selfStakeGRT={selfStake}
       />
 
       {/* Recent Delegation Activity — moved to right column above */}
