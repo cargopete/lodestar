@@ -75,18 +75,38 @@ function scoreREO(
 }
 
 /**
- * Self-stake ratio: higher own-stake proportion = more skin in the game.
- * Scaled so ~10% = 50, ~25% = 80, 50%+ = 100.
+ * Self-stake: absolute GRT staked by the indexer — skin in the game.
+ * Scored on absolute value, NOT ratio. Having more delegation does not
+ * reduce this score. Linear interpolation between anchor points.
+ *
+ * Anchors (GRT → score):
+ *   10M+ → 100,  5M → 95,  1M → 80,  500K → 65,
+ *   200K → 50,  100K → 35 (protocol minimum),  0 → 5
  */
-function scoreSelfStake(ownStakeRatio: number | null, selfStakeGRT: number): number {
-  if (selfStakeGRT === 0) return 0;
+function scoreSelfStake(selfStakeGRT: number): number {
+  if (selfStakeGRT <= 0) return 0;
 
-  // ownStakeRatio is already 0–100 percentage from subgraph
-  const ratio = ownStakeRatio ?? 0;
-  if (ratio >= 50) return 100;
-  if (ratio >= 25) return 80;
-  if (ratio >= 10) return Math.round(50 + ((ratio - 10) / 15) * 30); // 50–80 linear
-  if (ratio >= 1) return Math.round(10 + ((ratio - 1) / 9) * 40);    // 10–50 linear
+  const anchors: [number, number][] = [
+    [10_000_000, 100],
+    [5_000_000,   95],
+    [1_000_000,   80],
+    [500_000,     65],
+    [200_000,     50],
+    [100_000,     35],
+    [0,            5],
+  ];
+
+  if (selfStakeGRT >= anchors[0][0]) return anchors[0][1];
+
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const [hi, hiScore] = anchors[i];
+    const [lo, loScore] = anchors[i + 1];
+    if (selfStakeGRT >= lo) {
+      const t = (selfStakeGRT - lo) / (hi - lo);
+      return Math.round(loScore + t * (hiScore - loScore));
+    }
+  }
+
   return 5;
 }
 
@@ -200,7 +220,6 @@ export interface ScoreInput {
   reoStatus: 'eligible' | 'ineligible' | 'unknown';
   reoDaysRemaining: number | null;
   reoSource: 'oracle' | 'heuristic';
-  ownStakeRatio: number | null;
   selfStakeGRT: number;
   lastDelegationParameterUpdate: number;
   delegatorParameterCooldown: number;
@@ -219,7 +238,7 @@ export interface ScoreInput {
 export function calculateIndexerScore(input: ScoreInput): IndexerScore {
   const breakdown: ScoreBreakdown = {
     reo: scoreREO(input.reoStatus, input.reoDaysRemaining, input.reoSource),
-    selfStake: scoreSelfStake(input.ownStakeRatio, input.selfStakeGRT),
+    selfStake: scoreSelfStake(input.selfStakeGRT),
     cutStability: scoreCutStability(
       input.lastDelegationParameterUpdate,
       input.delegatorParameterCooldown,

@@ -337,7 +337,6 @@ export async function GET(request: NextRequest) {
         reoStatus,
         reoDaysRemaining,
         reoSource: thisReoSource,
-        ownStakeRatio,
         selfStakeGRT: selfStake,
         lastDelegationParameterUpdate: indexer.lastDelegationParameterUpdate,
         delegatorParameterCooldown: indexer.delegatorParameterCooldown,

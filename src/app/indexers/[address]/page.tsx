@@ -242,7 +242,6 @@ export default function IndexerDetailPage({
     reoStatus: reoData.status.status === 'unknown' ? 'unknown' : reoData.status.status,
     reoDaysRemaining: reoData.status.daysRemaining ?? null,
     reoSource: reoData.status.source ?? 'heuristic',
-    ownStakeRatio,
     selfStakeGRT: selfStake,
     lastDelegationParameterUpdate: indexer.lastDelegationParameterUpdate,
     delegatorParameterCooldown: indexer.delegatorParameterCooldown,

@@ -46,6 +46,39 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - [x] Indexer comparison tool (up to 3 side-by-side)
 - [x] Real subgraph data throughout (no mock data in production)
 
+## Indexer Scoring
+
+Each indexer receives a composite score (0–100) across seven dimensions, combined with transparent weights. The score is designed for delegator decision-making — higher is better.
+
+### Dimensions & Weights
+
+| Dimension | Weight | What it measures |
+|---|---|---|
+| **REO Compliance** | 25% | Rewards Eligibility Oracle status (GIP-0079). Eligible with runway = 100, ineligible = 0. Oracle-sourced data gets full marks; heuristic fallback = partial credit. |
+| **Self-Stake** | 20% | Absolute GRT staked by the indexer — skin in the game. Scored on raw amount, **not** as a ratio of total stake. Having more delegation does *not* reduce this score. Anchors: 100K (protocol minimum) = 35, 500K = 65, 1M = 80, 10M+ = 100, with linear interpolation between points. |
+| **Cut Stability** | 15% | How long since the indexer last changed reward/query fee parameters. Longer = more predictable. 180+ days = 100, <7 days = 10. Bonus +10 if a cooldown period is set. |
+| **Allocation Efficiency** | 15% | Allocated tokens ÷ provisioned tokens. Higher utilisation = more operationally competent. 80%+ = 100, no allocations = 0. |
+| **Delegation Safety** | 10% | How close the indexer is to maximum delegation capacity (self-stake × 16). Lower utilisation = more room for new delegators without reward dilution. <50% used = 100, 100% full = 0. |
+| **Transparency** | 10% | Has the indexer set an ENS name (+40), website URL (+30), and display name (+30)? Presence and accountability signals. |
+| **Delegation Trend** | 5% | 7-day net delegation flow as a percentage of total delegated stake. Positive inflow = crowd confidence; outflow = warning. Low weight because it's inherently noisy. No delegation = neutral 50. |
+
+### Grades
+
+| Score | Grade |
+|---|---|
+| 80–100 | A |
+| 65–79 | B |
+| 50–64 | C |
+| 35–49 | D |
+| 0–34 | F |
+
+### Design Principles
+
+- **No black boxes** — every dimension, weight, and threshold is visible in [`src/lib/risk-score.ts`](src/lib/risk-score.ts)
+- **Zero extra API calls** — scores are computed from data the enrichment pipeline already fetches
+- **Delegation-neutral self-stake** — attracting delegation is a sign of trust, not something to penalise
+- **Feedback welcome** — if the weights or thresholds feel off, [open an issue](https://github.com/cargopete/lodestar/issues)
+
 ## Tech Stack
 
 - Next.js 16 (App Router, Turbopack)
