@@ -629,11 +629,11 @@ export default function IndexerDetailPage({
           {recentDelegations && recentDelegations.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Recent Delegation Activity</CardTitle>
+                <CardTitle>Delegation Activity (7d)</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {recentDelegations.slice(0, 10).map((event) => {
+                  {recentDelegations.map((event) => {
                     const tokens = weiToGRT(event.tokens);
                     const isDelegation = event.eventType === 'delegation';
                     const isWithdrawal = event.eventType === 'withdrawal';

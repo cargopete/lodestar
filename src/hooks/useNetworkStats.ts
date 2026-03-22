@@ -283,12 +283,13 @@ export function useRecentDelegations(indexerAddress: string) {
   return useQuery<DelegationEvent[]>({
     queryKey: ['recentDelegations', indexerAddress],
     queryFn: async () => {
+      const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
       const query = `{
         delegationEvents(
-          first: 20,
+          first: 100,
           orderBy: timestamp,
           orderDirection: desc,
-          where: { indexer: "${indexerAddress.toLowerCase()}" }
+          where: { indexer: "${indexerAddress.toLowerCase()}", timestamp_gt: "${sevenDaysAgo}" }
         ) {
           id
           eventType
