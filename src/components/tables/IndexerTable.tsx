@@ -539,9 +539,11 @@ export function IndexerTable() {
               )}
             >
               <option value={0}>Any</option>
-              <option value={10000}>10K GRT</option>
               <option value={100000}>100K GRT</option>
+              <option value={500000}>500K GRT</option>
               <option value={1000000}>1M GRT</option>
+              <option value={5000000}>5M GRT</option>
+              <option value={10000000}>10M GRT</option>
             </select>
           </div>
         </div>
