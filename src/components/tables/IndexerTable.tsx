@@ -222,7 +222,9 @@ export function IndexerTable() {
           return (
             <div>
               <p className="font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors inline-flex items-center gap-1.5 whitespace-nowrap">
-                {info.getValue()}
+                <Link href={`/indexers/${row.address}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
+                  {info.getValue()}
+                </Link>
                 {/* REO eligibility indicator */}
                 <span className="relative group/reo inline-flex">
                   <span className={cn(
@@ -681,8 +683,21 @@ export function IndexerTable() {
                       'hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer',
                       row.getIsSelected() && 'bg-[var(--accent-dim)]'
                     )}
-                    onClick={() => {
-                      window.location.href = `/indexers/${row.original.address}`;
+                    onClick={(e) => {
+                      // Don't navigate if clicking interactive elements
+                      if ((e.target as HTMLElement).closest('a, button, input, [role="button"]')) return;
+                      const url = `/indexers/${row.original.address}`;
+                      if (e.ctrlKey || e.metaKey || e.button === 1) {
+                        window.open(url, '_blank');
+                      } else {
+                        window.location.href = url;
+                      }
+                    }}
+                    onAuxClick={(e) => {
+                      if (e.button === 1) {
+                        e.preventDefault();
+                        window.open(`/indexers/${row.original.address}`, '_blank');
+                      }
                     }}
                   >
                     {row.getVisibleCells().map((cell) => (
