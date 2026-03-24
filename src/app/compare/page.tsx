@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useIndexers, useNetworkStats } from '@/hooks/useNetworkStats';
+import { useIndexers, useEnrichedIndexers, useNetworkStats } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import {
   weiToGRT,
@@ -122,12 +122,13 @@ function formatMetric(value: unknown, format: MetricDef['format']): string {
 
 interface IndexerSearchProps {
   indexers: Indexer[];
+  nameMap?: Map<string, string>;
   selected: string | null;
   onSelect: (id: string) => void;
   placeholder?: string;
 }
 
-function IndexerSearch({ indexers, selected, onSelect, placeholder }: IndexerSearchProps) {
+function IndexerSearch({ indexers, nameMap, selected, onSelect, placeholder }: IndexerSearchProps) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
 
@@ -137,15 +138,18 @@ function IndexerSearch({ indexers, selected, onSelect, placeholder }: IndexerSea
     return indexers.filter(
       (ix) =>
         ix.id.toLowerCase().includes(q) ||
-        (ix.account?.defaultDisplayName ?? '').toLowerCase().includes(q),
+        (ix.account?.defaultDisplayName ?? '').toLowerCase().includes(q) ||
+        (nameMap?.get(ix.id) ?? '').toLowerCase().includes(q),
     ).slice(0, 20);
-  }, [indexers, query]);
+  }, [indexers, nameMap, query]);
 
   const selectedName = useMemo(() => {
     if (!selected) return null;
+    const enrichedName = nameMap?.get(selected);
+    if (enrichedName) return enrichedName;
     const ix = indexers.find((i) => i.id === selected);
     return resolveIndexerName(ix?.account, selected);
-  }, [indexers, selected]);
+  }, [indexers, nameMap, selected]);
 
   return (
     <div className="relative">
@@ -181,7 +185,7 @@ function IndexerSearch({ indexers, selected, onSelect, placeholder }: IndexerSea
           </div>
           <div className="max-h-60 overflow-y-auto">
             {filtered.map((ix) => {
-              const name = resolveIndexerName(ix.account, ix.id);
+              const name = nameMap?.get(ix.id) || resolveIndexerName(ix.account, ix.id);
               return (
                 <button
                   key={ix.id}
@@ -242,10 +246,21 @@ function CompareContent() {
     orderBy: 'stakedTokens',
     orderDirection: 'desc',
   });
+  const { data: enrichedData } = useEnrichedIndexers();
   const { data: networkData } = useNetworkStats();
 
   const delegationRatio = networkData?.graphNetwork?.delegationRatio ?? 16;
   const indexers = indexersData?.indexers ?? [];
+
+  // Build name map from enriched data (has ENS names) for search
+  const nameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const enrichedList = enrichedData && 'indexers' in enrichedData ? enrichedData.indexers : enrichedData ?? [];
+    for (const e of enrichedList) {
+      map.set(e.id, e.name);
+    }
+    return map;
+  }, [enrichedData]);
 
   const setSlot = useCallback((idx: number, id: string) => {
     setSelections((prev) => {
@@ -320,6 +335,7 @@ function CompareContent() {
             </div>
             <IndexerSearch
               indexers={indexers}
+              nameMap={nameMap}
               selected={sel}
               onSelect={(id) => setSlot(idx, id)}
             />
