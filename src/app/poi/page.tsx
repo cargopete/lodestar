@@ -16,15 +16,27 @@ const PAGE_SIZE = 25;
 
 // ---------- component ----------
 
+type SortMode = 'divergent' | 'recent';
+
 export default function POIDashboard() {
   const { data: overview, isLoading, isError } = usePOIOverview();
   const [page, setPage] = useState(0);
+  const [sortMode, setSortMode] = useState<SortMode>('divergent');
+
+  const sortedDeployments = useMemo(() => {
+    if (!overview) return [];
+    const deps = [...overview.deployments];
+    if (sortMode === 'recent') {
+      deps.sort((a, b) => b.latestEpoch - a.latestEpoch || b.allocationCount - a.allocationCount);
+    }
+    // 'divergent' is the default sort from the API
+    return deps;
+  }, [overview, sortMode]);
 
   const paginatedDeployments = useMemo(() => {
-    if (!overview) return [];
     const start = page * PAGE_SIZE;
-    return overview.deployments.slice(start, start + PAGE_SIZE);
-  }, [overview, page]);
+    return sortedDeployments.slice(start, start + PAGE_SIZE);
+  }, [sortedDeployments, page]);
 
   if (isLoading) {
     return (
@@ -82,6 +94,26 @@ export default function POIDashboard() {
         />
       </StatGrid>
 
+      {/* Sort toggle */}
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.06em]">Sort by</span>
+        {(['divergent', 'recent'] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            onClick={() => { setSortMode(mode); setPage(0); }}
+            className={cn(
+              'px-3 py-1.5 text-xs rounded-[var(--radius-button)] transition-colors',
+              sortMode === mode
+                ? 'bg-[var(--accent-dim)] text-[var(--accent)] font-medium'
+                : 'bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--text)]',
+            )}
+          >
+            {mode === 'divergent' ? 'Divergent first' : 'Most recent'}
+          </button>
+        ))}
+      </div>
+
       {/* Mobile cards */}
       <div className="block md:hidden space-y-3">
         {paginatedDeployments.map((dep) => (
@@ -121,7 +153,7 @@ export default function POIDashboard() {
         <Pagination
           page={page}
           pageSize={PAGE_SIZE}
-          totalItems={deployments.length}
+          totalItems={sortedDeployments.length}
           onPageChange={setPage}
         />
       </div>
@@ -196,7 +228,7 @@ export default function POIDashboard() {
         <Pagination
           page={page}
           pageSize={PAGE_SIZE}
-          totalItems={deployments.length}
+          totalItems={sortedDeployments.length}
           onPageChange={setPage}
         />
       </Card>

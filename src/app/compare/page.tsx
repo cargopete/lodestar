@@ -252,14 +252,16 @@ function CompareContent() {
   const delegationRatio = networkData?.graphNetwork?.delegationRatio ?? 16;
   const indexers = indexersData?.indexers ?? [];
 
-  // Build name map from enriched data (has ENS names) for search
-  const nameMap = useMemo(() => {
-    const map = new Map<string, string>();
+  // Build maps from enriched data (has ENS names + allocation-level APR)
+  const { nameMap, aprMap } = useMemo(() => {
+    const names = new Map<string, string>();
+    const aprs = new Map<string, number>();
     const enrichedList = enrichedData && 'indexers' in enrichedData ? enrichedData.indexers : enrichedData ?? [];
     for (const e of enrichedList) {
-      map.set(e.id, e.name);
+      names.set(e.id, e.name);
+      aprs.set(e.id, e.delegatorAPR);
     }
-    return map;
+    return { nameMap: names, aprMap: aprs };
   }, [enrichedData]);
 
   const setSlot = useCallback((idx: number, id: string) => {
@@ -281,15 +283,21 @@ function CompareContent() {
     });
   }, []);
 
-  // Process selected indexers
+  // Process selected indexers — overlay enriched APR when available
   const processed: (ProcessedIndexer | null)[] = useMemo(() => {
     return selections.map((sel) => {
       if (!sel) return null;
       const ix = indexers.find((i) => i.id === sel);
       if (!ix) return null;
-      return processIndexer(ix, delegationRatio, 300_000_000);
+      const p = processIndexer(ix, delegationRatio, 300_000_000);
+      const enrichedAPR = aprMap.get(sel);
+      if (enrichedAPR !== undefined) {
+        p.estimatedAPR = enrichedAPR;
+        p.name = nameMap.get(sel) ?? p.name;
+      }
+      return p;
     });
-  }, [selections, indexers, delegationRatio]);
+  }, [selections, indexers, delegationRatio, aprMap, nameMap]);
 
   // Best values per metric
   const bestValues = useMemo(() => {
@@ -436,8 +444,8 @@ function CompareContent() {
           {/* Legend */}
           <div className="px-4 py-3 border-t border-[0.5px] border-[var(--border)] bg-[var(--bg-elevated)]">
             <p className="text-xs text-[var(--text-faint)]">
-              Best value in each row is highlighted in accent colour. APR estimates are based on a
-              reference 10,000 GRT delegation.
+              Best value in each row is highlighted in accent colour. APR uses allocation-level
+              calculations from the enriched pipeline when available.
             </p>
           </div>
         </CardContent>
