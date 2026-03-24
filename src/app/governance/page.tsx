@@ -52,12 +52,12 @@ const GIPS: GIP[] = [
   {
     id: 'GIP-0079',
     title: 'Rewards Eligibility Oracle',
-    status: 'deployed',
+    status: 'approved',
     authors: 'Graph Foundation',
     forumUrl: 'https://forum.thegraph.com/t/gip-0079-indexer-rewards-eligibility-oracle/6734',
-    summary: 'Gates indexing rewards on actual service quality — HTTP status, response speed, and data freshness — evaluated over 28-day windows with 14-day renewal cycles.',
-    indexerImpact: 'Must maintain quality service to retain reward eligibility. Failure to meet thresholds (200 OK, <5s response, <50K blocks behind) results in lost rewards until re-qualified.',
-    delegatorImpact: 'Delegation to ineligible indexers earns zero rewards. Monitor your indexer\'s REO status — Lodestar shows this on every indexer page with oracle-sourced data and renewal countdowns.',
+    summary: 'Gates indexing rewards on actual service quality — HTTP status, response speed, and data freshness — evaluated over 28-day windows with 14-day renewal cycles. Oracle contract is live on Arbitrum and scoring indexers, but enforcement (reward gating) is pending GIP-0086.',
+    indexerImpact: 'Must maintain quality service to retain reward eligibility. Failure to meet thresholds (200 OK, <5s response, <50K blocks behind) will result in lost rewards once enforcement is active.',
+    delegatorImpact: 'Once enforced, delegation to ineligible indexers will earn zero rewards. Monitor your indexer\'s REO status now — Lodestar shows oracle-sourced eligibility data and renewal countdowns on every indexer page.',
     liveMetrics: (indexers) => {
       const eligible = indexers.filter(i => i.reoStatus === 'eligible').length;
       const total = indexers.length;
