@@ -12,8 +12,21 @@ const FORUM_CATEGORIES: { id: number; type: 'governance' | 'announcement' }[] = 
 ];
 
 // ── GitHub config ────────────────────────────────────────────────
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GH_HEADERS: Record<string, string> = {
+  Accept: 'application/vnd.github.v3+json',
+  ...(GITHUB_TOKEN ? { Authorization: `Bearer ${GITHUB_TOKEN}` } : {}),
+};
+
 const GIP_COMMITS_URL =
   'https://api.github.com/repos/graphprotocol/graph-improvement-proposals/commits?per_page=10';
+
+const TRACKED_REPOS = [
+  'graphprotocol/graph-node',
+  'graphprotocol/indexer',
+  'graphprotocol/contracts',
+  'graphprotocol/graph-tooling',
+];
 
 // ── Subgraph config ──────────────────────────────────────────────
 const SUBGRAPH_URL = process.env.GRAPH_API_KEY
@@ -67,9 +80,7 @@ async function fetchForumTopics(): Promise<FeedItem[]> {
 
 async function fetchGIPCommits(): Promise<FeedItem[]> {
   try {
-    const res = await fetch(GIP_COMMITS_URL, {
-      headers: { Accept: 'application/vnd.github.v3+json' },
-    });
+    const res = await fetch(GIP_COMMITS_URL, { headers: GH_HEADERS });
     if (!res.ok) return [];
 
     const commits = await res.json();
@@ -101,6 +112,99 @@ async function fetchGIPCommits(): Promise<FeedItem[]> {
   } catch {
     return [];
   }
+}
+
+async function fetchRepoIssues(): Promise<FeedItem[]> {
+  const results = await Promise.allSettled(
+    TRACKED_REPOS.map(async (repo) => {
+      const res = await fetch(
+        `https://api.github.com/repos/${repo}/issues?state=open&sort=created&direction=desc&per_page=5`,
+        { headers: GH_HEADERS }
+      );
+      if (!res.ok) return [];
+
+      const issues: any[] = await res.json();
+      // The issues endpoint also returns PRs — filter them out
+      return issues
+        .filter((i) => !i.pull_request)
+        .map((issue): FeedItem => ({
+          id: `issue-${repo}-${issue.number}`,
+          type: 'issue',
+          title: issue.title,
+          summary: issue.body ? issue.body.replace(/\r?\n/g, ' ').slice(0, 200) : '',
+          url: issue.html_url,
+          timestamp: issue.created_at,
+          tags: (issue.labels ?? []).map((l: any) => l.name).slice(0, 3),
+          metadata: {
+            author: issue.user?.login,
+            repo: repo.split('/')[1],
+            labels: (issue.labels ?? []).map((l: any) => l.name),
+          },
+        }));
+    })
+  );
+
+  return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+}
+
+async function fetchRepoPRs(): Promise<FeedItem[]> {
+  const results = await Promise.allSettled(
+    TRACKED_REPOS.map(async (repo) => {
+      const res = await fetch(
+        `https://api.github.com/repos/${repo}/pulls?state=open&sort=created&direction=desc&per_page=5`,
+        { headers: GH_HEADERS }
+      );
+      if (!res.ok) return [];
+
+      const prs: any[] = await res.json();
+      return prs.map((pr): FeedItem => ({
+        id: `pr-${repo}-${pr.number}`,
+        type: 'pr',
+        title: pr.title,
+        summary: pr.body ? pr.body.replace(/\r?\n/g, ' ').slice(0, 200) : '',
+        url: pr.html_url,
+        timestamp: pr.created_at,
+        tags: (pr.labels ?? []).map((l: any) => l.name).slice(0, 3),
+        metadata: {
+          author: pr.user?.login,
+          repo: repo.split('/')[1],
+          labels: (pr.labels ?? []).map((l: any) => l.name),
+        },
+      }));
+    })
+  );
+
+  return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+}
+
+async function fetchRepoReleases(): Promise<FeedItem[]> {
+  const results = await Promise.allSettled(
+    TRACKED_REPOS.map(async (repo) => {
+      const res = await fetch(
+        `https://api.github.com/repos/${repo}/releases?per_page=3`,
+        { headers: GH_HEADERS }
+      );
+      if (!res.ok) return [];
+
+      const releases: any[] = await res.json();
+      return releases.map((rel): FeedItem => ({
+        id: `release-${repo}-${rel.id}`,
+        type: 'release',
+        title: `${repo.split('/')[1]} ${rel.tag_name}`,
+        summary: rel.body ? rel.body.replace(/\r?\n/g, ' ').slice(0, 200) : '',
+        url: rel.html_url,
+        timestamp: rel.published_at ?? rel.created_at,
+        tags: [repo.split('/')[1]],
+        metadata: {
+          author: rel.author?.login,
+          repo: repo.split('/')[1],
+          releaseTag: rel.tag_name,
+        },
+      }));
+    })
+  );
+
+  return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
 }
 
 async function fetchEpochSummaries(): Promise<FeedItem[]> {
@@ -187,15 +291,18 @@ async function fetchEpochSummaries(): Promise<FeedItem[]> {
 
 export async function GET() {
   const items = await cached('lodestar:feed', 300, async () => {
-    const [forumItems, gipItems, epochItems] = await Promise.all([
+    const [forumItems, gipItems, epochItems, issueItems, prItems, releaseItems] = await Promise.all([
       fetchForumTopics(),
       fetchGIPCommits(),
       fetchEpochSummaries(),
+      fetchRepoIssues(),
+      fetchRepoPRs(),
+      fetchRepoReleases(),
     ]);
 
-    return [...forumItems, ...gipItems, ...epochItems]
+    return [...forumItems, ...gipItems, ...epochItems, ...issueItems, ...prItems, ...releaseItems]
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 40);
+      .slice(0, 60);
   });
 
   return NextResponse.json(

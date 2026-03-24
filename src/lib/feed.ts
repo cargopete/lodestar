@@ -1,4 +1,4 @@
-export type FeedItemType = 'governance' | 'gip' | 'epoch' | 'announcement';
+export type FeedItemType = 'governance' | 'gip' | 'epoch' | 'announcement' | 'issue' | 'pr' | 'release';
 
 export interface FeedItem {
   id: string;
@@ -17,6 +17,9 @@ export interface FeedItem {
     queryFeeDelta?: string;
     totalDistributed?: string;
     author?: string;
+    repo?: string;
+    labels?: string[];
+    releaseTag?: string;
   };
 }
 
@@ -43,6 +46,21 @@ export const FEED_TYPE_CONFIG: Record<
     label: 'Announcement',
     borderColor: 'var(--star-base)',
     bgColor: 'rgba(123, 117, 232, 0.12)',
+  },
+  issue: {
+    label: 'Issue',
+    borderColor: 'var(--red)',
+    bgColor: 'var(--red-dim)',
+  },
+  pr: {
+    label: 'PR',
+    borderColor: 'var(--cyan)',
+    bgColor: 'var(--cyan-dim)',
+  },
+  release: {
+    label: 'Release',
+    borderColor: 'var(--green)',
+    bgColor: 'var(--green-dim)',
   },
 };
 

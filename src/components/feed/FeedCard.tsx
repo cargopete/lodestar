@@ -73,6 +73,12 @@ export function FeedCard({ item }: FeedCardProps) {
         {item.metadata.author && (
           <span>by {item.metadata.author}</span>
         )}
+        {item.metadata.repo && (
+          <span className="font-mono">{item.metadata.repo}</span>
+        )}
+        {item.metadata.releaseTag && (
+          <span className="font-mono">{item.metadata.releaseTag}</span>
+        )}
         {item.metadata.epochNumber != null && (
           <span className="font-mono">#{item.metadata.epochNumber}</span>
         )}

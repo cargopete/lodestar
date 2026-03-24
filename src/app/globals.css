@@ -27,6 +27,8 @@
   --red-dim: rgba(248, 113, 113, 0.12);
   --amber: #FBBF24;
   --amber-dim: rgba(251, 191, 36, 0.12);
+  --cyan: #38BDF8;
+  --cyan-dim: rgba(56, 189, 248, 0.12);
 
   /* Star gradient */
   --star-top: #C4C0FF;

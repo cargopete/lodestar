@@ -9,6 +9,9 @@ const FILTERS: { label: string; value: FeedItemType | 'all' }[] = [
   { label: 'GIPs', value: 'gip' },
   { label: 'Epochs', value: 'epoch' },
   { label: 'News', value: 'announcement' },
+  { label: 'Issues', value: 'issue' },
+  { label: 'PRs', value: 'pr' },
+  { label: 'Releases', value: 'release' },
 ];
 
 interface FilterBarProps {
