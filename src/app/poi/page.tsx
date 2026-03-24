@@ -16,7 +16,7 @@ const PAGE_SIZE = 25;
 
 // ---------- component ----------
 
-type SortMode = 'divergent' | 'consensus' | 'allocations';
+type SortMode = 'divergent' | 'consensus' | 'signal';
 
 export default function POIDashboard() {
   const { data: overview, isLoading, isError } = usePOIOverview();
@@ -31,8 +31,8 @@ export default function POIDashboard() {
         if (a.hasDivergence !== b.hasDivergence) return a.hasDivergence ? 1 : -1;
         return b.allocationCount - a.allocationCount;
       });
-    } else if (sortMode === 'allocations') {
-      deps.sort((a, b) => b.allocationCount - a.allocationCount);
+    } else if (sortMode === 'signal') {
+      deps.sort((a, b) => b.signal - a.signal);
     }
     // 'divergent' is the default sort from the API
     return deps;
@@ -105,7 +105,7 @@ export default function POIDashboard() {
         {([
           { mode: 'divergent' as const, label: 'Divergent first' },
           { mode: 'consensus' as const, label: 'Consensus first' },
-          { mode: 'allocations' as const, label: 'By activity' },
+          { mode: 'signal' as const, label: 'By signal' },
         ]).map(({ mode, label }) => (
           <button
             key={mode}
