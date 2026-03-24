@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -51,10 +51,51 @@ function ComplexityCell({ hash }: { hash: string }) {
 
 // ---------- component ----------
 
+interface SearchResult {
+  id: string;
+  metadata: { displayName: string; description: string | null } | null;
+  currentVersion: {
+    subgraphDeployment: {
+      ipfsHash: string;
+      signalledTokens: string;
+      stakedTokens: string;
+    };
+  } | null;
+}
+
 export default function SubgraphDirectory() {
   const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>('signal');
   const [sortDesc, setSortDesc] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Debounced search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!searchQuery || searchQuery.length < 2) {
+      setSearchResults(null);
+      return;
+    }
+
+    setSearchLoading(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/subgraph-search?q=${encodeURIComponent(searchQuery)}`);
+        const json = await res.json();
+        setSearchResults(json.data ?? []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchQuery]);
 
   const queryParams = useMemo(() => ({
     first: PAGE_SIZE,
@@ -127,8 +168,70 @@ export default function SubgraphDirectory() {
     );
   }
 
+  const isSearching = searchQuery.length >= 2;
+
   return (
     <div className="space-y-6">
+      {/* Search bar */}
+      <div>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by name or Qm hash..."
+          className={cn(
+            'w-full px-4 py-3 text-sm rounded-[var(--radius-card)]',
+            'bg-[var(--bg-surface)] border border-[var(--border)]',
+            'text-[var(--text)] placeholder:text-[var(--text-faint)]',
+            'focus:outline-none focus:border-[var(--accent)]',
+          )}
+        />
+      </div>
+
+      {/* Search results */}
+      {isSearching && (
+        <Card className="overflow-hidden">
+          {searchLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : searchResults && searchResults.length > 0 ? (
+            <div className="divide-y divide-[var(--border)]">
+              {searchResults.map((s) => {
+                const dep = s.currentVersion?.subgraphDeployment;
+                if (!dep) return null;
+                const signal = weiToGRT(dep.signalledTokens);
+                const stake = weiToGRT(dep.stakedTokens);
+                return (
+                  <Link
+                    key={s.id}
+                    href={`/subgraphs/${dep.ipfsHash}`}
+                    className="flex items-center justify-between px-4 py-3 hover:bg-[var(--bg-elevated)] transition-colors"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-[var(--text)]">
+                        {s.metadata?.displayName || 'Unnamed'}
+                      </p>
+                      <p className="text-xs font-mono text-[var(--text-faint)]">
+                        {dep.ipfsHash.slice(0, 12)}...{dep.ipfsHash.slice(-6)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs font-mono text-[var(--text-muted)]">
+                      <span>{formatGRT(signal)} signal</span>
+                      <span>{formatGRT(stake)} stake</span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="px-4 py-8 text-sm text-[var(--text-faint)] text-center">
+              No subgraphs found for &ldquo;{searchQuery}&rdquo;
+            </p>
+          )}
+        </Card>
+      )}
+
       {/* Mobile cards */}
       <div className="block md:hidden space-y-3">
         {rows.map((row, idx) => {

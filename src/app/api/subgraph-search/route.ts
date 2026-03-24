@@ -28,11 +28,64 @@ export async function GET(request: NextRequest) {
   const safe = q.replace(/["\\\n\r]/g, '');
 
   try {
+    const isHash = safe.startsWith('Qm') && safe.length >= 8;
+
     const data = await cached(
       `lodestar:subgraph-search:${safe.toLowerCase()}`,
       300, // 5 min — subgraph names don't change often
-      () =>
-        subgraphQuery<{ subgraphs: SubgraphResult[] }>(`{
+      async () => {
+        if (isHash) {
+          // Search by IPFS hash — query deployments directly, then find parent subgraphs
+          const deployments = await subgraphQuery<{
+            subgraphDeployments: Array<{
+              id: string;
+              ipfsHash: string;
+              signalledTokens: string;
+              stakedTokens: string;
+              versions: Array<{
+                subgraph: {
+                  id: string;
+                  metadata: { displayName: string; description: string | null } | null;
+                };
+              }>;
+            }>;
+          }>(`{
+            subgraphDeployments(
+              first: 10
+              where: { ipfsHash_starts_with: "${safe}" }
+              orderBy: signalledTokens
+              orderDirection: desc
+            ) {
+              id
+              ipfsHash
+              signalledTokens
+              stakedTokens
+              versions(first: 1, orderBy: createdAt, orderDirection: desc) {
+                subgraph {
+                  id
+                  metadata { displayName description }
+                }
+              }
+            }
+          }`);
+          // Map to same shape as name search results
+          return {
+            subgraphs: deployments.subgraphDeployments.map((d) => ({
+              id: d.versions[0]?.subgraph?.id ?? d.id,
+              metadata: d.versions[0]?.subgraph?.metadata ?? null,
+              currentVersion: {
+                subgraphDeployment: {
+                  ipfsHash: d.ipfsHash,
+                  signalledTokens: d.signalledTokens,
+                  stakedTokens: d.stakedTokens,
+                },
+              },
+            })),
+          };
+        }
+
+        // Name search
+        return subgraphQuery<{ subgraphs: SubgraphResult[] }>(`{
           subgraphs(
             first: 10
             orderBy: signalledTokens
@@ -49,7 +102,8 @@ export async function GET(request: NextRequest) {
               }
             }
           }
-        }`),
+        }`);
+      },
     );
 
     return NextResponse.json(
