@@ -39,7 +39,7 @@ const MIN_STAKE_REO = 100000;
  * (oracle-sourced) data isn't available yet. Not authoritative.
  */
 function quickREOStatus(indexer: Indexer): 'eligible' | 'ineligible' | 'unknown' {
-  const selfStake = weiToGRT(indexer.stakedTokens);
+  const selfStake = weiToGRT(indexer.stakedTokens) - weiToGRT(indexer.lockedTokens ?? '0');
   const hasAllocations = indexer.allocationCount > 0;
   const hasSufficientStake = selfStake >= MIN_STAKE_REO;
   return (hasAllocations && hasSufficientStake) ? 'eligible' : 'ineligible';
@@ -160,7 +160,7 @@ export function IndexerTable() {
 
     return indexersData.indexers
       .map((indexer: Indexer) => {
-        const selfStake = weiToGRT(indexer.stakedTokens);
+        const selfStake = weiToGRT(indexer.stakedTokens) - weiToGRT(indexer.lockedTokens ?? '0');
         const delegated = weiToGRT(indexer.delegatedTokens);
         const allocated = weiToGRT(indexer.allocatedTokens);
         const rewards = weiToGRT(indexer.rewardsEarned);

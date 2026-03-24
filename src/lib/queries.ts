@@ -459,6 +459,7 @@ export interface Indexer {
   id: string;
   account: IndexerAccount;
   stakedTokens: string;
+  lockedTokens?: string;
   delegatedTokens: string;
   allocatedTokens: string;
   tokenCapacity?: string;

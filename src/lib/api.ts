@@ -176,6 +176,7 @@ export async function fetchIndexers(params: {
           }
         }
         stakedTokens
+        lockedTokens
         delegatedTokens
         allocatedTokens
         allocationCount

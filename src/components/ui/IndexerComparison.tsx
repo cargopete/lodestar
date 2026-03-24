@@ -11,6 +11,7 @@ interface IndexerForComparison {
   id: string;
   name: string;
   stakedTokens: string;
+  lockedTokens?: string;
   delegatedTokens: string;
   allocatedTokens: string;
   indexingRewardCut: number;
@@ -53,7 +54,7 @@ export function IndexerComparison({
 
   // Process indexer data
   const processedIndexers = indexers.map((indexer) => {
-    const selfStake = weiToGRT(indexer.stakedTokens);
+    const selfStake = weiToGRT(indexer.stakedTokens) - weiToGRT(indexer.lockedTokens ?? '0');
     const delegated = weiToGRT(indexer.delegatedTokens);
     const allocated = weiToGRT(indexer.allocatedTokens);
     const totalRewards = weiToGRT(indexer.rewardsEarned);
@@ -65,7 +66,6 @@ export function IndexerComparison({
     const estimatedAPR = calculateEstimatedAPR(
       indexerRewardsPerYear,
       indexer.indexingRewardCut,
-      selfStake,
       delegated,
       delegationAmount
     );

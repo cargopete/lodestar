@@ -30,6 +30,7 @@ interface IndexerDetail {
     metadata?: { displayName?: string | null; description?: string | null } | null;
   };
   stakedTokens: string;
+  lockedTokens?: string;
   delegatedTokens: string;
   allocatedTokens: string;
   tokenCapacity: string;
@@ -86,6 +87,7 @@ function useIndexerDetails(address: string) {
               }
             }
             stakedTokens
+            lockedTokens
             delegatedTokens
             allocatedTokens
             tokenCapacity
@@ -221,7 +223,7 @@ export default function IndexerDetailPage({
   }
 
   const name = ensData?.ensName || resolveIndexerName(indexer.account, indexer.id);
-  const selfStake = weiToGRT(indexer.stakedTokens);
+  const selfStake = weiToGRT(indexer.stakedTokens) - weiToGRT(indexer.lockedTokens ?? '0');
   const delegated = weiToGRT(indexer.delegatedTokens);
   const allocated = weiToGRT(indexer.allocatedTokens);
   const totalRewards = weiToGRT(indexer.rewardsEarned);
@@ -409,6 +411,7 @@ export default function IndexerDetailPage({
             id: indexer.id,
             name,
             stakedTokens: indexer.stakedTokens,
+            lockedTokens: indexer.lockedTokens,
             delegatedTokens: indexer.delegatedTokens,
             indexingRewardCut: indexer.indexingRewardCut,
             queryFeeCut: indexer.queryFeeCut,

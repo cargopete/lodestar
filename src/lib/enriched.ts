@@ -7,6 +7,7 @@ export interface EnrichedIndexer {
   id: string;
   name: string;
   stakedTokens: string;
+  lockedTokens: string;
   delegatedTokens: string;
   allocatedTokens: string;
   allocationCount: number;

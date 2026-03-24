@@ -28,6 +28,7 @@ interface SubgraphIndexer {
     metadata?: { displayName?: string | null; description?: string | null } | null;
   };
   stakedTokens: string;
+  lockedTokens?: string;
   delegatedTokens: string;
   allocatedTokens: string;
   allocationCount: number;
@@ -280,7 +281,8 @@ export async function GET(request: NextRequest) {
 
     // Step 6: Compute enriched data for each indexer
     const enriched: EnrichedIndexer[] = indexers.map((indexer) => {
-      const selfStake = weiToGRT(indexer.stakedTokens);
+      const lockedTokens = weiToGRT(indexer.lockedTokens ?? '0');
+      const selfStake = weiToGRT(indexer.stakedTokens) - lockedTokens;
       const delegated = weiToGRT(indexer.delegatedTokens);
 
       const allocations = (allocationMap.get(indexer.id) ?? []).map((a) => ({
@@ -291,7 +293,6 @@ export async function GET(request: NextRequest) {
       const apr = calculateDelegatorAPR(
         allocations,
         indexer.indexingRewardCut,
-        selfStake,
         delegated,
         totalNetworkSignal,
         annualIssuance
@@ -357,6 +358,7 @@ export async function GET(request: NextRequest) {
         name: displayName,
         ensName: ens,
         stakedTokens: indexer.stakedTokens,
+        lockedTokens: indexer.lockedTokens ?? '0',
         delegatedTokens: indexer.delegatedTokens,
         allocatedTokens: indexer.allocatedTokens,
         allocationCount: indexer.allocationCount,

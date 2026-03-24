@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
             }
           }
           stakedTokens
+          lockedTokens
           delegatedTokens
           allocatedTokens
           allocationCount

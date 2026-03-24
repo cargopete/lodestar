@@ -62,14 +62,12 @@ function calculateRedelegation(
   delegationRatio: number,
   networkRewardsPerYear: number
 ): CalculationResult {
-  const currentSelfStake = weiToGRT(currentIndexer.stakedTokens);
   const currentDelegated = weiToGRT(currentIndexer.delegatedTokens);
-  const targetSelfStake = weiToGRT(targetIndexer.stakedTokens);
   const targetDelegated = weiToGRT(targetIndexer.delegatedTokens);
 
   // Calculate APRs
-  const currentTotalStake = currentSelfStake + currentDelegated;
-  const targetTotalStake = targetSelfStake + targetDelegated;
+  const currentTotalStake = weiToGRT(currentIndexer.stakedTokens) + currentDelegated;
+  const targetTotalStake = weiToGRT(targetIndexer.stakedTokens) + targetDelegated;
 
   const currentIndexerRewards = (currentTotalStake / 3000000000) * networkRewardsPerYear;
   const targetIndexerRewards = (targetTotalStake / 3000000000) * networkRewardsPerYear;
@@ -77,7 +75,6 @@ function calculateRedelegation(
   const currentAPR = calculateEstimatedAPR(
     currentIndexerRewards,
     currentIndexer.indexingRewardCut,
-    currentSelfStake,
     currentDelegated,
     delegationAmount
   );
@@ -85,7 +82,6 @@ function calculateRedelegation(
   const targetAPR = calculateEstimatedAPR(
     targetIndexerRewards,
     targetIndexer.indexingRewardCut,
-    targetSelfStake,
     targetDelegated + delegationAmount, // Add your delegation to target
     delegationAmount
   );

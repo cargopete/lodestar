@@ -64,7 +64,7 @@ function processIndexer(
   delegationRatio: number,
   networkRewardsPerYear: number,
 ): ProcessedIndexer {
-  const selfStake = weiToGRT(indexer.stakedTokens);
+  const selfStake = weiToGRT(indexer.stakedTokens) - weiToGRT(indexer.lockedTokens ?? '0');
   const delegated = weiToGRT(indexer.delegatedTokens);
   const totalRewards = weiToGRT(indexer.rewardsEarned);
 
@@ -77,16 +77,12 @@ function processIndexer(
   const estimatedAPR = calculateEstimatedAPR(
     indexerRewardsPerYear,
     indexer.indexingRewardCut,
-    selfStake,
     delegated,
     10_000, // reference delegation of 10K GRT
   );
 
-  // Effective cut: what delegators effectively pay, accounting for self-stake
   const rawCut = indexer.indexingRewardCut / 1_000_000;
-  const effectiveCut = delegated > 0
-    ? (1 - (1 - rawCut) * (selfStake + delegated) / delegated) * 100
-    : rawCut * 100;
+  const effectiveCut = rawCut * 100;
 
   return {
     id: indexer.id,
