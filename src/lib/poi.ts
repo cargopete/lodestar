@@ -50,6 +50,7 @@ export interface POIDeploymentSummary {
   signal: number;
   stake: number;
   latestEpoch: number;
+  latestClosedAt: number;
   allocationCount: number;
   uniqueIndexers: number;
   consensusPct: number;
@@ -200,12 +201,15 @@ export function computeOverview(allocations: ClosedAllocation[]): POIOverview {
 
     const first = allocs[0].subgraphDeployment;
 
+    const latestClosedAt = Math.max(...allocs.map((a) => a.closedAt));
+
     deployments.push({
       deploymentId,
       ipfsHash: first.ipfsHash,
       signal: weiToGRT(first.signalledTokens),
       stake: weiToGRT(first.stakedTokens),
       latestEpoch,
+      latestClosedAt,
       allocationCount: allocs.length,
       uniqueIndexers,
       consensusPct: consensus.consensusPct,
