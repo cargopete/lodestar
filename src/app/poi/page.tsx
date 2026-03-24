@@ -16,7 +16,7 @@ const PAGE_SIZE = 25;
 
 // ---------- component ----------
 
-type SortMode = 'divergent' | 'recent';
+type SortMode = 'divergent' | 'consensus' | 'allocations';
 
 export default function POIDashboard() {
   const { data: overview, isLoading, isError } = usePOIOverview();
@@ -26,8 +26,13 @@ export default function POIDashboard() {
   const sortedDeployments = useMemo(() => {
     if (!overview) return [];
     const deps = [...overview.deployments];
-    if (sortMode === 'recent') {
-      deps.sort((a, b) => b.latestEpoch - a.latestEpoch || b.allocationCount - a.allocationCount);
+    if (sortMode === 'consensus') {
+      deps.sort((a, b) => {
+        if (a.hasDivergence !== b.hasDivergence) return a.hasDivergence ? 1 : -1;
+        return b.allocationCount - a.allocationCount;
+      });
+    } else if (sortMode === 'allocations') {
+      deps.sort((a, b) => b.allocationCount - a.allocationCount);
     }
     // 'divergent' is the default sort from the API
     return deps;
@@ -96,8 +101,12 @@ export default function POIDashboard() {
 
       {/* Sort toggle */}
       <div className="flex items-center gap-2">
-        <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.06em]">Sort by</span>
-        {(['divergent', 'recent'] as const).map((mode) => (
+        <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.06em]">Sort</span>
+        {([
+          { mode: 'divergent' as const, label: 'Divergent first' },
+          { mode: 'consensus' as const, label: 'Consensus first' },
+          { mode: 'allocations' as const, label: 'By activity' },
+        ]).map(({ mode, label }) => (
           <button
             key={mode}
             type="button"
@@ -109,7 +118,7 @@ export default function POIDashboard() {
                 : 'bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--text)]',
             )}
           >
-            {mode === 'divergent' ? 'Divergent first' : 'Most recent'}
+            {label}
           </button>
         ))}
       </div>
