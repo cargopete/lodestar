@@ -114,17 +114,30 @@ export function calculateDelegatorAPR(
 ): number {
   if (delegated === 0 || totalNetworkSignal === 0 || allocations.length === 0) return 0;
 
-  let totalRewards = 0;
-
-  for (const alloc of allocations) {
+  // Compute signal-to-stake ratio for each allocation and cap outliers at P95.
+  // Subgraphs with anomalously high signal relative to stake (e.g. 100x the norm)
+  // generate outsized theoretical rewards that skew the APR estimate.
+  const allocData = allocations.map((alloc) => {
     const allocated = weiToGRT(alloc.allocatedTokens);
     const subgraphSignal = weiToGRT(alloc.subgraphDeployment.signalledTokens);
     const subgraphStake = weiToGRT(alloc.subgraphDeployment.stakedTokens);
+    const signalToStake = subgraphStake > 0 ? subgraphSignal / subgraphStake : 0;
+    return { allocated, subgraphSignal, subgraphStake, signalToStake };
+  }).filter((a) => a.subgraphSignal > 0 && a.subgraphStake > 0);
 
-    if (subgraphSignal === 0 || subgraphStake === 0) continue;
+  if (allocData.length === 0) return 0;
 
-    // Per-allocation reward share
-    const reward = annualIssuance * (subgraphSignal / totalNetworkSignal) * (allocated / subgraphStake);
+  // Find P95 signal-to-stake ratio as the cap
+  const ratios = allocData.map((a) => a.signalToStake).sort((a, b) => a - b);
+  const p95Idx = Math.min(Math.floor(ratios.length * 0.95), ratios.length - 1);
+  const signalToStakeCap = ratios[p95Idx];
+
+  let totalRewards = 0;
+  for (const alloc of allocData) {
+    // reward = issuance × (signal/totalSignal) × (allocated/stake)
+    //        = issuance × signalToStake × allocated / totalSignal
+    const cappedRatio = Math.min(alloc.signalToStake, signalToStakeCap);
+    const reward = annualIssuance * cappedRatio * alloc.allocated / totalNetworkSignal;
     totalRewards += reward;
   }
 
