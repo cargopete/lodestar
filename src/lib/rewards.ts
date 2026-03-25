@@ -149,6 +149,39 @@ export function calculateDelegatorAPR(
 }
 
 /**
+ * Calculate rolling delegator APY from closed allocations.
+ *
+ * @param closedAllocations - Rows from Supabase allocations table (closed within 90d)
+ * @param currentRewardCutPPM - Indexer's current reward cut in PPM
+ * @param delegatedGRT - Total GRT delegated to this indexer
+ * @param windowDays - Rolling window (30 or 90)
+ */
+export function calculateRollingAPY(
+  closedAllocations: Array<{ indexing_rewards_grt: number; closed_at: string }>,
+  currentRewardCutPPM: number,
+  delegatedGRT: number,
+  windowDays: number
+): number {
+  if (delegatedGRT <= 0 || closedAllocations.length === 0) return 0;
+
+  const cutoff = Date.now() - windowDays * 86400 * 1000;
+
+  let totalRewards = 0;
+  for (const alloc of closedAllocations) {
+    if (new Date(alloc.closed_at).getTime() >= cutoff) {
+      totalRewards += alloc.indexing_rewards_grt;
+    }
+  }
+
+  if (totalRewards <= 0) return 0;
+
+  const delegatorShare = 1 - currentRewardCutPPM / 1_000_000;
+  const delegatorRewards = totalRewards * delegatorShare;
+
+  return (delegatorRewards / delegatedGRT) * (365 / windowDays) * 100;
+}
+
+/**
  * Calculate delegation capacity metrics
  */
 export function calculateDelegationCapacity(

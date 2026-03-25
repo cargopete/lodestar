@@ -11,6 +11,7 @@ import {
   formatPPM,
   shortenAddress,
   resolveIndexerName,
+  isGreedyCut,
   cn,
 } from '@/lib/utils';
 import { calculateDelegationCapacity } from '@/lib/rewards';
@@ -255,6 +256,7 @@ export default function IndexerDetailPage({
     url: indexer.url,
     name,
     id: indexer.id,
+    rewardCutPPM: indexer.indexingRewardCut,
     netFlowGRT,
     delegatedGRT: delegated,
   }) : null;
@@ -367,6 +369,23 @@ export default function IndexerDetailPage({
           subtitle={formatUSD(totalRewards * grtPrice)}
         />
       </StatGrid>
+
+      {/* Greedy Indexer Warning */}
+      {isGreedyCut(indexer.indexingRewardCut) && (
+        <div className="flex items-start gap-3 p-4 rounded-lg border bg-[var(--red-dim)] border-[var(--red)]">
+          <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-[var(--red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <div>
+            <p className="text-sm font-medium text-[var(--red)]">
+              This indexer takes 100% of indexing rewards
+            </p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              Delegating here earns 0% APR. All indexing rewards go to the indexer.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Reward Cut Change Alert */}
       {(() => {

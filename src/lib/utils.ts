@@ -43,6 +43,14 @@ export function formatGRTFull(amount: number): string {
 }
 
 /**
+ * Returns true when an indexer's reward cut PPM is 100% (or above),
+ * meaning delegators earn nothing from this indexer.
+ */
+export function isGreedyCut(ppm: number): boolean {
+  return ppm >= 1_000_000;
+}
+
+/**
  * Convert PPM (parts per million) to percentage
  */
 export function ppmToPercent(ppm: number): number {

@@ -26,6 +26,7 @@ function makeInput(overrides: Partial<ScoreInput> = {}): ScoreInput {
     url: 'https://example.com',
     name: 'My Indexer',
     id: '0x1234567890abcdef',
+    rewardCutPPM: 100_000,
     netFlowGRT: 10_000,
     delegatedGRT: 500_000,
     ...overrides,

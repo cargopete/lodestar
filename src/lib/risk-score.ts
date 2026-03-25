@@ -113,8 +113,22 @@ function scoreSelfStake(selfStakeGRT: number): number {
 /**
  * Cut stability: how long since last parameter change.
  * Longer = more predictable for delegators. Cooldown set = bonus signal.
+ * Greedy cuts (>=100%) are hard-capped regardless of stability.
  */
 function scoreCutStability(
+  lastUpdate: number,
+  cooldown: number,
+  rewardCutPPM?: number,
+): number {
+  // Hard cap for greedy indexers — delegators earn nothing
+  if (rewardCutPPM !== undefined) {
+    if (rewardCutPPM >= 1_000_000) return 5;
+    if (rewardCutPPM >= 900_000) return Math.min(30, scoreCutStabilityInner(lastUpdate, cooldown));
+  }
+  return scoreCutStabilityInner(lastUpdate, cooldown);
+}
+
+function scoreCutStabilityInner(
   lastUpdate: number,
   cooldown: number,
 ): number {
@@ -231,6 +245,7 @@ export interface ScoreInput {
   url: string | null;
   name: string;
   id: string;
+  rewardCutPPM: number;
   netFlowGRT: number;
   delegatedGRT: number;
 }
@@ -242,6 +257,7 @@ export function calculateIndexerScore(input: ScoreInput): IndexerScore {
     cutStability: scoreCutStability(
       input.lastDelegationParameterUpdate,
       input.delegatorParameterCooldown,
+      input.rewardCutPPM,
     ),
     allocationEfficiency: scoreAllocationEfficiency(
       input.allocationCount,

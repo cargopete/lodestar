@@ -22,6 +22,7 @@ import {
   shortenAddress,
   resolveIndexerName,
   calculateCapacityUsed,
+  isGreedyCut,
   cn,
 } from '@/lib/utils';
 import type { Indexer } from '@/lib/queries';
@@ -66,6 +67,8 @@ interface IndexerRow {
   apr: number | null;
   effectiveCut: number | null;
   overDelegationDilution: number | null;
+  rollingAPY30d: number | null;
+  rollingAPY90d: number | null;
   score: number | null;
   scoreGrade: 'A' | 'B' | 'C' | 'D' | 'F' | null;
   raw: Indexer;
@@ -133,6 +136,8 @@ export function IndexerTable() {
           apr: e.delegatorAPR,
           effectiveCut: e.effectiveCut,
           overDelegationDilution: e.overDelegationDilution,
+          rollingAPY30d: e.rollingAPY30d ?? null,
+          rollingAPY90d: e.rollingAPY90d ?? null,
           score: e.score ?? null,
           scoreGrade: e.scoreGrade ?? null,
           // Reconstruct raw Indexer shape for comparison panel
@@ -188,6 +193,8 @@ export function IndexerTable() {
           apr: null,
           effectiveCut: null,
           overDelegationDilution: null,
+          rollingAPY30d: null,
+          rollingAPY90d: null,
           score: null,
           scoreGrade: null,
           raw: indexer,
@@ -346,9 +353,13 @@ export function IndexerTable() {
           const lastUpdate = row.raw.lastDelegationParameterUpdate;
           const daysSince = (Date.now() / 1000 - lastUpdate) / 86400;
           const recentChange = daysSince <= 30;
+          const greedy = isGreedyCut(info.getValue());
           return (
-            <div>
-              <span className="font-mono text-[var(--text)] flex items-center gap-1.5">
+            <div className={greedy ? 'relative group/greedy' : undefined}>
+              <span className={cn(
+                'font-mono flex items-center gap-1.5',
+                greedy ? 'text-[var(--red)] font-semibold' : 'text-[var(--text)]'
+              )}>
                 {formatPPM(info.getValue())}
                 {recentChange && (
                   <span
@@ -357,6 +368,11 @@ export function IndexerTable() {
                   />
                 )}
               </span>
+              {greedy && (
+                <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-56 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/greedy:opacity-100 transition-opacity z-50 text-[11px] font-normal text-[var(--text)]">
+                  100% Reward Cut — delegators earn nothing from this indexer
+                </span>
+              )}
               {row.effectiveCut !== null && (
                 <span className="text-[10px] text-[var(--text-faint)] block">
                   eff. {row.effectiveCut.toFixed(1)}%
@@ -383,6 +399,29 @@ export function IndexerTable() {
             </span>
           );
         },
+      }),
+      columnHelper.accessor('rollingAPY30d', {
+        header: 'APY 30d',
+        cell: (info) => {
+          const value = info.getValue();
+          const row = info.row.original;
+          if (value === null) return <span className="text-[var(--text-faint)]">—</span>;
+          return (
+            <span className="relative group/apy">
+              <span className={cn(
+                'font-mono',
+                value > 5 ? 'text-[var(--green)]' : 'text-[var(--text)]'
+              )}>
+                {value.toFixed(2)}%
+              </span>
+              <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-44 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/apy:opacity-100 transition-opacity z-50 text-[11px] font-normal">
+                <span className="block text-[var(--text-muted)]">90d APY: {row.rollingAPY90d !== null ? `${row.rollingAPY90d.toFixed(2)}%` : '—'}</span>
+                <span className="block text-[var(--text-faint)] mt-0.5">Instant APR: {row.apr !== null ? `${row.apr.toFixed(2)}%` : '—'}</span>
+              </span>
+            </span>
+          );
+        },
+        sortUndefined: 'last',
       }),
       columnHelper.accessor('feesCollected', {
         header: 'Fees',
@@ -624,7 +663,10 @@ export function IndexerTable() {
                       </div>
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
                         <p className="text-[10px] text-[var(--text-faint)]">Cut</p>
-                        <p className="text-xs font-mono text-[var(--text)] flex items-center justify-center gap-1">
+                        <p className={cn(
+                          'text-xs font-mono flex items-center justify-center gap-1',
+                          isGreedyCut(d.rewardCut) ? 'text-[var(--red)] font-semibold' : 'text-[var(--text)]'
+                        )}>
                           {formatPPM(d.rewardCut)}
                           {(() => {
                             const daysSince = (Date.now() / 1000 - d.raw.lastDelegationParameterUpdate) / 86400;
@@ -635,9 +677,9 @@ export function IndexerTable() {
                         </p>
                       </div>
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
-                        <p className="text-[10px] text-[var(--text-faint)]">APR</p>
-                        <p className={cn('text-xs font-mono', d.apr && d.apr > 5 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
-                          {d.apr !== null ? `${d.apr.toFixed(2)}%` : '—'}
+                        <p className="text-[10px] text-[var(--text-faint)]">APY 30d</p>
+                        <p className={cn('text-xs font-mono', d.rollingAPY30d && d.rollingAPY30d > 5 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
+                          {d.rollingAPY30d !== null ? `${d.rollingAPY30d.toFixed(2)}%` : d.apr !== null ? `${d.apr.toFixed(2)}%` : '—'}
                         </p>
                       </div>
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
@@ -699,7 +741,8 @@ export function IndexerTable() {
                     key={row.id}
                     className={cn(
                       'hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer',
-                      row.getIsSelected() && 'bg-[var(--accent-dim)]'
+                      row.getIsSelected() && 'bg-[var(--accent-dim)]',
+                      !row.getIsSelected() && isGreedyCut(row.original.rewardCut) && 'bg-[rgba(255,80,80,0.04)]'
                     )}
                     onClick={(e) => {
                       // Don't navigate if clicking interactive elements

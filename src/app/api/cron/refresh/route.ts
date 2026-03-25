@@ -6,6 +6,7 @@ import { batchCheckEligibility, type OracleEligibility } from '@/lib/reo-contrac
 import {
   calculateDelegatorAPR,
   calculateDelegationCapacity,
+  calculateRollingAPY,
 } from '@/lib/rewards';
 import { calculateIndexerScore } from '@/lib/risk-score';
 import type { EnrichedIndexer } from '@/lib/enriched';
@@ -285,6 +286,34 @@ export async function GET(request: NextRequest) {
       console.warn('REO oracle batch call failed, falling back to heuristics:', e);
     }
 
+    // Step 5b: Query closed allocations (last 90d) for rolling APY
+    let closedAllocsByIndexer = new Map<string, Array<{ indexing_rewards_grt: number; closed_at: string }>>();
+    if (hasDbAccess() && db) {
+      try {
+        const ninetyDaysAgo = new Date(Date.now() - 90 * 86400 * 1000).toISOString();
+        const { data: closedAllocs, error: allocError } = await db
+          .from('allocations')
+          .select('indexer_address, indexing_rewards_grt, closed_at')
+          .eq('status', 'closed')
+          .gte('closed_at', ninetyDaysAgo);
+
+        if (!allocError && closedAllocs) {
+          for (const row of closedAllocs) {
+            const addr = row.indexer_address.toLowerCase();
+            const existing = closedAllocsByIndexer.get(addr) ?? [];
+            existing.push({
+              indexing_rewards_grt: Number(row.indexing_rewards_grt) || 0,
+              closed_at: row.closed_at,
+            });
+            closedAllocsByIndexer.set(addr, existing);
+          }
+          console.log(`Rolling APY: loaded ${closedAllocs.length} closed allocations for ${closedAllocsByIndexer.size} indexers`);
+        }
+      } catch (e) {
+        console.warn('Rolling APY query failed (non-fatal):', e);
+      }
+    }
+
     // Step 6: Compute enriched data for each indexer
     const enriched: EnrichedIndexer[] = indexers.map((indexer) => {
       const lockedTokens = weiToGRT(indexer.lockedTokens ?? '0');
@@ -339,6 +368,15 @@ export async function GET(request: NextRequest) {
         ? weiToGRT(indexer.provisionedTokens)
         : null;
 
+      // Rolling APY from closed allocations
+      const indexerClosedAllocs = closedAllocsByIndexer.get(indexer.id) ?? [];
+      const rollingAPY30d = indexerClosedAllocs.length > 0 && delegated > 0
+        ? calculateRollingAPY(indexerClosedAllocs, indexer.indexingRewardCut, delegated, 30)
+        : null;
+      const rollingAPY90d = indexerClosedAllocs.length > 0 && delegated > 0
+        ? calculateRollingAPY(indexerClosedAllocs, indexer.indexingRewardCut, delegated, 90)
+        : null;
+
       // Composite risk score
       const indexerScore = calculateIndexerScore({
         reoStatus,
@@ -355,6 +393,7 @@ export async function GET(request: NextRequest) {
         url: indexer.url,
         name: displayName,
         id: indexer.id,
+        rewardCutPPM: indexer.indexingRewardCut,
         netFlowGRT: activity.netFlowGRT,
         delegatedGRT: delegated,
       });
@@ -404,6 +443,8 @@ export async function GET(request: NextRequest) {
           ? parseFloat(indexer.indexerRewardsOwnGenerationRatio)
           : null,
         provisionedGRT,
+        rollingAPY30d,
+        rollingAPY90d,
         score: indexerScore.composite,
         scoreGrade: indexerScore.grade,
         scoreBreakdown: indexerScore.breakdown,

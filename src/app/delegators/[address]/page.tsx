@@ -16,6 +16,7 @@ import {
   formatPPM,
   shortenAddress,
   resolveIndexerName,
+  isGreedyCut,
   cn,
 } from '@/lib/utils';
 import {
@@ -415,6 +416,23 @@ export default function DelegatorPortfolioPage({
         </div>
       )}
 
+      {/* Greedy Indexer Warning — any active position with 100% cut */}
+      {positions.some((p) => p.isActive && isGreedyCut(p.stake.indexer.indexingRewardCut)) && (
+        <div className="flex items-start gap-3 p-4 rounded-lg border bg-[var(--red-dim)] border-[var(--red)]">
+          <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-[var(--red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <div>
+            <p className="text-sm font-medium text-[var(--red)]">
+              You have delegation with a 100% reward cut indexer
+            </p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              One or more of your active positions earns 0% APR because the indexer takes all rewards.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Positions table */}
       <Card>
         <CardHeader>
@@ -489,7 +507,17 @@ export default function DelegatorPortfolioPage({
 
                       {/* Reward Cut */}
                       <td className="text-right py-3 px-4">
-                        <p className="text-sm font-mono text-[var(--text)]">{formatPPM(pos.stake.indexer.indexingRewardCut)}</p>
+                        <p className={cn(
+                          'text-sm font-mono',
+                          isGreedyCut(pos.stake.indexer.indexingRewardCut) ? 'text-[var(--red)] font-semibold' : 'text-[var(--text)]'
+                        )}>
+                          {formatPPM(pos.stake.indexer.indexingRewardCut)}
+                        </p>
+                        {isGreedyCut(pos.stake.indexer.indexingRewardCut) && pos.isActive && (
+                          <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-[var(--red)] text-white">
+                            Earning 0%
+                          </span>
+                        )}
                         {(() => {
                           const selfStake = weiToGRT(pos.stake.indexer.stakedTokens);
                           const delegated = weiToGRT(pos.stake.indexer.delegatedTokens);
