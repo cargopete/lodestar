@@ -35,7 +35,7 @@ export function Footer() {
               rel="noopener noreferrer"
               className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
             >
-              {'\u2764\uFE0F'} Sponsor
+              {'\uD83D\uDC9C'} Sponsor
             </a>
           </div>
         </div>
