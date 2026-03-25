@@ -9,7 +9,7 @@ interface SubgraphNetworkStats {
     totalTokensSignalled: string;
     totalTokensAllocated: string;
     indexerCount: number;
-    activeIndexerCount: number;
+    stakedIndexersCount: number;
     delegatorCount: number;
     activeDelegatorCount: number;
     curatorCount: number;
@@ -35,7 +35,7 @@ export async function writeNetworkSnapshot(
       totalTokensSignalled
       totalTokensAllocated
       indexerCount
-      activeIndexerCount
+      stakedIndexersCount
       delegatorCount
       activeDelegatorCount
       curatorCount
@@ -54,7 +54,7 @@ export async function writeNetworkSnapshot(
     total_signalled: weiToGRT(n.totalTokensSignalled),
     total_allocated: weiToGRT(n.totalTokensAllocated),
     indexer_count: n.indexerCount,
-    active_indexer_count: n.activeIndexerCount,
+    active_indexer_count: n.stakedIndexersCount,
     delegator_count: n.delegatorCount,
     active_delegator_count: n.activeDelegatorCount,
     curator_count: n.curatorCount,
