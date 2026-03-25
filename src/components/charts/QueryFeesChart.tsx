@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { useEpochHistory, useEpochInfo } from '@/hooks/useNetworkStats';
+import { useEpochHistory, useNetworkStats } from '@/hooks/useNetworkStats';
 import { weiToGRT, formatGRT, formatGRTFull } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 
@@ -25,22 +25,25 @@ interface EpochFee {
 
 export function QueryFeesChart() {
   const { data, isLoading: epochsLoading } = useEpochHistory(30);
-  const { epoch: currentEpoch, epochLength } = useEpochInfo();
+  const { data: networkData } = useNetworkStats();
 
+  const epochLength = networkData?.graphNetwork?.epochLength ?? 0;
   const epochDuration = epochLength * L1_BLOCK_TIME;
-  const now = Date.now() / 1000;
 
-  // Estimate timestamp for each epoch and assign to a period
+  // Reverse to chronological order (API returns desc)
   const epochs = data?.epoches?.slice().reverse() ?? [];
 
+  // Anchor to the latest epoch in the data (not the derived current epoch,
+  // which can be far ahead of what the subgraph has closed)
+  const latestEpochId = epochs.length > 0 ? Number(epochs[epochs.length - 1].id) : 0;
+
   const chartData: EpochFee[] = epochs.map((ep) => {
-    const epochAge = (currentEpoch - Number(ep.id)) * epochDuration;
-    const epochTime = now - epochAge;
-    const age = now - epochTime;
+    const epochsAgo = latestEpochId - Number(ep.id);
+    const ageSeconds = epochsAgo * epochDuration;
 
     let period: 'current' | 'previous' | 'older' = 'older';
-    if (age <= SEVEN_DAYS) period = 'current';
-    else if (age <= SEVEN_DAYS * 2) period = 'previous';
+    if (ageSeconds <= SEVEN_DAYS) period = 'current';
+    else if (ageSeconds <= SEVEN_DAYS * 2) period = 'previous';
 
     return {
       epoch: ep.id,
