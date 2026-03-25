@@ -11,7 +11,7 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 ### 1.1 Schema Updates
 - [x] Add `Provision` entity queries (stake per data service)
 - [x] Add Indexer Horizon fields: `isLegacyIndexer`, `tokensProvisioned`, `ownStakeRatio`
-- [ ] Add Allocation `isLegacy` flag support
+- [x] Add Allocation `isLegacy` flag support
 - [ ] Update `GraphNetwork` to use `maxSlashingPercentage`
 - [x] Add thawing period per-service tracking
 - [ ] Add TAP/RAV redemption data support
@@ -73,7 +73,7 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 - [x] Side-by-side comparison (2-4 indexers)
 - [x] Metrics: stake, delegation, capacity, cuts, APR
 - [ ] Parameter change history timeline
-- [ ] Cooldown status indicator
+- [x] Cooldown status indicator (shows "Locked" badge when in cooldown)
 - [ ] "Locked parameters" badge for marketing analysis
 
 ### 3.3 QoS Metrics Integration
