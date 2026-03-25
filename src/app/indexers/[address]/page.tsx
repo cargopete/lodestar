@@ -1,6 +1,7 @@
 'use client';
 
 import { use } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName } from '@/hooks/useNetworkStats';
 import {
@@ -852,11 +853,14 @@ export default function IndexerDetailPage({
                     key={del.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-elevated)]"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-[var(--text-faint)]">#{i + 1}</span>
-                      <span className="font-mono text-sm text-[var(--text)]">
-                        {shortenAddress(del.delegator.id)}
-                      </span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-sm text-[var(--text-faint)] flex-shrink-0">#{i + 1}</span>
+                      <Link
+                        href={`/delegators/${del.delegator.id}`}
+                        className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors truncate"
+                      >
+                        {del.delegator.id}
+                      </Link>
                     </div>
                     <div className="text-right">
                       <p className="font-mono text-sm text-[var(--text)]">
