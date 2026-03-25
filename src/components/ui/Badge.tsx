@@ -9,6 +9,8 @@ interface BadgeProps {
   children: ReactNode;
   variant?: BadgeVariant;
   className?: string;
+  title?: string;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
@@ -19,7 +21,7 @@ const variantStyles: Record<BadgeVariant, string> = {
   error: 'bg-[var(--red-dim)] text-[var(--red)]',
 };
 
-export function Badge({ children, variant = 'default', className }: BadgeProps) {
+export function Badge({ children, variant = 'default', className, title, onClick }: BadgeProps) {
   return (
     <span
       className={cn(
@@ -28,6 +30,8 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
         variantStyles[variant],
         className
       )}
+      title={title}
+      onClick={onClick}
     >
       {children}
     </span>

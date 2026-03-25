@@ -360,7 +360,16 @@ export default function SubgraphDirectory() {
                     <span className="font-mono text-sm text-[var(--text)]" title={row.ipfsHash}>
                       {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
                     </span>
-                    {row.isElite && <Badge variant="warning">Elite</Badge>}
+                    {row.isElite && (
+                      <Badge
+                        variant="warning"
+                        className="cursor-pointer"
+                        title="Elite subgraph — earned over 1,000 GRT in cumulative query fees"
+                        onClick={(e) => { e.preventDefault(); setEliteOnly(true); }}
+                      >
+                        Elite
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <ComplexityCell hash={row.ipfsHash} onComplexity={handleComplexity} />
@@ -451,7 +460,16 @@ export default function SubgraphDirectory() {
                         >
                           {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
                         </Link>
-                        {row.isElite && <Badge variant="warning">Elite</Badge>}
+                        {row.isElite && (
+                      <Badge
+                        variant="warning"
+                        className="cursor-pointer"
+                        title="Elite subgraph — earned over 1,000 GRT in cumulative query fees"
+                        onClick={(e) => { e.preventDefault(); setEliteOnly(true); }}
+                      >
+                        Elite
+                      </Badge>
+                    )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
