@@ -34,33 +34,37 @@ const CATEGORY_VARIANT: Record<ComplexityCategory, 'success' | 'default' | 'warn
   Extreme: 'error',
 };
 
-function ManifestCell({ hash, onNetwork }: { hash: string; onNetwork?: (hash: string, network: string) => void }) {
+function ComplexityCell({ hash, onComplexity }: { hash: string; onComplexity?: (hash: string, category: ComplexityCategory) => void }) {
   const { data, isLoading, isError } = useManifestAnalysis(hash);
 
-  // Report network back to parent for filter state
+  useEffect(() => {
+    if (data?.category && onComplexity) onComplexity(hash, data.category);
+  }, [hash, data?.category, onComplexity]);
+
+  if (isLoading) return <div className="h-5 w-16 shimmer rounded" />;
+  if (isError || !data) return <span className="text-[var(--text-faint)]">--</span>;
+
+  return (
+    <Badge variant={CATEGORY_VARIANT[data.category]}>
+      {data.category}
+    </Badge>
+  );
+}
+
+function NetworkCell({ hash, onNetwork }: { hash: string; onNetwork?: (hash: string, network: string) => void }) {
+  const { data, isLoading, isError } = useManifestAnalysis(hash);
+
   useEffect(() => {
     if (data?.network && onNetwork) onNetwork(hash, data.network);
   }, [hash, data?.network, onNetwork]);
 
-  if (isLoading) {
-    return <div className="h-5 w-16 shimmer rounded" />;
-  }
+  if (isLoading) return <div className="h-5 w-16 shimmer rounded" />;
+  if (isError || !data) return <span className="text-[var(--text-faint)]">--</span>;
 
-  if (isError || !data) {
-    return <span className="text-[var(--text-faint)]">--</span>;
-  }
-
-  return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      <Badge variant={CATEGORY_VARIANT[data.category]}>
-        {data.category}
-      </Badge>
-      {data.network && (
-        <Badge variant="accent">
-          {data.network}
-        </Badge>
-      )}
-    </div>
+  return data.network ? (
+    <Badge variant="accent">{data.network}</Badge>
+  ) : (
+    <span className="text-[var(--text-faint)]">--</span>
   );
 }
 
@@ -87,11 +91,13 @@ export default function SubgraphDirectory() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [eliteOnly, setEliteOnly] = useState(false);
   const [networkFilter, setNetworkFilter] = useState<string>('all');
+  const [complexityFilter, setComplexityFilter] = useState<string>('all');
   const [knownNetworks, setKnownNetworks] = useState<Set<string>>(new Set());
   const [rowNetworks, setRowNetworks] = useState<Record<string, string>>({});
+  const [knownComplexities, setKnownComplexities] = useState<Set<string>>(new Set());
+  const [rowComplexities, setRowComplexities] = useState<Record<string, string>>({});
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Callback for ManifestCell to report its network
   const handleNetwork = useCallback((hash: string, network: string) => {
     setKnownNetworks((prev) => {
       if (prev.has(network)) return prev;
@@ -100,6 +106,17 @@ export default function SubgraphDirectory() {
     setRowNetworks((prev) => {
       if (prev[hash] === network) return prev;
       return { ...prev, [hash]: network };
+    });
+  }, []);
+
+  const handleComplexity = useCallback((hash: string, category: ComplexityCategory) => {
+    setKnownComplexities((prev) => {
+      if (prev.has(category)) return prev;
+      return new Set([...prev, category]);
+    });
+    setRowComplexities((prev) => {
+      if (prev[hash] === category) return prev;
+      return { ...prev, [hash]: category };
     });
   }, []);
 
@@ -161,8 +178,9 @@ export default function SubgraphDirectory() {
     let filtered = allRows;
     if (eliteOnly) filtered = filtered.filter((r) => r.isElite);
     if (networkFilter !== 'all') filtered = filtered.filter((r) => rowNetworks[r.ipfsHash] === networkFilter);
+    if (complexityFilter !== 'all') filtered = filtered.filter((r) => rowComplexities[r.ipfsHash] === complexityFilter);
     return filtered;
-  }, [allRows, eliteOnly, networkFilter, rowNetworks]);
+  }, [allRows, eliteOnly, networkFilter, rowNetworks, complexityFilter, rowComplexities]);
 
   // We don't know total count from the subgraph, so estimate:
   // if we got a full page, there's likely more
@@ -241,6 +259,25 @@ export default function SubgraphDirectory() {
         >
           Elite Only ({'>'}1K GRT fees)
         </button>
+        {knownComplexities.size > 0 && (
+          <select
+            value={complexityFilter}
+            onChange={(e) => setComplexityFilter(e.target.value)}
+            className={cn(
+              'px-3 py-1.5 text-xs rounded-[var(--radius-button)]',
+              'bg-[var(--bg-surface)] border border-[var(--border)]',
+              'text-[var(--text)]',
+              'focus:outline-none focus:border-[var(--accent)]'
+            )}
+          >
+            <option value="all">All Complexities</option>
+            {(['Light', 'Moderate', 'Heavy', 'Extreme'] as const)
+              .filter((c) => knownComplexities.has(c))
+              .map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+          </select>
+        )}
         {knownNetworks.size > 0 && (
           <select
             value={networkFilter}
@@ -319,7 +356,10 @@ export default function SubgraphDirectory() {
                     </span>
                     {row.isElite && <Badge variant="warning">Elite</Badge>}
                   </div>
-                  <ManifestCell hash={row.ipfsHash} onNetwork={handleNetwork} />
+                  <div className="flex items-center gap-1.5">
+                    <ComplexityCell hash={row.ipfsHash} onComplexity={handleComplexity} />
+                    <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} />
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="p-2 rounded bg-[var(--bg-elevated)]">
@@ -371,7 +411,8 @@ export default function SubgraphDirectory() {
               <tr>
                 <th className={cn(thBase, 'text-left w-12')}>#</th>
                 <th className={cn(thBase, 'text-left')}>Deployment ID</th>
-                <th className={cn(thBase, 'text-center')}>Complexity / Network</th>
+                <th className={cn(thBase, 'text-center')}>Complexity</th>
+                <th className={cn(thBase, 'text-center')}>Network</th>
                 <th className={cn(thSortable, 'text-right')} onClick={() => handleSort('signal')}>
                   Signal (GRT){renderSortArrow('signal')}
                 </th>
@@ -408,7 +449,10 @@ export default function SubgraphDirectory() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <ManifestCell hash={row.ipfsHash} onNetwork={handleNetwork} />
+                      <ComplexityCell hash={row.ipfsHash} onComplexity={handleComplexity} />
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} />
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text)]">
                       {formatGRT(row.signal)}
