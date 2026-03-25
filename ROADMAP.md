@@ -224,6 +224,12 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 ### Indexer Logs (Matthew Darwin / Pinax — 2026-03-25)
 - [ ] Integrate indexer subgraph indexing status logs via upcoming API (pending upstream availability)
 
+### Delegator Protection & APY (PaulieB14 — GitHub issue #1, 2026-03-20)
+- [ ] Highlight 100% reward cut indexers in red on the Indexer Directory — delegators keep delegating to dead indexers
+- [ ] Add educational tooltips at top of indexer table explaining reward cut, effective cut, and warning signs
+- [ ] 60/90-day rolling APY alongside current APR for longer-term performance view
+- Reference: https://github.com/PaulieB14/delegator-apy-dashboard
+
 ---
 
 ## Blog
