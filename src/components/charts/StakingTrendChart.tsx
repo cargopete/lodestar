@@ -97,7 +97,6 @@ export function StakingTrendChart() {
                 <Area
                   type="monotone"
                   dataKey="indexerRewards"
-                  stackId="1"
                   stroke="var(--accent)"
                   strokeWidth={2}
                   fill="url(#indexerGradient)"
@@ -105,7 +104,6 @@ export function StakingTrendChart() {
                 <Area
                   type="monotone"
                   dataKey="delegatorRewards"
-                  stackId="1"
                   stroke="var(--green)"
                   strokeWidth={2}
                   fill="url(#delegatorGradient)"
