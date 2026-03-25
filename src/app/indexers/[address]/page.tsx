@@ -3,7 +3,7 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName } from '@/hooks/useNetworkStats';
+import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName, useEnrichedIndexers } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
   formatGRT,
@@ -186,6 +186,12 @@ export default function IndexerDetailPage({
   const { data: reoData } = useREOStatus(address);
   const { data: recentDelegations } = useRecentDelegations(address);
   const { data: ensData } = useENSName(address);
+  const { data: enrichedData } = useEnrichedIndexers();
+
+  // Pull pre-computed fields from enriched cache (rolling APY, score)
+  const enrichedIndexer = enrichedData?.indexers?.find(
+    (e) => e.id.toLowerCase() === address.toLowerCase()
+  );
 
   const [allocPage, setAllocPage] = useState(0);
   const ALLOC_PAGE_SIZE = 25;
@@ -379,6 +385,49 @@ export default function IndexerDetailPage({
           subtitle={formatUSD(totalRewards * grtPrice)}
         />
       </StatGrid>
+
+      {/* Rolling APY from enriched data */}
+      {enrichedIndexer && (enrichedIndexer.rollingAPY30d !== null || enrichedIndexer.rollingAPY90d !== null) && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {enrichedIndexer.rollingAPY30d !== null && (
+            <Card>
+              <CardContent className="py-4">
+                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">APY 30d</p>
+                <p className={cn(
+                  'text-xl font-semibold font-mono',
+                  enrichedIndexer.rollingAPY30d >= 5 ? 'text-[var(--green)]' : 'text-[var(--text)]'
+                )}>
+                  {enrichedIndexer.rollingAPY30d.toFixed(2)}%
+                </p>
+                <p className="text-[10px] text-[var(--text-faint)] mt-1">From closed allocation rewards</p>
+              </CardContent>
+            </Card>
+          )}
+          {enrichedIndexer.rollingAPY90d !== null && (
+            <Card>
+              <CardContent className="py-4">
+                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">APY 90d</p>
+                <p className={cn(
+                  'text-xl font-semibold font-mono',
+                  enrichedIndexer.rollingAPY90d >= 5 ? 'text-[var(--green)]' : 'text-[var(--text)]'
+                )}>
+                  {enrichedIndexer.rollingAPY90d.toFixed(2)}%
+                </p>
+                <p className="text-[10px] text-[var(--text-faint)] mt-1">From closed allocation rewards</p>
+              </CardContent>
+            </Card>
+          )}
+          <Card>
+            <CardContent className="py-4">
+              <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">Instantaneous APR</p>
+              <p className="text-xl font-semibold font-mono text-[var(--text)]">
+                {enrichedIndexer.delegatorAPR.toFixed(2)}%
+              </p>
+              <p className="text-[10px] text-[var(--text-faint)] mt-1">Theoretical from current allocations</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Greedy Indexer Warning */}
       {isGreedyCut(indexer.indexingRewardCut) && (
