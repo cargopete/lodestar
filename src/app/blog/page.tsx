@@ -40,7 +40,7 @@ export default function BlogIndexPage() {
                 </h2>
 
                 {featured.excerpt && (
-                  <p className="text-[var(--text-muted)] mt-4 text-base leading-relaxed max-w-2xl">
+                  <p className="text-[#B8B8C8] mt-4 text-base leading-relaxed max-w-2xl">
                     {featured.excerpt}
                   </p>
                 )}
@@ -72,7 +72,7 @@ export default function BlogIndexPage() {
 
           {/* Remaining posts grid */}
           {rest.length > 0 && (
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className={`mt-10 grid gap-5 ${rest.length === 1 ? 'sm:grid-cols-1 max-w-xl' : rest.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
               {rest.map((post) => (
                 <Link
                   key={post.slug}
@@ -83,19 +83,19 @@ export default function BlogIndexPage() {
                     {/* Gradient accent line */}
                     <div className="h-1 bg-gradient-to-r from-[var(--accent)] to-purple-500 opacity-60" />
 
-                    <div className="p-5">
+                    <div className="p-6">
                       <div className="flex flex-wrap gap-1.5 mb-3">
                         {post.tags.slice(0, 2).map((tag) => (
                           <Badge key={tag} variant="default">{tag}</Badge>
                         ))}
                       </div>
 
-                      <h3 className="text-[15px] font-semibold text-[var(--text)] leading-snug group-hover:text-[var(--accent)] transition-colors">
+                      <h3 className="text-base font-semibold text-[var(--text)] leading-snug group-hover:text-[var(--accent)] transition-colors">
                         {post.title}
                       </h3>
 
                       {post.excerpt && (
-                        <p className="text-sm text-[var(--text-muted)] mt-2 line-clamp-2 leading-relaxed">
+                        <p className="text-sm text-[#B8B8C8] mt-2 line-clamp-3 leading-relaxed">
                           {post.excerpt}
                         </p>
                       )}

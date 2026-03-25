@@ -1,6 +1,6 @@
 ---
 title: "Intro to Tycho and the Tycho Data Service"
-date: "2026-03-25"
+date: "2026-03-26"
 author: "cargopete"
 tags: ["tycho", "substreams", "data-services", "defi", "horizon"]
 excerpt: "Tycho indexes DEX liquidity in real time so solvers, market makers, and searchers don't have to. Here's what it is, how it works, and why it's coming to The Graph Network."
