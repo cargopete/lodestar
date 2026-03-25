@@ -289,18 +289,29 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 5b: Query closed allocations (last 90d) for rolling APY
+    // Paginate to avoid Supabase default 1000-row limit
     let closedAllocsByIndexer = new Map<string, Array<{ indexing_rewards_grt: number; closed_at: string }>>();
     if (hasDbAccess() && db) {
       try {
         const ninetyDaysAgo = new Date(Date.now() - 90 * 86400 * 1000).toISOString();
-        const { data: closedAllocs, error: allocError } = await db
-          .from('allocations')
-          .select('indexer_address, indexing_rewards_grt, closed_at')
-          .eq('status', 'closed')
-          .gte('closed_at', ninetyDaysAgo);
+        const PAGE_SIZE = 1000;
+        let offset = 0;
+        let totalRows = 0;
 
-        if (!allocError && closedAllocs) {
-          for (const row of closedAllocs) {
+        while (true) {
+          const { data: page, error: allocError } = await db
+            .from('allocations')
+            .select('indexer_address, indexing_rewards_grt, closed_at')
+            .eq('status', 'closed')
+            .gte('closed_at', ninetyDaysAgo)
+            .gt('indexing_rewards_grt', 0)
+            .order('closed_at', { ascending: false })
+            .range(offset, offset + PAGE_SIZE - 1);
+
+          if (allocError) { console.warn('Rolling APY page error:', allocError); break; }
+          if (!page || page.length === 0) break;
+
+          for (const row of page) {
             const addr = row.indexer_address.toLowerCase();
             const existing = closedAllocsByIndexer.get(addr) ?? [];
             existing.push({
@@ -309,8 +320,13 @@ export async function GET(request: NextRequest) {
             });
             closedAllocsByIndexer.set(addr, existing);
           }
-          console.log(`Rolling APY: loaded ${closedAllocs.length} closed allocations for ${closedAllocsByIndexer.size} indexers`);
+
+          totalRows += page.length;
+          if (page.length < PAGE_SIZE) break;
+          offset += PAGE_SIZE;
         }
+
+        console.log(`Rolling APY: loaded ${totalRows} closed allocations (rewards > 0) for ${closedAllocsByIndexer.size} indexers`);
       } catch (e) {
         console.warn('Rolling APY query failed (non-fatal):', e);
       }
