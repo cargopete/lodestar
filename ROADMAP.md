@@ -238,6 +238,7 @@ Content platform for operational knowledge that's currently scattered across Dis
 - [ ] **Ingestor architecture guide** — single ingestor vs per-chain nodes, the `[chains]` top-level config pattern, E&N's approach of one ingestor for all chains
 - [ ] **Graph-node config best practices** — single shared config vs per-node configs, PG connection sprawl, common misconfigurations (duplicate node names bypassing ingestor settings)
 - [ ] **Per-chain tuning options** — what's coming in graph-node config (Maks exploring per-chain settings to replace global ENVs)
+- [ ] **Graph-node stack architecture patterns** — the 3 golden rules (single ingestor, every instance supports every chain, full low-latency networking between all nodes and PG shards) plus advanced patterns: index-node tiers (fast/slow/super-fast via reassign), tiered shards (graphman copy for subgraph placement), custom query-node proxies, PG replicas for load spreading and their trade-offs on query accuracy (sourced from Marc-André / Ellipfra, 2026-03-25)
 
 ---
 
