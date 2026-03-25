@@ -240,7 +240,9 @@ export async function GET(request: NextRequest) {
         if (event.eventType === 'delegation') {
           delegationActivity[id].delegations++;
           delegationActivity[id].netFlowGRT += tokens;
-        } else if (event.eventType === 'undelegation' || event.eventType === 'withdrawal') {
+        } else if (event.eventType === 'undelegation') {
+          // Only count undelegation events — withdrawals are the completion of a
+          // prior undelegation (after 28d thaw) and would double-count the outflow
           delegationActivity[id].undelegations++;
           delegationActivity[id].netFlowGRT -= tokens;
         }
@@ -394,6 +396,7 @@ export async function GET(request: NextRequest) {
         name: displayName,
         id: indexer.id,
         rewardCutPPM: indexer.indexingRewardCut,
+        queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected),
         netFlowGRT: activity.netFlowGRT,
         delegatedGRT: delegated,
       });

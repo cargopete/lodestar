@@ -41,6 +41,7 @@ interface IndexerDetail {
   indexingRewardCut: number;
   queryFeeCut: number;
   rewardsEarned: string;
+  queryFeesCollected: string;
   delegatorShares: string;
   delegatorParameterCooldown: number;
   lastDelegationParameterUpdate: number;
@@ -98,6 +99,7 @@ function useIndexerDetails(address: string) {
             indexingRewardCut
             queryFeeCut
             rewardsEarned
+            queryFeesCollected
             delegatorShares
             delegatorParameterCooldown
             lastDelegationParameterUpdate
@@ -243,7 +245,9 @@ export default function IndexerDetailPage({
   const ownStakeRatio = indexer.ownStakeRatio ? parseFloat(indexer.ownStakeRatio) * 100 : null;
   const netFlowGRT = recentDelegations?.reduce((sum, e) => {
     const tokens = weiToGRT(e.tokens);
-    return e.eventType === 'delegation' ? sum + tokens : sum - tokens;
+    if (e.eventType === 'delegation') return sum + tokens;
+    if (e.eventType === 'undelegation') return sum - tokens;
+    return sum; // ignore withdrawals — already counted at undelegation time
   }, 0) ?? 0;
 
   const indexerScore: IndexerScore | null = reoData?.status ? calculateIndexerScore({
@@ -262,6 +266,7 @@ export default function IndexerDetailPage({
     name,
     id: indexer.id,
     rewardCutPPM: indexer.indexingRewardCut,
+    queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected ?? '0'),
     netFlowGRT,
     delegatedGRT: delegated,
   }) : null;
@@ -646,7 +651,7 @@ export default function IndexerDetailPage({
                   })}
                 </div>
                 <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
-                  Composite score from 7 on-chain dimensions. Weights reflect delegator priorities: REO compliance (25%), self-stake (20%), cut stability (15%), allocation efficiency (15%), delegation safety (10%), transparency (10%), delegation trend (5%). Higher = better for delegators.
+                  Composite score from 8 on-chain dimensions. Weights reflect delegator priorities: REO compliance (20%), self-stake (15%), query volume (15%), allocation efficiency (15%), cut stability (10%), delegation safety (10%), transparency (10%), delegation trend (5%). Higher = better for delegators.
                 </p>
               </CardContent>
             </Card>

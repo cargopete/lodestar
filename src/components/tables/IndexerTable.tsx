@@ -88,7 +88,7 @@ const columnHelper = createColumnHelper<IndexerRow>();
 
 export function IndexerTable() {
   const [sorting, setSorting] = useState<SortingState>([
-    { id: 'selfStake', desc: true },
+    { id: 'score', desc: true },
   ]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [minStake, setMinStake] = useState(0);

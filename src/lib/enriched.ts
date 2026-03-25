@@ -61,6 +61,7 @@ export interface EnrichedIndexer {
   scoreBreakdown: {
     reo: number;
     selfStake: number;
+    queryVolume: number;
     cutStability: number;
     allocationEfficiency: number;
     overDelegation: number;
