@@ -226,6 +226,21 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 
 ---
 
+## Blog
+
+Content platform for operational knowledge that's currently scattered across Discord and lost to history.
+
+### Infrastructure
+- [ ] Blog platform (MDX pages or headless CMS — keep it simple)
+
+### Initial Topics
+- [ ] **Graph-node memory leak investigation** — idle proxy nodes reaching 12GB over 6-8h with no block ingestion or subgraph sync (sourced from Tehn's report, 2026-03-25)
+- [ ] **Ingestor architecture guide** — single ingestor vs per-chain nodes, the `[chains]` top-level config pattern, E&N's approach of one ingestor for all chains
+- [ ] **Graph-node config best practices** — single shared config vs per-node configs, PG connection sprawl, common misconfigurations (duplicate node names bypassing ingestor settings)
+- [ ] **Per-chain tuning options** — what's coming in graph-node config (Maks exploring per-chain settings to replace global ENVs)
+
+---
+
 ## Technical Architecture
 
 ### Data Sources
