@@ -55,11 +55,14 @@ export async function ingestDelegationEvents(db: DbClient): Promise<{ ingested: 
       timestamp: new Date(parseInt(e.timestamp) * 1000).toISOString(),
     }));
 
-    // Upsert by primary key — safe against duplicate events
-    const { error } = await db
-      .from('delegation_events')
-      .upsert(rows, { onConflict: 'id' });
-    if (error) throw new Error(`Delegation event upsert failed: ${error.message}`);
+    // Upsert in smaller chunks to avoid Supabase statement timeout
+    const CHUNK = 200;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const { error } = await db
+        .from('delegation_events')
+        .upsert(rows.slice(i, i + CHUNK), { onConflict: 'id' });
+      if (error) throw new Error(`Delegation event upsert failed: ${error.message}`);
+    }
 
     totalIngested += rows.length;
     cursor = events[events.length - 1].id;
