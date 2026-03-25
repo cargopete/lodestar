@@ -317,16 +317,21 @@ export function useRecentDelegations(indexerAddress: string) {
 
 /**
  * Hook for network-wide delegation activity feed (last 50 events)
+ * Optionally filtered by indexer address
  */
-export function useNetworkDelegations() {
+export function useNetworkDelegations(indexerAddress?: string) {
   return useQuery<DelegationEvent[]>({
-    queryKey: ['networkDelegations'],
+    queryKey: ['networkDelegations', indexerAddress ?? ''],
     queryFn: async () => {
+      const whereClause = indexerAddress
+        ? `where: { indexer: "${indexerAddress.toLowerCase()}" }`
+        : '';
       const query = `{
         delegationEvents(
           first: 50,
           orderBy: timestamp,
           orderDirection: desc
+          ${whereClause}
         ) {
           id
           eventType
