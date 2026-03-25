@@ -214,6 +214,18 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 
 ---
 
+## Community Requests
+
+### Delegation Activity (Matthew Darwin / Pinax — 2026-03-25)
+- [ ] Filter delegation activity feed by indexer on the Delegators page
+- [ ] Add delegation activity section to individual indexer detail pages
+- [ ] Historical delegation data via backend ingestion pipeline
+
+### Indexer Logs (Matthew Darwin / Pinax — 2026-03-25)
+- [ ] Integrate indexer subgraph indexing status logs via upcoming API (pending upstream availability)
+
+---
+
 ## Technical Architecture
 
 ### Data Sources
