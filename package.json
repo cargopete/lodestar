@@ -25,10 +25,13 @@
     "@upstash/redis": "^1.37.0",
     "clsx": "^2.1.1",
     "graphql-request": "^7.4.0",
+    "gray-matter": "^4.0.3",
     "next": "16.1.7",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.8.0",
+    "remark": "^15.0.1",
+    "remark-html": "^16.0.1",
     "viem": "^2.47.5",
     "wagmi": "^3.5.0",
     "yaml": "^2.8.2"
