@@ -1,11 +1,11 @@
 export function Footer() {
   return (
-    <footer className="hidden md:block md:pl-[var(--sidebar-width)] lg:pr-[var(--feed-active-width)] transition-[padding] duration-200">
+    <footer className="md:pl-[var(--sidebar-width)] lg:pr-[var(--feed-active-width)] pb-[calc(var(--bottom-nav-height)+var(--safe-bottom))] md:pb-0 transition-[padding] duration-200">
       <div className="max-w-[1440px] px-4 md:px-6 py-8 border-t border-[var(--border)]">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--text-faint)]">
+        <div className="flex flex-col items-center sm:flex-row sm:justify-between gap-4 text-xs text-[var(--text-faint)]">
           <p>
             Made with{' '}
-            <span className="text-[var(--red)]">&hearts;</span> by{' '}
+            <span className="text-[var(--accent)]">&hearts;</span> by{' '}
             <a
               href="https://github.com/cargopete"
               target="_blank"
