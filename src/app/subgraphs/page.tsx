@@ -25,6 +25,12 @@ const SORT_KEY_MAP: Record<string, string> = {
 
 type SortKey = 'signal' | 'stake' | 'queryFees';
 
+// Short display names for long network identifiers
+const NETWORK_DISPLAY: Record<string, string> = {
+  'arbitrum-one': 'arb-one',
+};
+const displayNetwork = (n: string) => NETWORK_DISPLAY[n] ?? n;
+
 // ---------- per-row cells ----------
 
 const CATEGORY_VARIANT: Record<ComplexityCategory, 'success' | 'default' | 'warning' | 'error'> = {
@@ -62,7 +68,7 @@ function NetworkCell({ hash, onNetwork }: { hash: string; onNetwork?: (hash: str
   if (isError || !data) return <span className="text-[var(--text-faint)]">--</span>;
 
   return data.network ? (
-    <Badge variant="accent">{data.network}</Badge>
+    <Badge variant="accent">{displayNetwork(data.network)}</Badge>
   ) : (
     <span className="text-[var(--text-faint)]">--</span>
   );
@@ -291,7 +297,7 @@ export default function SubgraphDirectory() {
           >
             <option value="all">All Networks</option>
             {[...knownNetworks].sort().map((n) => (
-              <option key={n} value={n}>{n}</option>
+              <option key={n} value={n}>{displayNetwork(n)}</option>
             ))}
           </select>
         )}
