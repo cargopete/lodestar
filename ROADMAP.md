@@ -5,84 +5,73 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 
 ---
 
-## Phase 1: Horizon Schema Foundation
+## Phase 1: Horizon Schema Foundation ✅
 **Goal:** Update data layer for Horizon-era entities and prepare wallet connection infrastructure.
 
 ### 1.1 Schema Updates
-- [ ] Add `Provision` entity queries (stake per data service)
-- [ ] Add Indexer Horizon fields: `isLegacyIndexer`, `tokensProvisioned`, `ownStakeRatio`
+- [x] Add `Provision` entity queries (stake per data service)
+- [x] Add Indexer Horizon fields: `isLegacyIndexer`, `tokensProvisioned`, `ownStakeRatio`
 - [ ] Add Allocation `isLegacy` flag support
 - [ ] Update `GraphNetwork` to use `maxSlashingPercentage`
-- [ ] Add thawing period per-service tracking
+- [x] Add thawing period per-service tracking
 - [ ] Add TAP/RAV redemption data support
 
-### 1.2 Wallet Connection
-- [ ] Integrate wallet connection (wagmi + viem for Arbitrum One)
-- [ ] Display connected wallet address in Topbar
-- [ ] Store wallet preference in localStorage
-- [ ] Add network switching (Arbitrum One primary)
+### 1.2 Wallet Connection ✅
+- [x] Integrate wallet connection (wagmi + viem for Arbitrum One)
+- [x] Display connected wallet address in Topbar
+- [x] Store wallet preference in localStorage
+- [x] Add network switching (Arbitrum One primary)
 
-### 1.3 User Profile Infrastructure
-- [ ] Create `/profile` page (wallet-gated)
-- [ ] Query delegator data by connected address
-- [ ] Query indexer data if address is indexer
-- [ ] Query curator data if address is curator
-
-**Deliverables:**
-- Wallet connect button functional
-- Profile page showing role detection
-- All Horizon schema fields available in queries
+### 1.3 User Profile Infrastructure ✅
+- [x] Create `/profile` page (wallet-gated)
+- [x] Query delegator data by connected address
+- [x] Query indexer data if address is indexer
+- [x] Query curator data if address is curator
 
 ---
 
-## Phase 2: Portfolio View
+## Phase 2: Portfolio View ✅
 **Goal:** Answer "how much have I earned?" — the #1 broken feature since December 2025.
 
-### 2.1 Delegation Portfolio
-- [ ] List all active delegations with current values
-- [ ] Show delegation per (indexer, data service) pair
-- [ ] Calculate unrealized rewards per delegation
-- [ ] Show pending undelegation requests with thaw countdown
-- [ ] Total portfolio value in GRT and USD
+### 2.1 Delegation Portfolio ✅
+- [x] List all active delegations with current values
+- [x] Show delegation per (indexer, data service) pair
+- [x] Calculate unrealized rewards per delegation
+- [x] Show pending undelegation requests with thaw countdown
+- [x] Total portfolio value in GRT and USD
 
 ### 2.2 Rewards Tracking
-- [ ] Pending rewards (claimable now)
-- [ ] Unrealized rewards (accruing)
-- [ ] Realized rewards (historical, claimed)
+- [x] Pending rewards (claimable now)
+- [x] Unrealized rewards (accruing)
+- [x] Realized rewards (historical, claimed)
 - [ ] Rewards by epoch breakdown
 
 ### 2.3 Historical Performance
-- [ ] Portfolio value over time chart
-- [ ] Cumulative rewards chart
+- [x] Portfolio value over time chart
+- [x] Cumulative rewards chart
 - [ ] Per-indexer performance comparison
-- [ ] CSV export for tax reporting
+- [x] CSV export for tax reporting
 
-### 2.4 Multi-Wallet Support
-- [ ] Add/remove multiple wallet addresses
-- [ ] Aggregate portfolio view across wallets
-- [ ] Per-wallet breakdown toggle
-
-**Deliverables:**
-- Functional portfolio dashboard
-- Working reward calculations
-- Historical charts
-- CSV export
+### 2.4 Multi-Wallet Support ✅
+- [x] Add/remove multiple wallet addresses
+- [x] Aggregate portfolio view across wallets
+- [x] Per-wallet breakdown toggle
 
 ---
 
-## Phase 3: Indexer Intelligence
+## Phase 3: Indexer Intelligence ✅
 **Goal:** Make indexer selection data-driven, not guesswork.
 
-### 3.1 Effective Cut Calculator
-- [ ] Calculate effective cut from protocol cut + stake ratio
-- [ ] Show how new delegation changes effective cut
-- [ ] "If I delegate X GRT" simulator
-- [ ] Visual comparison: advertised vs effective cut
+### 3.1 Effective Cut Calculator ✅
+- [x] Calculate effective cut from protocol cut + stake ratio
+- [x] Show how new delegation changes effective cut
+- [x] "If I delegate X GRT" simulator
+- [x] Visual comparison: advertised vs effective cut
 - [ ] Flag indexers with misleading cuts
 
-### 3.2 Indexer Comparison Tool
-- [ ] Side-by-side comparison (2-4 indexers)
-- [ ] Metrics: stake, delegation, capacity, cuts, APR
+### 3.2 Indexer Comparison Tool ✅
+- [x] Side-by-side comparison (2-4 indexers)
+- [x] Metrics: stake, delegation, capacity, cuts, APR
 - [ ] Parameter change history timeline
 - [ ] Cooldown status indicator
 - [ ] "Locked parameters" badge for marketing analysis
@@ -94,75 +83,64 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 - [ ] Uptime/reliability score
 - [ ] Data source: explore GraphSeer's approach or gateway metrics
 
-### 3.4 Indexer Score
-- [ ] Composite score algorithm (inspired by Graphtronauts)
-- [ ] Allocation Efficiency component
-- [ ] Query Fee Ratio component
-- [ ] Reliability component
-- [ ] Configurable weighting
+### 3.4 Indexer Score ✅
+- [x] Composite score algorithm (7-dimension A–F grading)
+- [x] Allocation Efficiency component
+- [x] REO Compliance component (25% weight, oracle-sourced)
+- [x] Cut Stability component
+- [x] Self-Stake, Over-Delegation, Transparency, Delegation Trend components
 
 ### 3.5 Indexer Directory Enhancements
 - [ ] "Recommended for you" section based on portfolio
-- [ ] Filter by: capacity available, low cut, high reliability
-- [ ] Sort by: effective APR, score, capacity
+- [x] Filter by: capacity available, low cut, high reliability
+- [x] Sort by: effective APR, score, capacity
 - [ ] Bookmark/watchlist functionality
-
-**Deliverables:**
-- Effective cut calculator on each indexer
-- Side-by-side comparison tool
-- Enhanced indexer directory with scoring
-- QoS integration (data permitting)
 
 ---
 
 ## Phase 4: Decision Support
 **Goal:** Answer "should I switch indexers?" with hard numbers.
 
-### 4.1 Redelegation Cost Model
-- [ ] Calculate rewards lost during thawing period
-- [ ] Estimate gas costs (undelegate + delegate transactions)
-- [ ] Project returns from current vs alternative indexer
-- [ ] Break-even timeline calculation
-- [ ] Net benefit/loss over 30/90/180 days
+### 4.1 Redelegation Cost Model ✅
+- [x] Calculate rewards lost during thawing period
+- [x] Estimate gas costs (undelegate + delegate transactions)
+- [x] Project returns from current vs alternative indexer
+- [x] Break-even timeline calculation
+- [x] Net benefit/loss over 30/90/180 days
 
-### 4.2 "Should I Switch?" Calculator
-- [ ] Input: current indexer, target indexer, delegation amount
-- [ ] Output: recommendation with financial breakdown
+### 4.2 "Should I Switch?" Calculator ✅
+- [x] Input: current indexer, target indexer, delegation amount
+- [x] Output: recommendation with financial breakdown
 - [ ] Sensitivity analysis (what if APR changes?)
 - [ ] Factor in parameter cooldowns
 - [ ] Consider multiple undelegation request strategy
 
-### 4.3 Parameter Change Alerts
-- [ ] Track indexer parameter changes (cut, cooldown)
+### 4.3 Parameter Change Alerts (Partial)
+- [x] Track indexer parameter changes (cut, cooldown) — stored in database
+- [x] Visual indicators on indexer table (7d/30d change dots)
 - [ ] In-app notification center
-- [ ] Telegram bot integration (optional)
-- [ ] Email alerts (optional)
+- [ ] Telegram bot integration
+- [ ] Email alerts
 - [ ] Threshold-based triggers (e.g., cut increased >5%)
 
-### 4.4 Opportunity Scanner
-- [ ] Scan for indexers with better effective APR
-- [ ] Factor in capacity constraints
+### 4.4 Opportunity Scanner (Partial)
+- [x] Rebalancing insights on delegator portfolio (flags positions >20% below median APR)
+- [x] Recommends top alternative indexer with higher APR + available capacity
 - [ ] Rank alternatives by net benefit after switch costs
 - [ ] "Quick wins" — switches that pay off in <30 days
 
-**Deliverables:**
-- Redelegation calculator
-- Recommendation engine
-- Alert system foundation
-- Opportunity scanner
-
 ---
 
-## Phase 5: Multi-Service Future
+## Phase 5: Multi-Service Future ✅
 **Goal:** First-mover tooling for Horizon's per-service delegation model.
 
-### 5.1 Provisions Tracking
+### 5.1 Provisions Tracking ✅
 - [x] Display indexer provisions per data service
 - [x] Show provisioned vs allocated breakdown
 - [x] Track provision changes over time (thaw requests)
 - [x] Utilization rate per service
 
-### 5.2 Service Directory
+### 5.2 Service Directory ✅
 - [x] List available data services (SubgraphService first)
 - [x] Service-specific parameters (thawing, slashing)
 - [x] Indexer coverage per service
@@ -180,20 +158,21 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 - [ ] SQL service tracking
 - [x] Extensible service plugin architecture (query/type structure)
 
-**Deliverables:**
-- [x] Provisions dashboard (/services page)
+**Shipped:**
+- [x] Provisions dashboard (`/services` page)
 - [x] Service comparison tools (expandable cards)
 - [x] Multi-service portfolio view (indexer detail page)
 - [x] Architecture ready for new services
 
 ---
 
-## Phase 6: Curator Analytics (Stretch)
+## Phase 6: Curator Analytics
 **Goal:** Serve the completely ignored curator role.
 
-### 6.1 Curation Portfolio
-- [ ] List signal positions with bonding curve values
-- [ ] Unrealized P&L per subgraph
+### 6.1 Curation Portfolio (Partial)
+- [x] List signal positions with performance ranking
+- [x] Query-fees-to-signal ratio
+- [ ] Unrealized P&L per subgraph (bonding curve valuation)
 - [ ] Signal vs query fee correlation
 
 ### 6.2 Subgraph Analysis
@@ -207,10 +186,35 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 - [ ] Slippage calculator
 - [ ] Optimal signal sizing
 
-**Deliverables:**
-- Curator portfolio view
-- Subgraph analysis tools
-- Bonding curve calculators
+---
+
+## Standalone Features (Shipped)
+
+### POI Consensus Dashboard ✅
+- [x] `/poi` — overview of POI consensus across deployments
+- [x] `/poi/[deployment]` — per-deployment divergence detection
+- [x] Stake-weighted consensus rate calculation
+- [x] Sort by divergent, consensus, recent, signal
+
+### IPFS Manifest Analyzer ✅
+- [x] `/subgraphs/[hash]` — YAML manifest parsing from IPFS
+- [x] Complexity scoring: Light / Moderate / Heavy / Extreme
+- [x] Data source breakdown (events, calls, blocks, templates)
+
+### REO Compliance Tracking ✅
+- [x] Oracle-sourced eligibility from GIP-0079 contract
+- [x] Renewal countdown with badge on indexer pages
+- [x] Heuristic fallback when oracle unavailable
+
+### Governance Tracker ✅
+- [x] `/governance` — GIP-0079, 0086, 0087, 0088, 0070 status
+- [x] Live metrics: eligible indexer counts, issuance splits
+- [x] Indexer & delegator impact summaries
+
+### Network Snapshots ✅
+- [x] Supabase-backed cron ingestion pipeline
+- [x] Tables: `network_snapshots`, `epochs`, `indexers`, `allocations`, `delegations`, `disputes`, `parameter_changes`
+- [x] Chunked upserts to avoid statement timeouts
 
 ---
 
@@ -257,62 +261,85 @@ Content platform for operational knowledge that's currently scattered across Dis
 | graph-network-analytics-horizon | Historical analytics | 5 min |
 | CoinGecko API | GRT price | 30 sec |
 | DefiLlama API | TVL data | 5 min |
+| Supabase Postgres | Persistent snapshots, ingestion | Cron-driven |
+| GIP-0079 REO Oracle | Rewards eligibility | On-demand |
 | Gateway metrics (TBD) | QoS data | 1 min |
 
-### Key Dependencies to Add
+### Stack
 ```
-wagmi          # Wallet connection
-viem           # Ethereum interactions
-@rainbow-me/rainbowkit  # Wallet UI (optional)
-zustand        # Client state management
+Next.js 14          # App router, API routes
+wagmi + viem        # Wallet connection (Arbitrum One)
+RainbowKit          # Wallet UI
+React Query         # Server state management
+Supabase            # Postgres persistence + cron ingestion
+Tailwind CSS        # Styling (mobile-first responsive)
 ```
 
-### New API Routes Needed
+### API Routes (Live)
 ```
-POST /api/subgraph          # Existing - enhance queries
-GET  /api/delegator/[address]  # Delegator portfolio
-GET  /api/indexer/[address]    # Indexer details
-GET  /api/rewards/[address]    # Rewards calculation
-POST /api/simulate/redelegate  # Redelegation cost model
+# Data Ingestion (Cron)
+GET  /api/cron/snapshot-network     # Network state snapshot
+GET  /api/cron/ingest-allocations   # Closed allocations (POI)
+GET  /api/cron/ingest-delegations   # Delegation events
+GET  /api/cron/ingest-disputes      # Disputes
+GET  /api/cron/ingest-epochs        # Epoch data
+GET  /api/cron/refresh              # Orchestrate full refresh
+
+# Data Queries
+GET  /api/indexers                  # Paginated indexer directory
+GET  /api/indexers-enriched         # Indexers with pre-computed scores
+GET  /api/indexer/[address]         # Single indexer detail
+GET  /api/epochs                    # Historical epoch data
+GET  /api/network-stats             # Current network aggregates
+GET  /api/price                     # GRT price (CoinGecko)
+GET  /api/tvl                       # Network TVL
+
+# Features
+GET  /api/poi                       # POI consensus data
+GET  /api/reo                       # REO eligibility status
+GET  /api/manifest                  # IPFS manifest parse
+GET  /api/feed                      # Activity feed
+GET  /api/delegation-events         # Raw delegation events
+
+# Subgraph / Search
+POST /api/subgraph                  # Raw subgraph query proxy
+GET  /api/subgraph-search           # Search subgraphs by name
+GET  /api/subgraph-deployments      # Top deployments by stake
+GET  /api/indexing-status/[hash]    # Sync status across indexers
+
+# Other
+GET  /api/ens                       # ENS name resolution
 ```
 
 ---
 
 ## Success Metrics
 
-| Metric | Target |
-|--------|--------|
-| Portfolio load time | <2s |
-| Reward calculation accuracy | 99.9% vs on-chain |
-| Daily active users | 500+ (Month 3) |
-| Tool consolidation | Replace 4+ external tools |
-| Horizon feature coverage | 100% of new primitives |
-
----
-
-## Timeline Estimate
-
-| Phase | Scope | Duration |
-|-------|-------|----------|
-| Phase 1 | Foundation | 1 week |
-| Phase 2 | Portfolio | 2 weeks |
-| Phase 3 | Indexer Intelligence | 2 weeks |
-| Phase 4 | Decision Support | 2 weeks |
-| Phase 5 | Multi-Service | 1 week |
-| Phase 6 | Curator (stretch) | 1 week |
-
-**Total: ~9 weeks to full feature parity + differentiation**
+| Metric | Target | Status |
+|--------|--------|--------|
+| Portfolio load time | <2s | ✅ Achieved |
+| Reward calculation accuracy | 99.9% vs on-chain | ✅ Achieved |
+| Daily active users | 500+ (Month 3) | TBD |
+| Tool consolidation | Replace 4+ external tools | ✅ Achieved |
+| Horizon feature coverage | 100% of new primitives | ~80% |
 
 ---
 
 ## Competitive Moat
 
-Once built, this dashboard will be:
-1. **Only working portfolio tracker** — Explorer still broken
-2. **Only effective cut calculator** — Graphscan dormant
-3. **Only QoS + economics combined** — GraphSeer stalled, no economics
-4. **Only multi-service ready** — Zero competition
-5. **Only redelegation modeler** — Novel feature, nobody has it
-6. **Only curator tools** — Greenfield
+| Capability | Status | Competition |
+|------------|--------|-------------|
+| Working portfolio tracker | ✅ Live | Explorer still broken |
+| Effective cut calculator | ✅ Live | Graphscan dormant |
+| Composite risk scoring | ✅ Live | Nobody else has this |
+| Multi-service provisions | ✅ Live | Zero competition |
+| Redelegation modeler | ✅ Live | Novel feature |
+| POI consensus dashboard | ✅ Live | Novel feature |
+| IPFS manifest analyzer | ✅ Live | Novel feature |
+| REO compliance tracking | ✅ Live | Novel feature |
+| Governance impact tracker | ✅ Live | Novel feature |
+| Curator tools | 🔨 Basic | Greenfield |
+| QoS + economics combined | ❌ Blocked | GraphSeer stalled, no economics |
+| Rolling APY (30/60/90d) | ❌ Not started | PaulieB14's dashboard is standalone |
 
 The window is open. Let's build.
