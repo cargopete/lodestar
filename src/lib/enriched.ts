@@ -50,6 +50,8 @@ export interface EnrichedIndexer {
   ownStakeRatio: number | null;
   indexerRewardsOwnGenerationRatio: number | null;
   provisionedGRT: number | null;
+  // Query fees collected (cumulative, from subgraph)
+  queryFeesCollectedGRT: number;
   // Composite risk score (computed from all dimensions above)
   score: number;               // 0–100 composite
   scoreGrade: 'A' | 'B' | 'C' | 'D' | 'F';

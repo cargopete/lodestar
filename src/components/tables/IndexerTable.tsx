@@ -58,6 +58,7 @@ interface IndexerRow {
   allocations: number;
   allocated: number;
   rewards: number;
+  feesCollected: number;
   reoStatus: 'eligible' | 'ineligible' | 'unknown';
   reoSource: 'oracle' | 'heuristic' | null;
   reoDaysRemaining: number | null;
@@ -122,6 +123,7 @@ export function IndexerTable() {
           allocations: e.allocationCount,
           allocated: weiToGRT(e.allocatedTokens),
           rewards: weiToGRT(e.rewardsEarned),
+          feesCollected: e.queryFeesCollectedGRT ?? 0,
           reoStatus: e.reoStatus,
           reoSource: e.reoSource ?? null,
           reoDaysRemaining: e.reoDaysRemaining ?? null,
@@ -178,6 +180,7 @@ export function IndexerTable() {
           allocations: indexer.allocationCount,
           allocated,
           rewards,
+          feesCollected: 0,
           reoStatus: quickREOStatus(indexer),
           reoSource: null,
           reoDaysRemaining: null,
@@ -380,6 +383,19 @@ export function IndexerTable() {
             </span>
           );
         },
+      }),
+      columnHelper.accessor('feesCollected', {
+        header: 'Fees',
+        cell: (info) => {
+          const value = info.getValue();
+          if (!value) return <span className="text-[var(--text-faint)]">—</span>;
+          return (
+            <span className="font-mono text-[var(--text)]">
+              {formatGRT(value)} GRT
+            </span>
+          );
+        },
+        sortUndefined: 'last',
       }),
       columnHelper.accessor('allocations', {
         header: 'Allocations',

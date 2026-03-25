@@ -37,6 +37,7 @@ interface SubgraphIndexer {
   delegatorParameterCooldown: number;
   lastDelegationParameterUpdate: number;
   rewardsEarned: string;
+  queryFeesCollected: string;
   delegatorShares: string;
   url: string | null;
   geoHash: string | null;
@@ -123,6 +124,7 @@ export async function GET(request: NextRequest) {
           delegatorParameterCooldown
           lastDelegationParameterUpdate
           rewardsEarned
+          queryFeesCollected
           delegatorShares
           url
           geoHash
@@ -367,6 +369,8 @@ export async function GET(request: NextRequest) {
         delegatorParameterCooldown: indexer.delegatorParameterCooldown,
         lastDelegationParameterUpdate: indexer.lastDelegationParameterUpdate,
         rewardsEarned: indexer.rewardsEarned,
+        queryFeesCollected: indexer.queryFeesCollected,
+        queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected),
         delegatorShares: indexer.delegatorShares,
         url: indexer.url,
         geoHash: indexer.geoHash,

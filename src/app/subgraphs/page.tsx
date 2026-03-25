@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -13,6 +13,9 @@ import type { ComplexityCategory } from '@/lib/manifest';
 
 const PAGE_SIZE = 25;
 
+// Elite subgraph threshold: cumulative query fees above this are "Elite"
+const ELITE_FEE_THRESHOLD_GRT = 1000;
+
 // Map front-end sort keys to GraphQL field names
 const SORT_KEY_MAP: Record<string, string> = {
   signal: 'signalledTokens',
@@ -22,7 +25,7 @@ const SORT_KEY_MAP: Record<string, string> = {
 
 type SortKey = 'signal' | 'stake' | 'queryFees';
 
-// ---------- complexity cell ----------
+// ---------- per-row cells ----------
 
 const CATEGORY_VARIANT: Record<ComplexityCategory, 'success' | 'default' | 'warning' | 'error'> = {
   Light: 'success',
@@ -31,8 +34,13 @@ const CATEGORY_VARIANT: Record<ComplexityCategory, 'success' | 'default' | 'warn
   Extreme: 'error',
 };
 
-function ComplexityCell({ hash }: { hash: string }) {
+function ManifestCell({ hash, onNetwork }: { hash: string; onNetwork?: (hash: string, network: string) => void }) {
   const { data, isLoading, isError } = useManifestAnalysis(hash);
+
+  // Report network back to parent for filter state
+  useEffect(() => {
+    if (data?.network && onNetwork) onNetwork(hash, data.network);
+  }, [hash, data?.network, onNetwork]);
 
   if (isLoading) {
     return <div className="h-5 w-16 shimmer rounded" />;
@@ -43,9 +51,16 @@ function ComplexityCell({ hash }: { hash: string }) {
   }
 
   return (
-    <Badge variant={CATEGORY_VARIANT[data.category]}>
-      {data.category}
-    </Badge>
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <Badge variant={CATEGORY_VARIANT[data.category]}>
+        {data.category}
+      </Badge>
+      {data.network && (
+        <Badge variant="accent">
+          {data.network}
+        </Badge>
+      )}
+    </div>
   );
 }
 
@@ -70,7 +85,23 @@ export default function SubgraphDirectory() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [eliteOnly, setEliteOnly] = useState(false);
+  const [networkFilter, setNetworkFilter] = useState<string>('all');
+  const [knownNetworks, setKnownNetworks] = useState<Set<string>>(new Set());
+  const [rowNetworks, setRowNetworks] = useState<Record<string, string>>({});
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Callback for ManifestCell to report its network
+  const handleNetwork = useCallback((hash: string, network: string) => {
+    setKnownNetworks((prev) => {
+      if (prev.has(network)) return prev;
+      return new Set([...prev, network]);
+    });
+    setRowNetworks((prev) => {
+      if (prev[hash] === network) return prev;
+      return { ...prev, [hash]: network };
+    });
+  }, []);
 
   // Debounced search
   useEffect(() => {
@@ -106,17 +137,19 @@ export default function SubgraphDirectory() {
 
   const { data: raw, isLoading, isError } = useSubgraphDeployments(queryParams);
 
-  const rows = useMemo(() => {
+  const allRows = useMemo(() => {
     if (!raw) return [];
     return raw.map((d) => {
       const signal = weiToGRT(d.signalledTokens);
       const stake = weiToGRT(d.stakedTokens);
+      const queryFees = weiToGRT(d.queryFeesAmount);
       return {
         id: d.id,
         ipfsHash: d.ipfsHash,
         signal,
         stake,
-        queryFees: weiToGRT(d.queryFeesAmount),
+        queryFees,
+        isElite: queryFees >= ELITE_FEE_THRESHOLD_GRT,
         indexerCount: d.indexerAllocations.length,
         curatorCount: d.curatorSignals.length,
         signalStakeRatio: stake > 0 ? signal / stake : 0,
@@ -124,11 +157,18 @@ export default function SubgraphDirectory() {
     });
   }, [raw]);
 
+  const rows = useMemo(() => {
+    let filtered = allRows;
+    if (eliteOnly) filtered = filtered.filter((r) => r.isElite);
+    if (networkFilter !== 'all') filtered = filtered.filter((r) => rowNetworks[r.ipfsHash] === networkFilter);
+    return filtered;
+  }, [allRows, eliteOnly, networkFilter, rowNetworks]);
+
   // We don't know total count from the subgraph, so estimate:
   // if we got a full page, there's likely more
-  const hasFullPage = rows.length === PAGE_SIZE;
+  const hasFullPage = allRows.length === PAGE_SIZE;
   // Use a high estimate so pagination works; will show fewer on last page
-  const estimatedTotal = hasFullPage ? (page + 2) * PAGE_SIZE : page * PAGE_SIZE + rows.length;
+  const estimatedTotal = hasFullPage ? (page + 2) * PAGE_SIZE : page * PAGE_SIZE + allRows.length;
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -188,6 +228,38 @@ export default function SubgraphDirectory() {
         />
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={() => setEliteOnly(!eliteOnly)}
+          className={cn(
+            'px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] border transition-colors',
+            eliteOnly
+              ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
+              : 'bg-[var(--bg-surface)] text-[var(--text-muted)] border-[var(--border)] hover:border-[var(--accent)]'
+          )}
+        >
+          Elite Only ({'>'}1K GRT fees)
+        </button>
+        {knownNetworks.size > 0 && (
+          <select
+            value={networkFilter}
+            onChange={(e) => setNetworkFilter(e.target.value)}
+            className={cn(
+              'px-3 py-1.5 text-xs rounded-[var(--radius-button)]',
+              'bg-[var(--bg-surface)] border border-[var(--border)]',
+              'text-[var(--text)]',
+              'focus:outline-none focus:border-[var(--accent)]'
+            )}
+          >
+            <option value="all">All Networks</option>
+            {[...knownNetworks].sort().map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
       {/* Search results */}
       {isSearching && (
         <Card className="overflow-hidden">
@@ -245,8 +317,9 @@ export default function SubgraphDirectory() {
                     <span className="font-mono text-sm text-[var(--text)]" title={row.ipfsHash}>
                       {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
                     </span>
+                    {row.isElite && <Badge variant="warning">Elite</Badge>}
                   </div>
-                  <ComplexityCell hash={row.ipfsHash} />
+                  <ManifestCell hash={row.ipfsHash} onNetwork={handleNetwork} />
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="p-2 rounded bg-[var(--bg-elevated)]">
@@ -298,7 +371,7 @@ export default function SubgraphDirectory() {
               <tr>
                 <th className={cn(thBase, 'text-left w-12')}>#</th>
                 <th className={cn(thBase, 'text-left')}>Deployment ID</th>
-                <th className={cn(thBase, 'text-center')}>Complexity</th>
+                <th className={cn(thBase, 'text-center')}>Complexity / Network</th>
                 <th className={cn(thSortable, 'text-right')} onClick={() => handleSort('signal')}>
                   Signal (GRT){renderSortArrow('signal')}
                 </th>
@@ -323,16 +396,19 @@ export default function SubgraphDirectory() {
                   >
                     <td className="px-4 py-3 text-sm text-[var(--text-faint)]">{page * PAGE_SIZE + idx + 1}</td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/subgraphs/${row.ipfsHash}`}
-                        className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
-                        title={row.ipfsHash}
-                      >
-                        {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/subgraphs/${row.ipfsHash}`}
+                          className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+                          title={row.ipfsHash}
+                        >
+                          {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
+                        </Link>
+                        {row.isElite && <Badge variant="warning">Elite</Badge>}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <ComplexityCell hash={row.ipfsHash} />
+                      <ManifestCell hash={row.ipfsHash} onNetwork={handleNetwork} />
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text)]">
                       {formatGRT(row.signal)}
