@@ -288,48 +288,63 @@ export async function GET(request: NextRequest) {
       console.warn('REO oracle batch call failed, falling back to heuristics:', e);
     }
 
-    // Step 5b: Query closed allocations (last 90d) for rolling APY
-    // Paginate to avoid Supabase default 1000-row limit
-    let closedAllocsByIndexer = new Map<string, Array<{ indexing_rewards_grt: number; closed_at: string }>>();
-    if (hasDbAccess() && db) {
-      try {
-        const ninetyDaysAgo = new Date(Date.now() - 90 * 86400 * 1000).toISOString();
-        const PAGE_SIZE = 1000;
-        let offset = 0;
-        let totalRows = 0;
+    // Step 5b: Fetch closed allocations (last 90d) from subgraph for rolling APY
+    // Queries the subgraph directly (authoritative source) instead of Supabase,
+    // using indexingDelegatorRewards which has the reward cut already applied at close time
+    const closedAllocsByIndexer = new Map<string, Array<{ delegator_rewards_grt: number; closed_at: number }>>();
+    try {
+      const ninetyDaysAgoUnix = Math.floor(Date.now() / 1000) - 90 * 86400;
+      let lastAllocId = '';
+      let totalRows = 0;
 
-        while (true) {
-          const { data: page, error: allocError } = await db
-            .from('allocations')
-            .select('indexer_address, indexing_rewards_grt, closed_at')
-            .eq('status', 'closed')
-            .gte('closed_at', ninetyDaysAgo)
-            .gt('indexing_rewards_grt', 0)
-            .order('closed_at', { ascending: false })
-            .range(offset, offset + PAGE_SIZE - 1);
-
-          if (allocError) { console.warn('Rolling APY page error:', allocError); break; }
-          if (!page || page.length === 0) break;
-
-          for (const row of page) {
-            const addr = row.indexer_address.toLowerCase();
-            const existing = closedAllocsByIndexer.get(addr) ?? [];
-            existing.push({
-              indexing_rewards_grt: Number(row.indexing_rewards_grt) || 0,
-              closed_at: row.closed_at,
-            });
-            closedAllocsByIndexer.set(addr, existing);
+      while (true) {
+        const result = await subgraphQuery<{
+          allocations: Array<{
+            id: string;
+            indexer: { id: string };
+            indexingDelegatorRewards: string;
+            closedAt: number;
+          }>;
+        }>(`{
+          allocations(
+            first: 1000
+            orderBy: id
+            orderDirection: asc
+            where: {
+              status: Closed
+              closedAt_gte: ${ninetyDaysAgoUnix}
+              ${lastAllocId ? `id_gt: "${lastAllocId}"` : ''}
+            }
+          ) {
+            id
+            indexer { id }
+            indexingDelegatorRewards
+            closedAt
           }
+        }`);
 
-          totalRows += page.length;
-          if (page.length < PAGE_SIZE) break;
-          offset += PAGE_SIZE;
+        if (result.allocations.length === 0) break;
+
+        for (const alloc of result.allocations) {
+          const delegatorRewards = weiToGRT(alloc.indexingDelegatorRewards);
+          if (delegatorRewards <= 0) continue;
+          const addr = alloc.indexer.id.toLowerCase();
+          const existing = closedAllocsByIndexer.get(addr) ?? [];
+          existing.push({
+            delegator_rewards_grt: delegatorRewards,
+            closed_at: alloc.closedAt,
+          });
+          closedAllocsByIndexer.set(addr, existing);
         }
 
-        console.log(`Rolling APY: loaded ${totalRows} closed allocations (rewards > 0) for ${closedAllocsByIndexer.size} indexers`);
-      } catch (e) {
-        console.warn('Rolling APY query failed (non-fatal):', e);
+        totalRows += result.allocations.length;
+        lastAllocId = result.allocations[result.allocations.length - 1].id;
+        if (result.allocations.length < 1000) break;
       }
+
+      console.log(`Rolling APY: loaded ${totalRows} closed allocations from subgraph for ${closedAllocsByIndexer.size} indexers`);
+    } catch (e) {
+      console.warn('Rolling APY subgraph query failed (non-fatal):', e);
     }
 
     // Step 6: Compute enriched data for each indexer
@@ -386,13 +401,13 @@ export async function GET(request: NextRequest) {
         ? weiToGRT(indexer.provisionedTokens)
         : null;
 
-      // Rolling APY from closed allocations
+      // Rolling APY from closed allocations (delegator rewards already cut-adjusted by subgraph)
       const indexerClosedAllocs = closedAllocsByIndexer.get(indexer.id) ?? [];
       const rollingAPY30d = indexerClosedAllocs.length > 0 && delegated > 0
-        ? calculateRollingAPY(indexerClosedAllocs, indexer.indexingRewardCut, delegated, 30)
+        ? calculateRollingAPY(indexerClosedAllocs, delegated, 30)
         : null;
       const rollingAPY90d = indexerClosedAllocs.length > 0 && delegated > 0
-        ? calculateRollingAPY(indexerClosedAllocs, indexer.indexingRewardCut, delegated, 90)
+        ? calculateRollingAPY(indexerClosedAllocs, delegated, 90)
         : null;
 
       // Composite risk score

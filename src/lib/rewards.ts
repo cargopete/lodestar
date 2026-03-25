@@ -151,32 +151,30 @@ export function calculateDelegatorAPR(
 /**
  * Calculate rolling delegator APY from closed allocations.
  *
- * @param closedAllocations - Rows from Supabase allocations table (closed within 90d)
- * @param currentRewardCutPPM - Indexer's current reward cut in PPM
+ * Uses indexingDelegatorRewards from the subgraph, which already has the
+ * reward cut applied at close time (more accurate than applying the current cut).
+ *
+ * @param closedAllocations - Closed allocations with pre-calculated delegator rewards
  * @param delegatedGRT - Total GRT delegated to this indexer
  * @param windowDays - Rolling window (30 or 90)
  */
 export function calculateRollingAPY(
-  closedAllocations: Array<{ indexing_rewards_grt: number; closed_at: string }>,
-  currentRewardCutPPM: number,
+  closedAllocations: Array<{ delegator_rewards_grt: number; closed_at: number }>,
   delegatedGRT: number,
   windowDays: number
 ): number {
   if (delegatedGRT <= 0 || closedAllocations.length === 0) return 0;
 
-  const cutoff = Date.now() - windowDays * 86400 * 1000;
+  const cutoffUnix = Math.floor(Date.now() / 1000) - windowDays * 86400;
 
-  let totalRewards = 0;
+  let delegatorRewards = 0;
   for (const alloc of closedAllocations) {
-    if (new Date(alloc.closed_at).getTime() >= cutoff) {
-      totalRewards += alloc.indexing_rewards_grt;
+    if (alloc.closed_at >= cutoffUnix) {
+      delegatorRewards += alloc.delegator_rewards_grt;
     }
   }
 
-  if (totalRewards <= 0) return 0;
-
-  const delegatorShare = 1 - currentRewardCutPPM / 1_000_000;
-  const delegatorRewards = totalRewards * delegatorShare;
+  if (delegatorRewards <= 0) return 0;
 
   return (delegatorRewards / delegatedGRT) * (365 / windowDays) * 100;
 }
