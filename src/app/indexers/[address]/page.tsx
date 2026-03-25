@@ -22,6 +22,7 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { DelegationCalculator } from '@/components/ui/DelegationCalculator';
 import { ProvisionsPanel } from '@/components/ui/ProvisionsPanel';
+import { DelegationFeed } from '@/components/feed/DelegationFeed';
 import { calculateIndexerScore, SCORE_WEIGHTS, SCORE_LABELS, type IndexerScore } from '@/lib/risk-score';
 
 interface IndexerDetail {
@@ -651,53 +652,8 @@ export default function IndexerDetailPage({
             </Card>
           )}
 
-          {/* Recent Delegation Activity */}
-          {recentDelegations && recentDelegations.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Delegation Activity (7d)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {recentDelegations.map((event) => {
-                    const tokens = weiToGRT(event.tokens);
-                    const isDelegation = event.eventType === 'delegation';
-                    const isWithdrawal = event.eventType === 'withdrawal';
-                    const timestamp = parseInt(event.timestamp);
-                    const now = Math.floor(Date.now() / 1000);
-                    const daysAgo = Math.floor((now - timestamp) / 86400);
-                    const timeLabel = daysAgo === 0 ? 'today' : daysAgo === 1 ? '1d ago' : `${daysAgo}d ago`;
-
-                    return (
-                      <div key={event.id} className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-elevated)]">
-                        <div className="flex items-center gap-2.5">
-                          <div className={cn(
-                            'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold',
-                            isDelegation ? 'bg-[var(--green-dim)] text-[var(--green)]' : 'bg-[var(--red-dim)] text-[var(--red)]'
-                          )}>
-                            {isDelegation ? '+' : '−'}
-                          </div>
-                          <div>
-                            <p className="font-mono text-xs text-[var(--text)]">
-                              {shortenAddress(event.delegator)}
-                            </p>
-                            <p className="text-[10px] text-[var(--text-faint)]">
-                              {timeLabel} · {isWithdrawal ? 'withdrawal' : event.eventType}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className={cn('font-mono text-xs', isDelegation ? 'text-[var(--green)]' : 'text-[var(--red)]')}>
-                            {isDelegation ? '+' : '−'}{formatGRT(tokens)} GRT
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Recent Delegation Activity — reusable feed component pre-filtered to this indexer */}
+          <DelegationFeed indexerAddress={address} />
 
           {/* Parameters */}
           <Card>
