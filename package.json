@@ -10,10 +10,16 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "db:migrate": "supabase db push",
+    "db:backfill": "tsx scripts/backfill.ts",
+    "db:types": "supabase gen types typescript --local > src/lib/database.types.ts",
+    "db:reset": "supabase db reset",
+    "db:studio": "supabase studio"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.10",
+    "@supabase/supabase-js": "^2.100.0",
     "@tanstack/react-query": "^5.91.0",
     "@tanstack/react-table": "^8.21.3",
     "@upstash/redis": "^1.37.0",
@@ -36,6 +42,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.7",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.1"
   }
