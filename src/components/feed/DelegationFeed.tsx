@@ -84,49 +84,53 @@ export function DelegationFeed({ indexerAddress: initialFilter }: DelegationFeed
             {activeFilter ? 'Filtered' : 'Live'} — last 50
           </span>
         </div>
-        {/* Indexer filter */}
-        <form onSubmit={handleFilterSubmit} className="flex items-center gap-2 mt-3">
-          <input
-            type="text"
-            value={filterInput}
-            onChange={(e) => setFilterInput(e.target.value)}
-            placeholder="Filter by indexer name or address..."
-            className={cn(
-              'flex-1 px-3 py-1.5 text-xs',
-              'rounded-[var(--radius-button)]',
-              'bg-[var(--bg-elevated)] border border-[var(--border)]',
-              'text-[var(--text)] placeholder:text-[var(--text-faint)]',
-              'focus:outline-none focus:border-[var(--accent)]'
+        {/* Indexer filter — hidden when pre-filtered from indexer detail page */}
+        {!initialFilter && (
+          <>
+            <form onSubmit={handleFilterSubmit} className="flex items-center gap-2 mt-3">
+              <input
+                type="text"
+                value={filterInput}
+                onChange={(e) => setFilterInput(e.target.value)}
+                placeholder="Filter by indexer name or address..."
+                className={cn(
+                  'flex-1 px-3 py-1.5 text-xs',
+                  'rounded-[var(--radius-button)]',
+                  'bg-[var(--bg-elevated)] border border-[var(--border)]',
+                  'text-[var(--text)] placeholder:text-[var(--text-faint)]',
+                  'focus:outline-none focus:border-[var(--accent)]'
+                )}
+              />
+              <button
+                type="submit"
+                className={cn(
+                  'px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)]',
+                  'bg-[var(--accent)] text-white hover:opacity-90 transition-opacity'
+                )}
+              >
+                Filter
+              </button>
+              {activeFilter && (
+                <button
+                  type="button"
+                  onClick={clearFilter}
+                  className="px-2 py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </form>
+            {activeFilter && !isValidAddress && (
+              <p className="text-[11px] text-[var(--amber)] mt-1">
+                No indexer found matching &ldquo;{activeFilter}&rdquo;
+              </p>
             )}
-          />
-          <button
-            type="submit"
-            className={cn(
-              'px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)]',
-              'bg-[var(--accent)] text-white hover:opacity-90 transition-opacity'
+            {activeFilter && isValidAddress && resolvedFilter !== activeFilter.toLowerCase() && (
+              <p className="text-[11px] text-[var(--text-faint)] mt-1">
+                Matched: {indexerNames.get(resolvedFilter.toLowerCase()) ?? resolvedFilter}
+              </p>
             )}
-          >
-            Filter
-          </button>
-          {activeFilter && (
-            <button
-              type="button"
-              onClick={clearFilter}
-              className="px-2 py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-            >
-              Clear
-            </button>
-          )}
-        </form>
-        {activeFilter && !isValidAddress && (
-          <p className="text-[11px] text-[var(--amber)] mt-1">
-            No indexer found matching &ldquo;{activeFilter}&rdquo;
-          </p>
-        )}
-        {activeFilter && isValidAddress && resolvedFilter !== activeFilter.toLowerCase() && (
-          <p className="text-[11px] text-[var(--text-faint)] mt-1">
-            Matched: {indexerNames.get(resolvedFilter.toLowerCase()) ?? resolvedFilter}
-          </p>
+          </>
         )}
       </CardHeader>
       <CardContent>
