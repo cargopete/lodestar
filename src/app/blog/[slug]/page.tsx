@@ -68,6 +68,7 @@ export default async function BlogPostPage({
             prose-td:border prose-td:border-[var(--border)] prose-td:px-3 prose-td:py-2
             prose-code:text-[var(--accent)] prose-code:bg-[var(--bg-elevated)] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono
             prose-pre:bg-[var(--bg-elevated)] prose-pre:border prose-pre:border-[var(--border)] prose-pre:rounded-lg prose-pre:p-4 prose-pre:text-left prose-pre:text-[#B8B8C8]
+            [&_pre_code]:p-0 [&_pre_code]:bg-transparent [&_pre_code]:text-inherit [&_pre_code]:text-sm
             prose-blockquote:border-l-2 prose-blockquote:border-[var(--accent)] prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-[#9999AA]
             prose-hr:border-[var(--border)]"
           dangerouslySetInnerHTML={{ __html: post.contentHtml }}
