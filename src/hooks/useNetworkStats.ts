@@ -316,6 +316,42 @@ export function useRecentDelegations(indexerAddress: string) {
 }
 
 /**
+ * Hook for network-wide delegation activity feed (last 50 events)
+ */
+export function useNetworkDelegations() {
+  return useQuery<DelegationEvent[]>({
+    queryKey: ['networkDelegations'],
+    queryFn: async () => {
+      const query = `{
+        delegationEvents(
+          first: 50,
+          orderBy: timestamp,
+          orderDirection: desc
+        ) {
+          id
+          eventType
+          indexer
+          delegator
+          tokens
+          timestamp
+          txHash
+        }
+      }`;
+      const response = await fetch('/api/delegation-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      if (!response.ok) throw new Error('Failed to fetch delegation events');
+      const json = await response.json();
+      return json.data?.delegationEvents ?? [];
+    },
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+  });
+}
+
+/**
  * Hook for ENS name resolution
  */
 export function useENSName(address: string) {

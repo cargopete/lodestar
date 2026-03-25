@@ -8,6 +8,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { HorizonParameters } from '@/components/ui/HorizonParameters';
 import { StakingTrendChart } from '@/components/charts/StakingTrendChart';
 import { RewardSplitDonut } from '@/components/charts/RewardSplitDonut';
+import { QueryFeesChart } from '@/components/charts/QueryFeesChart';
 
 export default function ProtocolOverview() {
   const { data: networkData, isLoading: networkLoading } = useNetworkStats();
@@ -95,6 +96,9 @@ export default function ProtocolOverview() {
         <StakingTrendChart />
         <RewardSplitDonut />
       </div>
+
+      {/* Query fees comparison */}
+      <QueryFeesChart />
 
       {/* Bottom panels */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

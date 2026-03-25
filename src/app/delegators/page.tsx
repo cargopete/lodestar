@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
+import { DelegationFeed } from '@/components/feed/DelegationFeed';
 import { cn } from '@/lib/utils';
 
 export default function DelegatorsPage() {
@@ -20,7 +21,8 @@ export default function DelegatorsPage() {
   const isValidAddress = /^0x[a-fA-F0-9]{40}$/.test(address.trim());
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+    <div className="space-y-8">
+    <div className="flex flex-col items-center justify-center text-center pt-4">
       <div className="w-16 h-16 rounded-full bg-[var(--accent-dim)] flex items-center justify-center mb-6">
         <svg className="w-8 h-8 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -67,6 +69,10 @@ export default function DelegatorsPage() {
       <p className="text-[11px] text-[var(--text-faint)] mt-6">
         Or connect your wallet using the button in the top right corner
       </p>
+    </div>
+
+    {/* Network-wide delegation activity */}
+    <DelegationFeed />
     </div>
   );
 }
