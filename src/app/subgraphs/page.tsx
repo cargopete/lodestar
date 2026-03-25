@@ -361,14 +361,18 @@ export default function SubgraphDirectory() {
                       {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
                     </span>
                     {row.isElite && (
-                      <Badge
-                        variant="warning"
-                        className="cursor-pointer"
-                        title="Elite subgraph — earned over 1,000 GRT in cumulative query fees"
-                        onClick={(e) => { e.preventDefault(); setEliteOnly(true); }}
-                      >
-                        Elite
-                      </Badge>
+                      <span className="relative group/elite">
+                        <Badge
+                          variant="warning"
+                          className="cursor-pointer"
+                          onClick={(e) => { e.preventDefault(); setEliteOnly(true); }}
+                        >
+                          Elite
+                        </Badge>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-[10px] text-white bg-[var(--bg-elevated)] border border-[var(--border)] rounded whitespace-nowrap opacity-0 group-hover/elite:opacity-100 transition-opacity z-50">
+                          Earned over 1,000 GRT in query fees
+                        </span>
+                      </span>
                     )}
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -461,14 +465,18 @@ export default function SubgraphDirectory() {
                           {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
                         </Link>
                         {row.isElite && (
-                      <Badge
-                        variant="warning"
-                        className="cursor-pointer"
-                        title="Elite subgraph — earned over 1,000 GRT in cumulative query fees"
-                        onClick={(e) => { e.preventDefault(); setEliteOnly(true); }}
-                      >
-                        Elite
-                      </Badge>
+                      <span className="relative group/elite">
+                        <Badge
+                          variant="warning"
+                          className="cursor-pointer"
+                          onClick={(e) => { e.preventDefault(); setEliteOnly(true); }}
+                        >
+                          Elite
+                        </Badge>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-[10px] text-white bg-[var(--bg-elevated)] border border-[var(--border)] rounded whitespace-nowrap opacity-0 group-hover/elite:opacity-100 transition-opacity z-50">
+                          Earned over 1,000 GRT in query fees
+                        </span>
+                      </span>
                     )}
                       </div>
                     </td>
