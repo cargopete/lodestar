@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName } from '@/hooks/useNetworkStats';
@@ -183,6 +183,9 @@ export default function IndexerDetailPage({
   const { data: reoData } = useREOStatus(address);
   const { data: recentDelegations } = useRecentDelegations(address);
   const { data: ensData } = useENSName(address);
+
+  const [allocPage, setAllocPage] = useState(0);
+  const ALLOC_PAGE_SIZE = 25;
 
   const grtPrice = priceData?.price ?? 0;
   const network = networkData?.graphNetwork;
@@ -791,7 +794,9 @@ export default function IndexerDetailPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
-                  {indexer.allocations.slice(0, 10).map((alloc) => (
+                  {indexer.allocations
+                    .slice(allocPage * ALLOC_PAGE_SIZE, (allocPage + 1) * ALLOC_PAGE_SIZE)
+                    .map((alloc) => (
                     <tr key={alloc.id} className="hover:bg-[var(--bg-elevated)]">
                       <td className="px-4 py-3">
                         <span className="font-mono text-sm text-[var(--text)]">
@@ -818,11 +823,43 @@ export default function IndexerDetailPage({
                 </tbody>
               </table>
             </div>
-            {indexer.allocations.length > 10 && (
-              <p className="text-sm text-[var(--text-faint)] text-center mt-4">
-                Showing 10 of {indexer.allocations.length} allocations
-              </p>
-            )}
+            {indexer.allocations.length > ALLOC_PAGE_SIZE && (() => {
+              const totalPages = Math.ceil(indexer.allocations.length / ALLOC_PAGE_SIZE);
+              return (
+                <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--border)]">
+                  <span className="text-sm text-[var(--text-faint)]">
+                    {allocPage * ALLOC_PAGE_SIZE + 1}–{Math.min((allocPage + 1) * ALLOC_PAGE_SIZE, indexer.allocations.length)} of {indexer.allocations.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setAllocPage((p) => Math.max(0, p - 1))}
+                      disabled={allocPage === 0}
+                      className={cn(
+                        'px-3 py-1.5 text-sm rounded-[var(--radius-button)]',
+                        'border border-[var(--border)]',
+                        'disabled:opacity-50 disabled:cursor-not-allowed',
+                        'hover:bg-[var(--bg-elevated)] transition-colors'
+                      )}
+                    >
+                      Prev
+                    </button>
+                    <span className="text-sm text-[var(--text-muted)]">{allocPage + 1}/{totalPages}</span>
+                    <button
+                      onClick={() => setAllocPage((p) => Math.min(totalPages - 1, p + 1))}
+                      disabled={allocPage >= totalPages - 1}
+                      className={cn(
+                        'px-3 py-1.5 text-sm rounded-[var(--radius-button)]',
+                        'border border-[var(--border)]',
+                        'disabled:opacity-50 disabled:cursor-not-allowed',
+                        'hover:bg-[var(--bg-elevated)] transition-colors'
+                      )}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       )}
