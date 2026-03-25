@@ -9,6 +9,8 @@ import {
 } from '@/lib/rewards';
 import { calculateIndexerScore } from '@/lib/risk-score';
 import type { EnrichedIndexer } from '@/lib/enriched';
+import { db, hasDbAccess } from '@/lib/db';
+import { writeIndexers } from '@/lib/ingest/indexers';
 
 // Verify cron secret in production
 function isAuthorized(request: NextRequest): boolean {
@@ -86,12 +88,14 @@ export async function GET(request: NextRequest) {
         totalTokensSignalled: string;
         networkGRTIssuancePerBlock?: string;
         delegationRatio: number;
+        currentEpoch: number;
       };
     }>(`{
       graphNetwork(id: "1") {
         totalTokensSignalled
         networkGRTIssuancePerBlock
         delegationRatio
+        currentEpoch
       }
     }`);
 
@@ -409,6 +413,16 @@ export async function GET(request: NextRequest) {
 
     // Step 7: Write to Redis
     await cacheSet('lodestar:indexers-enriched', enriched, 600);
+
+    // Step 7b: Write to Postgres (Phase 1 — parallel write, non-fatal)
+    if (hasDbAccess() && db) {
+      try {
+        const pgResult = await writeIndexers(db, enriched, network.currentEpoch);
+        console.log(`Postgres: ${pgResult.upserted} indexers, ${pgResult.snapshots} snapshots, ${pgResult.paramChanges} param changes`);
+      } catch (e) {
+        console.warn('Postgres write failed (non-fatal):', e);
+      }
+    }
 
     const duration = Date.now() - startTime;
     console.log(`Cron refresh completed: ${enriched.length} indexers enriched in ${duration}ms`);
