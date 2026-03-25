@@ -149,6 +149,37 @@ export function calculateDelegatorAPR(
 }
 
 /**
+ * Calculate rolling delegator APY from closed allocations.
+ *
+ * Uses indexingDelegatorRewards from the subgraph, which already has the
+ * reward cut applied at close time (more accurate than applying the current cut).
+ *
+ * @param closedAllocations - Closed allocations with pre-calculated delegator rewards
+ * @param delegatedGRT - Total GRT delegated to this indexer
+ * @param windowDays - Rolling window (30 or 90)
+ */
+export function calculateRollingAPY(
+  closedAllocations: Array<{ delegator_rewards_grt: number; closed_at: number }>,
+  delegatedGRT: number,
+  windowDays: number
+): number {
+  if (delegatedGRT <= 0 || closedAllocations.length === 0) return 0;
+
+  const cutoffUnix = Math.floor(Date.now() / 1000) - windowDays * 86400;
+
+  let delegatorRewards = 0;
+  for (const alloc of closedAllocations) {
+    if (alloc.closed_at >= cutoffUnix) {
+      delegatorRewards += alloc.delegator_rewards_grt;
+    }
+  }
+
+  if (delegatorRewards <= 0) return 0;
+
+  return (delegatorRewards / delegatedGRT) * (365 / windowDays) * 100;
+}
+
+/**
  * Calculate delegation capacity metrics
  */
 export function calculateDelegationCapacity(

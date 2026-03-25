@@ -1,14 +1,15 @@
 /**
  * Composite Indexer Risk Score
  *
- * Seven dimensions, each scored 0–100, combined with transparent weights
+ * Eight dimensions, each scored 0–100, combined with transparent weights
  * into a single 0–100 composite score. Higher = better for delegators.
  *
  * Dimensions & weights:
- *   REO compliance     25%  — gates rewards; most critical signal
- *   Self-stake ratio   20%  — skin in the game
- *   Cut stability      15%  — trust / predictability
+ *   REO compliance     20%  — gates rewards; most critical signal
+ *   Self-stake ratio   15%  — skin in the game
+ *   Query volume       15%  — actual work served (query fees collected)
  *   Allocation efficiency 15% — operational competence
+ *   Cut stability      10%  — trust / predictability
  *   Over-delegation    10%  — delegation safety margin
  *   Transparency       10%  — presence and accountability
  *   Delegation trend    5%  — crowd signal (noisy, low weight)
@@ -17,6 +18,7 @@
 export interface ScoreBreakdown {
   reo: number;
   selfStake: number;
+  queryVolume: number;
   cutStability: number;
   allocationEfficiency: number;
   overDelegation: number;
@@ -31,10 +33,11 @@ export interface IndexerScore {
 }
 
 export const SCORE_WEIGHTS: Record<keyof ScoreBreakdown, number> = {
-  reo: 25,
-  selfStake: 20,
-  cutStability: 15,
+  reo: 20,
+  selfStake: 15,
+  queryVolume: 15,
   allocationEfficiency: 15,
+  cutStability: 10,
   overDelegation: 10,
   transparency: 10,
   delegationTrend: 5,
@@ -43,6 +46,7 @@ export const SCORE_WEIGHTS: Record<keyof ScoreBreakdown, number> = {
 export const SCORE_LABELS: Record<keyof ScoreBreakdown, string> = {
   reo: 'REO Compliance',
   selfStake: 'Self-Stake',
+  queryVolume: 'Query Volume',
   cutStability: 'Cut Stability',
   allocationEfficiency: 'Allocation Efficiency',
   overDelegation: 'Delegation Safety',
@@ -113,8 +117,22 @@ function scoreSelfStake(selfStakeGRT: number): number {
 /**
  * Cut stability: how long since last parameter change.
  * Longer = more predictable for delegators. Cooldown set = bonus signal.
+ * Greedy cuts (>=100%) are hard-capped regardless of stability.
  */
 function scoreCutStability(
+  lastUpdate: number,
+  cooldown: number,
+  rewardCutPPM?: number,
+): number {
+  // Hard cap for greedy indexers — delegators earn nothing
+  if (rewardCutPPM !== undefined) {
+    if (rewardCutPPM >= 1_000_000) return 5;
+    if (rewardCutPPM >= 900_000) return Math.min(30, scoreCutStabilityInner(lastUpdate, cooldown));
+  }
+  return scoreCutStabilityInner(lastUpdate, cooldown);
+}
+
+function scoreCutStabilityInner(
   lastUpdate: number,
   cooldown: number,
 ): number {
@@ -185,6 +203,40 @@ function scoreTransparency(
 }
 
 /**
+ * Query volume: cumulative query fees collected in GRT.
+ * Indexers actually serving queries = doing real work. Higher fees = more useful.
+ *
+ * Anchors (GRT → score):
+ *   100K+ → 100,  50K → 90,  10K → 70,  1K → 50,
+ *   100 → 30,  >0 → 15,  0 → 0
+ */
+function scoreQueryVolume(queryFeesCollectedGRT: number): number {
+  if (queryFeesCollectedGRT <= 0) return 0;
+
+  const anchors: [number, number][] = [
+    [100_000, 100],
+    [50_000,   90],
+    [10_000,   70],
+    [1_000,    50],
+    [100,      30],
+    [0,        15],
+  ];
+
+  if (queryFeesCollectedGRT >= anchors[0][0]) return anchors[0][1];
+
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const [hi, hiScore] = anchors[i];
+    const [lo, loScore] = anchors[i + 1];
+    if (queryFeesCollectedGRT >= lo) {
+      const t = (queryFeesCollectedGRT - lo) / (hi - lo);
+      return Math.round(loScore + t * (hiScore - loScore));
+    }
+  }
+
+  return 0;
+}
+
+/**
  * Delegation trend: net flow relative to total delegated.
  * Positive inflow = crowd confidence. Neutral = baseline. Outflow = warning.
  */
@@ -231,6 +283,8 @@ export interface ScoreInput {
   url: string | null;
   name: string;
   id: string;
+  rewardCutPPM: number;
+  queryFeesCollectedGRT: number;
   netFlowGRT: number;
   delegatedGRT: number;
 }
@@ -239,9 +293,11 @@ export function calculateIndexerScore(input: ScoreInput): IndexerScore {
   const breakdown: ScoreBreakdown = {
     reo: scoreREO(input.reoStatus, input.reoDaysRemaining, input.reoSource),
     selfStake: scoreSelfStake(input.selfStakeGRT),
+    queryVolume: scoreQueryVolume(input.queryFeesCollectedGRT),
     cutStability: scoreCutStability(
       input.lastDelegationParameterUpdate,
       input.delegatorParameterCooldown,
+      input.rewardCutPPM,
     ),
     allocationEfficiency: scoreAllocationEfficiency(
       input.allocationCount,

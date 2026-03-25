@@ -1,8 +1,9 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName } from '@/hooks/useNetworkStats';
+import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName, useEnrichedIndexers } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
   formatGRT,
@@ -11,6 +12,7 @@ import {
   formatPPM,
   shortenAddress,
   resolveIndexerName,
+  isGreedyCut,
   cn,
 } from '@/lib/utils';
 import { calculateDelegationCapacity } from '@/lib/rewards';
@@ -20,6 +22,7 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { DelegationCalculator } from '@/components/ui/DelegationCalculator';
 import { ProvisionsPanel } from '@/components/ui/ProvisionsPanel';
+import { DelegationFeed } from '@/components/feed/DelegationFeed';
 import { calculateIndexerScore, SCORE_WEIGHTS, SCORE_LABELS, type IndexerScore } from '@/lib/risk-score';
 
 interface IndexerDetail {
@@ -38,6 +41,7 @@ interface IndexerDetail {
   indexingRewardCut: number;
   queryFeeCut: number;
   rewardsEarned: string;
+  queryFeesCollected: string;
   delegatorShares: string;
   delegatorParameterCooldown: number;
   lastDelegationParameterUpdate: number;
@@ -95,6 +99,7 @@ function useIndexerDetails(address: string) {
             indexingRewardCut
             queryFeeCut
             rewardsEarned
+            queryFeesCollected
             delegatorShares
             delegatorParameterCooldown
             lastDelegationParameterUpdate
@@ -181,6 +186,15 @@ export default function IndexerDetailPage({
   const { data: reoData } = useREOStatus(address);
   const { data: recentDelegations } = useRecentDelegations(address);
   const { data: ensData } = useENSName(address);
+  const { data: enrichedData } = useEnrichedIndexers();
+
+  // Pull pre-computed fields from enriched cache (rolling APY, score)
+  const enrichedIndexer = enrichedData?.indexers?.find(
+    (e) => e.id.toLowerCase() === address.toLowerCase()
+  );
+
+  const [allocPage, setAllocPage] = useState(0);
+  const ALLOC_PAGE_SIZE = 25;
 
   const grtPrice = priceData?.price ?? 0;
   const network = networkData?.graphNetwork;
@@ -237,7 +251,9 @@ export default function IndexerDetailPage({
   const ownStakeRatio = indexer.ownStakeRatio ? parseFloat(indexer.ownStakeRatio) * 100 : null;
   const netFlowGRT = recentDelegations?.reduce((sum, e) => {
     const tokens = weiToGRT(e.tokens);
-    return e.eventType === 'delegation' ? sum + tokens : sum - tokens;
+    if (e.eventType === 'delegation') return sum + tokens;
+    if (e.eventType === 'undelegation') return sum - tokens;
+    return sum; // ignore withdrawals — already counted at undelegation time
   }, 0) ?? 0;
 
   const indexerScore: IndexerScore | null = reoData?.status ? calculateIndexerScore({
@@ -255,6 +271,8 @@ export default function IndexerDetailPage({
     url: indexer.url,
     name,
     id: indexer.id,
+    rewardCutPPM: indexer.indexingRewardCut,
+    queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected ?? '0'),
     netFlowGRT,
     delegatedGRT: delegated,
   }) : null;
@@ -367,6 +385,66 @@ export default function IndexerDetailPage({
           subtitle={formatUSD(totalRewards * grtPrice)}
         />
       </StatGrid>
+
+      {/* Rolling APY from enriched data */}
+      {enrichedIndexer && (enrichedIndexer.rollingAPY30d !== null || enrichedIndexer.rollingAPY90d !== null) && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {enrichedIndexer.rollingAPY30d !== null && (
+            <Card>
+              <CardContent className="py-4">
+                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">APY 30d</p>
+                <p className={cn(
+                  'text-xl font-semibold font-mono',
+                  enrichedIndexer.rollingAPY30d >= 5 ? 'text-[var(--green)]' : 'text-[var(--text)]'
+                )}>
+                  {enrichedIndexer.rollingAPY30d.toFixed(2)}%
+                </p>
+                <p className="text-[10px] text-[var(--text-faint)] mt-1">From closed allocation rewards</p>
+              </CardContent>
+            </Card>
+          )}
+          {enrichedIndexer.rollingAPY90d !== null && (
+            <Card>
+              <CardContent className="py-4">
+                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">APY 90d</p>
+                <p className={cn(
+                  'text-xl font-semibold font-mono',
+                  enrichedIndexer.rollingAPY90d >= 5 ? 'text-[var(--green)]' : 'text-[var(--text)]'
+                )}>
+                  {enrichedIndexer.rollingAPY90d.toFixed(2)}%
+                </p>
+                <p className="text-[10px] text-[var(--text-faint)] mt-1">From closed allocation rewards</p>
+              </CardContent>
+            </Card>
+          )}
+          <Card>
+            <CardContent className="py-4">
+              <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">Instantaneous APR</p>
+              <p className="text-xl font-semibold font-mono text-[var(--text)]">
+                {enrichedIndexer.delegatorAPR.toFixed(2)}%
+              </p>
+              <p className="text-[10px] text-[var(--text-faint)] mt-1">Theoretical from current allocations</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Greedy Indexer Warning */}
+      {isGreedyCut(indexer.indexingRewardCut) && (
+        <div className="flex items-start gap-3 p-4 rounded-lg border bg-[var(--red-dim)] border-[var(--red)]">
+          <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-[var(--red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <div>
+            <p className="text-sm font-medium text-[var(--red)]">
+              This indexer takes 100% of indexing rewards
+            </p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              Delegating here earns 0% APR. All indexing rewards go to the indexer.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Reward Cut Change Alert */}
       {(() => {
@@ -622,59 +700,14 @@ export default function IndexerDetailPage({
                   })}
                 </div>
                 <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
-                  Composite score from 7 on-chain dimensions. Weights reflect delegator priorities: REO compliance (25%), self-stake (20%), cut stability (15%), allocation efficiency (15%), delegation safety (10%), transparency (10%), delegation trend (5%). Higher = better for delegators.
+                  Composite score from 8 on-chain dimensions. Weights reflect delegator priorities: REO compliance (20%), self-stake (15%), query volume (15%), allocation efficiency (15%), cut stability (10%), delegation safety (10%), transparency (10%), delegation trend (5%). Higher = better for delegators.
                 </p>
               </CardContent>
             </Card>
           )}
 
-          {/* Recent Delegation Activity */}
-          {recentDelegations && recentDelegations.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Delegation Activity (7d)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {recentDelegations.map((event) => {
-                    const tokens = weiToGRT(event.tokens);
-                    const isDelegation = event.eventType === 'delegation';
-                    const isWithdrawal = event.eventType === 'withdrawal';
-                    const timestamp = parseInt(event.timestamp);
-                    const now = Math.floor(Date.now() / 1000);
-                    const daysAgo = Math.floor((now - timestamp) / 86400);
-                    const timeLabel = daysAgo === 0 ? 'today' : daysAgo === 1 ? '1d ago' : `${daysAgo}d ago`;
-
-                    return (
-                      <div key={event.id} className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-elevated)]">
-                        <div className="flex items-center gap-2.5">
-                          <div className={cn(
-                            'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold',
-                            isDelegation ? 'bg-[var(--green-dim)] text-[var(--green)]' : 'bg-[var(--red-dim)] text-[var(--red)]'
-                          )}>
-                            {isDelegation ? '+' : '−'}
-                          </div>
-                          <div>
-                            <p className="font-mono text-xs text-[var(--text)]">
-                              {shortenAddress(event.delegator)}
-                            </p>
-                            <p className="text-[10px] text-[var(--text-faint)]">
-                              {timeLabel} · {isWithdrawal ? 'withdrawal' : event.eventType}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className={cn('font-mono text-xs', isDelegation ? 'text-[var(--green)]' : 'text-[var(--red)]')}>
-                            {isDelegation ? '+' : '−'}{formatGRT(tokens)} GRT
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Recent Delegation Activity — reusable feed component pre-filtered to this indexer */}
+          <DelegationFeed indexerAddress={address} />
 
           {/* Parameters */}
           <Card>
@@ -771,7 +804,9 @@ export default function IndexerDetailPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
-                  {indexer.allocations.slice(0, 10).map((alloc) => (
+                  {indexer.allocations
+                    .slice(allocPage * ALLOC_PAGE_SIZE, (allocPage + 1) * ALLOC_PAGE_SIZE)
+                    .map((alloc) => (
                     <tr key={alloc.id} className="hover:bg-[var(--bg-elevated)]">
                       <td className="px-4 py-3">
                         <span className="font-mono text-sm text-[var(--text)]">
@@ -798,11 +833,43 @@ export default function IndexerDetailPage({
                 </tbody>
               </table>
             </div>
-            {indexer.allocations.length > 10 && (
-              <p className="text-sm text-[var(--text-faint)] text-center mt-4">
-                Showing 10 of {indexer.allocations.length} allocations
-              </p>
-            )}
+            {indexer.allocations.length > ALLOC_PAGE_SIZE && (() => {
+              const totalPages = Math.ceil(indexer.allocations.length / ALLOC_PAGE_SIZE);
+              return (
+                <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--border)]">
+                  <span className="text-sm text-[var(--text-faint)]">
+                    {allocPage * ALLOC_PAGE_SIZE + 1}–{Math.min((allocPage + 1) * ALLOC_PAGE_SIZE, indexer.allocations.length)} of {indexer.allocations.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setAllocPage((p) => Math.max(0, p - 1))}
+                      disabled={allocPage === 0}
+                      className={cn(
+                        'px-3 py-1.5 text-sm rounded-[var(--radius-button)]',
+                        'border border-[var(--border)]',
+                        'disabled:opacity-50 disabled:cursor-not-allowed',
+                        'hover:bg-[var(--bg-elevated)] transition-colors'
+                      )}
+                    >
+                      Prev
+                    </button>
+                    <span className="text-sm text-[var(--text-muted)]">{allocPage + 1}/{totalPages}</span>
+                    <button
+                      onClick={() => setAllocPage((p) => Math.min(totalPages - 1, p + 1))}
+                      disabled={allocPage >= totalPages - 1}
+                      className={cn(
+                        'px-3 py-1.5 text-sm rounded-[var(--radius-button)]',
+                        'border border-[var(--border)]',
+                        'disabled:opacity-50 disabled:cursor-not-allowed',
+                        'hover:bg-[var(--bg-elevated)] transition-colors'
+                      )}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       )}
@@ -833,11 +900,14 @@ export default function IndexerDetailPage({
                     key={del.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-elevated)]"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-[var(--text-faint)]">#{i + 1}</span>
-                      <span className="font-mono text-sm text-[var(--text)]">
-                        {shortenAddress(del.delegator.id)}
-                      </span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-sm text-[var(--text-faint)] flex-shrink-0">#{i + 1}</span>
+                      <Link
+                        href={`/delegators/${del.delegator.id}`}
+                        className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors truncate"
+                      >
+                        {del.delegator.id}
+                      </Link>
                     </div>
                     <div className="text-right">
                       <p className="font-mono text-sm text-[var(--text)]">

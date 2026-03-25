@@ -26,6 +26,8 @@ function makeInput(overrides: Partial<ScoreInput> = {}): ScoreInput {
     url: 'https://example.com',
     name: 'My Indexer',
     id: '0x1234567890abcdef',
+    rewardCutPPM: 100_000,
+    queryFeesCollectedGRT: 50_000,
     netFlowGRT: 10_000,
     delegatedGRT: 500_000,
     ...overrides,
@@ -257,6 +259,40 @@ describe('transparency scoring', () => {
       ensName: null, url: null, name: 'My Indexer', id: '0x123',
     }));
     expect(breakdown.transparency).toBe(30);
+  });
+});
+
+// ---------- Query volume dimension ----------
+
+describe('query volume scoring', () => {
+  it('scores 100 for 100K+ GRT in fees', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      queryFeesCollectedGRT: 200_000,
+    }));
+    expect(breakdown.queryVolume).toBe(100);
+  });
+
+  it('scores 90 for 50K GRT', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      queryFeesCollectedGRT: 50_000,
+    }));
+    expect(breakdown.queryVolume).toBe(90);
+  });
+
+  it('scores 0 for zero fees', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      queryFeesCollectedGRT: 0,
+    }));
+    expect(breakdown.queryVolume).toBe(0);
+  });
+
+  it('interpolates between anchors', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      queryFeesCollectedGRT: 5_000,
+    }));
+    // Between 1K(50) and 10K(70), at 44.4% → ~59
+    expect(breakdown.queryVolume).toBeGreaterThan(50);
+    expect(breakdown.queryVolume).toBeLessThan(70);
   });
 });
 
