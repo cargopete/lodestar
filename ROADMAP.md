@@ -221,18 +221,23 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 ## Community Requests
 
 ### Delegation Activity (Matthew Darwin / Pinax — 2026-03-25)
-- [ ] Filter delegation activity feed by indexer on the Delegators page
-- [ ] Add delegation activity section to individual indexer detail pages
+- [x] Filter delegation activity feed by indexer on the Delegators page
+- [x] Add delegation activity section to individual indexer detail pages
 - [ ] Historical delegation data via backend ingestion pipeline
 
 ### Indexer Logs (Matthew Darwin / Pinax — 2026-03-25)
 - [ ] Integrate indexer subgraph indexing status logs via upcoming API (pending upstream availability)
 
 ### Delegator Protection & APY (PaulieB14 — GitHub issue #1, 2026-03-20)
-- [ ] Highlight 100% reward cut indexers in red on the Indexer Directory — delegators keep delegating to dead indexers
+- [x] Highlight 100% reward cut indexers with greedy indexer warnings on the Indexer Directory
 - [ ] Add educational tooltips at top of indexer table explaining reward cut, effective cut, and warning signs
-- [ ] 60/90-day rolling APY alongside current APR for longer-term performance view
+- [x] 30/90-day rolling APY alongside current APR for longer-term performance view
 - Reference: https://github.com/PaulieB14/delegator-apy-dashboard
+
+### Indexer Operations (Gemma / LunaNova — 2026-03-25)
+- [ ] Indexing status at indexer level — show all allocated subgraphs and how close to chainhead each is
+- [ ] Query traffic over recent windows (1d / 2d / 7d) per indexer
+- [ ] Subgraph indexer count on `/subgraphs` should only count active allocations (not historical)
 
 ---
 
@@ -242,6 +247,7 @@ Content platform for operational knowledge that's currently scattered across Dis
 
 ### Infrastructure
 - [x] Blog platform (Markdown in repo, SSG via remark — shipped v1.4.0)
+- [x] Blog restyle — hero section, gradient accents, sidebar metadata, GFM table support, Graph-inspired design
 
 ### Initial Topics
 - [ ] **Graph-node memory leak investigation** — idle proxy nodes reaching 12GB over 6-8h with no block ingestion or subgraph sync (sourced from Tehn's report, 2026-03-25)
@@ -340,6 +346,8 @@ GET  /api/ens                       # ENS name resolution
 | Governance impact tracker | ✅ Live | Novel feature |
 | Curator tools | 🔨 Basic | Greenfield |
 | QoS + economics combined | ❌ Blocked | GraphSeer stalled, no economics |
-| Rolling APY (30/60/90d) | ❌ Not started | PaulieB14's dashboard is standalone |
+| Rolling APY (30/90d) | ✅ Live | PaulieB14's dashboard is standalone |
+| Greedy indexer warnings | ✅ Live | Novel feature |
+| Delegation activity feed | ✅ Live | Novel feature |
 
 The window is open. Let's build.
