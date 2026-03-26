@@ -99,7 +99,6 @@ export default function LeaderboardPage() {
   // Summary stats
   const topScore = entries[0]?.final_score ?? 0;
   const medianScore = entries.length > 0 ? entries[Math.floor(entries.length / 2)]?.final_score ?? 0 : 0;
-  const penalised = entries.filter((e) => e.penalty_multiplier < 1).length;
 
   if (isLoading) {
     return (
@@ -142,11 +141,6 @@ export default function LeaderboardPage() {
           delta={{ value: `/ 100`, positive: topScore >= 70 }}
         />
         <StatCard label="Median Score" value={medianScore.toFixed(1)} />
-        <StatCard
-          label="Penalised"
-          value={String(penalised)}
-          subtitle={`of ${entries.length} indexers`}
-        />
       </StatGrid>
 
       {/* Mobile cards */}
@@ -181,7 +175,6 @@ export default function LeaderboardPage() {
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Economics</th>
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Trust</th>
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Health</th>
-                <th className={TH_CLASS}>Penalty</th>
               </tr>
             </thead>
             <tbody>
@@ -296,19 +289,10 @@ function DesktopRow({
         <td className="px-4 py-3 text-right hidden lg:table-cell">
           <ComponentCell score={healthScore} max={10} />
         </td>
-        <td className="px-4 py-3 text-right">
-          {entry.penalty_multiplier < 1 ? (
-            <span className="font-mono text-xs text-[var(--red)]">
-              x{entry.penalty_multiplier.toFixed(2)}
-            </span>
-          ) : (
-            <span className="font-mono text-xs text-[var(--text-faint)]">--</span>
-          )}
-        </td>
       </tr>
       {expanded && (
         <tr className="border-b border-[0.5px] border-[var(--border)]">
-          <td colSpan={8} className="px-4 py-4 bg-[var(--bg-elevated)]">
+          <td colSpan={7} className="px-4 py-4 bg-[var(--bg-elevated)]">
             <ScoreBreakdown entry={entry} />
           </td>
         </tr>
@@ -386,12 +370,6 @@ function MobileCard({
         <span>Trust</span>
         <span>Health</span>
       </div>
-
-      {entry.penalty_multiplier < 1 && (
-        <p className="text-xs text-[var(--red)] mt-2 font-mono">
-          Penalty: x{entry.penalty_multiplier.toFixed(2)}
-        </p>
-      )}
 
       {expanded && (
         <div className="mt-4 pt-4 border-t border-[var(--border)]">

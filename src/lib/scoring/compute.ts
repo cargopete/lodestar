@@ -187,9 +187,11 @@ export async function computeMonthlyScores(
       AND c.rn = 1
     GROUP BY a.indexer_address
   `;
+  // Require minimum 3 closed allocations with POIs for a meaningful consensus rate
+  const POI_MIN_SAMPLE = 3;
   const poiMap = new Map(poiRows.map((r) => [
     r.indexer_address,
-    Number(r.total) > 0 ? Number(r.matches) / Number(r.total) : null,
+    Number(r.total) >= POI_MIN_SAMPLE ? Number(r.matches) / Number(r.total) : null,
   ]));
 
   // 7. Allocation breadth (distinct active deployments)
