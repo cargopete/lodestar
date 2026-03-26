@@ -15,6 +15,7 @@ import type { ManifestAnalysis } from './manifest';
 import type { POIOverview, POIDeploymentDetail } from './poi';
 import type { DeploymentIndexingStatus } from './indexing-status';
 import type { LeaderboardEntry } from './scoring';
+import type { VotesResponse, VoteMessage } from './voting';
 
 // The Graph Network subgraph on Arbitrum (kept for user-specific POST queries)
 const SUBGRAPH_URL = '/api/subgraph';
@@ -430,6 +431,35 @@ export async function fetchNetworksRegistry(): Promise<{
   const response = await fetch('/api/networks');
   if (!response.ok) throw new Error('Failed to fetch networks registry');
   return response.json();
+}
+
+/**
+ * Fetch community votes for a period
+ */
+export async function fetchVotes(period?: string, voter?: string): Promise<VotesResponse> {
+  const params = new URLSearchParams();
+  if (period) params.set('period', period);
+  if (voter) params.set('voter', voter);
+  const response = await fetch(`/api/vote?${params}`);
+  if (!response.ok) throw new Error('Failed to fetch votes');
+  return response.json();
+}
+
+/**
+ * Submit a community vote
+ */
+export async function submitVote(message: VoteMessage, signature: string): Promise<{
+  success: boolean;
+  vote: { voter: string; indexer: string; isDelegator: boolean; voteWeight: number; period: string };
+}> {
+  const response = await fetch('/api/vote', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, signature }),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.error || 'Failed to submit vote');
+  return json;
 }
 
 /**

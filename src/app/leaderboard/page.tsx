@@ -8,6 +8,8 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Pagination } from '@/components/ui/Pagination';
 import { cn, shortenAddress } from '@/lib/utils';
 import type { LeaderboardEntry } from '@/lib/scoring';
+import { VoteButton } from '@/components/VoteButton';
+import { VoterList, VoteCount } from '@/components/VoterList';
 
 const PAGE_SIZE = 25;
 
@@ -69,6 +71,13 @@ const SCORE_SECTIONS = [
       { key: 'allocation_breadth_score' as const, label: 'Allocation Breadth', max: 2 },
     ],
   },
+  {
+    label: 'Community',
+    max: 10,
+    items: [
+      { key: 'community_vote_score' as const, label: 'Community Votes', max: 10 },
+    ],
+  },
 ] as const;
 
 export default function LeaderboardPage() {
@@ -124,7 +133,7 @@ export default function LeaderboardPage() {
       <div>
         <h1 className="text-xl font-semibold text-[var(--text)]">Indexer Leaderboard</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Monthly rankings based on 12 scoring dimensions across network contribution, economics, trust, and protocol health.
+          Monthly rankings based on 11 scoring dimensions across network contribution, economics, trust, protocol health, and community votes.
           {data.periodStart && (
             <span className="text-[var(--text)]"> {formatPeriod(data.periodStart)}</span>
           )}
@@ -174,6 +183,8 @@ export default function LeaderboardPage() {
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Economics</th>
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Trust</th>
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Health</th>
+                <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Community</th>
+                <th className={TH_CLASS}>Vote</th>
               </tr>
             </thead>
             <tbody>
@@ -204,10 +215,10 @@ export default function LeaderboardPage() {
             <h4 className="font-semibold text-[var(--text)] mb-2">About the Leaderboard</h4>
             <p className="text-sm text-[var(--text-muted)]">
               Scores are computed monthly using percentile normalisation (p10/p90) across all active indexers.
-              Each indexer is scored on 10 dimensions grouped into 4 components: Network Contribution (35pts),
-              Economics (25pts), Trust &amp; Stability (20pts), and Protocol Health (6pts).
-              Community votes (10pts) are reserved for a future phase. Penalties are multiplicative
-              and stack — an indexer with multiple infractions can see their score significantly reduced.
+              Each indexer is scored on 10 dimensions grouped into 5 components: Network Contribution (35pts),
+              Economics (25pts), Trust &amp; Stability (20pts), Protocol Health (6pts), and Community Votes (10pts).
+              Anyone with a wallet can vote once per month for their favourite indexer — delegator
+              votes count 5x. Penalties are multiplicative and stack.
             </p>
           </div>
           <div>
@@ -288,11 +299,20 @@ function DesktopRow({
         <td className="px-4 py-3 text-right hidden lg:table-cell">
           <ComponentCell score={healthScore} max={6} />
         </td>
+        <td className="px-4 py-3 text-right hidden lg:table-cell">
+          <VoteCount indexerAddress={entry.indexer_address} />
+        </td>
+        <td className="px-4 py-3 text-center">
+          <VoteButton indexerAddress={entry.indexer_address} />
+        </td>
       </tr>
       {expanded && (
         <tr className="border-b border-[0.5px] border-[var(--border)]">
-          <td colSpan={7} className="px-4 py-4 bg-[var(--bg-elevated)]">
+          <td colSpan={9} className="px-4 py-4 bg-[var(--bg-elevated)]">
             <ScoreBreakdown entry={entry} />
+            <div className="mt-4 pt-3 border-t border-[var(--border)]">
+              <VoterList indexerAddress={entry.indexer_address} />
+            </div>
           </td>
         </tr>
       )}
@@ -344,23 +364,28 @@ function MobileCard({
       <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-[var(--bg)]">
         <div
           className="rounded-l-full bg-[var(--accent)]"
-          style={{ width: barWidth(entry.query_fee_score + entry.allocation_efficiency_score, 86) }}
+          style={{ width: barWidth(entry.query_fee_score + entry.allocation_efficiency_score, 96) }}
           title="Network"
         />
         <div
           className="bg-[var(--green)]"
-          style={{ width: barWidth(entry.delegator_apr_score + entry.effective_cut_score + entry.capacity_score, 86) }}
+          style={{ width: barWidth(entry.delegator_apr_score + entry.effective_cut_score + entry.capacity_score, 96) }}
           title="Economics"
         />
         <div
           className="bg-[var(--cyan)]"
-          style={{ width: barWidth(entry.cut_stability_score + entry.tenure_bonus + entry.retention_score, 86) }}
+          style={{ width: barWidth(entry.cut_stability_score + entry.tenure_bonus + entry.retention_score, 96) }}
           title="Trust"
         />
         <div
-          className="rounded-r-full bg-[var(--amber)]"
-          style={{ width: barWidth(entry.reo_score + entry.allocation_breadth_score, 86) }}
+          className="bg-[var(--amber)]"
+          style={{ width: barWidth(entry.reo_score + entry.allocation_breadth_score, 96) }}
           title="Health"
+        />
+        <div
+          className="rounded-r-full bg-[var(--purple)]"
+          style={{ width: barWidth(entry.community_vote_score, 96) }}
+          title="Community"
         />
       </div>
       <div className="flex justify-between mt-1.5 text-[10px] text-[var(--text-faint)]">
@@ -368,11 +393,20 @@ function MobileCard({
         <span>Economics</span>
         <span>Trust</span>
         <span>Health</span>
+        <span>Community</span>
+      </div>
+
+      {/* Vote button */}
+      <div className="mt-3">
+        <VoteButton indexerAddress={entry.indexer_address} />
       </div>
 
       {expanded && (
         <div className="mt-4 pt-4 border-t border-[var(--border)]">
           <ScoreBreakdown entry={entry} />
+          <div className="mt-4 pt-3 border-t border-[var(--border)]">
+            <VoterList indexerAddress={entry.indexer_address} />
+          </div>
         </div>
       )}
     </Card>
