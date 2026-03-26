@@ -18,6 +18,7 @@
     "db:studio": "supabase studio"
   },
   "dependencies": {
+    "@pinax/graph-networks-registry": "^0.7.1",
     "@rainbow-me/rainbowkit": "^2.2.10",
     "@supabase/supabase-js": "^2.100.0",
     "@tailwindcss/typography": "^0.5.19",

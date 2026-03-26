@@ -407,6 +407,17 @@ export async function fetchIndexingStatus(hash: string): Promise<DeploymentIndex
 }
 
 /**
+ * Fetch networks registry (cached 24h server-side)
+ */
+export async function fetchNetworksRegistry(): Promise<{
+  networks: import('@/app/api/networks/route').NetworkInfo[];
+}> {
+  const response = await fetch('/api/networks');
+  if (!response.ok) throw new Error('Failed to fetch networks registry');
+  return response.json();
+}
+
+/**
  * Generic fetch with error handling
  */
 export async function fetchWithRetry<T>(

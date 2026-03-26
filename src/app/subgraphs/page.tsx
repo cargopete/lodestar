@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Pagination } from '@/components/ui/Pagination';
-import { useSubgraphDeployments, useManifestAnalysis } from '@/hooks/useNetworkStats';
+import { useSubgraphDeployments, useManifestAnalysis, useNetworksRegistry } from '@/hooks/useNetworkStats';
 import { weiToGRT, formatGRT, cn } from '@/lib/utils';
 import type { ComplexityCategory } from '@/lib/manifest';
+import type { NetworkInfo } from '@/app/api/networks/route';
 
 // ---------- constants ----------
 
@@ -24,12 +25,6 @@ const SORT_KEY_MAP: Record<string, string> = {
 };
 
 type SortKey = 'signal' | 'stake' | 'queryFees';
-
-// Short display names for long network identifiers
-const NETWORK_DISPLAY: Record<string, string> = {
-  'arbitrum-one': 'arb-one',
-};
-const displayNetwork = (n: string) => NETWORK_DISPLAY[n] ?? n;
 
 // ---------- per-row cells ----------
 
@@ -57,7 +52,7 @@ function ComplexityCell({ hash, onComplexity }: { hash: string; onComplexity?: (
   );
 }
 
-function NetworkCell({ hash, onNetwork }: { hash: string; onNetwork?: (hash: string, network: string) => void }) {
+function NetworkCell({ hash, onNetwork, networkMap }: { hash: string; onNetwork?: (hash: string, network: string) => void; networkMap: Map<string, NetworkInfo> }) {
   const { data, isLoading, isError } = useManifestAnalysis(hash);
 
   useEffect(() => {
@@ -67,10 +62,20 @@ function NetworkCell({ hash, onNetwork }: { hash: string; onNetwork?: (hash: str
   if (isLoading) return <div className="h-5 w-16 shimmer rounded" />;
   if (isError || !data) return <span className="text-[var(--text-faint)]">--</span>;
 
-  return data.network ? (
-    <Badge variant="accent">{displayNetwork(data.network)}</Badge>
-  ) : (
-    <span className="text-[var(--text-faint)]">--</span>
+  if (!data.network) return <span className="text-[var(--text-faint)]">--</span>;
+
+  const info = networkMap.get(data.network);
+  const displayName = info?.shortName ?? data.network;
+  const iconUrl = info?.iconUrl;
+
+  return (
+    <Badge variant="accent" className="inline-flex items-center gap-1.5">
+      {iconUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={iconUrl} alt="" className="w-3.5 h-3.5 rounded-full" />
+      )}
+      {displayName}
+    </Badge>
   );
 }
 
@@ -103,6 +108,21 @@ export default function SubgraphDirectory() {
   const [knownComplexities, setKnownComplexities] = useState<Set<string>>(new Set());
   const [rowComplexities, setRowComplexities] = useState<Record<string, string>>({});
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Networks registry for display names and icons
+  const { data: registryData } = useNetworksRegistry();
+  const networkMap = useMemo(() => {
+    const map = new Map<string, NetworkInfo>();
+    if (!registryData?.networks) return map;
+    for (const n of registryData.networks) {
+      map.set(n.id, n);
+      // Also index by aliases so manifest network IDs like "xdai" resolve
+      for (const alias of n.aliases) {
+        if (!map.has(alias)) map.set(alias, n);
+      }
+    }
+    return map;
+  }, [registryData]);
 
   const handleNetwork = useCallback((hash: string, network: string) => {
     setKnownNetworks((prev) => {
@@ -296,9 +316,12 @@ export default function SubgraphDirectory() {
             )}
           >
             <option value="all">All Networks</option>
-            {[...knownNetworks].sort().map((n) => (
-              <option key={n} value={n}>{displayNetwork(n)}</option>
-            ))}
+            {[...knownNetworks].sort().map((n) => {
+              const info = networkMap.get(n);
+              return (
+                <option key={n} value={n}>{info?.shortName ?? n}</option>
+              );
+            })}
           </select>
         )}
       </div>
@@ -377,7 +400,7 @@ export default function SubgraphDirectory() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <ComplexityCell hash={row.ipfsHash} onComplexity={handleComplexity} />
-                    <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} />
+                    <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} networkMap={networkMap} />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
@@ -484,7 +507,7 @@ export default function SubgraphDirectory() {
                       <ComplexityCell hash={row.ipfsHash} onComplexity={handleComplexity} />
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} />
+                      <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} networkMap={networkMap} />
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text)]">
                       {formatGRT(row.signal)}

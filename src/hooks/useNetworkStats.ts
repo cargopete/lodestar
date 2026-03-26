@@ -16,6 +16,7 @@ import {
   fetchPOIOverview,
   fetchPOIDeployment,
   fetchIndexingStatus,
+  fetchNetworksRegistry,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -193,6 +194,18 @@ export function useSubgraphDeployments(params: {
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
     placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Hook for Graph Networks Registry (display names + icons for chains)
+ */
+export function useNetworksRegistry() {
+  return useQuery({
+    queryKey: ['networksRegistry'],
+    queryFn: fetchNetworksRegistry,
+    staleTime: ONE_HOUR,
+    refetchInterval: ONE_HOUR,
   });
 }
 
