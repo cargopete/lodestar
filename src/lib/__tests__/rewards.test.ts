@@ -8,6 +8,8 @@ import {
   calculateThawingRemaining,
   formatThawingTime,
   generateRewardsCSV,
+  calculatePoolExchangeRate,
+  calculateExchangeRateAPY,
 } from '../rewards';
 
 // ---------- calculateExchangeRate ----------
@@ -185,6 +187,73 @@ describe('calculateDelegatorAPR', () => {
     // Without P95 cap, the outlier would dominate. With cap, it should be reasonable
     expect(aprCapped).toBeGreaterThan(0);
     expect(aprCapped).toBeLessThan(100_000); // Sanity check — not astronomical
+  });
+});
+
+// ---------- calculatePoolExchangeRate ----------
+
+describe('calculatePoolExchangeRate', () => {
+  it('returns rate excluding thawing tokens', () => {
+    // 2000 GRT tokens, 200 GRT thawing, 1000 GRT shares → (2000-200)/1000 = 1.8
+    const rate = calculatePoolExchangeRate(
+      '2000000000000000000000',
+      '200000000000000000000',
+      '1000000000000000000000',
+    );
+    expect(rate).toBeCloseTo(1.8);
+  });
+
+  it('returns 1 when shares are zero', () => {
+    expect(calculatePoolExchangeRate('1000000000000000000000', '0', '0')).toBe(1);
+  });
+
+  it('matches basic exchange rate when no thawing', () => {
+    const rate = calculatePoolExchangeRate(
+      '2000000000000000000000',
+      '0',
+      '1000000000000000000000',
+    );
+    expect(rate).toBeCloseTo(2.0);
+  });
+});
+
+// ---------- calculateExchangeRateAPY ----------
+
+describe('calculateExchangeRateAPY', () => {
+  it('calculates APY from rate growth', () => {
+    // Rate grew from 1.0 to 1.1 over 30 days
+    // yield = 0.1/1.0 = 10% in 30 days
+    // APY = ((1.1/1.0)^(365/30) - 1) * 100
+    const apy = calculateExchangeRateAPY(1.1, 1.0, 30);
+    expect(apy).toBeGreaterThan(100); // >100% annualised from 10% monthly
+    expect(apy).toBeCloseTo(218.9, 0); // (1.1^(365/30) - 1) * 100
+  });
+
+  it('returns 0 when rate did not grow', () => {
+    expect(calculateExchangeRateAPY(1.0, 1.0, 30)).toBe(0);
+  });
+
+  it('returns 0 when rate declined (slashing)', () => {
+    expect(calculateExchangeRateAPY(0.95, 1.0, 30)).toBe(0);
+  });
+
+  it('returns 0 for zero historical rate', () => {
+    expect(calculateExchangeRateAPY(1.1, 0, 30)).toBe(0);
+  });
+
+  it('returns 0 for zero current rate', () => {
+    expect(calculateExchangeRateAPY(0, 1.0, 30)).toBe(0);
+  });
+
+  it('returns 0 for zero window', () => {
+    expect(calculateExchangeRateAPY(1.1, 1.0, 0)).toBe(0);
+  });
+
+  it('produces reasonable APY for typical indexer growth', () => {
+    // ~0.8% growth over 90 days → ~3.2% annualised APY
+    const apy = calculateExchangeRateAPY(1.008, 1.0, 90);
+    expect(apy).toBeGreaterThan(3);
+    expect(apy).toBeLessThan(4);
   });
 });
 

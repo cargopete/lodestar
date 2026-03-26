@@ -76,6 +76,7 @@ export interface IndexerDbRow {
   rewards_earned_grt: number | null;
   query_fees_collected_grt: number | null;
   allocation_count: number | null;
+  delegation_exchange_rate: number | null;
   last_updated: string;
 }
 
@@ -91,6 +92,7 @@ export interface IndexerSnapshotRow {
   query_fee_cut: number | null;
   delegator_apr: number | null;
   delegation_capacity_pct: number | null;
+  delegation_exchange_rate: number | null;
   score: number | null;
   score_grade: string | null;
 }

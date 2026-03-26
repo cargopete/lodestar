@@ -52,7 +52,9 @@ export interface EnrichedIndexer {
   provisionedGRT: number | null;
   // Query fees collected (cumulative, from subgraph)
   queryFeesCollectedGRT: number;
-  // Rolling APY (derived from closed allocations)
+  // Delegation pool exchange rate (excl. thawing tokens)
+  delegationExchangeRate: number | null;
+  // Rolling APY (exchange-rate-based when available, else closed-allocation fallback)
   rollingAPY30d: number | null;
   rollingAPY90d: number | null;
   // Composite risk score (computed from all dimensions above)

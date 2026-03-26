@@ -6,6 +6,8 @@ import {
   calculateDelegatorAPR,
   calculateDelegationCapacity,
   calculateRollingAPY,
+  calculatePoolExchangeRate,
+  calculateExchangeRateAPY,
 } from './rewards';
 import { calculateIndexerScore } from './risk-score';
 import type { EnrichedIndexer } from './enriched';
@@ -34,6 +36,7 @@ interface SubgraphIndexer {
   rewardsEarned: string;
   queryFeesCollected: string;
   delegatorShares: string;
+  delegatedThawingTokens?: string;
   url: string | null;
   geoHash: string | null;
   createdAt: number;
@@ -126,6 +129,7 @@ export async function refreshIndexers(opts: {
         rewardsEarned
         queryFeesCollected
         delegatorShares
+        delegatedThawingTokens
         url
         geoHash
         createdAt
@@ -331,6 +335,49 @@ export async function refreshIndexers(opts: {
     console.warn('Rolling APY subgraph query failed (non-fatal):', e);
   }
 
+  // Step 5c: Fetch historical exchange rates for exchange-rate-based APY
+  const exchangeRateHistory = new Map<string, { rate30d: number | null; rate90d: number | null }>();
+  if (sql) {
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 86400 * 1000).toISOString();
+
+      const rates30d = await sql`
+        SELECT DISTINCT ON (indexer_address)
+          indexer_address, delegation_exchange_rate
+        FROM indexer_snapshots
+        WHERE snapshot_at <= ${thirtyDaysAgo}
+          AND delegation_exchange_rate IS NOT NULL
+        ORDER BY indexer_address, snapshot_at DESC
+      `;
+
+      const rates90d = await sql`
+        SELECT DISTINCT ON (indexer_address)
+          indexer_address, delegation_exchange_rate
+        FROM indexer_snapshots
+        WHERE snapshot_at <= ${ninetyDaysAgo}
+          AND delegation_exchange_rate IS NOT NULL
+        ORDER BY indexer_address, snapshot_at DESC
+      `;
+
+      for (const r of rates30d) {
+        exchangeRateHistory.set(r.indexer_address, {
+          rate30d: Number(r.delegation_exchange_rate),
+          rate90d: null,
+        });
+      }
+      for (const r of rates90d) {
+        const existing = exchangeRateHistory.get(r.indexer_address) ?? { rate30d: null, rate90d: null };
+        existing.rate90d = Number(r.delegation_exchange_rate);
+        exchangeRateHistory.set(r.indexer_address, existing);
+      }
+
+      console.log(`Exchange rate history: ${exchangeRateHistory.size} indexers with historical rates`);
+    } catch (e) {
+      console.warn('Exchange rate history fetch failed (non-fatal):', e);
+    }
+  }
+
   // Step 6: Compute enriched data for each indexer
   const enriched: EnrichedIndexer[] = indexers.map((indexer) => {
     const lockedTokens = weiToGRT(indexer.lockedTokens ?? '0');
@@ -383,13 +430,31 @@ export async function refreshIndexers(opts: {
       ? weiToGRT(indexer.provisionedTokens)
       : null;
 
+    // Exchange-rate-based APY (primary) with closed-allocation fallback
+    const currentExchangeRate = calculatePoolExchangeRate(
+      indexer.delegatedTokens,
+      indexer.delegatedThawingTokens ?? '0',
+      indexer.delegatorShares
+    );
+    const history = exchangeRateHistory.get(indexer.id);
+    const erAPY30d = history?.rate30d
+      ? calculateExchangeRateAPY(currentExchangeRate, history.rate30d, 30)
+      : null;
+    const erAPY90d = history?.rate90d
+      ? calculateExchangeRateAPY(currentExchangeRate, history.rate90d, 90)
+      : null;
+
     const indexerClosedAllocs = closedAllocsByIndexer.get(indexer.id) ?? [];
-    const rollingAPY30d = indexerClosedAllocs.length > 0 && delegated > 0
-      ? calculateRollingAPY(indexerClosedAllocs, delegated, 30)
-      : null;
-    const rollingAPY90d = indexerClosedAllocs.length > 0 && delegated > 0
-      ? calculateRollingAPY(indexerClosedAllocs, delegated, 90)
-      : null;
+    const rollingAPY30d = erAPY30d ?? (
+      indexerClosedAllocs.length > 0 && delegated > 0
+        ? calculateRollingAPY(indexerClosedAllocs, delegated, 30)
+        : null
+    );
+    const rollingAPY90d = erAPY90d ?? (
+      indexerClosedAllocs.length > 0 && delegated > 0
+        ? calculateRollingAPY(indexerClosedAllocs, delegated, 90)
+        : null
+    );
 
     const indexerScore = calculateIndexerScore({
       reoStatus,
@@ -463,6 +528,7 @@ export async function refreshIndexers(opts: {
         ? parseFloat(indexer.indexerRewardsOwnGenerationRatio)
         : null,
       provisionedGRT,
+      delegationExchangeRate: currentExchangeRate,
       rollingAPY30d,
       rollingAPY90d,
       score: indexerScore.composite,

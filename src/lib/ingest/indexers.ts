@@ -106,6 +106,7 @@ export async function writeIndexers(
         rewards_earned_grt = EXCLUDED.rewards_earned_grt,
         query_fees_collected_grt = EXCLUDED.query_fees_collected_grt,
         allocation_count = EXCLUDED.allocation_count,
+        delegation_exchange_rate = EXCLUDED.delegation_exchange_rate,
         last_updated = EXCLUDED.last_updated
     `;
     upserted += rows.length;
@@ -123,6 +124,7 @@ export async function writeIndexers(
     delegator_apr: i.delegatorAPR,
     delegation_capacity_pct: i.delegationCapacity.utilizationPercent,
     query_fees_collected_grt: i.queryFeesCollectedGRT,
+    delegation_exchange_rate: i.delegationExchangeRate,
     score: i.score,
     score_grade: i.scoreGrade,
   }));
@@ -176,6 +178,7 @@ function mapToIndexerRow(i: EnrichedIndexer) {
     rewards_earned_grt: weiToGRT(i.rewardsEarned),
     query_fees_collected_grt: i.queryFeesCollectedGRT,
     allocation_count: i.allocationCount,
+    delegation_exchange_rate: i.delegationExchangeRate,
     last_updated: new Date().toISOString(),
   };
 }

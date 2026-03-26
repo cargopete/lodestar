@@ -154,6 +154,10 @@ export function calculateDelegatorAPR(
  * Uses indexingDelegatorRewards from the subgraph, which already has the
  * reward cut applied at close time (more accurate than applying the current cut).
  *
+ * NOTE: This is the legacy method — it divides rewards by the *current*
+ * delegation pool size, so recent delegations/undelegations distort the result.
+ * Prefer calculateExchangeRateAPY when historical exchange rates are available.
+ *
  * @param closedAllocations - Closed allocations with pre-calculated delegator rewards
  * @param delegatedGRT - Total GRT delegated to this indexer
  * @param windowDays - Rolling window (30 or 90)
@@ -177,6 +181,50 @@ export function calculateRollingAPY(
   if (delegatorRewards <= 0) return 0;
 
   return (delegatorRewards / delegatedGRT) * (365 / windowDays) * 100;
+}
+
+/**
+ * Calculate the delegation pool exchange rate, excluding thawing tokens.
+ *
+ * rate = (delegatedTokens - delegatedThawingTokens) / delegatorShares
+ *
+ * Thawing tokens are excluded because they no longer generate rewards
+ * but remain in delegatedTokens until withdrawn.
+ */
+export function calculatePoolExchangeRate(
+  delegatedTokens: string,
+  delegatedThawingTokens: string,
+  delegatorShares: string
+): number {
+  const tokens = weiToGRT(delegatedTokens);
+  const thawing = weiToGRT(delegatedThawingTokens);
+  const shares = weiToGRT(delegatorShares);
+
+  if (shares === 0) return 1;
+  return (tokens - thawing) / shares;
+}
+
+/**
+ * Calculate APY from delegation pool exchange rate changes.
+ *
+ * APY = ((rate_now / rate_old) ^ (365/N) - 1) × 100
+ *
+ * This captures everything: indexing rewards, query fees, and slashing.
+ * Immune to delegation/undelegation noise because the rate is per-share.
+ *
+ * Credit: Marc-André (EllipfraRole / IndexerDesignPartner)
+ */
+export function calculateExchangeRateAPY(
+  currentRate: number,
+  historicalRate: number,
+  windowDays: number
+): number {
+  if (historicalRate <= 0 || currentRate <= 0 || windowDays <= 0) return 0;
+
+  const ratio = currentRate / historicalRate;
+  if (ratio <= 1) return 0;
+
+  return (Math.pow(ratio, 365 / windowDays) - 1) * 100;
 }
 
 /**
