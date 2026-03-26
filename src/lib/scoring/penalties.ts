@@ -14,7 +14,7 @@ export interface PenaltyInput {
   hasOlderSlashing: boolean;
   /** 3+ reward cut increases in 12 months */
   hasRepeatedCutIncreases: boolean;
-  /** POI consensus rate below 80% in last 30 days */
+  /** POI consensus rate below 50% in last 30 days (min 5 allocations) */
   hasLowPoiConsensus: boolean;
   /** Zero query fees in 30 days despite active allocations */
   hasZeroFees: boolean;
@@ -51,7 +51,7 @@ export function calculatePenalties(input: PenaltyInput): PenaltyResult {
 
   if (input.hasLowPoiConsensus) {
     multiplier *= 0.80;
-    reasons.push('POI consensus < 80% last 30 days (×0.80)');
+    reasons.push('POI consensus < 50% last 30 days (×0.80)');
   }
 
   if (input.hasZeroFees) {

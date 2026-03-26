@@ -255,6 +255,7 @@ export async function computeMonthlyScores(
       GROUP BY deployment_id, closed_epoch, poi
     )
     SELECT a.indexer_address,
+      COUNT(*) as total,
       CASE WHEN COUNT(*) > 0
         THEN SUM(CASE WHEN a.poi = c.poi THEN 1 ELSE 0 END)::numeric / COUNT(*)
         ELSE NULL
@@ -265,7 +266,10 @@ export async function computeMonthlyScores(
       AND c.rn = 1
     GROUP BY a.indexer_address
   `;
-  const poi30dMap = new Map(poi30dRows.map((r) => [r.indexer_address, r.rate !== null ? Number(r.rate) : null]));
+  const poi30dMap = new Map(poi30dRows.map((r) => [r.indexer_address, {
+    rate: r.rate !== null ? Number(r.rate) : null,
+    total: Number(r.total),
+  }]));
 
   // ── Assemble metrics per indexer ──────────────────────
 
@@ -276,7 +280,9 @@ export async function computeMonthlyScores(
     const selfStake = Number(idx.self_stake_grt) || 0;
     const hasActiveAllocs = (Number(idx.allocation_count) || 0) > 0;
     const fees30d = fees30dMap.get(addr) ?? 0;
-    const poi30dRate = poi30dMap.get(addr);
+    const poi30d = poi30dMap.get(addr);
+    const poi30dRate = poi30d?.rate ?? null;
+    const poi30dTotal = poi30d?.total ?? 0;
 
     const monthsActive = idx.created_at_ts
       ? Math.floor((now - new Date(idx.created_at_ts).getTime()) / (30 * 24 * 3600 * 1000))
@@ -300,7 +306,7 @@ export async function computeMonthlyScores(
         hasRecentSlashing: disputes.hasRecent,
         hasOlderSlashing: disputes.hasOlder,
         hasRepeatedCutIncreases: cutData.increaseCount >= 3,
-        hasLowPoiConsensus: poi30dRate != null && poi30dRate < 0.80,
+        hasLowPoiConsensus: poi30dRate != null && poi30dTotal >= 5 && poi30dRate < 0.50,
         hasZeroFees: hasActiveAllocs && fees30d === 0,
         hasBelowMinStake: selfStake < 100000,
       },
