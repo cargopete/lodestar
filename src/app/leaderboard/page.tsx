@@ -63,10 +63,9 @@ const SCORE_SECTIONS = [
   },
   {
     label: 'Protocol Health',
-    max: 10,
+    max: 6,
     items: [
       { key: 'reo_score' as const, label: 'REO Eligibility', max: 4 },
-      { key: 'poi_consensus_score' as const, label: 'POI Consensus', max: 4 },
       { key: 'allocation_breadth_score' as const, label: 'Allocation Breadth', max: 2 },
     ],
   },
@@ -205,8 +204,8 @@ export default function LeaderboardPage() {
             <h4 className="font-semibold text-[var(--text)] mb-2">About the Leaderboard</h4>
             <p className="text-sm text-[var(--text-muted)]">
               Scores are computed monthly using percentile normalisation (p10/p90) across all active indexers.
-              Each indexer is scored on 12 dimensions grouped into 4 components: Network Contribution (35pts),
-              Economics (25pts), Trust &amp; Stability (20pts), and Protocol Health (10pts).
+              Each indexer is scored on 10 dimensions grouped into 4 components: Network Contribution (35pts),
+              Economics (25pts), Trust &amp; Stability (20pts), and Protocol Health (6pts).
               Community votes (10pts) are reserved for a future phase. Penalties are multiplicative
               and stack — an indexer with multiple infractions can see their score significantly reduced.
             </p>
@@ -245,7 +244,7 @@ function DesktopRow({
   const networkScore = entry.query_fee_score + entry.allocation_efficiency_score;
   const economicsScore = entry.delegator_apr_score + entry.effective_cut_score + entry.capacity_score;
   const trustScore = entry.cut_stability_score + entry.tenure_bonus + entry.retention_score;
-  const healthScore = entry.reo_score + entry.poi_consensus_score + entry.allocation_breadth_score;
+  const healthScore = entry.reo_score + entry.allocation_breadth_score;
 
   return (
     <>
@@ -287,7 +286,7 @@ function DesktopRow({
           <ComponentCell score={trustScore} max={20} />
         </td>
         <td className="px-4 py-3 text-right hidden lg:table-cell">
-          <ComponentCell score={healthScore} max={10} />
+          <ComponentCell score={healthScore} max={6} />
         </td>
       </tr>
       {expanded && (
@@ -345,22 +344,22 @@ function MobileCard({
       <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-[var(--bg)]">
         <div
           className="rounded-l-full bg-[var(--accent)]"
-          style={{ width: barWidth(entry.query_fee_score + entry.allocation_efficiency_score, 90) }}
+          style={{ width: barWidth(entry.query_fee_score + entry.allocation_efficiency_score, 86) }}
           title="Network"
         />
         <div
           className="bg-[var(--green)]"
-          style={{ width: barWidth(entry.delegator_apr_score + entry.effective_cut_score + entry.capacity_score, 90) }}
+          style={{ width: barWidth(entry.delegator_apr_score + entry.effective_cut_score + entry.capacity_score, 86) }}
           title="Economics"
         />
         <div
           className="bg-[var(--cyan)]"
-          style={{ width: barWidth(entry.cut_stability_score + entry.tenure_bonus + entry.retention_score, 90) }}
+          style={{ width: barWidth(entry.cut_stability_score + entry.tenure_bonus + entry.retention_score, 86) }}
           title="Trust"
         />
         <div
           className="rounded-r-full bg-[var(--amber)]"
-          style={{ width: barWidth(entry.reo_score + entry.poi_consensus_score + entry.allocation_breadth_score, 90) }}
+          style={{ width: barWidth(entry.reo_score + entry.allocation_breadth_score, 86) }}
           title="Health"
         />
       </div>

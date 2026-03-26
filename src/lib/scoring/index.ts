@@ -11,6 +11,5 @@ export {
   scoreTenure,
   scoreRetention,
   scoreReo,
-  scorePoiConsensus,
   scoreAllocationBreadth,
 } from './components';

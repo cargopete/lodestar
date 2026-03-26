@@ -19,13 +19,12 @@ import {
   scoreTenure,
   scoreRetention,
   scoreReo,
-  scorePoiConsensus,
   scoreAllocationBreadth,
 } from './components';
 import { calculatePenalties, type PenaltyInput } from './penalties';
 
 // Max achievable subtotal without community votes
-const MAX_SUBTOTAL_WITHOUT_VOTES = 90;
+const MAX_SUBTOTAL_WITHOUT_VOTES = 86;
 
 interface IndexerMetrics {
   address: string;
@@ -42,7 +41,6 @@ interface IndexerMetrics {
   netFlow30d: number;
   // Protocol Health
   reoStatus: string;
-  poiConsensusRate: number | null;
   distinctDeployments: number;
   // Penalties
   penalties: PenaltyInput;
@@ -159,42 +157,7 @@ export async function computeMonthlyScores(
   `;
   const flowMap = new Map(flowRows.map((r) => [r.indexer_address, Number(r.net_flow)]));
 
-  // 6. POI consensus rate (90-day)
-  const poiRows = await sql`
-    WITH allocation_pois AS (
-      SELECT deployment_id, closed_epoch, poi, indexer_address
-      FROM allocations
-      WHERE closed_at >= NOW() - INTERVAL '90 days'
-        AND poi IS NOT NULL
-        AND poi != '0x0000000000000000000000000000000000000000000000000000000000000000'
-        AND status = 'closed'
-    ),
-    consensus AS (
-      SELECT deployment_id, closed_epoch, poi,
-        ROW_NUMBER() OVER (
-          PARTITION BY deployment_id, closed_epoch
-          ORDER BY COUNT(*) DESC
-        ) as rn
-      FROM allocation_pois
-      GROUP BY deployment_id, closed_epoch, poi
-    )
-    SELECT a.indexer_address,
-      COUNT(*)::numeric as total,
-      SUM(CASE WHEN a.poi = c.poi THEN 1 ELSE 0 END)::numeric as matches
-    FROM allocation_pois a
-    JOIN consensus c ON a.deployment_id = c.deployment_id
-      AND a.closed_epoch = c.closed_epoch
-      AND c.rn = 1
-    GROUP BY a.indexer_address
-  `;
-  // Require minimum 3 closed allocations with POIs for a meaningful consensus rate
-  const POI_MIN_SAMPLE = 3;
-  const poiMap = new Map(poiRows.map((r) => [
-    r.indexer_address,
-    Number(r.total) >= POI_MIN_SAMPLE ? Number(r.matches) / Number(r.total) : null,
-  ]));
-
-  // 7. Allocation breadth (distinct active deployments)
+  // 6. Allocation breadth (distinct active deployments)
   const breadthRows = await sql`
     SELECT indexer_address, COUNT(DISTINCT deployment_id) as cnt
     FROM allocations
@@ -237,42 +200,6 @@ export async function computeMonthlyScores(
   `;
   const fees30dMap = new Map(fees30dRows.map((r) => [r.indexer_address, Number(r.fees)]));
 
-  // 10. POI consensus last 30 days (for penalty check)
-  const poi30dRows = await sql`
-    WITH recent_pois AS (
-      SELECT deployment_id, closed_epoch, poi, indexer_address
-      FROM allocations
-      WHERE closed_at >= NOW() - INTERVAL '30 days'
-        AND poi IS NOT NULL
-        AND poi != '0x0000000000000000000000000000000000000000000000000000000000000000'
-        AND status = 'closed'
-    ),
-    consensus AS (
-      SELECT deployment_id, closed_epoch, poi,
-        ROW_NUMBER() OVER (
-          PARTITION BY deployment_id, closed_epoch
-          ORDER BY COUNT(*) DESC
-        ) as rn
-      FROM recent_pois
-      GROUP BY deployment_id, closed_epoch, poi
-    )
-    SELECT a.indexer_address,
-      COUNT(*) as total,
-      CASE WHEN COUNT(*) > 0
-        THEN SUM(CASE WHEN a.poi = c.poi THEN 1 ELSE 0 END)::numeric / COUNT(*)
-        ELSE NULL
-      END as rate
-    FROM recent_pois a
-    JOIN consensus c ON a.deployment_id = c.deployment_id
-      AND a.closed_epoch = c.closed_epoch
-      AND c.rn = 1
-    GROUP BY a.indexer_address
-  `;
-  const poi30dMap = new Map(poi30dRows.map((r) => [r.indexer_address, {
-    rate: r.rate !== null ? Number(r.rate) : null,
-    total: Number(r.total),
-  }]));
-
   // ── Assemble metrics per indexer ──────────────────────
 
   const metrics: IndexerMetrics[] = indexers.map((idx) => {
@@ -282,9 +209,6 @@ export async function computeMonthlyScores(
     const selfStake = Number(idx.self_stake_grt) || 0;
     const hasActiveAllocs = (Number(idx.allocation_count) || 0) > 0;
     const fees30d = fees30dMap.get(addr) ?? 0;
-    const poi30d = poi30dMap.get(addr);
-    const poi30dRate = poi30d?.rate ?? null;
-    const poi30dTotal = poi30d?.total ?? 0;
 
     const monthsActive = idx.created_at_ts
       ? Math.floor((now - new Date(idx.created_at_ts).getTime()) / (30 * 24 * 3600 * 1000))
@@ -301,14 +225,13 @@ export async function computeMonthlyScores(
       monthsActive,
       netFlow30d: flowMap.get(addr) ?? 0,
       reoStatus: idx.reo_status ?? 'unknown',
-      poiConsensusRate: poiMap.get(addr) ?? null,
       distinctDeployments: breadthMap.get(addr) ?? 0,
       penalties: {
         hasActiveDispute: disputes.hasActive,
         hasRecentSlashing: disputes.hasRecent,
         hasOlderSlashing: disputes.hasOlder,
         hasRepeatedCutIncreases: cutData.increaseCount >= 3,
-        hasLowPoiConsensus: poi30dRate != null && poi30dTotal >= 5 && poi30dRate < 0.50,
+        hasLowPoiConsensus: false,
         hasZeroFees: hasActiveAllocs && fees30d === 0,
         hasBelowMinStake: selfStake < 100000,
       },
@@ -337,18 +260,17 @@ export async function computeMonthlyScores(
     const tenureScore = scoreTenure(m.monthsActive);
     const retScore = scoreRetention(m.netFlow30d);
     const reoScore = scoreReo(m.reoStatus);
-    const poiScore = scorePoiConsensus(m.poiConsensusRate);
     const breadthScore = scoreAllocationBreadth(m.distinctDeployments);
 
     const subtotal =
       queryFeeScore + allocEffScore +
       aprScore + cutScore + capScore +
       stabilityScore + tenureScore + retScore +
-      reoScore + poiScore + breadthScore;
+      reoScore + breadthScore;
 
     const { multiplier: penaltyMultiplier } = calculatePenalties(m.penalties);
 
-    // Normalise to 0–100 (max achievable without votes is 90)
+    // Normalise to 0–100 (max achievable without votes is 86)
     const penalised = subtotal * penaltyMultiplier;
     const finalScore = (penalised / MAX_SUBTOTAL_WITHOUT_VOTES) * 100;
 
@@ -366,7 +288,7 @@ export async function computeMonthlyScores(
       tenure_bonus: round2(tenureScore),
       retention_score: round2(retScore),
       reo_score: round2(reoScore),
-      poi_consensus_score: round2(poiScore),
+      poi_consensus_score: 0,
       allocation_breadth_score: round2(breadthScore),
       community_vote_score: 0,
       subtotal: round2(subtotal),

@@ -77,7 +77,7 @@ const navigation: NavSection[] = [
     title: 'Tools',
     items: [
       {
-        label: 'Leaderboard',
+        label: 'Monthly Leaderboard',
         href: '/leaderboard',
         icon: (
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

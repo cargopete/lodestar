@@ -10,7 +10,6 @@ import {
   scoreTenure,
   scoreRetention,
   scoreReo,
-  scorePoiConsensus,
   scoreAllocationBreadth,
 } from '../components';
 import { calculatePenalties } from '../penalties';
@@ -135,15 +134,6 @@ describe('scoreReo', () => {
   it('ineligible = 0', () => expect(scoreReo('ineligible')).toBe(0));
 });
 
-describe('scorePoiConsensus', () => {
-  it('99%+ = 4', () => expect(scorePoiConsensus(0.995)).toBe(4));
-  it('95-99% = 3', () => expect(scorePoiConsensus(0.96)).toBe(3));
-  it('90-95% = 2', () => expect(scorePoiConsensus(0.92)).toBe(2));
-  it('80-90% = 1', () => expect(scorePoiConsensus(0.85)).toBe(1));
-  it('<80% = 0', () => expect(scorePoiConsensus(0.7)).toBe(0));
-  it('null = 2 (neutral)', () => expect(scorePoiConsensus(null)).toBe(2));
-});
-
 describe('scoreAllocationBreadth', () => {
   it('10+ = 2', () => expect(scoreAllocationBreadth(12)).toBe(2));
   it('5-9 = 1', () => expect(scoreAllocationBreadth(7)).toBe(1));
@@ -203,28 +193,28 @@ describe('calculatePenalties', () => {
 // ── Integration: Full score range ───────────────────────
 
 describe('score range validation', () => {
-  it('max possible subtotal without votes is 90', () => {
+  it('max possible subtotal without votes is 86', () => {
     // Network: 20 + 15 = 35
     // Economics: 10 + 10 + 5 = 25
     // Trust: 12 + 5 + 3 = 20
-    // Health: 4 + 4 + 2 = 10
-    // Total: 90
-    const max = 20 + 15 + 10 + 10 + 5 + 12 + 5 + 3 + 4 + 4 + 2;
-    expect(max).toBe(90);
+    // Health: 4 + 2 = 6
+    // Total: 86
+    const max = 20 + 15 + 10 + 10 + 5 + 12 + 5 + 3 + 4 + 2;
+    expect(max).toBe(86);
   });
 
   it('component weights match RFC-003', () => {
     const networkMax = 20 + 15;           // 35
     const economicsMax = 10 + 10 + 5;     // 25
     const trustMax = 12 + 5 + 3;          // 20
-    const healthMax = 4 + 4 + 2;          // 10
+    const healthMax = 4 + 2;              // 6
     const votesMax = 10;                   // 10
 
     expect(networkMax).toBe(35);
     expect(economicsMax).toBe(25);
     expect(trustMax).toBe(20);
-    expect(healthMax).toBe(10);
+    expect(healthMax).toBe(6);
     expect(votesMax).toBe(10);
-    expect(networkMax + economicsMax + trustMax + healthMax + votesMax).toBe(100);
+    expect(networkMax + economicsMax + trustMax + healthMax + votesMax).toBe(96);
   });
 });

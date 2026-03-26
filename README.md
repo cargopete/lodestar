@@ -21,6 +21,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Delegation Calculator** — Model redelegation scenarios with thawing period cost analysis and net gain projections
 - **Compare Indexers** — Side-by-side comparison of up to 3 indexers
 - **Wallet Connection** — Connect via MetaMask, WalletConnect, or Coinbase Wallet (Arbitrum only)
+- **Monthly Leaderboard** — Ranked indexer leaderboard scored across 10 dimensions (network contribution, economics, trust, protocol health) with expandable score breakdowns
 - **Mobile-First Layout** — Bottom tab navigation, table-to-card patterns, responsive grids, touch-friendly targets
 
 ## Roadmap
@@ -83,6 +84,45 @@ Each indexer receives a composite score (0–100) across ten dimensions, combine
 - **Delegator-first** — the score explicitly penalises high cuts; an operationally excellent indexer that takes 100% of rewards still scores poorly because delegators earn nothing
 - **Feedback welcome** — if the weights or thresholds feel off, [open an issue](https://github.com/cargopete/lodestar/issues)
 
+## Monthly Leaderboard
+
+A separate scoring system for monthly indexer rankings at `/leaderboard`. Scores are computed on the 1st of each month via cron, using percentile normalisation (p10/p90) across all active indexers.
+
+### Scoring Dimensions
+
+| Component | Dimension | Max Points | Method |
+|---|---|---|---|
+| **Network Contribution** | Query Fees Earned | 20 | Percentile-normalised |
+| | Allocation Efficiency | 15 | Fees-to-allocated ratio, percentile-normalised |
+| **Economics** | Delegator APR | 10 | Percentile-normalised |
+| | Effective Cut Fairness | 10 | Lower cut = higher score (inverted) |
+| | Delegation Capacity | 5 | Bucket: <70% = 5, 70-90% = 3, 90-99% = 1, 100% = 0 |
+| **Trust & Stability** | Cut Stability | 12 | 12-month net change in reward cut |
+| | Tenure | 5 | Months active: 24+ = 5, 12+ = 3, 6+ = 2, 3+ = 1 |
+| | Delegation Retention | 3 | 30-day net delegation flow |
+| **Protocol Health** | REO Eligibility | 4 | Oracle-sourced status |
+| | Allocation Breadth | 2 | Distinct active deployments |
+| **Community Votes** | _(reserved)_ | 10 | Future phase |
+
+**Total: 96 points** (86 without votes, normalised to 0–100).
+
+### Penalties
+
+Multiplicative penalties stack and reduce the final score. Minimum multiplier: 0.10.
+
+| Penalty | Multiplier |
+|---|---|
+| Active slashing dispute | ×0.50 |
+| Accepted slashing (< 12 months) | ×0.60 |
+| Accepted slashing (12–24 months) | ×0.85 |
+| 3+ reward cut increases (12 months) | ×0.75 |
+| Zero query fees (30 days, active allocs) | ×0.85 |
+| Self-stake below 100K GRT | ×0.90 |
+
+The #1 ranked indexer at month-end is named **Indexer of the Month**.
+
+Code: [`src/lib/scoring/`](src/lib/scoring/)
+
 ## Tech Stack
 
 - Next.js 16 (App Router, Turbopack)
@@ -90,6 +130,7 @@ Each indexer receives a composite score (0–100) across ten dimensions, combine
 - wagmi v3 + viem (Arbitrum One)
 - @tanstack/react-query + @tanstack/react-table
 - Recharts (area charts, donut charts)
+- Self-hosted Postgres (postgres.js) + Upstash Redis
 - CoinGecko + DefiLlama (price/TVL data)
 - The Graph Network subgraph (Arbitrum, inline fetch)
 
@@ -122,6 +163,7 @@ src/
     curators/    # Curator portfolio
     delegators/  # Delegator portfolio
     indexers/    # Indexer directory + profiles
+    leaderboard/ # Monthly indexer leaderboard
     profile/     # Connected wallet portfolio
     services/    # Data services (Horizon)
     subgraphs/   # Subgraph directory

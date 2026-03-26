@@ -222,16 +222,16 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 
 ## RFC-003: Indexer Leaderboard & Indexer of the Month
 
-Monthly leaderboard scoring engine with percentile-normalised scores across 12 sub-dimensions, multiplicative penalties, and badge eligibility.
+Monthly leaderboard scoring engine with percentile-normalised scores across 10 dimensions, multiplicative penalties, and Indexer of the Month.
 
 ### Scoring Engine ✅
-- [x] 12-dimension scoring formula (4 components: Network 35pts, Economics 25pts, Trust 20pts, Health 10pts)
+- [x] 10-dimension scoring formula (4 components: Network 35pts, Economics 25pts, Trust 20pts, Health 6pts)
 - [x] Percentile normalization (p10/p90 bounds, linear interpolation)
 - [x] Multiplicative penalty system (7 penalty types, stacking, 0.1 floor)
 - [x] Monthly computation pipeline (`computeMonthlyScores`)
 - [x] `indexer_scores` table with full component breakdown
 - [x] Cron runner integration (`compute-scores` step)
-- [x] 48 unit tests covering all components, normalization, and penalties
+- [x] Unit tests covering all components, normalization, and penalties
 - [x] Indexer of the Month badge (#1 ranked indexer each month)
 
 ### Leaderboard Page

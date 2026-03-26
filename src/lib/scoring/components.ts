@@ -102,19 +102,6 @@ export function scoreReo(status: string): number {
 }
 
 /**
- * POI Consensus Rate — 4 pts.
- * @param consensusRate - fraction (0–1) of allocations matching consensus POI
- */
-export function scorePoiConsensus(consensusRate: number | null): number {
-  if (consensusRate === null) return 2; // No data — neutral score
-  if (consensusRate >= 0.99) return 4;
-  if (consensusRate >= 0.95) return 3;
-  if (consensusRate >= 0.90) return 2;
-  if (consensusRate >= 0.80) return 1;
-  return 0;
-}
-
-/**
  * Active Allocation Breadth — 2 pts.
  * @param distinctDeployments - number of distinct subgraph deployments with active allocations
  */
