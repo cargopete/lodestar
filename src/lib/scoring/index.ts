@@ -1,4 +1,4 @@
-export { computeMonthlyScores } from './compute';
+export { computeMonthlyScores, type LeaderboardEntry } from './compute';
 export { calculatePenalties, type PenaltyInput, type PenaltyResult } from './penalties';
 export { computeBounds, normalize, normalizeInverted, percentile } from './normalize';
 export {

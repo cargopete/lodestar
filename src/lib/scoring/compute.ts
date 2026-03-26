@@ -52,10 +52,35 @@ interface IndexerMetrics {
   queryFees30d: number;
 }
 
+export interface LeaderboardEntry {
+  indexer_address: string;
+  period_type: string;
+  period_start: string;
+  period_end: string;
+  query_fee_score: number;
+  allocation_efficiency_score: number;
+  delegator_apr_score: number;
+  effective_cut_score: number;
+  capacity_score: number;
+  cut_stability_score: number;
+  tenure_bonus: number;
+  retention_score: number;
+  reo_score: number;
+  poi_consensus_score: number;
+  allocation_breadth_score: number;
+  community_vote_score: number;
+  subtotal: number;
+  penalty_multiplier: number;
+  final_score: number;
+  months_active: number;
+  is_eligible_for_badge: boolean;
+  rank?: number;
+}
+
 export async function computeMonthlyScores(
   sql: DbClient,
   opts: { year: number; month: number }
-): Promise<{ scored: number }> {
+): Promise<{ scored: number; entries: LeaderboardEntry[] }> {
   const { year, month } = opts;
   const periodStart = `${year}-${String(month).padStart(2, '0')}-01`;
   const nextMonth = month === 12 ? 1 : month + 1;
@@ -372,7 +397,7 @@ export async function computeMonthlyScores(
 
   console.log(`Scored ${scored.length} indexers for ${periodStart}. Top: ${scored[0]?.indexer_address} (${scored[0]?.final_score})`);
 
-  return { scored: scored.length };
+  return { scored: scored.length, entries: scored as LeaderboardEntry[] };
 }
 
 function round2(n: number): number {

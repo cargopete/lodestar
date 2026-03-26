@@ -126,6 +126,17 @@ async function main() {
           year: now.getUTCFullYear(),
           month: now.getUTCMonth() + 1,
         });
+        // Push to Redis so the Vercel frontend can read it
+        if (process.env.UPSTASH_REDIS_REST_URL) {
+          const { cacheSet } = await import('../src/lib/cache.js');
+          await cacheSet('lodestar:leaderboard:latest', {
+            periodStart: result.entries[0]?.period_start,
+            periodEnd: result.entries[0]?.period_end,
+            computedAt: Date.now(),
+            entries: result.entries,
+          }, 86400 * 35); // 35 days — refreshed monthly
+          console.log(`Redis: leaderboard scores pushed (${result.entries.length} entries)`);
+        }
         console.log(`✓ compute-scores: ${result.scored} indexers scored in ${Date.now() - start}ms`);
         break;
       }
