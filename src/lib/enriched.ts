@@ -67,6 +67,7 @@ export interface EnrichedIndexer {
     overDelegation: number;
     transparency: number;
     delegationTrend: number;
+    delegatorAPY: number;
   };
   computedAt: number;
 }

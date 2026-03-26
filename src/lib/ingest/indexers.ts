@@ -122,6 +122,7 @@ export async function writeIndexers(
     query_fee_cut: i.queryFeeCut,
     delegator_apr: i.delegatorAPR,
     delegation_capacity_pct: i.delegationCapacity.utilizationPercent,
+    query_fees_collected_grt: i.queryFeesCollectedGRT,
     score: i.score,
     score_grade: i.scoreGrade,
   }));

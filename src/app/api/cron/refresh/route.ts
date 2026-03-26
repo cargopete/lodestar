@@ -434,6 +434,8 @@ export async function GET(request: NextRequest) {
         queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected),
         netFlowGRT: activity.netFlowGRT,
         delegatedGRT: delegated,
+        rollingAPY30d,
+        delegatorAPR: apr,
       });
 
       return {

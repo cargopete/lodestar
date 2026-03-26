@@ -31,6 +31,8 @@ function makeInput(overrides: Partial<ScoreInput> = {}): ScoreInput {
     queryFeesCollectedGRT: 50_000,
     netFlowGRT: 10_000,
     delegatedGRT: 500_000,
+    rollingAPY30d: 10,
+    delegatorAPR: 8,
     ...overrides,
   };
 }
@@ -143,12 +145,20 @@ describe('cut stability scoring', () => {
     expect(breakdown.cutStability).toBe(95);
   });
 
-  it('scores 10 for recent change without cooldown', () => {
+  it('scores 30 for recent change without cooldown (raised floor)', () => {
     const { breakdown } = calculateIndexerScore(makeInput({
       lastDelegationParameterUpdate: toUnix(2),
       delegatorParameterCooldown: 0,
     }));
-    expect(breakdown.cutStability).toBe(10);
+    expect(breakdown.cutStability).toBe(30);
+  });
+
+  it('scores 40 for recent change with cooldown (floor + bonus)', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      lastDelegationParameterUpdate: toUnix(2),
+      delegatorParameterCooldown: 86400,
+    }));
+    expect(breakdown.cutStability).toBe(40);
   });
 
   it('adds 10 bonus for having cooldown set', () => {
@@ -349,6 +359,68 @@ describe('delegator cut scoring', () => {
   });
 });
 
+// ---------- Delegator APY dimension ----------
+
+describe('delegator APY scoring', () => {
+  it('scores 100 for 20%+ APY', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rollingAPY30d: 25,
+    }));
+    expect(breakdown.delegatorAPY).toBe(100);
+  });
+
+  it('scores 75 for 10% APY', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rollingAPY30d: 10,
+    }));
+    expect(breakdown.delegatorAPY).toBe(75);
+  });
+
+  it('scores 50 for 5% APY', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rollingAPY30d: 5,
+    }));
+    expect(breakdown.delegatorAPY).toBe(50);
+  });
+
+  it('scores 0 for 0% APY', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rollingAPY30d: 0, delegatorAPR: 0,
+    }));
+    expect(breakdown.delegatorAPY).toBe(0);
+  });
+
+  it('falls back to delegatorAPR when rollingAPY30d is null', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rollingAPY30d: null, delegatorAPR: 10,
+    }));
+    expect(breakdown.delegatorAPY).toBe(75);
+  });
+
+  it('prefers rollingAPY30d over delegatorAPR', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rollingAPY30d: 20, delegatorAPR: 5,
+    }));
+    expect(breakdown.delegatorAPY).toBe(100); // 20% APY, not 5% APR
+  });
+
+  it('falls back to APR when rolling APY is 0', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rollingAPY30d: 0, delegatorAPR: 15,
+    }));
+    expect(breakdown.delegatorAPY).toBe(90); // 15% APR
+  });
+
+  it('interpolates between anchors', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rollingAPY30d: 7.5,
+    }));
+    // Between 5%(50) and 10%(75), at 50% → ~63
+    expect(breakdown.delegatorAPY).toBeGreaterThan(50);
+    expect(breakdown.delegatorAPY).toBeLessThan(75);
+  });
+});
+
 // ---------- Delegation trend dimension ----------
 
 describe('delegation trend scoring', () => {
@@ -411,6 +483,8 @@ describe('composite score', () => {
       id: '0x123',
       netFlowGRT: -50_000,
       delegatedGRT: 500_000,
+      rollingAPY30d: 0,
+      delegatorAPR: 0,
     }));
     expect(result.composite).toBeLessThan(35);
     expect(result.grade).toBe('F');

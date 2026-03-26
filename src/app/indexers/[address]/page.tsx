@@ -279,6 +279,8 @@ export default function IndexerDetailPage({
     queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected ?? '0'),
     netFlowGRT,
     delegatedGRT: delegated,
+    rollingAPY30d: enrichedIndexer?.rollingAPY30d ?? null,
+    delegatorAPR: enrichedIndexer?.delegatorAPR ?? 0,
   }) : null;
 
   return (
@@ -704,7 +706,7 @@ export default function IndexerDetailPage({
                   })}
                 </div>
                 <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
-                  Composite score from 9 on-chain dimensions. Weights reflect delegator priorities: REO compliance (20%), self-stake (13%), query volume (12%), allocation efficiency (13%), delegator cut (10%), cut stability (8%), delegation safety (10%), transparency (9%), delegation trend (5%). Higher = better for delegators.
+                  Composite score from 10 on-chain dimensions. Weights reflect delegator priorities: REO compliance (20%), allocation efficiency (13%), self-stake (12%), delegator cut (10%), delegation safety (10%), transparency (9%), delegator APY (8%), query volume (7%), cut stability (7%), delegation trend (4%). Higher = better for delegators.
                 </p>
               </CardContent>
             </Card>

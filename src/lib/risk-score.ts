@@ -1,19 +1,20 @@
 /**
  * Composite Indexer Risk Score
  *
- * Nine dimensions, each scored 0–100, combined with transparent weights
+ * Ten dimensions, each scored 0–100, combined with transparent weights
  * into a single 0–100 composite score. Higher = better for delegators.
  *
  * Dimensions & weights:
  *   REO compliance       20%  — gates rewards; most critical signal
- *   Self-stake ratio     13%  — skin in the game
- *   Query volume         12%  — actual work served (query fees collected)
  *   Allocation efficiency 13% — operational competence
+ *   Self-stake ratio     12%  — skin in the game
  *   Delegator cut        10%  — how much delegators keep (reward + query fee cuts)
- *   Cut stability         8%  — trust / predictability
  *   Over-delegation      10%  — delegation safety margin
  *   Transparency          9%  — presence and accountability
- *   Delegation trend      5%  — crowd signal (noisy, low weight)
+ *   Delegator APY         8%  — actual returns delivered to delegators
+ *   Query volume          7%  — actual work served (query fees collected)
+ *   Cut stability         7%  — trust / predictability
+ *   Delegation trend      4%  — crowd signal (noisy, low weight)
  */
 
 export interface ScoreBreakdown {
@@ -26,6 +27,7 @@ export interface ScoreBreakdown {
   overDelegation: number;
   transparency: number;
   delegationTrend: number;
+  delegatorAPY: number;
 }
 
 export interface IndexerScore {
@@ -36,14 +38,15 @@ export interface IndexerScore {
 
 export const SCORE_WEIGHTS: Record<keyof ScoreBreakdown, number> = {
   reo: 20,
-  selfStake: 13,
-  queryVolume: 12,
   allocationEfficiency: 13,
+  selfStake: 12,
   delegatorCut: 10,
-  cutStability: 8,
   overDelegation: 10,
   transparency: 9,
-  delegationTrend: 5,
+  delegatorAPY: 8,
+  queryVolume: 7,
+  cutStability: 7,
+  delegationTrend: 4,
 };
 
 export const SCORE_LABELS: Record<keyof ScoreBreakdown, string> = {
@@ -56,6 +59,7 @@ export const SCORE_LABELS: Record<keyof ScoreBreakdown, string> = {
   overDelegation: 'Delegation Safety',
   transparency: 'Transparency',
   delegationTrend: 'Delegation Trend',
+  delegatorAPY: 'Delegator APY',
 };
 
 // --- Individual dimension scorers ---
@@ -147,8 +151,8 @@ function scoreCutStabilityInner(
   if (daysSinceChange >= 180) score = 100;
   else if (daysSinceChange >= 90) score = 85;
   else if (daysSinceChange >= 30) score = 65;
-  else if (daysSinceChange >= 7) score = 35;
-  else score = 10;
+  else if (daysSinceChange >= 7) score = 45;
+  else score = 30;
 
   // Bonus: having a cooldown set shows good faith
   if (cooldown > 0) score = Math.min(score + 10, 100);
@@ -301,6 +305,51 @@ function scoreDelegatorCut(
 }
 
 /**
+ * Delegator APY: actual returns delivered to delegators.
+ * Uses rolling 30d realised APY when available (most honest),
+ * falls back to estimated delegator APR.
+ *
+ * Anchors (APY% → score):
+ *   20%+ → 100,  15% → 90,  10% → 75,  7% → 60,  5% → 50,
+ *   3% → 35,  1% → 20,  0% → 0
+ */
+function scoreDelegatorAPY(
+  rollingAPY30d: number | null,
+  delegatorAPR: number,
+): number {
+  // Prefer realised APY (backward-looking) over estimated APR (forward-looking)
+  const apy = rollingAPY30d != null && rollingAPY30d > 0
+    ? rollingAPY30d
+    : delegatorAPR;
+
+  if (apy <= 0) return 0;
+
+  const anchors: [number, number][] = [
+    [20, 100],
+    [15,  90],
+    [10,  75],
+    [7,   60],
+    [5,   50],
+    [3,   35],
+    [1,   20],
+    [0,    0],
+  ];
+
+  if (apy >= anchors[0][0]) return anchors[0][1];
+
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const [hi, hiScore] = anchors[i];
+    const [lo, loScore] = anchors[i + 1];
+    if (apy >= lo) {
+      const t = (apy - lo) / (hi - lo);
+      return Math.round(loScore + t * (hiScore - loScore));
+    }
+  }
+
+  return 0;
+}
+
+/**
  * Delegation trend: net flow relative to total delegated.
  * Positive inflow = crowd confidence. Neutral = baseline. Outflow = warning.
  */
@@ -353,6 +402,8 @@ export interface ScoreInput {
   queryFeesCollectedGRT: number;
   netFlowGRT: number;
   delegatedGRT: number;
+  rollingAPY30d?: number | null;
+  delegatorAPR?: number;
 }
 
 export function calculateIndexerScore(input: ScoreInput): IndexerScore {
@@ -378,6 +429,7 @@ export function calculateIndexerScore(input: ScoreInput): IndexerScore {
       input.name !== input.id, // display name set if name !== raw address
     ),
     delegationTrend: scoreDelegationTrend(input.netFlowGRT, input.delegatedGRT),
+    delegatorAPY: scoreDelegatorAPY(input.rollingAPY30d ?? null, input.delegatorAPR ?? 0),
   };
 
   // Weighted composite
