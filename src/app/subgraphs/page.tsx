@@ -69,12 +69,12 @@ function NetworkCell({ hash, onNetwork, networkMap }: { hash: string; onNetwork?
   const iconUrl = info?.iconUrl;
 
   return (
-    <Badge variant="accent" className="inline-flex items-center gap-1.5">
+    <Badge variant="accent" className="inline-flex items-center gap-1 whitespace-nowrap">
       {iconUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={iconUrl} alt="" className="w-3.5 h-3.5 rounded-full" />
+        <img src={iconUrl} alt="" className="w-3 h-3 rounded-full shrink-0" />
       )}
-      {displayName}
+      <span className="truncate max-w-[80px]">{displayName}</span>
     </Badge>
   );
 }
