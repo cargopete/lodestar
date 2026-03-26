@@ -8,19 +8,19 @@ import type { EnrichedIndexer } from '../enriched';
  * Called from the existing cron job — the enriched data is already computed.
  */
 export async function writeIndexers(
-  db: DbClient,
+  sql: DbClient,
   enriched: EnrichedIndexer[],
   currentEpoch?: number
 ): Promise<{ upserted: number; snapshots: number; paramChanges: number }> {
   if (enriched.length === 0) return { upserted: 0, snapshots: 0, paramChanges: 0 };
 
   // 1. Read existing indexers to detect parameter changes
-  const { data: existing } = await db
-    .from('indexers')
-    .select('address, reward_cut, query_fee_cut');
+  const existing = await sql`
+    SELECT address, reward_cut, query_fee_cut FROM indexers
+  `;
 
   const existingMap = new Map(
-    (existing ?? []).map((i) => [i.address, i])
+    existing.map((i) => [i.address, i])
   );
 
   // 2. Detect parameter changes
@@ -57,17 +57,57 @@ export async function writeIndexers(
   });
 
   if (paramChanges.length > 0) {
-    const { error } = await db.from('parameter_changes').insert(paramChanges);
-    if (error) console.warn('Parameter changes insert failed:', error.message);
+    try {
+      await sql`
+        INSERT INTO parameter_changes ${sql(paramChanges)}
+      `;
+    } catch (e) {
+      console.warn('Parameter changes insert failed:', e);
+    }
   }
 
-  // 3. Upsert current indexer state (batch in chunks of 200 to avoid body size limits)
+  // 3. Upsert current indexer state (batch in chunks to avoid query size limits)
   const CHUNK = 200;
   let upserted = 0;
   for (let i = 0; i < enriched.length; i += CHUNK) {
     const rows = enriched.slice(i, i + CHUNK).map(mapToIndexerRow);
-    const { error } = await db.from('indexers').upsert(rows, { onConflict: 'address' });
-    if (error) throw new Error(`Indexer upsert failed: ${error.message}`);
+    await sql`
+      INSERT INTO indexers ${sql(rows)}
+      ON CONFLICT (address) DO UPDATE SET
+        name = EXCLUDED.name,
+        ens_name = EXCLUDED.ens_name,
+        url = EXCLUDED.url,
+        geo_hash = EXCLUDED.geo_hash,
+        created_at_epoch = EXCLUDED.created_at_epoch,
+        self_stake_grt = EXCLUDED.self_stake_grt,
+        delegated_grt = EXCLUDED.delegated_grt,
+        allocated_grt = EXCLUDED.allocated_grt,
+        provisioned_grt = EXCLUDED.provisioned_grt,
+        reward_cut = EXCLUDED.reward_cut,
+        query_fee_cut = EXCLUDED.query_fee_cut,
+        effective_cut = EXCLUDED.effective_cut,
+        delegator_apr = EXCLUDED.delegator_apr,
+        delegation_capacity_pct = EXCLUDED.delegation_capacity_pct,
+        over_delegation_dilution = EXCLUDED.over_delegation_dilution,
+        own_stake_ratio = EXCLUDED.own_stake_ratio,
+        indexer_rewards_own_ratio = EXCLUDED.indexer_rewards_own_ratio,
+        delegator_parameter_cooldown = EXCLUDED.delegator_parameter_cooldown,
+        last_delegation_param_update = EXCLUDED.last_delegation_param_update,
+        reo_status = EXCLUDED.reo_status,
+        reo_source = EXCLUDED.reo_source,
+        reo_renewal_timestamp = EXCLUDED.reo_renewal_timestamp,
+        reo_expires_at = EXCLUDED.reo_expires_at,
+        reo_days_remaining = EXCLUDED.reo_days_remaining,
+        score = EXCLUDED.score,
+        score_grade = EXCLUDED.score_grade,
+        delegations_in_7d = EXCLUDED.delegations_in_7d,
+        undelegations_in_7d = EXCLUDED.undelegations_in_7d,
+        net_flow_grt_7d = EXCLUDED.net_flow_grt_7d,
+        rewards_earned_grt = EXCLUDED.rewards_earned_grt,
+        query_fees_collected_grt = EXCLUDED.query_fees_collected_grt,
+        allocation_count = EXCLUDED.allocation_count,
+        last_updated = EXCLUDED.last_updated
+    `;
     upserted += rows.length;
   }
 
@@ -86,13 +126,15 @@ export async function writeIndexers(
     score_grade: i.scoreGrade,
   }));
 
-  // Batch snapshots too
   let snapshotCount = 0;
   for (let i = 0; i < snapshots.length; i += CHUNK) {
     const batch = snapshots.slice(i, i + CHUNK);
-    const { error } = await db.from('indexer_snapshots').insert(batch);
-    if (error) console.warn('Indexer snapshot insert failed:', error.message);
-    else snapshotCount += batch.length;
+    try {
+      await sql`INSERT INTO indexer_snapshots ${sql(batch)}`;
+      snapshotCount += batch.length;
+    } catch (e) {
+      console.warn('Indexer snapshot insert failed:', e);
+    }
   }
 
   return { upserted, snapshots: snapshotCount, paramChanges: paramChanges.length };

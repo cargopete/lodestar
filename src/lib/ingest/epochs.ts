@@ -23,8 +23,8 @@ interface SubgraphEpoch {
  * Ingest new epochs from the subgraph into Postgres.
  * Uses epoch ID as cursor — only fetches epochs newer than the last ingested.
  */
-export async function ingestEpochs(db: DbClient): Promise<{ ingested: number }> {
-  const state = await getIngestionState(db, 'epochs');
+export async function ingestEpochs(sql: DbClient): Promise<{ ingested: number }> {
+  const state = await getIngestionState(sql, 'epochs');
   const lastEpoch = state.last_epoch ?? 0;
 
   let totalIngested = 0;
@@ -66,8 +66,21 @@ export async function ingestEpochs(db: DbClient): Promise<{ ingested: number }> 
       taxed_query_fees: weiToGRT(e.taxedQueryFees),
     }));
 
-    const { error } = await db.from('epochs').upsert(rows, { onConflict: 'id' });
-    if (error) throw new Error(`Epoch upsert failed: ${error.message}`);
+    await sql`
+      INSERT INTO epochs ${sql(rows)}
+      ON CONFLICT (id) DO UPDATE SET
+        end_block = EXCLUDED.end_block,
+        stake_deposited = EXCLUDED.stake_deposited,
+        signalled_tokens = EXCLUDED.signalled_tokens,
+        total_rewards = EXCLUDED.total_rewards,
+        total_indexer_rewards = EXCLUDED.total_indexer_rewards,
+        total_delegator_rewards = EXCLUDED.total_delegator_rewards,
+        total_query_fees = EXCLUDED.total_query_fees,
+        query_fees_collected = EXCLUDED.query_fees_collected,
+        curator_query_fees = EXCLUDED.curator_query_fees,
+        query_fee_rebates = EXCLUDED.query_fee_rebates,
+        taxed_query_fees = EXCLUDED.taxed_query_fees
+    `;
 
     totalIngested += rows.length;
     cursor = Math.max(...epochs.map((e) => parseInt(e.id)));
@@ -76,7 +89,7 @@ export async function ingestEpochs(db: DbClient): Promise<{ ingested: number }> 
   }
 
   if (totalIngested > 0) {
-    await updateIngestionState(db, 'epochs', { last_epoch: cursor });
+    await updateIngestionState(sql, 'epochs', { last_epoch: cursor });
   }
 
   return { ingested: totalIngested };

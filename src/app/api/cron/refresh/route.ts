@@ -289,7 +289,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 5b: Fetch closed allocations (last 90d) from subgraph for rolling APY
-    // Queries the subgraph directly (authoritative source) instead of Supabase,
+    // Queries the subgraph directly (authoritative source) instead of Postgres,
     // using indexingDelegatorRewards which has the reward cut already applied at close time
     const closedAllocsByIndexer = new Map<string, Array<{ delegator_rewards_grt: number; closed_at: number }>>();
     try {

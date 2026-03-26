@@ -24,17 +24,17 @@ interface SubgraphAllocation {
  * Backfill mode: fetch ALL allocations using id_gt pagination.
  */
 export async function ingestAllocations(
-  db: DbClient,
+  sql: DbClient,
   opts: { backfill?: boolean } = {}
 ): Promise<{ ingested: number }> {
   if (opts.backfill) {
-    return backfillAllocations(db);
+    return backfillAllocations(sql);
   }
-  return deltaIngestAllocations(db);
+  return deltaIngestAllocations(sql);
 }
 
-async function deltaIngestAllocations(db: DbClient): Promise<{ ingested: number }> {
-  const state = await getIngestionState(db, 'allocations');
+async function deltaIngestAllocations(sql: DbClient): Promise<{ ingested: number }> {
+  const state = await getIngestionState(sql, 'allocations');
   const lastEpoch = state.last_epoch ?? 0;
 
   let totalIngested = 0;
@@ -54,7 +54,7 @@ async function deltaIngestAllocations(db: DbClient): Promise<{ ingested: number 
     }`);
 
     if (result.allocations.length === 0) break;
-    await upsertAllocations(db, result.allocations);
+    await upsertAllocations(sql, result.allocations);
     totalIngested += result.allocations.length;
     lastId = result.allocations[result.allocations.length - 1].id;
     if (result.allocations.length < 1000) break;
@@ -76,7 +76,7 @@ async function deltaIngestAllocations(db: DbClient): Promise<{ ingested: number 
       }`);
 
       if (result.allocations.length === 0) break;
-      await upsertAllocations(db, result.allocations);
+      await upsertAllocations(sql, result.allocations);
       totalIngested += result.allocations.length;
       lastId = result.allocations[result.allocations.length - 1].id;
       if (result.allocations.length < 1000) break;
@@ -88,14 +88,14 @@ async function deltaIngestAllocations(db: DbClient): Promise<{ ingested: number 
     graphNetwork: { currentEpoch: number };
   }>(`{ graphNetwork(id: "1") { currentEpoch } }`);
 
-  await updateIngestionState(db, 'allocations', {
+  await updateIngestionState(sql, 'allocations', {
     last_epoch: networkResult.graphNetwork.currentEpoch,
   });
 
   return { ingested: totalIngested };
 }
 
-async function backfillAllocations(db: DbClient): Promise<{ ingested: number }> {
+async function backfillAllocations(sql: DbClient): Promise<{ ingested: number }> {
   let totalIngested = 0;
   let lastId = '';
 
@@ -112,7 +112,7 @@ async function backfillAllocations(db: DbClient): Promise<{ ingested: number }> 
     }`);
 
     if (result.allocations.length === 0) break;
-    await upsertAllocations(db, result.allocations);
+    await upsertAllocations(sql, result.allocations);
     totalIngested += result.allocations.length;
     lastId = result.allocations[result.allocations.length - 1].id;
 
@@ -128,14 +128,14 @@ async function backfillAllocations(db: DbClient): Promise<{ ingested: number }> 
     graphNetwork: { currentEpoch: number };
   }>(`{ graphNetwork(id: "1") { currentEpoch } }`);
 
-  await updateIngestionState(db, 'allocations', {
+  await updateIngestionState(sql, 'allocations', {
     last_epoch: networkResult.graphNetwork.currentEpoch,
   });
 
   return { ingested: totalIngested };
 }
 
-async function upsertAllocations(db: DbClient, allocations: SubgraphAllocation[]) {
+async function upsertAllocations(sql: DbClient, allocations: SubgraphAllocation[]) {
   const rows = allocations.map((a) => ({
     id: a.id,
     indexer_address: a.indexer.id.toLowerCase(),
@@ -152,8 +152,22 @@ async function upsertAllocations(db: DbClient, allocations: SubgraphAllocation[]
     status: a.status === 'Active' ? 'open' : 'closed',
   }));
 
-  const { error } = await db.from('allocations').upsert(rows, { onConflict: 'id' });
-  if (error) throw new Error(`Allocation upsert failed: ${error.message}`);
+  // Batch in chunks to avoid oversized queries
+  const CHUNK = 200;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const batch = rows.slice(i, i + CHUNK);
+    await sql`
+      INSERT INTO allocations ${sql(batch)}
+      ON CONFLICT (id) DO UPDATE SET
+        allocated_tokens_grt = EXCLUDED.allocated_tokens_grt,
+        closed_epoch = EXCLUDED.closed_epoch,
+        closed_at = EXCLUDED.closed_at,
+        poi = EXCLUDED.poi,
+        indexing_rewards_grt = EXCLUDED.indexing_rewards_grt,
+        query_fees_grt = EXCLUDED.query_fees_grt,
+        status = EXCLUDED.status
+    `;
+  }
 }
 
 const ALLOCATION_FIELDS = `

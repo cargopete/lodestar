@@ -52,7 +52,7 @@ export interface EnrichedIndexer {
   provisionedGRT: number | null;
   // Query fees collected (cumulative, from subgraph)
   queryFeesCollectedGRT: number;
-  // Rolling APY (derived from closed allocations in Supabase)
+  // Rolling APY (derived from closed allocations)
   rollingAPY30d: number | null;
   rollingAPY90d: number | null;
   // Composite risk score (computed from all dimensions above)

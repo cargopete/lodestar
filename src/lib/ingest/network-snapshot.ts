@@ -25,7 +25,7 @@ interface SubgraphNetworkStats {
  * Optionally enriched with GRT price and TVL.
  */
 export async function writeNetworkSnapshot(
-  db: DbClient,
+  sql: DbClient,
   opts: { grtPriceUsd?: number; networkTvlUsd?: number } = {}
 ): Promise<void> {
   const result = await subgraphQuery<SubgraphNetworkStats>(`{
@@ -48,23 +48,30 @@ export async function writeNetworkSnapshot(
 
   const n = result.graphNetwork;
 
-  const { error } = await db.from('network_snapshots').insert({
-    total_staked: weiToGRT(n.totalTokensStaked),
-    total_delegated: weiToGRT(n.totalDelegatedTokens),
-    total_signalled: weiToGRT(n.totalTokensSignalled),
-    total_allocated: weiToGRT(n.totalTokensAllocated),
-    indexer_count: n.indexerCount,
-    active_indexer_count: n.stakedIndexersCount,
-    delegator_count: n.delegatorCount,
-    active_delegator_count: n.activeDelegatorCount,
-    curator_count: n.curatorCount,
-    active_curator_count: n.activeCuratorCount,
-    subgraph_count: n.subgraphCount,
-    active_subgraph_count: n.activeSubgraphCount,
-    current_epoch: n.currentEpoch,
-    grt_price_usd: opts.grtPriceUsd ?? null,
-    network_tvl_usd: opts.networkTvlUsd ?? null,
-  });
-
-  if (error) throw new Error(`Network snapshot insert failed: ${error.message}`);
+  await sql`
+    INSERT INTO network_snapshots (
+      total_staked, total_delegated, total_signalled, total_allocated,
+      indexer_count, active_indexer_count,
+      delegator_count, active_delegator_count,
+      curator_count, active_curator_count,
+      subgraph_count, active_subgraph_count,
+      current_epoch, grt_price_usd, network_tvl_usd
+    ) VALUES (
+      ${weiToGRT(n.totalTokensStaked)},
+      ${weiToGRT(n.totalDelegatedTokens)},
+      ${weiToGRT(n.totalTokensSignalled)},
+      ${weiToGRT(n.totalTokensAllocated)},
+      ${n.indexerCount},
+      ${n.stakedIndexersCount},
+      ${n.delegatorCount},
+      ${n.activeDelegatorCount},
+      ${n.curatorCount},
+      ${n.activeCuratorCount},
+      ${n.subgraphCount},
+      ${n.activeSubgraphCount},
+      ${n.currentEpoch},
+      ${opts.grtPriceUsd ?? null},
+      ${opts.networkTvlUsd ?? null}
+    )
+  `;
 }

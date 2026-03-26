@@ -1,5 +1,5 @@
 /**
- * One-time historical backfill — run after setting up Supabase.
+ * One-time historical backfill — run after setting up Postgres.
  *
  * Usage:
  *   npx tsx scripts/backfill.ts              # run all steps
@@ -7,7 +7,7 @@
  *   npx tsx scripts/backfill.ts delegations allocations  # run specific steps
  *
  * Requires .env.local (or env vars) with:
- *   GRAPH_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ *   GRAPH_API_KEY, DATABASE_URL
  */
 
 import { readFileSync } from 'node:fs';
@@ -37,14 +37,13 @@ loadEnv();
 // ── Dynamic imports (env must be set before these resolve) ─
 
 async function main() {
-  const { createClient } = await import('@supabase/supabase-js');
+  const pg = await import('postgres');
 
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const databaseUrl = process.env.DATABASE_URL;
   const graphKey = process.env.GRAPH_API_KEY;
 
-  if (!url || !key) {
-    console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  if (!databaseUrl) {
+    console.error('Missing DATABASE_URL');
     process.exit(1);
   }
   if (!graphKey) {
@@ -52,9 +51,13 @@ async function main() {
     process.exit(1);
   }
 
-  const db = createClient(url, key, { auth: { persistSession: false } });
+  const sql = pg.default(databaseUrl, {
+    max: 5,
+    idle_timeout: 20,
+    connect_timeout: 10,
+  });
 
-  // Import ingestion modules (they use relative imports internally)
+  // Import ingestion modules
   const { ingestEpochs } = await import('../src/lib/ingest/epochs.js');
   const { ingestDelegationEvents } = await import('../src/lib/ingest/delegations.js');
   const { ingestAllocations } = await import('../src/lib/ingest/allocations.js');
@@ -77,8 +80,7 @@ async function main() {
     console.log('▸ Epochs: starting...');
     const t = Date.now();
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const r = await ingestEpochs(db as any);
+      const r = await ingestEpochs(sql);
       results.epochs = { count: r.ingested, durationMs: Date.now() - t };
       console.log(`  ✓ ${r.ingested} epochs in ${results.epochs.durationMs}ms`);
     } catch (e) {
@@ -92,8 +94,7 @@ async function main() {
     console.log('▸ Delegation events: starting...');
     const t = Date.now();
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const r = await ingestDelegationEvents(db as any);
+      const r = await ingestDelegationEvents(sql);
       results.delegations = { count: r.ingested, durationMs: Date.now() - t };
       console.log(`  ✓ ${r.ingested} events in ${results.delegations.durationMs}ms`);
     } catch (e) {
@@ -107,8 +108,7 @@ async function main() {
     console.log('▸ Allocations: starting (this may take 10–15 minutes)...');
     const t = Date.now();
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const r = await ingestAllocations(db as any, { backfill: true });
+      const r = await ingestAllocations(sql, { backfill: true });
       results.allocations = { count: r.ingested, durationMs: Date.now() - t };
       console.log(`  ✓ ${r.ingested} allocations in ${results.allocations.durationMs}ms`);
     } catch (e) {
@@ -122,8 +122,7 @@ async function main() {
     console.log('▸ Disputes: starting...');
     const t = Date.now();
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const r = await ingestDisputes(db as any);
+      const r = await ingestDisputes(sql);
       results.disputes = { count: r.ingested, durationMs: Date.now() - t };
       console.log(`  ✓ ${r.ingested} disputes in ${results.disputes.durationMs}ms`);
     } catch (e) {
@@ -140,6 +139,7 @@ async function main() {
   }
 
   const failed = Object.values(results).some((r) => r.error);
+  await sql.end();
   process.exit(failed ? 1 : 0);
 }
 

@@ -1,7 +1,6 @@
 import type { DbClient } from '../db';
 import { getIngestionState, updateIngestionState } from '../db';
 import { subgraphQuery } from '../subgraph';
-import { weiToGRT } from '../utils';
 
 interface SubgraphDispute {
   id: string;
@@ -21,8 +20,8 @@ interface SubgraphDispute {
  * Ingest disputes from the network subgraph.
  * Uses id_gt cursor — disputes are infrequent.
  */
-export async function ingestDisputes(db: DbClient): Promise<{ ingested: number }> {
-  const state = await getIngestionState(db, 'disputes');
+export async function ingestDisputes(sql: DbClient): Promise<{ ingested: number }> {
+  const state = await getIngestionState(sql, 'disputes');
   const lastId = state.last_id ?? '';
 
   let totalIngested = 0;
@@ -67,8 +66,14 @@ export async function ingestDisputes(db: DbClient): Promise<{ ingested: number }
       closed_at: d.closedAt ? new Date(d.closedAt * 1000).toISOString() : null,
     }));
 
-    const { error } = await db.from('disputes').upsert(rows, { onConflict: 'id' });
-    if (error) throw new Error(`Dispute upsert failed: ${error.message}`);
+    await sql`
+      INSERT INTO disputes ${sql(rows)}
+      ON CONFLICT (id) DO UPDATE SET
+        status = EXCLUDED.status,
+        tokens_slashed_grt = EXCLUDED.tokens_slashed_grt,
+        tokens_burned_grt = EXCLUDED.tokens_burned_grt,
+        closed_at = EXCLUDED.closed_at
+    `;
 
     totalIngested += rows.length;
     cursor = disputes[disputes.length - 1].id;
@@ -77,7 +82,7 @@ export async function ingestDisputes(db: DbClient): Promise<{ ingested: number }
   }
 
   if (totalIngested > 0) {
-    await updateIngestionState(db, 'disputes', { last_id: cursor });
+    await updateIngestionState(sql, 'disputes', { last_id: cursor });
   }
 
   return { ingested: totalIngested };

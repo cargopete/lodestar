@@ -1,28 +1,25 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import postgres from 'postgres';
 
 /**
- * Server-only Supabase client — never import from client components.
- * Uses the service role key to bypass RLS (all writes are from cron).
+ * Server-only Postgres client — never import from client components.
+ * Uses postgres.js for direct connections (no ORM, no REST layer).
  *
- * Untyped client — row types live in database.types.ts for use in
- * ingestion code. Full Supabase type binding regenerable via pnpm db:types
- * once the DB is live.
- *
- * Returns null if Supabase is not configured (dev without DB).
+ * Returns null if DATABASE_URL is not configured.
  */
-function createDb(): SupabaseClient | null {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
+function createDb(): postgres.Sql | null {
+  const url = process.env.DATABASE_URL;
+  if (!url) return null;
 
-  return createClient(url, key, {
-    auth: { persistSession: false },
+  return postgres(url, {
+    max: 10,
+    idle_timeout: 20,
+    connect_timeout: 10,
   });
 }
 
 export const db = createDb();
 
-export type DbClient = SupabaseClient;
+export type DbClient = postgres.Sql;
 
 export function hasDbAccess(): boolean {
   return db !== null;
@@ -32,29 +29,33 @@ export function hasDbAccess(): boolean {
  * Read the ingestion cursor for a given data type.
  */
 export async function getIngestionState(
-  client: DbClient,
+  sql: DbClient,
   key: string
 ): Promise<{ last_epoch: number | null; last_block: number | null; last_id: string | null }> {
-  const { data, error } = await client
-    .from('ingestion_state')
-    .select('last_epoch, last_block, last_id')
-    .eq('key', key)
-    .single();
+  const rows = await sql`
+    SELECT last_epoch, last_block, last_id
+    FROM ingestion_state
+    WHERE key = ${key}
+  `;
 
-  if (error || !data) return { last_epoch: null, last_block: null, last_id: null };
-  return data;
+  if (rows.length === 0) return { last_epoch: null, last_block: null, last_id: null };
+  return rows[0] as { last_epoch: number | null; last_block: number | null; last_id: string | null };
 }
 
 /**
  * Update the ingestion cursor after a successful ingest.
  */
 export async function updateIngestionState(
-  client: DbClient,
+  sql: DbClient,
   key: string,
   state: { last_epoch?: number; last_block?: number; last_id?: string }
 ): Promise<void> {
-  await client
-    .from('ingestion_state')
-    .update({ ...state, updated_at: new Date().toISOString() })
-    .eq('key', key);
+  await sql`
+    UPDATE ingestion_state
+    SET ${sql({
+      ...state,
+      updated_at: new Date().toISOString(),
+    })}
+    WHERE key = ${key}
+  `;
 }

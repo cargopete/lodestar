@@ -16,8 +16,8 @@ interface SubgraphDelegationEvent {
  * Ingest delegation events from Paolo Diomede's delegation events subgraph.
  * Uses the last seen event ID as cursor for delta ingestion.
  */
-export async function ingestDelegationEvents(db: DbClient): Promise<{ ingested: number }> {
-  const state = await getIngestionState(db, 'delegation_events');
+export async function ingestDelegationEvents(sql: DbClient): Promise<{ ingested: number }> {
+  const state = await getIngestionState(sql, 'delegation_events');
   const lastId = state.last_id ?? '';
 
   let totalIngested = 0;
@@ -55,13 +55,14 @@ export async function ingestDelegationEvents(db: DbClient): Promise<{ ingested: 
       timestamp: new Date(parseInt(e.timestamp) * 1000).toISOString(),
     }));
 
-    // Upsert in smaller chunks to avoid Supabase statement timeout
+    // Batch in chunks to avoid oversized queries
     const CHUNK = 200;
     for (let i = 0; i < rows.length; i += CHUNK) {
-      const { error } = await db
-        .from('delegation_events')
-        .upsert(rows.slice(i, i + CHUNK), { onConflict: 'id' });
-      if (error) throw new Error(`Delegation event upsert failed: ${error.message}`);
+      const batch = rows.slice(i, i + CHUNK);
+      await sql`
+        INSERT INTO delegation_events ${sql(batch)}
+        ON CONFLICT (id) DO NOTHING
+      `;
     }
 
     totalIngested += rows.length;
@@ -71,7 +72,7 @@ export async function ingestDelegationEvents(db: DbClient): Promise<{ ingested: 
   }
 
   if (totalIngested > 0) {
-    await updateIngestionState(db, 'delegation_events', { last_id: cursor });
+    await updateIngestionState(sql, 'delegation_events', { last_id: cursor });
   }
 
   return { ingested: totalIngested };
