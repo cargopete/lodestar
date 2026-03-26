@@ -242,18 +242,26 @@ function scoreQueryVolume(queryFeesCollectedGRT: number): number {
 
 /**
  * Delegator cut: how much of the rewards delegators actually keep.
- * Primary signal is the indexing reward cut (where most earnings come from).
- * Secondary penalty for high query fee cut (smaller impact, but still relevant
- * as query fees grow in importance).
+ * Uses the **effective cut** (what delegators actually experience) when available,
+ * falling back to raw cut. Effective cut accounts for the indexer's own stake
+ * ratio — indexers with low delegation ratios need higher raw cuts to earn a
+ * reasonable return, but their effective cut is lower.
  *
- * Reward cut anchors (PPM → score via percentage):
+ * Cut anchors (percentage → score):
  *   0%   → 100,  5%  → 95,  10% → 85,  15% → 75,  20% → 68,
  *   25%  → 60,  50% → 35,  75% → 15,  100% → 0
  *
  * Query fee cut penalty: up to -15 points (linear, 100% fee cut = -15).
  */
-function scoreDelegatorCut(rewardCutPPM: number, queryFeeCutPPM: number): number {
-  const rewardCutPercent = Math.min(rewardCutPPM / 10_000, 100);
+function scoreDelegatorCut(
+  rewardCutPPM: number,
+  queryFeeCutPPM: number,
+  effectiveCutPercent?: number | null,
+): number {
+  // Prefer effective cut (what delegators actually experience) over raw cut
+  const rewardCutPercent = effectiveCutPercent != null
+    ? Math.min(Math.max(effectiveCutPercent, 0), 100)
+    : Math.min(rewardCutPPM / 10_000, 100);
 
   const anchors: [number, number][] = [
     [0,   100],
@@ -341,6 +349,7 @@ export interface ScoreInput {
   id: string;
   rewardCutPPM: number;
   queryFeeCutPPM: number;
+  effectiveCutPercent?: number | null;
   queryFeesCollectedGRT: number;
   netFlowGRT: number;
   delegatedGRT: number;
@@ -351,7 +360,7 @@ export function calculateIndexerScore(input: ScoreInput): IndexerScore {
     reo: scoreREO(input.reoStatus, input.reoDaysRemaining, input.reoSource),
     selfStake: scoreSelfStake(input.selfStakeGRT),
     queryVolume: scoreQueryVolume(input.queryFeesCollectedGRT),
-    delegatorCut: scoreDelegatorCut(input.rewardCutPPM, input.queryFeeCutPPM),
+    delegatorCut: scoreDelegatorCut(input.rewardCutPPM, input.queryFeeCutPPM, input.effectiveCutPercent),
     cutStability: scoreCutStability(
       input.lastDelegationParameterUpdate,
       input.delegatorParameterCooldown,

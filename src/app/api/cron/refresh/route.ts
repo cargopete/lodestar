@@ -428,6 +428,9 @@ export async function GET(request: NextRequest) {
         id: indexer.id,
         rewardCutPPM: indexer.indexingRewardCut,
         queryFeeCutPPM: indexer.queryFeeCut,
+        effectiveCutPercent: indexer.indexingRewardEffectiveCut
+          ? parseFloat(indexer.indexingRewardEffectiveCut) * 100
+          : null,
         queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected),
         netFlowGRT: activity.netFlowGRT,
         delegatedGRT: delegated,

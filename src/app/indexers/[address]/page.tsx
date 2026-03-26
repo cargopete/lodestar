@@ -273,6 +273,9 @@ export default function IndexerDetailPage({
     id: indexer.id,
     rewardCutPPM: indexer.indexingRewardCut,
     queryFeeCutPPM: indexer.queryFeeCut,
+    effectiveCutPercent: indexer.indexingRewardEffectiveCut
+      ? parseFloat(indexer.indexingRewardEffectiveCut) * 100
+      : null,
     queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected ?? '0'),
     netFlowGRT,
     delegatedGRT: delegated,
