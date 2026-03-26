@@ -100,7 +100,7 @@ export default function LeaderboardPage() {
   // Summary stats
   const topScore = entries[0]?.final_score ?? 0;
   const medianScore = entries.length > 0 ? entries[Math.floor(entries.length / 2)]?.final_score ?? 0 : 0;
-  const badgeEligible = entries.filter((e) => e.is_eligible_for_badge).length;
+  const indexerOfTheMonth = entries.find((e) => e.is_eligible_for_badge);
   const penalised = entries.filter((e) => e.penalty_multiplier < 1).length;
 
   if (isLoading) {
@@ -145,8 +145,8 @@ export default function LeaderboardPage() {
         />
         <StatCard label="Median Score" value={medianScore.toFixed(1)} />
         <StatCard
-          label="Badge Eligible"
-          value={String(badgeEligible)}
+          label="Indexer of the Month"
+          value={indexerOfTheMonth ? (nameMap.get(indexerOfTheMonth.indexer_address.toLowerCase()) ?? shortenAddress(indexerOfTheMonth.indexer_address)) : '--'}
           subtitle={`${penalised} penalised`}
         />
       </StatGrid>
@@ -184,7 +184,7 @@ export default function LeaderboardPage() {
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Trust</th>
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Health</th>
                 <th className={TH_CLASS}>Penalty</th>
-                <th className={TH_CLASS}>Badge</th>
+                <th className={TH_CLASS}></th>
               </tr>
             </thead>
             <tbody>
@@ -222,10 +222,10 @@ export default function LeaderboardPage() {
             </p>
           </div>
           <div>
-            <h4 className="font-semibold text-[var(--text)] mb-2">Badge Eligibility</h4>
+            <h4 className="font-semibold text-[var(--text)] mb-2">Indexer of the Month</h4>
             <p className="text-sm text-[var(--text-muted)]">
-              Indexers qualify for the monthly badge if they are REO eligible, have been active for 3+ months,
-              have no active disputes, allocate to 5+ deployments, and have earned query fees.
+              The #1 ranked indexer at the end of each month earns the &ldquo;Indexer of the Month&rdquo; title
+              and wears the badge for the following month.
             </p>
           </div>
         </div>
@@ -309,7 +309,7 @@ function DesktopRow({
           )}
         </td>
         <td className="px-4 py-3 text-center">
-          {entry.is_eligible_for_badge && <Badge variant="accent">Eligible</Badge>}
+          {entry.is_eligible_for_badge && <Badge variant="accent">Indexer of the Month</Badge>}
         </td>
       </tr>
       {expanded && (
@@ -362,7 +362,7 @@ function MobileCard({
           </span>
           {entry.is_eligible_for_badge && (
             <div className="mt-0.5">
-              <Badge variant="accent">Eligible</Badge>
+              <Badge variant="accent">Indexer of the Month</Badge>
             </div>
           )}
         </div>

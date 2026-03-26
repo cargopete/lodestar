@@ -365,12 +365,7 @@ export async function computeMonthlyScores(
       penalty_multiplier: round2(penaltyMultiplier),
       final_score: round2(Math.min(100, Math.max(0, finalScore))),
       months_active: m.monthsActive,
-      is_eligible_for_badge:
-        m.reoStatus === 'eligible' &&
-        m.monthsActive >= 3 &&
-        !m.penalties.hasActiveDispute &&
-        m.distinctDeployments >= 5 &&
-        m.queryFees > 0,
+      is_eligible_for_badge: false, // set after ranking — #1 gets the badge
     };
   });
 
@@ -379,6 +374,11 @@ export async function computeMonthlyScores(
   scored.forEach((s, i) => {
     (s as Record<string, unknown>).rank = i + 1;
   });
+
+  // #1 is Indexer of the Month
+  if (scored.length > 0) {
+    scored[0].is_eligible_for_badge = true;
+  }
 
   // ── Write to Postgres ─────────────────────────────────
 

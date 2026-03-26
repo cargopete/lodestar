@@ -232,7 +232,7 @@ Monthly leaderboard scoring engine with percentile-normalised scores across 12 s
 - [x] `indexer_scores` table with full component breakdown
 - [x] Cron runner integration (`compute-scores` step)
 - [x] 48 unit tests covering all components, normalization, and penalties
-- [x] Badge eligibility criteria (REO eligible + 3mo tenure + no dispute + 5+ deployments + earned fees)
+- [x] Indexer of the Month badge (#1 ranked indexer each month)
 
 ### Leaderboard Page
 - [ ] `/leaderboard` route with monthly rankings
@@ -246,8 +246,8 @@ Monthly leaderboard scoring engine with percentile-normalised scores across 12 s
 - [ ] Vote tallying and integration into final score
 - [ ] Anti-gaming measures
 
-### Indexer of the Month
-- [ ] Monthly badge assignment (top scorer)
+### Indexer of the Month (Partial)
+- [x] Monthly badge assignment (#1 ranked scorer)
 - [ ] Intel Feed integration
 - [ ] Historical badge display on indexer profile
 
