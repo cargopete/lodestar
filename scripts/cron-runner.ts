@@ -119,9 +119,20 @@ async function main() {
         break;
       }
 
+      case 'compute-scores': {
+        const { computeMonthlyScores } = await import('../src/lib/scoring/compute.js');
+        const now = new Date();
+        const result = await computeMonthlyScores(sql, {
+          year: now.getUTCFullYear(),
+          month: now.getUTCMonth() + 1,
+        });
+        console.log(`✓ compute-scores: ${result.scored} indexers scored in ${Date.now() - start}ms`);
+        break;
+      }
+
       default:
         console.error(`Unknown step: ${step}`);
-        console.error('Valid steps: refresh, epochs, allocations, delegations, disputes, snapshot');
+        console.error('Valid steps: refresh, epochs, allocations, delegations, disputes, snapshot, compute-scores');
         process.exit(1);
     }
   } catch (e) {
