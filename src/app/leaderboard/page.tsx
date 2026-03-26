@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useLeaderboard, useEnrichedIndexers } from '@/hooks/useNetworkStats';
 import { Card } from '@/components/ui/Card';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
-import { Badge } from '@/components/ui/Badge';
 import { Pagination } from '@/components/ui/Pagination';
 import { cn, shortenAddress } from '@/lib/utils';
 import type { LeaderboardEntry } from '@/lib/scoring';
@@ -100,7 +99,6 @@ export default function LeaderboardPage() {
   // Summary stats
   const topScore = entries[0]?.final_score ?? 0;
   const medianScore = entries.length > 0 ? entries[Math.floor(entries.length / 2)]?.final_score ?? 0 : 0;
-  const indexerOfTheMonth = entries.find((e) => e.is_eligible_for_badge);
   const penalised = entries.filter((e) => e.penalty_multiplier < 1).length;
 
   if (isLoading) {
@@ -145,9 +143,9 @@ export default function LeaderboardPage() {
         />
         <StatCard label="Median Score" value={medianScore.toFixed(1)} />
         <StatCard
-          label="Indexer of the Month"
-          value={indexerOfTheMonth ? (nameMap.get(indexerOfTheMonth.indexer_address.toLowerCase()) ?? shortenAddress(indexerOfTheMonth.indexer_address)) : '--'}
-          subtitle={`${penalised} penalised`}
+          label="Penalised"
+          value={String(penalised)}
+          subtitle={`of ${entries.length} indexers`}
         />
       </StatGrid>
 
@@ -184,7 +182,6 @@ export default function LeaderboardPage() {
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Trust</th>
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Health</th>
                 <th className={TH_CLASS}>Penalty</th>
-                <th className={TH_CLASS}></th>
               </tr>
             </thead>
             <tbody>
@@ -308,13 +305,10 @@ function DesktopRow({
             <span className="font-mono text-xs text-[var(--text-faint)]">--</span>
           )}
         </td>
-        <td className="px-4 py-3 text-center">
-          {entry.is_eligible_for_badge && <Badge variant="accent">Indexer of the Month</Badge>}
-        </td>
       </tr>
       {expanded && (
         <tr className="border-b border-[0.5px] border-[var(--border)]">
-          <td colSpan={9} className="px-4 py-4 bg-[var(--bg-elevated)]">
+          <td colSpan={8} className="px-4 py-4 bg-[var(--bg-elevated)]">
             <ScoreBreakdown entry={entry} />
           </td>
         </tr>
@@ -360,11 +354,6 @@ function MobileCard({
           <span className="font-mono text-lg font-bold" style={{ color: scoreColor(entry.final_score) }}>
             {entry.final_score.toFixed(1)}
           </span>
-          {entry.is_eligible_for_badge && (
-            <div className="mt-0.5">
-              <Badge variant="accent">Indexer of the Month</Badge>
-            </div>
-          )}
         </div>
       </div>
 
