@@ -304,7 +304,7 @@ export default function SubgraphDirectory() {
               ))}
           </select>
         )}
-        {knownNetworks.size > 0 && (
+        {(knownNetworks.size > 0 || registryData?.networks) && (
           <select
             value={networkFilter}
             onChange={(e) => setNetworkFilter(e.target.value)}
@@ -316,12 +316,48 @@ export default function SubgraphDirectory() {
             )}
           >
             <option value="all">All Networks</option>
-            {[...knownNetworks].sort().map((n) => {
-              const info = networkMap.get(n);
+            {(() => {
+              // Build deduplicated network list: discovered networks + all registry networks
+              const seen = new Set<string>();
+              const options: { value: string; label: string }[] = [];
+
+              // Discovered networks first (these have subgraphs on the current page)
+              for (const n of [...knownNetworks].sort()) {
+                const info = networkMap.get(n);
+                const canonicalId = info?.id ?? n;
+                if (!seen.has(canonicalId)) {
+                  seen.add(canonicalId);
+                  options.push({ value: n, label: info?.shortName ?? n });
+                }
+              }
+
+              // All registry mainnet networks
+              const registryNets = (registryData?.networks ?? [])
+                .filter(n => n.networkType === 'mainnet')
+                .sort((a, b) => a.shortName.localeCompare(b.shortName));
+
+              const registryOptions: { value: string; label: string }[] = [];
+              for (const n of registryNets) {
+                if (!seen.has(n.id)) {
+                  seen.add(n.id);
+                  registryOptions.push({ value: n.id, label: n.shortName });
+                }
+              }
+
               return (
-                <option key={n} value={n}>{info?.shortName ?? n}</option>
+                <>
+                  {options.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                  {options.length > 0 && registryOptions.length > 0 && (
+                    <option disabled>{'─'.repeat(20)}</option>
+                  )}
+                  {registryOptions.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </>
               );
-            })}
+            })()}
           </select>
         )}
       </div>
