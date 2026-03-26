@@ -53,6 +53,7 @@ const tabs: TabItem[] = [
 const moreItems = [
   { label: 'Delegators', href: '/delegators' },
   { label: 'Subgraphs', href: '/subgraphs' },
+  { label: 'Leaderboard', href: '/leaderboard' },
   { label: 'Indexing Status', href: '/indexing' },
   { label: 'Calculator', href: '/calculator' },
   { label: 'Compare', href: '/compare' },

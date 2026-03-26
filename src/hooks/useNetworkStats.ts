@@ -17,6 +17,7 @@ import {
   fetchPOIDeployment,
   fetchIndexingStatus,
   fetchNetworksRegistry,
+  fetchLeaderboard,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -382,5 +383,18 @@ export function useENSName(address: string) {
     },
     staleTime: ONE_HOUR,
     enabled: !!address,
+  });
+}
+
+/**
+ * Hook for leaderboard scores (monthly, cached for long periods)
+ */
+export function useLeaderboard() {
+  return useQuery({
+    queryKey: ['leaderboard'],
+    queryFn: fetchLeaderboard,
+    staleTime: ONE_HOUR,
+    refetchInterval: ONE_HOUR,
+    placeholderData: keepPreviousData,
   });
 }

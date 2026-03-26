@@ -102,7 +102,7 @@ export async function computeMonthlyScores(
 
   if (indexers.length === 0) {
     console.log('No indexers found — skipping score computation');
-    return { scored: 0 };
+    return { scored: 0, entries: [] };
   }
 
   // 2. Query fees earned this month (from closed allocations)

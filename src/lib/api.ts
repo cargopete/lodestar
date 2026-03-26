@@ -14,6 +14,7 @@ import type { EnrichedIndexer } from './enriched';
 import type { ManifestAnalysis } from './manifest';
 import type { POIOverview, POIDeploymentDetail } from './poi';
 import type { DeploymentIndexingStatus } from './indexing-status';
+import type { LeaderboardEntry } from './scoring';
 
 // The Graph Network subgraph on Arbitrum (kept for user-specific POST queries)
 const SUBGRAPH_URL = '/api/subgraph';
@@ -217,6 +218,20 @@ export async function fetchEnrichedIndexers(): Promise<{
 }> {
   const response = await fetch('/api/indexers-enriched');
   if (!response.ok) throw new Error('Enriched data not available');
+  return response.json();
+}
+
+/**
+ * Fetch leaderboard scores from Redis cache
+ */
+export async function fetchLeaderboard(): Promise<{
+  periodStart: string;
+  periodEnd: string;
+  computedAt: number;
+  entries: LeaderboardEntry[];
+}> {
+  const response = await fetch('/api/leaderboard');
+  if (!response.ok) throw new Error('Leaderboard data not available');
   return response.json();
 }
 
