@@ -84,11 +84,12 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 - [ ] Data source: explore GraphSeer's approach or gateway metrics
 
 ### 3.4 Indexer Score ✅
-- [x] Composite score algorithm (7-dimension A–F grading)
+- [x] Composite score algorithm (7-dimension A–F grading) — used on indexer directory
 - [x] Allocation Efficiency component
 - [x] REO Compliance component (25% weight, oracle-sourced)
 - [x] Cut Stability component
 - [x] Self-Stake, Over-Delegation, Transparency, Delegation Trend components
+- [x] **RFC-003 Leaderboard Scoring** — separate 12-dimension 0–100 scoring engine (see RFC-003 section below)
 
 ### 3.5 Indexer Directory Enhancements
 - [ ] "Recommended for you" section based on portfolio
@@ -212,9 +213,43 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 - [x] Indexer & delegator impact summaries
 
 ### Network Snapshots ✅
-- [x] Supabase-backed cron ingestion pipeline
-- [x] Tables: `network_snapshots`, `epochs`, `indexers`, `allocations`, `delegations`, `disputes`, `parameter_changes`
+- [x] Self-hosted Postgres ingestion pipeline (DigitalOcean droplet)
+- [x] Tables: `network_snapshots`, `epochs`, `indexers`, `allocations`, `delegations`, `disputes`, `parameter_changes`, `indexer_scores`
 - [x] Chunked upserts to avoid statement timeouts
+- [x] Standalone cron runner (`scripts/cron-runner.ts`) for droplet execution
+
+---
+
+## RFC-003: Indexer Leaderboard & Indexer of the Month
+
+Monthly leaderboard scoring engine with percentile-normalised scores across 12 sub-dimensions, multiplicative penalties, and badge eligibility.
+
+### Scoring Engine ✅
+- [x] 12-dimension scoring formula (4 components: Network 35pts, Economics 25pts, Trust 20pts, Health 10pts)
+- [x] Percentile normalization (p10/p90 bounds, linear interpolation)
+- [x] Multiplicative penalty system (7 penalty types, stacking, 0.1 floor)
+- [x] Monthly computation pipeline (`computeMonthlyScores`)
+- [x] `indexer_scores` table with full component breakdown
+- [x] Cron runner integration (`compute-scores` step)
+- [x] 48 unit tests covering all components, normalization, and penalties
+- [x] Badge eligibility criteria (REO eligible + 3mo tenure + no dispute + 5+ deployments + earned fees)
+
+### Leaderboard Page
+- [ ] `/leaderboard` route with monthly rankings
+- [ ] Period selector (month/year toggle)
+- [ ] Expandable score breakdown per indexer (all 12 sub-dimensions)
+- [ ] Badge indicator for eligible indexers
+- [ ] Wire leaderboard data into Redis for Vercel reads
+
+### Community Voting (Phase 3 — deferred)
+- [ ] Wallet-signature voting mechanism (10pts max, reserved in formula)
+- [ ] Vote tallying and integration into final score
+- [ ] Anti-gaming measures
+
+### Indexer of the Month
+- [ ] Monthly badge assignment (top scorer)
+- [ ] Intel Feed integration
+- [ ] Historical badge display on indexer profile
 
 ---
 
@@ -223,7 +258,7 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 ### Delegation Activity (Matthew Darwin / Pinax — 2026-03-25)
 - [x] Filter delegation activity feed by indexer on the Delegators page
 - [x] Add delegation activity section to individual indexer detail pages
-- [ ] Historical delegation data via backend ingestion pipeline
+- [x] Historical delegation data via backend ingestion pipeline (605K+ events backfilled)
 
 ### Indexer Logs (Matthew Darwin / Pinax — 2026-03-25)
 - [ ] Integrate indexer subgraph indexing status logs via upcoming API (pending upstream availability)
@@ -267,23 +302,36 @@ Content platform for operational knowledge that's currently scattered across Dis
 | graph-network-analytics-horizon | Historical analytics | 5 min |
 | CoinGecko API | GRT price | 30 sec |
 | DefiLlama API | TVL data | 5 min |
-| Supabase Postgres | Persistent snapshots, ingestion | Cron-driven |
+| Self-hosted Postgres (DigitalOcean) | Persistent snapshots, ingestion, scoring | Cron-driven |
 | GIP-0079 REO Oracle | Rewards eligibility | On-demand |
 | Gateway metrics (TBD) | QoS data | 1 min |
 
 ### Stack
 ```
-Next.js 14          # App router, API routes
+Next.js 16          # App router, API routes
 wagmi + viem        # Wallet connection (Arbitrum One)
 RainbowKit          # Wallet UI
 React Query         # Server state management
-Supabase            # Postgres persistence + cron ingestion
+postgres.js         # Direct Postgres (self-hosted on DigitalOcean droplet)
+Upstash Redis       # Edge-friendly cache layer for Vercel
 Tailwind CSS        # Styling (mobile-first responsive)
+```
+
+### Data Pipeline (DigitalOcean Droplet)
+```
+# Standalone cron runner — scripts/cron-runner.ts
+npx tsx scripts/cron-runner.ts refresh        # Full enrichment → Redis + Postgres
+npx tsx scripts/cron-runner.ts epochs         # Ingest epochs
+npx tsx scripts/cron-runner.ts allocations    # Ingest allocations (delta)
+npx tsx scripts/cron-runner.ts delegations    # Ingest delegation events
+npx tsx scripts/cron-runner.ts disputes       # Ingest disputes
+npx tsx scripts/cron-runner.ts snapshot       # Network snapshot
+npx tsx scripts/cron-runner.ts compute-scores # Monthly leaderboard scoring
 ```
 
 ### API Routes (Live)
 ```
-# Data Ingestion (Cron)
+# Data Ingestion (legacy Vercel cron wrappers — pipeline runs on droplet)
 GET  /api/cron/snapshot-network     # Network state snapshot
 GET  /api/cron/ingest-allocations   # Closed allocations (POI)
 GET  /api/cron/ingest-delegations   # Delegation events
@@ -349,5 +397,6 @@ GET  /api/ens                       # ENS name resolution
 | Rolling APY (30/90d) | ✅ Live | PaulieB14's dashboard is standalone |
 | Greedy indexer warnings | ✅ Live | Novel feature |
 | Delegation activity feed | ✅ Live | Novel feature |
+| Indexer leaderboard scoring | ✅ Engine live | Novel feature (RFC-003) |
 
 The window is open. Let's build.
