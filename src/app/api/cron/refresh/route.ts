@@ -427,6 +427,7 @@ export async function GET(request: NextRequest) {
         name: displayName,
         id: indexer.id,
         rewardCutPPM: indexer.indexingRewardCut,
+        queryFeeCutPPM: indexer.queryFeeCut,
         queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected),
         netFlowGRT: activity.netFlowGRT,
         delegatedGRT: delegated,

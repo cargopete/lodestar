@@ -1,24 +1,26 @@
 /**
  * Composite Indexer Risk Score
  *
- * Eight dimensions, each scored 0–100, combined with transparent weights
+ * Nine dimensions, each scored 0–100, combined with transparent weights
  * into a single 0–100 composite score. Higher = better for delegators.
  *
  * Dimensions & weights:
- *   REO compliance     20%  — gates rewards; most critical signal
- *   Self-stake ratio   15%  — skin in the game
- *   Query volume       15%  — actual work served (query fees collected)
- *   Allocation efficiency 15% — operational competence
- *   Cut stability      10%  — trust / predictability
- *   Over-delegation    10%  — delegation safety margin
- *   Transparency       10%  — presence and accountability
- *   Delegation trend    5%  — crowd signal (noisy, low weight)
+ *   REO compliance       20%  — gates rewards; most critical signal
+ *   Self-stake ratio     13%  — skin in the game
+ *   Query volume         12%  — actual work served (query fees collected)
+ *   Allocation efficiency 13% — operational competence
+ *   Delegator cut        10%  — how much delegators keep (reward + query fee cuts)
+ *   Cut stability         8%  — trust / predictability
+ *   Over-delegation      10%  — delegation safety margin
+ *   Transparency          9%  — presence and accountability
+ *   Delegation trend      5%  — crowd signal (noisy, low weight)
  */
 
 export interface ScoreBreakdown {
   reo: number;
   selfStake: number;
   queryVolume: number;
+  delegatorCut: number;
   cutStability: number;
   allocationEfficiency: number;
   overDelegation: number;
@@ -34,12 +36,13 @@ export interface IndexerScore {
 
 export const SCORE_WEIGHTS: Record<keyof ScoreBreakdown, number> = {
   reo: 20,
-  selfStake: 15,
-  queryVolume: 15,
-  allocationEfficiency: 15,
-  cutStability: 10,
+  selfStake: 13,
+  queryVolume: 12,
+  allocationEfficiency: 13,
+  delegatorCut: 10,
+  cutStability: 8,
   overDelegation: 10,
-  transparency: 10,
+  transparency: 9,
   delegationTrend: 5,
 };
 
@@ -47,6 +50,7 @@ export const SCORE_LABELS: Record<keyof ScoreBreakdown, string> = {
   reo: 'REO Compliance',
   selfStake: 'Self-Stake',
   queryVolume: 'Query Volume',
+  delegatorCut: 'Delegator Cut',
   cutStability: 'Cut Stability',
   allocationEfficiency: 'Allocation Efficiency',
   overDelegation: 'Delegation Safety',
@@ -237,6 +241,58 @@ function scoreQueryVolume(queryFeesCollectedGRT: number): number {
 }
 
 /**
+ * Delegator cut: how much of the rewards delegators actually keep.
+ * Primary signal is the indexing reward cut (where most earnings come from).
+ * Secondary penalty for high query fee cut (smaller impact, but still relevant
+ * as query fees grow in importance).
+ *
+ * Reward cut anchors (PPM → score via percentage):
+ *   0%   → 100,  5%  → 95,  10% → 85,  15% → 75,  20% → 68,
+ *   25%  → 60,  50% → 35,  75% → 15,  100% → 0
+ *
+ * Query fee cut penalty: up to -15 points (linear, 100% fee cut = -15).
+ */
+function scoreDelegatorCut(rewardCutPPM: number, queryFeeCutPPM: number): number {
+  const rewardCutPercent = Math.min(rewardCutPPM / 10_000, 100);
+
+  const anchors: [number, number][] = [
+    [0,   100],
+    [5,    95],
+    [10,   85],
+    [15,   75],
+    [20,   68],
+    [25,   60],
+    [50,   35],
+    [75,   15],
+    [100,   0],
+  ];
+
+  let rewardScore: number;
+  if (rewardCutPercent <= anchors[0][0]) {
+    rewardScore = anchors[0][1];
+  } else if (rewardCutPercent >= anchors[anchors.length - 1][0]) {
+    rewardScore = anchors[anchors.length - 1][1];
+  } else {
+    rewardScore = anchors[0][1]; // fallback
+    for (let i = 0; i < anchors.length - 1; i++) {
+      const [lo, loScore] = anchors[i];
+      const [hi, hiScore] = anchors[i + 1];
+      if (rewardCutPercent >= lo && rewardCutPercent <= hi) {
+        const t = (rewardCutPercent - lo) / (hi - lo);
+        rewardScore = Math.round(loScore + t * (hiScore - loScore));
+        break;
+      }
+    }
+  }
+
+  // Query fee cut penalty: 0% cut = 0 penalty, 100% cut = -15
+  const queryFeePercent = Math.min(queryFeeCutPPM / 10_000, 100);
+  const queryPenalty = Math.round((queryFeePercent / 100) * 15);
+
+  return Math.max(0, rewardScore - queryPenalty);
+}
+
+/**
  * Delegation trend: net flow relative to total delegated.
  * Positive inflow = crowd confidence. Neutral = baseline. Outflow = warning.
  */
@@ -284,6 +340,7 @@ export interface ScoreInput {
   name: string;
   id: string;
   rewardCutPPM: number;
+  queryFeeCutPPM: number;
   queryFeesCollectedGRT: number;
   netFlowGRT: number;
   delegatedGRT: number;
@@ -294,6 +351,7 @@ export function calculateIndexerScore(input: ScoreInput): IndexerScore {
     reo: scoreREO(input.reoStatus, input.reoDaysRemaining, input.reoSource),
     selfStake: scoreSelfStake(input.selfStakeGRT),
     queryVolume: scoreQueryVolume(input.queryFeesCollectedGRT),
+    delegatorCut: scoreDelegatorCut(input.rewardCutPPM, input.queryFeeCutPPM),
     cutStability: scoreCutStability(
       input.lastDelegationParameterUpdate,
       input.delegatorParameterCooldown,

@@ -27,6 +27,7 @@ function makeInput(overrides: Partial<ScoreInput> = {}): ScoreInput {
     name: 'My Indexer',
     id: '0x1234567890abcdef',
     rewardCutPPM: 100_000,
+    queryFeeCutPPM: 100_000,
     queryFeesCollectedGRT: 50_000,
     netFlowGRT: 10_000,
     delegatedGRT: 500_000,
@@ -293,6 +294,58 @@ describe('query volume scoring', () => {
     // Between 1K(50) and 10K(70), at 44.4% → ~59
     expect(breakdown.queryVolume).toBeGreaterThan(50);
     expect(breakdown.queryVolume).toBeLessThan(70);
+  });
+});
+
+// ---------- Delegator cut dimension ----------
+
+describe('delegator cut scoring', () => {
+  it('scores 100 for 0% reward cut and 0% query fee cut', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rewardCutPPM: 0, queryFeeCutPPM: 0,
+    }));
+    expect(breakdown.delegatorCut).toBe(100);
+  });
+
+  it('scores 85 for 10% reward cut, 0% query fee cut', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rewardCutPPM: 100_000, queryFeeCutPPM: 0,
+    }));
+    expect(breakdown.delegatorCut).toBe(85);
+  });
+
+  it('scores 0 for 100% reward cut', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rewardCutPPM: 1_000_000, queryFeeCutPPM: 0,
+    }));
+    expect(breakdown.delegatorCut).toBe(0);
+  });
+
+  it('applies query fee cut penalty', () => {
+    const withoutFeeCut = calculateIndexerScore(makeInput({
+      rewardCutPPM: 100_000, queryFeeCutPPM: 0,
+    }));
+    const withFeeCut = calculateIndexerScore(makeInput({
+      rewardCutPPM: 100_000, queryFeeCutPPM: 1_000_000,
+    }));
+    // 100% query fee cut = -15 penalty
+    expect(withoutFeeCut.breakdown.delegatorCut - withFeeCut.breakdown.delegatorCut).toBe(15);
+  });
+
+  it('scores ~58 for 17.5% reward cut + 100% query fee cut (p2p-org case)', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rewardCutPPM: 175_000, queryFeeCutPPM: 1_000_000,
+    }));
+    // 17.5% reward cut ≈ 71, minus 15 for 100% query fee cut ≈ 56
+    expect(breakdown.delegatorCut).toBeGreaterThan(50);
+    expect(breakdown.delegatorCut).toBeLessThan(65);
+  });
+
+  it('never goes below 0', () => {
+    const { breakdown } = calculateIndexerScore(makeInput({
+      rewardCutPPM: 900_000, queryFeeCutPPM: 1_000_000,
+    }));
+    expect(breakdown.delegatorCut).toBeGreaterThanOrEqual(0);
   });
 });
 
