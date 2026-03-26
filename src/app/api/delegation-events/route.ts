@@ -1,33 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cached } from '@/lib/cache';
+import { delegationEventsQuery, hasSubgraphAccess } from '@/lib/subgraph';
 
-// Paolo Diomede's delegation events subgraph — discrete delegation/undelegation/withdrawal events
-const SUBGRAPH_ID = '4LLzwGxX6iBgXzAe4Sp9pEUg6n5h3UTMviAYKPmuUWds';
+interface DelegationEvent {
+  id: string;
+  eventType: string;
+  indexer: string;
+  delegator: string;
+  tokens: string;
+  timestamp: string;
+  txHash: string;
+}
 
-export async function POST(request: NextRequest) {
+interface DelegationEventsResponse {
+  delegationEvents: DelegationEvent[];
+}
+
+export async function GET(request: NextRequest) {
+  if (!hasSubgraphAccess()) {
+    return NextResponse.json({ data: { delegationEvents: [] } });
+  }
+
+  const indexer = request.nextUrl.searchParams.get('indexer')?.toLowerCase();
+  const first = Math.min(parseInt(request.nextUrl.searchParams.get('first') ?? '50', 10), 100);
+
   try {
-    const { query } = await request.json();
+    const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
+    const cacheKey = indexer
+      ? `lodestar:delegation-events:${indexer}`
+      : 'lodestar:delegation-events:all';
 
-    const apiKey = process.env.GRAPH_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ data: { delegationEvents: [] } });
-    }
+    const whereClause = indexer
+      ? `where: { indexer: "${indexer}", timestamp_gt: "${sevenDaysAgo}" }`
+      : `where: { timestamp_gt: "${sevenDaysAgo}" }`;
 
-    const url = `https://gateway-arbitrum.network.thegraph.com/api/${apiKey}/subgraphs/id/${SUBGRAPH_ID}`;
+    const data = await cached(cacheKey, 300, () =>
+      delegationEventsQuery<DelegationEventsResponse>(`{
+        delegationEvents(
+          first: ${first},
+          orderBy: timestamp,
+          orderDirection: desc,
+          ${whereClause}
+        ) {
+          id
+          eventType
+          indexer
+          delegator
+          tokens
+          timestamp
+          txHash
+        }
+      }`)
+    );
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
+    return NextResponse.json({ data }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+      },
     });
-
-    if (!response.ok) {
-      throw new Error(`Delegation events subgraph error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
   } catch (error) {
-    console.error('Delegation events API error:', error);
+    console.error('Delegation events error:', error);
     return NextResponse.json({ data: { delegationEvents: [] } });
   }
 }

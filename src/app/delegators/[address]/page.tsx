@@ -1,14 +1,12 @@
 'use client';
 
 import { use, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import {
-  type DelegatorPortfolioResponse,
   type DelegatedStake,
   type Indexer,
 } from '@/lib/queries';
-import { useGRTPrice, useIndexers } from '@/hooks/useNetworkStats';
+import { useGRTPrice, useIndexers, useDelegatorPortfolio } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
   formatGRT,
@@ -25,68 +23,6 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
-
-function useDelegatorPortfolio(address: string | undefined) {
-  return useQuery({
-    queryKey: ['delegatorPortfolio', address],
-    queryFn: async () => {
-      if (!address) return null;
-      const query = `
-        {
-          delegator(id: "${address.toLowerCase()}") {
-            id
-            totalStakedTokens
-            totalUnstakedTokens
-            totalRealizedRewards
-            stakesCount
-            activeStakesCount
-            stakes(first: 100, orderBy: stakedTokens, orderDirection: desc) {
-              id
-              stakedTokens
-              shareAmount
-              lockedTokens
-              lockedUntil
-              realizedRewards
-              unstakedTokens
-              createdAt
-              lastUndelegatedAt
-              indexer {
-                id
-                account {
-                  id
-                  defaultDisplayName
-                  metadata {
-                    displayName
-                    description
-                  }
-                }
-                stakedTokens
-                delegatedTokens
-                delegatorShares
-                indexingRewardCut
-                queryFeeCut
-                delegatorParameterCooldown
-                allocationCount
-                indexingRewardEffectiveCut
-              }
-            }
-          }
-        }
-      `;
-      const response = await fetch('/api/subgraph', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
-      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-      const json = await response.json();
-      if (json.errors) throw new Error(JSON.stringify(json.errors));
-      return json.data?.delegator ?? null;
-    },
-    enabled: !!address,
-    staleTime: 60 * 1000,
-  });
-}
 
 /** Estimate a simple APR from an indexer's rewards earned and total stake */
 function estimateIndexerAPR(indexer: {
@@ -175,7 +111,8 @@ export default function DelegatorPortfolioPage({
   params: Promise<{ address: string }>;
 }) {
   const { address } = use(params);
-  const { data: delegator, isLoading, error } = useDelegatorPortfolio(address);
+  const { data: portfolioData, isLoading, error } = useDelegatorPortfolio(address);
+  const delegator = portfolioData?.delegator ?? null;
   const { data: priceData } = useGRTPrice();
   const { data: indexersData } = useIndexers({ first: 100, orderBy: 'stakedTokens', orderDirection: 'desc' });
 

@@ -18,6 +18,8 @@ import {
   fetchIndexingStatus,
   fetchNetworksRegistry,
   fetchLeaderboard,
+  fetchDelegatorPortfolio,
+  fetchCuratorPortfolio,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -145,10 +147,10 @@ export function useTVL() {
 /**
  * Hook for data services (Horizon multi-service)
  */
-export function useDataServices(first = 20) {
+export function useDataServices() {
   return useQuery({
-    queryKey: ['dataServices', first],
-    queryFn: () => fetchDataServices(first),
+    queryKey: ['dataServices'],
+    queryFn: () => fetchDataServices(),
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
   });
@@ -297,28 +299,7 @@ export function useRecentDelegations(indexerAddress: string) {
   return useQuery<DelegationEvent[]>({
     queryKey: ['recentDelegations', indexerAddress],
     queryFn: async () => {
-      const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
-      const query = `{
-        delegationEvents(
-          first: 100,
-          orderBy: timestamp,
-          orderDirection: desc,
-          where: { indexer: "${indexerAddress.toLowerCase()}", timestamp_gt: "${sevenDaysAgo}" }
-        ) {
-          id
-          eventType
-          indexer
-          delegator
-          tokens
-          timestamp
-          txHash
-        }
-      }`;
-      const response = await fetch('/api/delegation-events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
+      const response = await fetch(`/api/delegation-events?indexer=${encodeURIComponent(indexerAddress)}&first=100`);
       if (!response.ok) throw new Error('Failed to fetch delegation events');
       const json = await response.json();
       return json.data?.delegationEvents ?? [];
@@ -337,36 +318,41 @@ export function useNetworkDelegations(indexerAddress?: string) {
   return useQuery<DelegationEvent[]>({
     queryKey: ['networkDelegations', indexerAddress ?? ''],
     queryFn: async () => {
-      const whereClause = indexerAddress
-        ? `where: { indexer: "${indexerAddress.toLowerCase()}" }`
-        : '';
-      const query = `{
-        delegationEvents(
-          first: 50,
-          orderBy: timestamp,
-          orderDirection: desc
-          ${whereClause}
-        ) {
-          id
-          eventType
-          indexer
-          delegator
-          tokens
-          timestamp
-          txHash
-        }
-      }`;
-      const response = await fetch('/api/delegation-events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
+      const params = new URLSearchParams({ first: '50' });
+      if (indexerAddress) params.set('indexer', indexerAddress);
+      const response = await fetch(`/api/delegation-events?${params}`);
       if (!response.ok) throw new Error('Failed to fetch delegation events');
       const json = await response.json();
       return json.data?.delegationEvents ?? [];
     },
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
+  });
+}
+
+/**
+ * Hook for delegator portfolio via cached GET endpoint
+ */
+export function useDelegatorPortfolio(address: string | undefined) {
+  return useQuery({
+    queryKey: ['delegatorPortfolio', address],
+    queryFn: () => fetchDelegatorPortfolio(address!),
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    enabled: !!address,
+  });
+}
+
+/**
+ * Hook for curator portfolio via cached GET endpoint
+ */
+export function useCuratorPortfolio(address: string | undefined) {
+  return useQuery({
+    queryKey: ['curatorPortfolio', address],
+    queryFn: () => fetchCuratorPortfolio(address!),
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    enabled: !!address,
   });
 }
 

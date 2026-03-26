@@ -77,99 +77,12 @@ function useIndexerDetails(address: string) {
   return useQuery<IndexerDetail | null>({
     queryKey: ['indexerDetails', address],
     queryFn: async () => {
-      const addr = address.toLowerCase();
-      const query = `
-        query IndexerDetails {
-          indexer(id: "${addr}") {
-            id
-            account {
-              id
-              defaultDisplayName
-              metadata {
-                displayName
-                description
-              }
-            }
-            stakedTokens
-            lockedTokens
-            delegatedTokens
-            allocatedTokens
-            tokenCapacity
-            allocationCount
-            indexingRewardCut
-            queryFeeCut
-            rewardsEarned
-            queryFeesCollected
-            delegatorShares
-            delegatorParameterCooldown
-            lastDelegationParameterUpdate
-            url
-            geoHash
-            createdAt
-            indexingRewardEffectiveCut
-            overDelegationDilution
-            ownStakeRatio
-            delegatedStakeRatio
-            indexerRewardsOwnGenerationRatio
-            provisionedTokens
-            delegators(first: 100) {
-              id
-              stakedTokens
-              shareAmount
-              delegator { id }
-            }
-          }
-        }
-      `;
-      const response = await fetch('/api/subgraph', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
+      const response = await fetch(`/api/indexer/${encodeURIComponent(address.toLowerCase())}`);
       if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
       const json = await response.json();
-      if (json.errors) throw new Error(JSON.stringify(json.errors));
-      const indexer = json.data?.indexer ?? null;
-      if (!indexer) return null;
-
-      // Fetch ALL active allocations with pagination (subgraph caps at 1000)
-      let allAllocations: IndexerDetail['allocations'] = [];
-      let lastId = '';
-      while (true) {
-        const allocQuery = `{
-          allocations(
-            first: 1000,
-            where: { indexer: "${addr}", status: Active${lastId ? `, id_gt: "${lastId}"` : ''} }
-            orderBy: id
-            orderDirection: asc
-          ) {
-            id
-            allocatedTokens
-            createdAtEpoch
-            subgraphDeployment {
-              id
-              signalledTokens
-              stakedTokens
-            }
-          }
-        }`;
-        const allocRes = await fetch('/api/subgraph', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: allocQuery }),
-        });
-        if (!allocRes.ok) break;
-        const allocJson = await allocRes.json();
-        const batch = allocJson.data?.allocations ?? [];
-        allAllocations = allAllocations.concat(batch);
-        if (batch.length < 1000) break;
-        lastId = batch[batch.length - 1].id;
-      }
-
-      indexer.allocations = allAllocations;
-      return indexer;
+      return json.data?.indexer ?? null;
     },
-    staleTime: 60 * 1000,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

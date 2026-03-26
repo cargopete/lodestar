@@ -260,6 +260,14 @@ const MOCK_SERVICE_PROVISIONS = {
 };
 
 export async function POST(request: NextRequest) {
+  // In production, block direct subgraph proxy — all queries must go through cached GET endpoints
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Direct subgraph queries are disabled. Use the cached API endpoints.' },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
     const query = body.query as string;
@@ -268,7 +276,7 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.GRAPH_API_KEY;
 
     if (apiKey) {
-      // Use real subgraph
+      // Use real subgraph (development only)
       const url = SUBGRAPH_URL.replace('[api-key]', apiKey);
 
       const response = await fetch(url, {

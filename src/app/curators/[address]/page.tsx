@@ -1,8 +1,8 @@
 'use client';
 
 import { use, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { type Signal, type Curator } from '@/lib/queries';
+import { useCuratorPortfolio } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
   formatGRT,
@@ -12,54 +12,6 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
-
-function useCuratorPortfolio(address: string) {
-  return useQuery<Curator | null>({
-    queryKey: ['curatorPortfolio', address],
-    queryFn: async () => {
-      const query = `
-        query CuratorPortfolio {
-          curator(id: "${address.toLowerCase()}") {
-            id
-            totalSignalledTokens
-            totalUnsignalledTokens
-            totalNameSignalledTokens
-            totalNameUnsignalledTokens
-            totalWithdrawnTokens
-            realizedRewards
-            signalCount
-            activeSignalCount
-            signals(first: 100, orderBy: signalledTokens, orderDirection: desc) {
-              id
-              signalledTokens
-              unsignalledTokens
-              signal
-              lastSignalChange
-              realizedRewards
-              subgraphDeployment {
-                id
-                ipfsHash
-                signalledTokens
-                queryFeesAmount
-                stakedTokens
-              }
-            }
-          }
-        }
-      `;
-      const response = await fetch('/api/subgraph', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
-      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-      const json = await response.json();
-      if (json.errors) throw new Error(JSON.stringify(json.errors));
-      return json.data?.curator ?? null;
-    },
-    staleTime: 60 * 1000,
-  });
-}
 
 interface SignalWithMetrics extends Signal {
   signalledGRT: number;
@@ -106,7 +58,8 @@ export default function CuratorProfilePage({
   params: Promise<{ address: string }>;
 }) {
   const { address } = use(params);
-  const { data: curator, isLoading } = useCuratorPortfolio(address);
+  const { data: portfolioData, isLoading } = useCuratorPortfolio(address);
+  const curator = portfolioData?.curator ?? null;
 
   const { totalSignalled, totalRealized, activeCount, signalMetrics, opportunities } = useMemo(() => {
     if (!curator) {

@@ -857,21 +857,17 @@ describe('/api/indexing-status/[hash]', () => {
 // ============================================================
 
 describe('/api/delegation-events', () => {
-  let POST: (req: Request) => Promise<Response>;
+  let GET: (req: Request) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/delegation-events/route');
-    POST = mod.POST as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: Request) => Promise<Response>;
   });
 
   it('returns empty data when no API key', async () => {
     // GRAPH_API_KEY not set in test env
-    const req = makeRequest('/api/delegation-events', {
-      method: 'POST',
-      body: JSON.stringify({ query: '{ delegationEvents { id } }' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const res = await POST(req);
+    const req = makeRequest('/api/delegation-events');
+    const res = await GET(req);
     const json = await getJson(res);
 
     expect(res.status).toBe(200);

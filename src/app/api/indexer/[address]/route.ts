@@ -14,8 +14,9 @@ export async function GET(
   }
 
   try {
-    const data = await cached(`lodestar:indexer:${addr}`, 300, () =>
-      subgraphQuery(`{
+    const data = await cached(`lodestar:indexer:${addr}`, 300, async () => {
+      // Fetch indexer details
+      const result = await subgraphQuery<{ indexer: Record<string, unknown> | null }>(`{
         indexer(id: "${addr}") {
           id
           account {
@@ -27,6 +28,7 @@ export async function GET(
             }
           }
           stakedTokens
+          lockedTokens
           delegatedTokens
           allocatedTokens
           tokenCapacity
@@ -34,22 +36,19 @@ export async function GET(
           indexingRewardCut
           queryFeeCut
           rewardsEarned
+          queryFeesCollected
           delegatorShares
+          delegatorParameterCooldown
+          lastDelegationParameterUpdate
           url
           geoHash
           createdAt
-          delegatorParameterCooldown
-          lastDelegationParameterUpdate
-          allocations(first: 100, where: { status: Active }) {
-            id
-            allocatedTokens
-            createdAtEpoch
-            subgraphDeployment {
-              id
-              signalledTokens
-              stakedTokens
-            }
-          }
+          indexingRewardEffectiveCut
+          overDelegationDilution
+          ownStakeRatio
+          delegatedStakeRatio
+          indexerRewardsOwnGenerationRatio
+          provisionedTokens
           delegators(first: 100) {
             id
             stakedTokens
@@ -59,8 +58,54 @@ export async function GET(
             }
           }
         }
-      }`)
-    );
+      }`);
+
+      if (!result.indexer) return { indexer: null };
+
+      // Paginate through ALL active allocations (subgraph caps at 1000 per query)
+      interface Allocation {
+        id: string;
+        allocatedTokens: string;
+        createdAtEpoch: number;
+        subgraphDeployment: {
+          id: string;
+          signalledTokens: string;
+          stakedTokens: string;
+        };
+      }
+      let allAllocations: Allocation[] = [];
+      let lastId = '';
+      while (true) {
+        const allocResult = await subgraphQuery<{ allocations: Allocation[] }>(`{
+          allocations(
+            first: 1000,
+            where: { indexer: "${addr}", status: Active${lastId ? `, id_gt: "${lastId}"` : ''} }
+            orderBy: id
+            orderDirection: asc
+          ) {
+            id
+            allocatedTokens
+            createdAtEpoch
+            subgraphDeployment {
+              id
+              signalledTokens
+              stakedTokens
+            }
+          }
+        }`);
+        const batch = allocResult.allocations ?? [];
+        allAllocations = allAllocations.concat(batch);
+        if (batch.length < 1000) break;
+        lastId = batch[batch.length - 1].id;
+      }
+
+      return {
+        indexer: {
+          ...result.indexer,
+          allocations: allAllocations,
+        },
+      };
+    });
 
     return NextResponse.json({ data }, {
       headers: {
