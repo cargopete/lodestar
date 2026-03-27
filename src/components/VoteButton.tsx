@@ -44,7 +44,7 @@ export function VoteButton({ indexerAddress, className }: VoteButtonProps) {
       return;
     }
     if (hasVoted) {
-      setToast('You've already voted this month');
+      setToast('Already voted this month');
       setTimeout(() => setToast(null), 2500);
       return;
     }
