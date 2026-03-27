@@ -42,8 +42,9 @@ const SCORE_SECTIONS = [
     label: 'Network Contribution',
     max: 35,
     items: [
-      { key: 'query_fee_score' as const, label: 'Query Fees', max: 20 },
-      { key: 'allocation_efficiency_score' as const, label: 'Allocation Efficiency', max: 15 },
+      { key: 'query_fee_score' as const, label: 'Query Fees', max: 15 },
+      { key: 'allocation_breadth_score' as const, label: 'Subgraph Coverage', max: 10 },
+      { key: 'allocation_efficiency_score' as const, label: 'Allocation Efficiency', max: 10 },
     ],
   },
   {
@@ -68,8 +69,7 @@ const SCORE_SECTIONS = [
     label: 'Protocol Health',
     max: 6,
     items: [
-      { key: 'reo_score' as const, label: 'REO Eligibility', max: 4 },
-      { key: 'allocation_breadth_score' as const, label: 'Allocation Breadth', max: 2 },
+      { key: 'reo_score' as const, label: 'REO Eligibility', max: 6 },
     ],
   },
   {
@@ -134,7 +134,9 @@ export default function LeaderboardPage() {
       <div>
         <h1 className="text-xl font-semibold text-[var(--text)]">Indexer Leaderboard</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Monthly rankings based on 11 scoring dimensions across network contribution, economics, trust, protocol health, and community votes.
+          Community rankings recognising indexers who contribute most to The Graph network.
+          Scores reward broad subgraph coverage, query serving, fair economics, and operational trust —
+          this is about who helps the network most, not just who earns the most.
           {data.periodStart && (
             <span className="text-[var(--text)]"> {formatPeriod(data.periodStart)}</span>
           )}
@@ -215,11 +217,16 @@ export default function LeaderboardPage() {
           <div>
             <h4 className="font-semibold text-[var(--text)] mb-2">About the Leaderboard</h4>
             <p className="text-sm text-[var(--text-muted)]">
-              Scores are computed monthly using percentile normalisation (p10/p90) across all active indexers.
-              Each indexer is scored on 10 dimensions grouped into 5 components: Network Contribution (35pts),
-              Economics (25pts), Trust &amp; Stability (20pts), Protocol Health (6pts), and Community Votes (10pts).
-              Anyone with a wallet can vote once per month for their favourite indexer — delegator
-              votes count 5x. Penalties are multiplicative and stack.
+              The community leaderboard ranks indexers by their contribution to The Graph network,
+              not just profitability. Scores are computed monthly using percentile normalisation (p10/p90)
+              across all active indexers, grouped into 5 components:
+              Network Contribution (35pts — query fees, subgraph coverage, allocation efficiency),
+              Economics (25pts — delegator APR, effective cut fairness, capacity),
+              Trust &amp; Stability (20pts — cut stability, tenure, delegation retention),
+              Protocol Health (6pts — REO eligibility), and Community Votes (10pts).
+              Indexers who serve more subgraphs — especially those nobody else can sync — score
+              higher than those who concentrate on a few profitable deployments.
+              Anyone with a wallet can vote once per month; delegator votes count 5x.
             </p>
           </div>
           <div>

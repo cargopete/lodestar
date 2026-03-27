@@ -67,8 +67,8 @@ describe('normalizeInverted', () => {
 // ── Component Scoring ───────────────────────────────────
 
 describe('scoreQueryFees', () => {
-  it('scores at p90 gets full 20 points', () => {
-    expect(scoreQueryFees(1000, 100, 1000)).toBe(20);
+  it('scores at p90 gets full 15 points', () => {
+    expect(scoreQueryFees(1000, 100, 1000)).toBe(15);
   });
 
   it('scores at p10 gets 0 points', () => {
@@ -129,15 +129,15 @@ describe('scoreRetention', () => {
 });
 
 describe('scoreReo', () => {
-  it('eligible = 4', () => expect(scoreReo('eligible')).toBe(4));
-  it('warning = 2', () => expect(scoreReo('warning')).toBe(2));
+  it('eligible = 6', () => expect(scoreReo('eligible')).toBe(6));
+  it('warning = 3', () => expect(scoreReo('warning')).toBe(3));
   it('ineligible = 0', () => expect(scoreReo('ineligible')).toBe(0));
 });
 
 describe('scoreAllocationBreadth', () => {
-  it('10+ = 2', () => expect(scoreAllocationBreadth(12)).toBe(2));
-  it('5-9 = 1', () => expect(scoreAllocationBreadth(7)).toBe(1));
-  it('<5 = 0', () => expect(scoreAllocationBreadth(3)).toBe(0));
+  it('at p90 = 10', () => expect(scoreAllocationBreadth(50, 5, 50)).toBe(10));
+  it('at p10 = 0', () => expect(scoreAllocationBreadth(5, 5, 50)).toBe(0));
+  it('mid-range', () => expect(scoreAllocationBreadth(27.5, 5, 50)).toBeCloseTo(5, 1));
 });
 
 // ── Penalties ───────────────────────────────────────────

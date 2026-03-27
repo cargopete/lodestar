@@ -12,6 +12,7 @@ import { computeBounds } from './normalize';
 import {
   scoreQueryFees,
   scoreAllocationEfficiency,
+  scoreAllocationBreadth,
   scoreDelegatorApr,
   scoreEffectiveCut,
   scoreDelegationCapacity,
@@ -19,7 +20,6 @@ import {
   scoreTenure,
   scoreRetention,
   scoreReo,
-  scoreAllocationBreadth,
 } from './components';
 import { calculatePenalties, type PenaltyInput } from './penalties';
 
@@ -257,6 +257,7 @@ export async function computeMonthlyScores(
 
   const feeBounds = computeBounds(metrics.map((m) => m.queryFees));
   const effBounds = computeBounds(metrics.filter((m) => m.allocEfficiency > 0).map((m) => m.allocEfficiency));
+  const breadthBounds = computeBounds(metrics.filter((m) => m.distinctDeployments > 0).map((m) => m.distinctDeployments));
   const aprBounds = computeBounds(metrics.filter((m) => m.delegatorApr > 0).map((m) => m.delegatorApr));
   const cutBounds = computeBounds(metrics.filter((m) => m.effectiveCut > 0).map((m) => m.effectiveCut));
 
@@ -265,6 +266,7 @@ export async function computeMonthlyScores(
   const scored = metrics.map((m) => {
     const queryFeeScore = scoreQueryFees(m.queryFees, feeBounds.p10, feeBounds.p90);
     const allocEffScore = scoreAllocationEfficiency(m.allocEfficiency, effBounds.p10, effBounds.p90);
+    const breadthScore = scoreAllocationBreadth(m.distinctDeployments, breadthBounds.p10, breadthBounds.p90);
     const aprScore = scoreDelegatorApr(m.delegatorApr, aprBounds.p10, aprBounds.p90);
     const cutScore = scoreEffectiveCut(m.effectiveCut, cutBounds.p10, cutBounds.p90);
     const capScore = scoreDelegationCapacity(m.capacityPct);
@@ -272,7 +274,6 @@ export async function computeMonthlyScores(
     const tenureScore = scoreTenure(m.monthsActive);
     const retScore = scoreRetention(m.netFlow30d);
     const reoScore = scoreReo(m.reoStatus);
-    const breadthScore = scoreAllocationBreadth(m.distinctDeployments);
 
     // Community vote score: proportional to max weighted votes (0-10)
     const voterWeighted = voteMap.get(m.address) ?? 0;

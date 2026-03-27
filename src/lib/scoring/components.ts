@@ -7,22 +7,31 @@ import { normalize, normalizeInverted } from './normalize';
 
 // ── Component 1: Network Contribution (35 pts) ───────────
 
-/** Query Fees Earned — 20 pts. Percentile-normalised. */
+/** Query Fees Earned — 15 pts. Percentile-normalised. */
 export function scoreQueryFees(
   feesGrt: number,
   p10: number,
   p90: number
 ): number {
-  return normalize(feesGrt, p10, p90, 20);
+  return normalize(feesGrt, p10, p90, 15);
 }
 
-/** Allocation Efficiency — 15 pts. Fees-to-allocated ratio, percentile-normalised. */
+/** Allocation Efficiency — 10 pts. Fees-to-allocated ratio, percentile-normalised. */
 export function scoreAllocationEfficiency(
   ratio: number,
   p10: number,
   p90: number
 ): number {
-  return normalize(ratio, p10, p90, 15);
+  return normalize(ratio, p10, p90, 10);
+}
+
+/** Allocation Breadth — 10 pts. Distinct active deployments, percentile-normalised. */
+export function scoreAllocationBreadth(
+  distinctDeployments: number,
+  p10: number,
+  p90: number
+): number {
+  return normalize(distinctDeployments, p10, p90, 10);
 }
 
 // ── Component 2: Economics (25 pts) ───────────────────────
@@ -92,21 +101,11 @@ export function scoreRetention(netFlowGrt: number): number {
   return 0;
 }
 
-// ── Component 4: Protocol Health (10 pts) ─────────────────
+// ── Component 4: Protocol Health (6 pts) ──────────────────
 
-/** REO Eligibility — 4 pts. */
+/** REO Eligibility — 6 pts. */
 export function scoreReo(status: string): number {
-  if (status === 'eligible') return 4;
-  if (status === 'warning') return 2;
+  if (status === 'eligible') return 6;
+  if (status === 'warning') return 3;
   return 0; // ineligible or unknown
-}
-
-/**
- * Active Allocation Breadth — 2 pts.
- * @param distinctDeployments - number of distinct subgraph deployments with active allocations
- */
-export function scoreAllocationBreadth(distinctDeployments: number): number {
-  if (distinctDeployments >= 10) return 2;
-  if (distinctDeployments >= 5) return 1;
-  return 0;
 }
