@@ -39,21 +39,19 @@ function barWidth(score: number, max: number): string {
 // Component score sections for the expanded breakdown
 const SCORE_SECTIONS = [
   {
-    label: 'Network Contribution',
-    max: 35,
+    label: 'Network Service',
+    max: 40,
     items: [
-      { key: 'query_fee_score' as const, label: 'Query Fees', max: 15 },
-      { key: 'allocation_breadth_score' as const, label: 'Subgraph Coverage', max: 10 },
+      { key: 'allocation_breadth_score' as const, label: 'Subgraph Coverage', max: 20 },
+      { key: 'query_fee_score' as const, label: 'Query Fees', max: 10 },
       { key: 'allocation_efficiency_score' as const, label: 'Allocation Efficiency', max: 10 },
     ],
   },
   {
-    label: 'Economics',
+    label: 'Community',
     max: 25,
     items: [
-      { key: 'delegator_apr_score' as const, label: 'Delegator APR', max: 10 },
-      { key: 'effective_cut_score' as const, label: 'Effective Cut Fairness', max: 10 },
-      { key: 'capacity_score' as const, label: 'Delegation Capacity', max: 5 },
+      { key: 'community_vote_score' as const, label: 'Community Votes', max: 25 },
     ],
   },
   {
@@ -73,10 +71,10 @@ const SCORE_SECTIONS = [
     ],
   },
   {
-    label: 'Community',
-    max: 10,
+    label: 'Economics',
+    max: 5,
     items: [
-      { key: 'community_vote_score' as const, label: 'Community Votes', max: 10 },
+      { key: 'capacity_score' as const, label: 'Delegation Capacity', max: 5 },
     ],
   },
 ] as const;
@@ -134,9 +132,10 @@ export default function LeaderboardPage() {
       <div>
         <h1 className="text-xl font-semibold text-[var(--text)]">Indexer Leaderboard</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Community rankings recognising indexers who contribute most to The Graph network.
-          Scores reward broad subgraph coverage, query serving, fair economics, and operational trust —
-          this is about who helps the network most, not just who earns the most.
+          Community favourites — recognising the indexers who contribute most to The Graph network.
+          Scored on subgraph coverage, query serving, trust, and community votes.
+          For delegator-focused metrics like APR and effective cut, see the{' '}
+          <Link href="/indexers" className="text-[var(--accent)] hover:underline">Indexer Directory</Link> scores.
           {data.periodStart && (
             <span className="text-[var(--text)]"> {formatPeriod(data.periodStart)}</span>
           )}
@@ -217,16 +216,18 @@ export default function LeaderboardPage() {
           <div>
             <h4 className="font-semibold text-[var(--text)] mb-2">About the Leaderboard</h4>
             <p className="text-sm text-[var(--text-muted)]">
-              The community leaderboard ranks indexers by their contribution to The Graph network,
-              not just profitability. Scores are computed monthly using percentile normalisation (p10/p90)
-              across all active indexers, grouped into 5 components:
-              Network Contribution (35pts — query fees, subgraph coverage, allocation efficiency),
-              Economics (25pts — delegator APR, effective cut fairness, capacity),
+              The community leaderboard celebrates the indexers who contribute most to The Graph
+              network — not just the most profitable ones. Scores are computed monthly using
+              percentile normalisation (p10/p90) across all active indexers, grouped into 5 components:
+              Network Service (40pts — subgraph coverage, query fees, allocation efficiency),
+              Community Votes (25pts — anyone with a wallet can vote once per month; delegator votes count 5x),
               Trust &amp; Stability (20pts — cut stability, tenure, delegation retention),
-              Protocol Health (6pts — REO eligibility), and Community Votes (10pts).
-              Indexers who serve more subgraphs — especially those nobody else can sync — score
-              higher than those who concentrate on a few profitable deployments.
-              Anyone with a wallet can vote once per month; delegator votes count 5x.
+              Protocol Health (6pts — REO eligibility), and
+              Economics (5pts — delegation capacity headroom).
+              Indexers who serve more subgraphs score higher than those who concentrate on a few
+              profitable deployments. For delegator-focused metrics like APR, effective cut, and
+              performance scoring, see the{' '}
+              <Link href="/indexers" className="text-[var(--accent)] hover:underline">Indexer Directory</Link>.
             </p>
           </div>
           <div>
@@ -266,10 +267,10 @@ function DesktopRow({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const networkScore = entry.query_fee_score + entry.allocation_efficiency_score;
-  const economicsScore = entry.delegator_apr_score + entry.effective_cut_score + entry.capacity_score;
+  const networkScore = entry.allocation_breadth_score + entry.query_fee_score + entry.allocation_efficiency_score;
+  const economicsScore = entry.capacity_score;
   const trustScore = entry.cut_stability_score + entry.tenure_bonus + entry.retention_score;
-  const healthScore = entry.reo_score + entry.allocation_breadth_score;
+  const healthScore = entry.reo_score;
 
   return (
     <>
@@ -305,10 +306,10 @@ function DesktopRow({
           </span>
         </td>
         <td className={`px-4 py-3 text-right hidden lg:table-cell ${TD_BORDER}`}>
-          <ComponentCell score={networkScore} max={35} />
+          <ComponentCell score={networkScore} max={40} />
         </td>
         <td className={`px-4 py-3 text-right hidden lg:table-cell ${TD_BORDER}`}>
-          <ComponentCell score={economicsScore} max={25} />
+          <ComponentCell score={economicsScore} max={5} />
         </td>
         <td className={`px-4 py-3 text-right hidden lg:table-cell ${TD_BORDER}`}>
           <ComponentCell score={trustScore} max={20} />
@@ -378,12 +379,12 @@ function MobileCard({
       <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-[var(--bg)]">
         <div
           className="rounded-l-full bg-[var(--accent)]"
-          style={{ width: barWidth(entry.query_fee_score + entry.allocation_efficiency_score, 96) }}
+          style={{ width: barWidth(entry.allocation_breadth_score + entry.query_fee_score + entry.allocation_efficiency_score, 96) }}
           title="Network"
         />
         <div
           className="bg-[var(--green)]"
-          style={{ width: barWidth(entry.delegator_apr_score + entry.effective_cut_score + entry.capacity_score, 96) }}
+          style={{ width: barWidth(entry.capacity_score, 96) }}
           title="Economics"
         />
         <div
@@ -393,7 +394,7 @@ function MobileCard({
         />
         <div
           className="bg-[var(--amber)]"
-          style={{ width: barWidth(entry.reo_score + entry.allocation_breadth_score, 96) }}
+          style={{ width: barWidth(entry.reo_score, 96) }}
           title="Health"
         />
         <div
@@ -440,7 +441,7 @@ function ScoreBreakdown({ entry }: { entry: LeaderboardEntry }) {
     const indexerTally = votes.tallies.find(
       (t) => t.indexer_address.toLowerCase() === entry.indexer_address.toLowerCase()
     );
-    return ((indexerTally?.weighted_votes ?? 0) / maxWeighted) * 10;
+    return ((indexerTally?.weighted_votes ?? 0) / maxWeighted) * 25;
   }, [votes, entry.indexer_address, entry.community_vote_score]);
 
   return (

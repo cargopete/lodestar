@@ -4,8 +4,6 @@ export { computeBounds, normalize, normalizeInverted, percentile } from './norma
 export {
   scoreQueryFees,
   scoreAllocationEfficiency,
-  scoreDelegatorApr,
-  scoreEffectiveCut,
   scoreDelegationCapacity,
   scoreCutStability,
   scoreTenure,

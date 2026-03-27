@@ -3,8 +3,6 @@ import { percentile, computeBounds, normalize, normalizeInverted } from '../norm
 import {
   scoreQueryFees,
   scoreAllocationEfficiency,
-  scoreDelegatorApr,
-  scoreEffectiveCut,
   scoreDelegationCapacity,
   scoreCutStability,
   scoreTenure,
@@ -67,13 +65,24 @@ describe('normalizeInverted', () => {
 // ── Component Scoring ───────────────────────────────────
 
 describe('scoreQueryFees', () => {
-  it('scores at p90 gets full 15 points', () => {
-    expect(scoreQueryFees(1000, 100, 1000)).toBe(15);
+  it('scores at p90 gets full 10 points', () => {
+    expect(scoreQueryFees(1000, 100, 1000)).toBe(10);
   });
 
   it('scores at p10 gets 0 points', () => {
     expect(scoreQueryFees(100, 100, 1000)).toBe(0);
   });
+});
+
+describe('scoreAllocationBreadth', () => {
+  it('at p90 = 20', () => expect(scoreAllocationBreadth(50, 5, 50)).toBe(20));
+  it('at p10 = 0', () => expect(scoreAllocationBreadth(5, 5, 50)).toBe(0));
+  it('mid-range', () => expect(scoreAllocationBreadth(27.5, 5, 50)).toBeCloseTo(10, 1));
+});
+
+describe('scoreAllocationEfficiency', () => {
+  it('at p90 = 10', () => expect(scoreAllocationEfficiency(100, 10, 100)).toBe(10));
+  it('at p10 = 0', () => expect(scoreAllocationEfficiency(10, 10, 100)).toBe(0));
 });
 
 describe('scoreDelegationCapacity', () => {
@@ -134,12 +143,6 @@ describe('scoreReo', () => {
   it('ineligible = 0', () => expect(scoreReo('ineligible')).toBe(0));
 });
 
-describe('scoreAllocationBreadth', () => {
-  it('at p90 = 10', () => expect(scoreAllocationBreadth(50, 5, 50)).toBe(10));
-  it('at p10 = 0', () => expect(scoreAllocationBreadth(5, 5, 50)).toBe(0));
-  it('mid-range', () => expect(scoreAllocationBreadth(27.5, 5, 50)).toBeCloseTo(5, 1));
-});
-
 // ── Penalties ───────────────────────────────────────────
 
 describe('calculatePenalties', () => {
@@ -193,28 +196,28 @@ describe('calculatePenalties', () => {
 // ── Integration: Full score range ───────────────────────
 
 describe('score range validation', () => {
-  it('max possible subtotal without votes is 86', () => {
-    // Network: 20 + 15 = 35
-    // Economics: 10 + 10 + 5 = 25
-    // Trust: 12 + 5 + 3 = 20
-    // Health: 4 + 2 = 6
-    // Total: 86
-    const max = 20 + 15 + 10 + 10 + 5 + 12 + 5 + 3 + 4 + 2;
-    expect(max).toBe(86);
+  it('max possible subtotal without votes is 71', () => {
+    // Network Service: 20 + 10 + 10 = 40
+    // Trust & Stability: 12 + 5 + 3 = 20
+    // Protocol Health: 6
+    // Economics: 5
+    // Total without community votes: 71
+    const max = 20 + 10 + 10 + 12 + 5 + 3 + 6 + 5;
+    expect(max).toBe(71);
   });
 
-  it('component weights match RFC-003', () => {
-    const networkMax = 20 + 15;           // 35
-    const economicsMax = 10 + 10 + 5;     // 25
-    const trustMax = 12 + 5 + 3;          // 20
-    const healthMax = 4 + 2;              // 6
-    const votesMax = 10;                   // 10
+  it('component weights match current scoring', () => {
+    const networkMax = 20 + 10 + 10;         // 40
+    const communityMax = 25;                  // 25
+    const trustMax = 12 + 5 + 3;             // 20
+    const healthMax = 6;                      // 6
+    const economicsMax = 5;                   // 5
 
-    expect(networkMax).toBe(35);
-    expect(economicsMax).toBe(25);
+    expect(networkMax).toBe(40);
+    expect(communityMax).toBe(25);
     expect(trustMax).toBe(20);
     expect(healthMax).toBe(6);
-    expect(votesMax).toBe(10);
-    expect(networkMax + economicsMax + trustMax + healthMax + votesMax).toBe(96);
+    expect(economicsMax).toBe(5);
+    expect(networkMax + communityMax + trustMax + healthMax + economicsMax).toBe(96);
   });
 });

@@ -10,11 +10,9 @@
 import type { DbClient } from '../db';
 import { computeBounds } from './normalize';
 import {
+  scoreAllocationBreadth,
   scoreQueryFees,
   scoreAllocationEfficiency,
-  scoreAllocationBreadth,
-  scoreDelegatorApr,
-  scoreEffectiveCut,
   scoreDelegationCapacity,
   scoreCutStability,
   scoreTenure,
@@ -23,9 +21,9 @@ import {
 } from './components';
 import { calculatePenalties, type PenaltyInput } from './penalties';
 
-// Max achievable subtotal including community votes (10pts)
+// Max achievable subtotal including community votes (25pts)
 const MAX_SUBTOTAL = 96;
-const MAX_COMMUNITY_VOTE_SCORE = 10;
+const MAX_COMMUNITY_VOTE_SCORE = 25;
 
 interface IndexerMetrics {
   address: string;
@@ -258,17 +256,13 @@ export async function computeMonthlyScores(
   const feeBounds = computeBounds(metrics.map((m) => m.queryFees));
   const effBounds = computeBounds(metrics.filter((m) => m.allocEfficiency > 0).map((m) => m.allocEfficiency));
   const breadthBounds = computeBounds(metrics.filter((m) => m.distinctDeployments > 0).map((m) => m.distinctDeployments));
-  const aprBounds = computeBounds(metrics.filter((m) => m.delegatorApr > 0).map((m) => m.delegatorApr));
-  const cutBounds = computeBounds(metrics.filter((m) => m.effectiveCut > 0).map((m) => m.effectiveCut));
 
   // ── Score each indexer ────────────────────────────────
 
   const scored = metrics.map((m) => {
+    const breadthScore = scoreAllocationBreadth(m.distinctDeployments, breadthBounds.p10, breadthBounds.p90);
     const queryFeeScore = scoreQueryFees(m.queryFees, feeBounds.p10, feeBounds.p90);
     const allocEffScore = scoreAllocationEfficiency(m.allocEfficiency, effBounds.p10, effBounds.p90);
-    const breadthScore = scoreAllocationBreadth(m.distinctDeployments, breadthBounds.p10, breadthBounds.p90);
-    const aprScore = scoreDelegatorApr(m.delegatorApr, aprBounds.p10, aprBounds.p90);
-    const cutScore = scoreEffectiveCut(m.effectiveCut, cutBounds.p10, cutBounds.p90);
     const capScore = scoreDelegationCapacity(m.capacityPct);
     const stabilityScore = scoreCutStability(m.cutNetChangePpm);
     const tenureScore = scoreTenure(m.monthsActive);
@@ -282,10 +276,11 @@ export async function computeMonthlyScores(
       : 0;
 
     const subtotal =
-      queryFeeScore + allocEffScore +
-      aprScore + cutScore + capScore +
+      breadthScore + queryFeeScore + allocEffScore +
+      communityVoteScore +
       stabilityScore + tenureScore + retScore +
-      reoScore + breadthScore + communityVoteScore;
+      reoScore +
+      capScore;
 
     const { multiplier: penaltyMultiplier } = calculatePenalties(m.penalties);
 
@@ -300,8 +295,8 @@ export async function computeMonthlyScores(
       period_end: periodEnd,
       query_fee_score: round2(queryFeeScore),
       allocation_efficiency_score: round2(allocEffScore),
-      delegator_apr_score: round2(aprScore),
-      effective_cut_score: round2(cutScore),
+      delegator_apr_score: 0,
+      effective_cut_score: 0,
       capacity_score: round2(capScore),
       cut_stability_score: round2(stabilityScore),
       tenure_bonus: round2(tenureScore),

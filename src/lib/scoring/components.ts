@@ -1,19 +1,31 @@
 /**
  * Individual scoring components for the leaderboard (RFC-003).
  * Each function is pure — takes raw metrics + percentile bounds, returns points.
+ *
+ * The community leaderboard prioritises network service over economics.
+ * Delegator-focused metrics (APR, effective cut) live on the Indexers table score.
  */
 
-import { normalize, normalizeInverted } from './normalize';
+import { normalize } from './normalize';
 
-// ── Component 1: Network Contribution (35 pts) ───────────
+// ── Component 1: Network Service (40 pts) ─────────────────
 
-/** Query Fees Earned — 15 pts. Percentile-normalised. */
+/** Subgraph Coverage — 20 pts. Distinct active deployments, percentile-normalised. */
+export function scoreAllocationBreadth(
+  distinctDeployments: number,
+  p10: number,
+  p90: number
+): number {
+  return normalize(distinctDeployments, p10, p90, 20);
+}
+
+/** Query Fees Earned — 10 pts. Percentile-normalised. */
 export function scoreQueryFees(
   feesGrt: number,
   p10: number,
   p90: number
 ): number {
-  return normalize(feesGrt, p10, p90, 15);
+  return normalize(feesGrt, p10, p90, 10);
 }
 
 /** Allocation Efficiency — 10 pts. Fees-to-allocated ratio, percentile-normalised. */
@@ -25,42 +37,8 @@ export function scoreAllocationEfficiency(
   return normalize(ratio, p10, p90, 10);
 }
 
-/** Allocation Breadth — 10 pts. Distinct active deployments, percentile-normalised. */
-export function scoreAllocationBreadth(
-  distinctDeployments: number,
-  p10: number,
-  p90: number
-): number {
-  return normalize(distinctDeployments, p10, p90, 10);
-}
-
-// ── Component 2: Economics (25 pts) ───────────────────────
-
-/** Delegator APR — 10 pts. Percentile-normalised. */
-export function scoreDelegatorApr(
-  apr: number,
-  p10: number,
-  p90: number
-): number {
-  return normalize(apr, p10, p90, 10);
-}
-
-/** Effective Cut Fairness — 10 pts. Lower cut = higher score. */
-export function scoreEffectiveCut(
-  effectiveCutPct: number,
-  p10: number,
-  p90: number
-): number {
-  return normalizeInverted(effectiveCutPct, p10, p90, 10);
-}
-
-/** Delegation Capacity Health — 5 pts. Bucket scoring. */
-export function scoreDelegationCapacity(capacityUsedPct: number): number {
-  if (capacityUsedPct >= 100) return 0;
-  if (capacityUsedPct >= 90) return 1;
-  if (capacityUsedPct >= 70) return 3;
-  return 5;
-}
+// ── Component 2: Community (25 pts) ───────────────────────
+// Scored in compute.ts from vote tallies (proportional to max weighted votes).
 
 // ── Component 3: Trust & Stability (20 pts) ───────────────
 
@@ -108,4 +86,14 @@ export function scoreReo(status: string): number {
   if (status === 'eligible') return 6;
   if (status === 'warning') return 3;
   return 0; // ineligible or unknown
+}
+
+// ── Component 5: Economics (5 pts) ────────────────────────
+
+/** Delegation Capacity Health — 5 pts. Room for new delegators. */
+export function scoreDelegationCapacity(capacityUsedPct: number): number {
+  if (capacityUsedPct >= 100) return 0;
+  if (capacityUsedPct >= 90) return 1;
+  if (capacityUsedPct >= 70) return 3;
+  return 5;
 }
