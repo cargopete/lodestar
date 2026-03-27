@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAccount, useSignTypedData } from 'wagmi';
 import { fetchVotes, submitVote } from '@/lib/api';
 import { VOTE_DOMAIN, VOTE_TYPES, getCurrentPeriod } from '@/lib/voting';
-import type { VoteMessage } from '@/lib/voting';
+import type { VoteMessage, VotesResponse } from '@/lib/voting';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
 
@@ -50,7 +50,17 @@ export function useSubmitVote() {
 
       return submitVote(message, signature);
     },
-    onSuccess: () => {
+    onSuccess: (_data, indexerAddress) => {
+      const period = getCurrentPeriod();
+      // Optimistically set userVote so the UI updates immediately
+      // (the GET endpoint is CDN-cached and may return stale data)
+      queryClient.setQueryData(
+        ['votes', period, address?.toLowerCase()],
+        (old: VotesResponse | undefined) => {
+          if (!old) return old;
+          return { ...old, userVote: indexerAddress.toLowerCase() };
+        }
+      );
       queryClient.invalidateQueries({ queryKey: ['votes'] });
     },
   });
