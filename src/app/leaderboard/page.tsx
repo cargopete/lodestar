@@ -176,15 +176,15 @@ export default function LeaderboardPage() {
           <table className="w-full">
             <thead className="bg-[var(--bg-elevated)]">
               <tr>
-                <th className={TH_CLASS}>Rank</th>
+                <th className={TH_CLASS_CENTER}>Rank</th>
                 <th className={TH_CLASS_LEFT}>Indexer</th>
-                <th className={TH_CLASS}>Vote</th>
+                <th className={TH_CLASS_CENTER}>Vote</th>
                 <th className={TH_CLASS}>Score</th>
-                <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Network</th>
-                <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Economics</th>
-                <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Trust</th>
-                <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Health</th>
-                <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Community</th>
+                <th className={`${TH_CLASS} hidden lg:table-cell`}>Network</th>
+                <th className={`${TH_CLASS} hidden lg:table-cell`}>Economics</th>
+                <th className={`${TH_CLASS} hidden lg:table-cell`}>Trust</th>
+                <th className={`${TH_CLASS} hidden lg:table-cell`}>Health</th>
+                <th className={`${TH_CLASS} hidden lg:table-cell`}>Community</th>
               </tr>
             </thead>
             <tbody>
@@ -236,11 +236,14 @@ export default function LeaderboardPage() {
 
 // ── Shared styles ─────────────────────────────────────────
 
-const TH_CLASS =
-  'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em] select-none text-right';
+const TH_BASE =
+  'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em] select-none border-r border-[var(--border)]/20 last:border-r-0';
 
-const TH_CLASS_LEFT =
-  'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em] select-none text-left';
+const TH_CLASS = `${TH_BASE} text-right`;
+const TH_CLASS_LEFT = `${TH_BASE} text-left`;
+const TH_CLASS_CENTER = `${TH_BASE} text-center`;
+
+const TD_BORDER = 'border-r border-[var(--border)]/20 last:border-r-0';
 
 // ── Desktop row ───────────────────────────────────────────
 
@@ -266,10 +269,10 @@ function DesktopRow({
         className="border-b border-[0.5px] border-[var(--border)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
         onClick={onToggle}
       >
-        <td className="px-4 py-3 text-center">
+        <td className={`px-4 py-3 text-center ${TD_BORDER}`}>
           <RankBadge rank={entry.rank ?? 0} />
         </td>
-        <td className="px-4 py-3">
+        <td className={`px-4 py-3 ${TD_BORDER}`}>
           <Link
             href={`/indexers/${entry.indexer_address}`}
             className="hover:text-[var(--accent)] transition-colors"
@@ -285,24 +288,24 @@ function DesktopRow({
             )}
           </Link>
         </td>
-        <td className="px-4 py-3 text-center">
+        <td className={`px-4 py-3 text-center ${TD_BORDER}`}>
           <VoteButton indexerAddress={entry.indexer_address} />
         </td>
-        <td className="px-4 py-3 text-right">
+        <td className={`px-4 py-3 text-right ${TD_BORDER}`}>
           <span className="font-mono text-sm font-semibold" style={{ color: scoreColor(entry.final_score) }}>
             {entry.final_score.toFixed(1)}
           </span>
         </td>
-        <td className="px-4 py-3 text-right hidden lg:table-cell">
+        <td className={`px-4 py-3 text-right hidden lg:table-cell ${TD_BORDER}`}>
           <ComponentCell score={networkScore} max={35} />
         </td>
-        <td className="px-4 py-3 text-right hidden lg:table-cell">
+        <td className={`px-4 py-3 text-right hidden lg:table-cell ${TD_BORDER}`}>
           <ComponentCell score={economicsScore} max={25} />
         </td>
-        <td className="px-4 py-3 text-right hidden lg:table-cell">
+        <td className={`px-4 py-3 text-right hidden lg:table-cell ${TD_BORDER}`}>
           <ComponentCell score={trustScore} max={20} />
         </td>
-        <td className="px-4 py-3 text-right hidden lg:table-cell">
+        <td className={`px-4 py-3 text-right hidden lg:table-cell ${TD_BORDER}`}>
           <ComponentCell score={healthScore} max={6} />
         </td>
         <td className="px-4 py-3 text-right hidden lg:table-cell">

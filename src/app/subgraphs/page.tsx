@@ -225,8 +225,9 @@ export default function SubgraphDirectory() {
   };
 
   const thBase =
-    'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em] select-none';
+    'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em] select-none border-r border-[var(--border)]/20 last:border-r-0';
   const thSortable = cn(thBase, 'cursor-pointer hover:text-[var(--text)] transition-colors');
+  const tdBorder = 'border-r border-[var(--border)]/20 last:border-r-0';
 
   const renderSortArrow = (key: SortKey) =>
     sortKey === key ? (
@@ -513,8 +514,8 @@ export default function SubgraphDirectory() {
                     key={row.id}
                     className="border-b border-[0.5px] border-[var(--border)] hover:bg-[var(--bg-elevated)] transition-colors"
                   >
-                    <td className="px-4 py-3 text-sm text-[var(--text-faint)]">{page * PAGE_SIZE + idx + 1}</td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 py-3 text-sm text-[var(--text-faint)] ${tdBorder}`}>{page * PAGE_SIZE + idx + 1}</td>
+                    <td className={`px-4 py-3 ${tdBorder}`}>
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/subgraphs/${row.ipfsHash}`}
@@ -539,27 +540,27 @@ export default function SubgraphDirectory() {
                     )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className={`px-4 py-3 text-center ${tdBorder}`}>
                       <ComplexityCell hash={row.ipfsHash} onComplexity={handleComplexity} />
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className={`px-4 py-3 text-center ${tdBorder}`}>
                       <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} networkMap={networkMap} />
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text)]">
+                    <td className={`px-4 py-3 text-right font-mono text-sm text-[var(--text)] ${tdBorder}`}>
                       {formatGRT(row.signal)}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text)]">
+                    <td className={`px-4 py-3 text-right font-mono text-sm text-[var(--text)] ${tdBorder}`}>
                       {formatGRT(row.stake)}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text)]">
+                    <td className={`px-4 py-3 text-right font-mono text-sm text-[var(--text)] ${tdBorder}`}>
                       {formatGRT(row.queryFees)}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text)]">
+                    <td className={`px-4 py-3 text-right font-mono text-sm text-[var(--text)] ${tdBorder}`}>
                       {row.indexerCount}
                     </td>
                     <td
                       className={cn(
-                        'px-4 py-3 text-right font-mono text-sm',
+                        `px-4 py-3 text-right font-mono text-sm ${tdBorder}`,
                         highRatio ? 'text-[var(--green)] font-semibold' : 'text-[var(--text)]'
                       )}
                     >

@@ -707,6 +707,7 @@ export function IndexerTable() {
                       key={header.id}
                       className={cn(
                         'px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider',
+                        'border-r border-[var(--border)]/20 last:border-r-0',
                         header.column.getCanSort() && 'cursor-pointer select-none hover:text-[var(--text)]'
                       )}
                       onClick={header.column.getToggleSortingHandler()}
@@ -762,7 +763,7 @@ export function IndexerTable() {
                     }}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-4">
+                      <td key={cell.id} className="px-4 py-4 border-r border-[var(--border)]/20 last:border-r-0">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
