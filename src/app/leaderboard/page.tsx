@@ -177,14 +177,14 @@ export default function LeaderboardPage() {
             <thead className="bg-[var(--bg-elevated)]">
               <tr>
                 <th className={TH_CLASS}>Rank</th>
-                <th className={cn(TH_CLASS, 'text-left')}>Indexer</th>
+                <th className={TH_CLASS_LEFT}>Indexer</th>
+                <th className={TH_CLASS}>Vote</th>
                 <th className={TH_CLASS}>Score</th>
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Network</th>
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Economics</th>
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Trust</th>
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Health</th>
                 <th className={cn(TH_CLASS, 'hidden lg:table-cell')}>Community</th>
-                <th className={TH_CLASS}>Vote</th>
               </tr>
             </thead>
             <tbody>
@@ -239,6 +239,9 @@ export default function LeaderboardPage() {
 const TH_CLASS =
   'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em] select-none text-right';
 
+const TH_CLASS_LEFT =
+  'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em] select-none text-left';
+
 // ── Desktop row ───────────────────────────────────────────
 
 function DesktopRow({
@@ -282,6 +285,9 @@ function DesktopRow({
             )}
           </Link>
         </td>
+        <td className="px-4 py-3 text-center">
+          <VoteButton indexerAddress={entry.indexer_address} />
+        </td>
         <td className="px-4 py-3 text-right">
           <span className="font-mono text-sm font-semibold" style={{ color: scoreColor(entry.final_score) }}>
             {entry.final_score.toFixed(1)}
@@ -301,9 +307,6 @@ function DesktopRow({
         </td>
         <td className="px-4 py-3 text-right hidden lg:table-cell">
           <VoteCount indexerAddress={entry.indexer_address} />
-        </td>
-        <td className="px-4 py-3 text-center">
-          <VoteButton indexerAddress={entry.indexer_address} />
         </td>
       </tr>
       {expanded && (
