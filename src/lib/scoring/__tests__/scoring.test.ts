@@ -208,16 +208,16 @@ describe('score range validation', () => {
 
   it('component weights match current scoring', () => {
     const networkMax = 20 + 10 + 10;         // 40
-    const communityMax = 25;                  // 25
+    const communityMax = 10;                  // 10
     const trustMax = 12 + 5 + 3;             // 20
     const healthMax = 6;                      // 6
     const economicsMax = 5;                   // 5
 
     expect(networkMax).toBe(40);
-    expect(communityMax).toBe(25);
+    expect(communityMax).toBe(10);
     expect(trustMax).toBe(20);
     expect(healthMax).toBe(6);
     expect(economicsMax).toBe(5);
-    expect(networkMax + communityMax + trustMax + healthMax + economicsMax).toBe(96);
+    expect(networkMax + communityMax + trustMax + healthMax + economicsMax).toBe(81);
   });
 });

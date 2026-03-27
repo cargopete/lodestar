@@ -49,9 +49,9 @@ const SCORE_SECTIONS = [
   },
   {
     label: 'Community',
-    max: 25,
+    max: 10,
     items: [
-      { key: 'community_vote_score' as const, label: 'Community Votes', max: 25 },
+      { key: 'community_vote_score' as const, label: 'Community Votes', max: 10 },
     ],
   },
   {
@@ -178,15 +178,15 @@ export default function LeaderboardPage() {
           <table className="w-full">
             <thead className="bg-[var(--bg-elevated)]">
               <tr>
-                <th className={TH_CLASS_CENTER}>Rank</th>
+                <th className={`${TH_CLASS_CENTER} w-12`}>Rank</th>
                 <th className={TH_CLASS_LEFT}>Indexer</th>
-                <th className={TH_CLASS_CENTER}>Vote</th>
-                <th className={TH_CLASS}>Score</th>
-                <th className={`${TH_CLASS} hidden lg:table-cell`}>Network</th>
-                <th className={`${TH_CLASS} hidden lg:table-cell`}>Economics</th>
-                <th className={`${TH_CLASS} hidden lg:table-cell`}>Trust</th>
-                <th className={`${TH_CLASS} hidden lg:table-cell`}>Health</th>
-                <th className={`${TH_CLASS} hidden lg:table-cell`}>Community</th>
+                <th className={`${TH_CLASS_CENTER} w-20`}>Vote</th>
+                <th className={`${TH_CLASS} w-16`}>Score</th>
+                <th className={`${TH_CLASS} w-28 hidden lg:table-cell`}>Network</th>
+                <th className={`${TH_CLASS} w-24 hidden lg:table-cell`}>Economics</th>
+                <th className={`${TH_CLASS} w-24 hidden lg:table-cell`}>Trust</th>
+                <th className={`${TH_CLASS} w-24 hidden lg:table-cell`}>Health</th>
+                <th className={`${TH_CLASS} w-24 hidden lg:table-cell`}>Community</th>
               </tr>
             </thead>
             <tbody>
@@ -220,7 +220,7 @@ export default function LeaderboardPage() {
               network — not just the most profitable ones. Scores are computed monthly using
               percentile normalisation (p10/p90) across all active indexers, grouped into 5 components:
               Network Service (40pts — subgraph coverage, query fees, allocation efficiency),
-              Community Votes (25pts — anyone with a wallet can vote once per month; delegator votes count 5x),
+              Community Votes (10pts — anyone with a wallet can vote once per month; delegator votes count 5x),
               Trust &amp; Stability (20pts — cut stability, tenure, delegation retention),
               Protocol Health (6pts — REO eligibility), and
               Economics (5pts — delegation capacity headroom).
@@ -441,7 +441,7 @@ function ScoreBreakdown({ entry }: { entry: LeaderboardEntry }) {
     const indexerTally = votes.tallies.find(
       (t) => t.indexer_address.toLowerCase() === entry.indexer_address.toLowerCase()
     );
-    return ((indexerTally?.weighted_votes ?? 0) / maxWeighted) * 25;
+    return ((indexerTally?.weighted_votes ?? 0) / maxWeighted) * 10;
   }, [votes, entry.indexer_address, entry.community_vote_score]);
 
   return (

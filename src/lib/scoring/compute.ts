@@ -21,9 +21,9 @@ import {
 } from './components';
 import { calculatePenalties, type PenaltyInput } from './penalties';
 
-// Max achievable subtotal including community votes (25pts)
-const MAX_SUBTOTAL = 96;
-const MAX_COMMUNITY_VOTE_SCORE = 25;
+// Max achievable subtotal including community votes (10pts)
+const MAX_SUBTOTAL = 81;
+const MAX_COMMUNITY_VOTE_SCORE = 10;
 
 interface IndexerMetrics {
   address: string;
