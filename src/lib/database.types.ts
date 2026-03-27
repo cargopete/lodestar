@@ -1,5 +1,5 @@
 /**
- * Database row types — matches the schema in supabase/migrations/.
+ * Database row types — matches the Postgres schema.
  */
 
 // ── Row types ──────────────────────────────────────────────

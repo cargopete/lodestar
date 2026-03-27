@@ -1,3 +1,0 @@
--- Seed file for local development.
--- The backfill script (pnpm db:backfill) populates real data from the subgraph.
--- This file intentionally left empty.
