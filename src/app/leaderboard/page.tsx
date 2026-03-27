@@ -10,6 +10,7 @@ import { cn, shortenAddress } from '@/lib/utils';
 import type { LeaderboardEntry } from '@/lib/scoring';
 import { VoteButton } from '@/components/VoteButton';
 import { VoterList, VoteCount } from '@/components/VoterList';
+import { useVotes } from '@/hooks/useVoting';
 
 const PAGE_SIZE = 25;
 
@@ -422,10 +423,26 @@ function MobileCard({
 // ── Score breakdown (shared between mobile/desktop) ───────
 
 function ScoreBreakdown({ entry }: { entry: LeaderboardEntry }) {
+  const { data: votes } = useVotes();
+
+  // Compute live community score from real-time vote tallies
+  const liveCommunityScore = useMemo(() => {
+    if (!votes?.tallies?.length) return entry.community_vote_score;
+    const maxWeighted = Math.max(...votes.tallies.map((t) => t.weighted_votes));
+    if (maxWeighted === 0) return 0;
+    const indexerTally = votes.tallies.find(
+      (t) => t.indexer_address.toLowerCase() === entry.indexer_address.toLowerCase()
+    );
+    return ((indexerTally?.weighted_votes ?? 0) / maxWeighted) * 10;
+  }, [votes, entry.indexer_address, entry.community_vote_score]);
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {SCORE_SECTIONS.map((section) => {
-        const sectionTotal = section.items.reduce((sum, item) => sum + entry[item.key], 0);
+        const sectionTotal = section.items.reduce((sum, item) => {
+          const val = item.key === 'community_vote_score' ? liveCommunityScore : entry[item.key];
+          return sum + val;
+        }, 0);
         return (
           <div key={section.label}>
             <div className="flex items-center justify-between mb-2">
@@ -436,7 +453,7 @@ function ScoreBreakdown({ entry }: { entry: LeaderboardEntry }) {
             </div>
             <div className="space-y-1.5">
               {section.items.map((item) => {
-                const value = entry[item.key];
+                const value = item.key === 'community_vote_score' ? liveCommunityScore : entry[item.key];
                 const pct = item.max > 0 ? (value / item.max) * 100 : 0;
                 return (
                   <div key={item.key}>
