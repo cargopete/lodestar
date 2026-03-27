@@ -21,7 +21,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Delegation Calculator** — Model redelegation scenarios with thawing period cost analysis and net gain projections
 - **Compare Indexers** — Side-by-side comparison of up to 3 indexers
 - **Wallet Connection** — Connect via MetaMask, WalletConnect, or Coinbase Wallet (Arbitrum only)
-- **Monthly Leaderboard** — Ranked indexer leaderboard scored across 10 dimensions (network contribution, economics, trust, protocol health) with expandable score breakdowns
+- **Monthly Leaderboard** — Community favourites leaderboard scored on network service, community votes, trust, and protocol health, with expandable score breakdowns and EIP-712 gasless voting
 - **Mobile-First Layout** — Bottom tab navigation, table-to-card patterns, responsive grids, touch-friendly targets
 
 ## Roadmap
@@ -86,25 +86,27 @@ Each indexer receives a composite score (0–100) across ten dimensions, combine
 
 ## Monthly Leaderboard
 
-A separate scoring system for monthly indexer rankings at `/leaderboard`. Scores are computed on the 1st of each month via cron, using percentile normalisation (p10/p90) across all active indexers.
+The community leaderboard at `/leaderboard` celebrates the indexers who contribute most to The Graph network — not just the most profitable ones. It's a "community favourites" ranking: indexers who serve more subgraphs, earn community votes, and maintain trust score highest.
+
+Scores are computed on the 1st of each month via cron, using percentile normalisation (p10/p90) across all active indexers.
+
+Delegator-focused metrics like APR and effective cut live on the **Indexer Directory** scoring (see above), not here.
 
 ### Scoring Dimensions
 
 | Component | Dimension | Max Points | Method |
 |---|---|---|---|
-| **Network Contribution** | Query Fees Earned | 20 | Percentile-normalised |
-| | Allocation Efficiency | 15 | Fees-to-allocated ratio, percentile-normalised |
-| **Economics** | Delegator APR | 10 | Percentile-normalised |
-| | Effective Cut Fairness | 10 | Lower cut = higher score (inverted) |
-| | Delegation Capacity | 5 | Bucket: <70% = 5, 70-90% = 3, 90-99% = 1, 100% = 0 |
+| **Network Service** | Subgraph Coverage | 20 | Distinct active deployments, percentile-normalised |
+| | Query Fees Earned | 10 | Percentile-normalised |
+| | Allocation Efficiency | 10 | Fees-to-allocated ratio, percentile-normalised |
+| **Community Votes** | Community Votes | 10 | Proportional to highest-voted indexer. 1 vote/wallet/month; delegator votes count 5x. EIP-712 gasless signing. |
 | **Trust & Stability** | Cut Stability | 12 | 12-month net change in reward cut |
 | | Tenure | 5 | Months active: 24+ = 5, 12+ = 3, 6+ = 2, 3+ = 1 |
 | | Delegation Retention | 3 | 30-day net delegation flow |
-| **Protocol Health** | REO Eligibility | 4 | Oracle-sourced status |
-| | Allocation Breadth | 2 | Distinct active deployments |
-| **Community Votes** | _(reserved)_ | 10 | Future phase |
+| **Protocol Health** | REO Eligibility | 6 | Oracle-sourced status |
+| **Economics** | Delegation Capacity | 5 | Bucket: <70% = 5, 70-90% = 3, 90-99% = 1, 100% = 0 |
 
-**Total: 96 points** (86 without votes, normalised to 0–100).
+**Total: 81 points**, normalised to 0–100.
 
 ### Penalties
 
