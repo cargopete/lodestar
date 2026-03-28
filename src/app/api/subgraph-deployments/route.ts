@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       skip: ${skip}
       orderBy: ${orderBy}
       orderDirection: ${orderDirection}
-      where: { signalledTokens_gt: "0" }
+      where: { signalledTokens_gt: "1000000000000000000" }
     ) {
       id
       ipfsHash

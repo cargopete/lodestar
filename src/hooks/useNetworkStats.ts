@@ -12,6 +12,7 @@ import {
   fetchServiceProvisions,
   fetchEnrichedIndexers,
   fetchSubgraphDeployments,
+  fetchSubgraphDeployments30d,
   fetchManifestAnalysis,
   fetchPOIOverview,
   fetchPOIDeployment,
@@ -197,6 +198,19 @@ export function useSubgraphDeployments(params: {
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
     placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Hook for subgraph deployments with 30-day query fees
+ */
+export function useSubgraphDeployments30d(enabled = true) {
+  return useQuery({
+    queryKey: ['subgraphDeployments30d'],
+    queryFn: fetchSubgraphDeployments30d,
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    enabled,
   });
 }
 

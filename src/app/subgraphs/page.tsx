@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Pagination } from '@/components/ui/Pagination';
-import { useSubgraphDeployments, useManifestAnalysis, useNetworksRegistry } from '@/hooks/useNetworkStats';
+import { useSubgraphDeployments, useSubgraphDeployments30d, useManifestAnalysis, useNetworksRegistry } from '@/hooks/useNetworkStats';
 import { weiToGRT, formatGRT, cn } from '@/lib/utils';
 import type { ComplexityCategory } from '@/lib/manifest';
 import type { NetworkInfo } from '@/app/api/networks/route';
@@ -95,11 +95,12 @@ interface SearchResult {
 
 export default function SubgraphDirectory() {
   const [page, setPage] = useState(0);
-  const [sortKey, setSortKey] = useState<SortKey>('signal');
+  const [sortKey, setSortKey] = useState<SortKey>('queryFees');
   const [sortDesc, setSortDesc] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [feeWindow, setFeeWindow] = useState<'allTime' | '30d'>('30d');
   const [eliteOnly, setEliteOnly] = useState(false);
   const [networkFilter, setNetworkFilter] = useState<string>('all');
   const [complexityFilter, setComplexityFilter] = useState<string>('all');
@@ -171,6 +172,7 @@ export default function SubgraphDirectory() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [searchQuery]);
 
+  // --- All-time mode: server-side sort + pagination ---
   const queryParams = useMemo(() => ({
     first: PAGE_SIZE,
     skip: page * PAGE_SIZE,
@@ -178,9 +180,45 @@ export default function SubgraphDirectory() {
     orderDirection: (sortDesc ? 'desc' : 'asc') as 'asc' | 'desc',
   }), [page, sortKey, sortDesc]);
 
-  const { data: raw, isLoading, isError } = useSubgraphDeployments(queryParams);
+  const is30d = feeWindow === '30d';
+  const { data: raw, isLoading: loadingAllTime, isError: errorAllTime } = useSubgraphDeployments(queryParams);
+  const { data: raw30d, isLoading: loading30d, isError: error30d } = useSubgraphDeployments30d(is30d);
+
+  const isLoading = is30d ? loading30d : loadingAllTime;
+  const isError = is30d ? error30d : errorAllTime;
 
   const allRows = useMemo(() => {
+    if (is30d) {
+      if (!raw30d) return [];
+      // Client-side sort + pagination for 30d mode
+      const mapped = raw30d.map((d) => {
+        const signal = weiToGRT(d.signalledTokens);
+        const stake = weiToGRT(d.stakedTokens);
+        const queryFees = weiToGRT(d.queryFees30d);
+        const queryFeesAllTime = weiToGRT(d.queryFeesAmount);
+        return {
+          id: d.id,
+          ipfsHash: d.ipfsHash,
+          signal,
+          stake,
+          queryFees,
+          queryFeesAllTime,
+          isElite: queryFeesAllTime >= ELITE_FEE_THRESHOLD_GRT,
+          indexerCount: d.indexerAllocations.length,
+          curatorCount: d.curatorSignals.length,
+          signalStakeRatio: stake > 0 ? signal / stake : 0,
+        };
+      });
+      // Sort client-side
+      const sortFn = (a: typeof mapped[0], b: typeof mapped[0]) => {
+        const field = sortKey === 'signal' ? 'signal' : sortKey === 'stake' ? 'stake' : 'queryFees';
+        const diff = a[field] - b[field];
+        return sortDesc ? -diff : diff;
+      };
+      mapped.sort(sortFn);
+      return mapped;
+    }
+
     if (!raw) return [];
     return raw.map((d) => {
       const signal = weiToGRT(d.signalledTokens);
@@ -192,27 +230,42 @@ export default function SubgraphDirectory() {
         signal,
         stake,
         queryFees,
+        queryFeesAllTime: queryFees,
         isElite: queryFees >= ELITE_FEE_THRESHOLD_GRT,
         indexerCount: d.indexerAllocations.length,
         curatorCount: d.curatorSignals.length,
         signalStakeRatio: stake > 0 ? signal / stake : 0,
       };
     });
-  }, [raw]);
+  }, [raw, raw30d, is30d, sortKey, sortDesc]);
 
   const rows = useMemo(() => {
     let filtered = allRows;
     if (eliteOnly) filtered = filtered.filter((r) => r.isElite);
     if (networkFilter !== 'all') filtered = filtered.filter((r) => rowNetworks[r.ipfsHash] === networkFilter);
     if (complexityFilter !== 'all') filtered = filtered.filter((r) => rowComplexities[r.ipfsHash] === complexityFilter);
+    // In 30d mode, paginate client-side
+    if (is30d) {
+      return filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+    }
     return filtered;
-  }, [allRows, eliteOnly, networkFilter, rowNetworks, complexityFilter, rowComplexities]);
+  }, [allRows, eliteOnly, networkFilter, rowNetworks, complexityFilter, rowComplexities, is30d, page]);
 
-  // We don't know total count from the subgraph, so estimate:
-  // if we got a full page, there's likely more
-  const hasFullPage = allRows.length === PAGE_SIZE;
-  // Use a high estimate so pagination works; will show fewer on last page
-  const estimatedTotal = hasFullPage ? (page + 2) * PAGE_SIZE : page * PAGE_SIZE + allRows.length;
+  // Total count for pagination
+  const filteredTotal = useMemo(() => {
+    if (is30d) {
+      let filtered = allRows;
+      if (eliteOnly) filtered = filtered.filter((r) => r.isElite);
+      if (networkFilter !== 'all') filtered = filtered.filter((r) => rowNetworks[r.ipfsHash] === networkFilter);
+      if (complexityFilter !== 'all') filtered = filtered.filter((r) => rowComplexities[r.ipfsHash] === complexityFilter);
+      return filtered.length;
+    }
+    return undefined; // use estimate for all-time
+  }, [allRows, is30d, eliteOnly, networkFilter, rowNetworks, complexityFilter, rowComplexities]);
+
+  // For all-time mode: estimate total since we don't have count from the subgraph
+  const hasFullPage = !is30d && allRows.length === PAGE_SIZE;
+  const estimatedTotal = filteredTotal ?? (hasFullPage ? (page + 2) * PAGE_SIZE : page * PAGE_SIZE + allRows.length);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -242,7 +295,7 @@ export default function SubgraphDirectory() {
     );
   }
 
-  if (isError || !raw) {
+  if (isError || (is30d ? !raw30d : !raw)) {
     return (
       <div className="text-center py-24">
         <h2 className="text-xl font-semibold text-[var(--text)] mb-2">Unable to Load Deployments</h2>
@@ -275,6 +328,31 @@ export default function SubgraphDirectory() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
+        {/* Fee window toggle */}
+        <div className="inline-flex rounded-[var(--radius-button)] border border-[var(--border)] overflow-hidden">
+          <button
+            onClick={() => { setFeeWindow('30d'); setPage(0); }}
+            className={cn(
+              'px-3 py-1.5 text-xs font-medium transition-colors',
+              is30d
+                ? 'bg-[var(--accent)] text-white'
+                : 'bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text)]'
+            )}
+          >
+            30 Day Fees
+          </button>
+          <button
+            onClick={() => { setFeeWindow('allTime'); setPage(0); }}
+            className={cn(
+              'px-3 py-1.5 text-xs font-medium transition-colors',
+              !is30d
+                ? 'bg-[var(--accent)] text-white'
+                : 'bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text)]'
+            )}
+          >
+            All Time
+          </button>
+        </div>
         <button
           onClick={() => setEliteOnly(!eliteOnly)}
           className={cn(
@@ -458,7 +536,7 @@ export default function SubgraphDirectory() {
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center mt-2">
                   <div className="p-2 rounded bg-[var(--bg-elevated)]">
-                    <p className="text-[10px] text-[var(--text-faint)]">Fees</p>
+                    <p className="text-[10px] text-[var(--text-faint)]">{is30d ? 'Fees 30d' : 'Fees'}</p>
                     <p className="text-xs font-mono text-[var(--text)]">{formatGRT(row.queryFees)}</p>
                   </div>
                   <div className="p-2 rounded bg-[var(--bg-elevated)]">
@@ -499,7 +577,7 @@ export default function SubgraphDirectory() {
                   Stake (GRT){renderSortArrow('stake')}
                 </th>
                 <th className={cn(thSortable, 'text-right')} onClick={() => handleSort('queryFees')}>
-                  Query Fees (GRT){renderSortArrow('queryFees')}
+                  {is30d ? 'Fees 30d (GRT)' : 'Query Fees (GRT)'}{renderSortArrow('queryFees')}
                 </th>
                 <th className={cn(thBase, 'text-right')}>Indexers</th>
                 <th className={cn(thBase, 'text-right')}>Signal/Stake</th>

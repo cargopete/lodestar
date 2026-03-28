@@ -201,6 +201,25 @@ export async function fetchSubgraphDeployments(params: {
 }
 
 /**
+ * Fetch subgraph deployments with 30-day query fees
+ */
+export async function fetchSubgraphDeployments30d(): Promise<{
+  id: string;
+  ipfsHash: string;
+  signalledTokens: string;
+  stakedTokens: string;
+  queryFeesAmount: string;
+  queryFees30d: string;
+  indexerAllocations: { id: string }[];
+  curatorSignals: { id: string }[];
+}[]> {
+  const response = await fetch('/api/subgraph-fees-30d');
+  if (!response.ok) throw new Error(`30d fees fetch failed: ${response.status}`);
+  const json = await response.json();
+  return json.data;
+}
+
+/**
  * Fetch manifest complexity analysis for an IPFS hash
  */
 export async function fetchManifestAnalysis(hash: string): Promise<ManifestAnalysis> {
