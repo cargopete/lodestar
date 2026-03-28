@@ -265,7 +265,7 @@ Monthly leaderboard scoring engine with percentile-normalised scores across 10 d
 
 ### Delegator Protection & APY (PaulieB14 — GitHub issue #1, 2026-03-20)
 - [x] Highlight 100% reward cut indexers with greedy indexer warnings on the Indexer Directory
-- [ ] Add educational tooltips at top of indexer table explaining reward cut, effective cut, and warning signs
+- [x] Add educational tooltips at top of indexer table explaining reward cut, effective cut, and warning signs
 - [x] 30/90-day rolling APY alongside current APR for longer-term performance view
 - Reference: https://github.com/PaulieB14/delegator-apy-dashboard
 
