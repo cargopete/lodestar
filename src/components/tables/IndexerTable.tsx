@@ -91,11 +91,11 @@ function HeaderTip({ label, tip }: { label: string; tip: string }) {
   return (
     <span className="relative group/tip inline-flex items-center gap-1">
       {label}
-      <svg className="w-3 h-3 text-[var(--text-faint)] opacity-0 group-hover/tip:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <svg className="w-3 h-3 text-[var(--text-faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <circle cx="12" cy="12" r="10" />
         <path strokeLinecap="round" d="M12 16v-4m0-4h.01" />
       </svg>
-      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-56 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/tip:opacity-100 transition-opacity z-50 text-[11px] font-normal normal-case tracking-normal text-[var(--text)]">
+      <span className="absolute left-0 top-full mt-1.5 w-56 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/tip:opacity-100 transition-opacity z-50 text-[11px] font-normal normal-case tracking-normal text-[var(--text)]">
         {tip}
       </span>
     </span>
