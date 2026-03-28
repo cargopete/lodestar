@@ -10,6 +10,7 @@ interface DeploymentRaw {
   queryFeesAmount: string;
   indexerAllocations: { id: string }[];
   curatorSignals: { id: string }[];
+  versions: { subgraph: { metadata: { displayName: string } | null } }[];
 }
 
 const ALLOWED_ORDER_BY = new Set([
@@ -50,6 +51,11 @@ export async function GET(request: NextRequest) {
       curatorSignals {
         id
       }
+      versions(first: 1, orderBy: createdAt, orderDirection: desc) {
+        subgraph {
+          metadata { displayName }
+        }
+      }
     }
   }`;
 
@@ -58,7 +64,11 @@ export async function GET(request: NextRequest) {
   try {
     const data = await cached(cacheKey, 300, async () => {
       const result = await subgraphQuery<{ subgraphDeployments: DeploymentRaw[] }>(query);
-      return result.subgraphDeployments;
+      return result.subgraphDeployments.map((d) => ({
+        ...d,
+        displayName: d.versions?.[0]?.subgraph?.metadata?.displayName ?? null,
+        versions: undefined,
+      }));
     });
 
     return NextResponse.json({ data }, {

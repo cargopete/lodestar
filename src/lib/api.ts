@@ -201,6 +201,7 @@ export async function fetchSubgraphDeployments(params: {
   queryFeesAmount: string;
   indexerAllocations: { id: string }[];
   curatorSignals: { id: string }[];
+  displayName: string | null;
 }[]> {
   const qs = new URLSearchParams();
   if (params.first) qs.set('first', String(params.first));
@@ -225,6 +226,7 @@ export async function fetchSubgraphDeployments30d(): Promise<{
   queryFees30d: string;
   indexerAllocations: { id: string }[];
   curatorSignals: { id: string }[];
+  displayName: string | null;
 }[]> {
   const response = await fetch('/api/subgraph-fees-30d');
   if (!response.ok) throw new Error(`30d fees fetch failed: ${response.status}`);

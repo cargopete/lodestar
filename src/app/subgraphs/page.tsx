@@ -199,6 +199,7 @@ export default function SubgraphDirectory() {
         return {
           id: d.id,
           ipfsHash: d.ipfsHash,
+          displayName: d.displayName ?? null,
           signal,
           stake,
           queryFees,
@@ -227,6 +228,7 @@ export default function SubgraphDirectory() {
       return {
         id: d.id,
         ipfsHash: d.ipfsHash,
+        displayName: d.displayName ?? null,
         signal,
         stake,
         queryFees,
@@ -493,29 +495,50 @@ export default function SubgraphDirectory() {
             <Link key={row.id} href={`/subgraphs/${row.ipfsHash}`}>
               <Card className="hover:border-[var(--accent-hover)] transition-colors">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-[var(--text-faint)]">#{page * PAGE_SIZE + idx + 1}</span>
-                    <span className="font-mono text-sm text-[var(--text)]" title={row.ipfsHash}>
-                      {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
-                    </span>
-                    {row.isElite && (
-                      <span className="relative group/elite">
-                        <Badge
-                          variant="warning"
-                          className="cursor-pointer"
-                          onClick={(e) => { e.preventDefault(); setEliteOnly(true); }}
-                        >
-                          Elite
-                        </Badge>
-                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-[10px] text-white bg-[var(--bg-elevated)] border border-[var(--border)] rounded whitespace-nowrap opacity-0 group-hover/elite:opacity-100 transition-opacity z-50">
-                          Earned over 1,000 GRT in query fees
+                  <div className="flex-1 min-w-0 mr-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-[var(--text-faint)]">#{page * PAGE_SIZE + idx + 1}</span>
+                      {row.displayName ? (
+                        <span className="text-sm font-medium text-[var(--text)] truncate" title={row.displayName}>
+                          {row.displayName}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-sm text-[var(--text)]" title={row.ipfsHash}>
+                          {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
+                        </span>
+                      )}
+                      {row.isElite && (
+                        <span className="relative group/elite shrink-0">
+                          <Badge
+                            variant="warning"
+                            className="cursor-pointer"
+                            onClick={(e) => { e.preventDefault(); setEliteOnly(true); }}
+                          >
+                            Elite
+                          </Badge>
+                          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-[10px] text-white bg-[var(--bg-elevated)] border border-[var(--border)] rounded whitespace-nowrap opacity-0 group-hover/elite:opacity-100 transition-opacity z-50">
+                            Earned over 1,000 GRT in query fees
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                    {row.displayName && (
+                      <p className="text-[10px] font-mono text-[var(--text-faint)] mt-0.5 ml-7">
+                        {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <ComplexityCell hash={row.ipfsHash} onComplexity={handleComplexity} />
+                    <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} networkMap={networkMap} />
+                    {row.indexerCount <= 1 && (
+                      <span className="relative group/lowidx">
+                        <Badge variant="warning" className="text-[10px] px-1.5">1 idx</Badge>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-[10px] text-white bg-[var(--bg-elevated)] border border-[var(--border)] rounded whitespace-nowrap opacity-0 group-hover/lowidx:opacity-100 transition-opacity z-50">
+                          Only {row.indexerCount} active indexer — may be hard to sync
                         </span>
                       </span>
                     )}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <ComplexityCell hash={row.ipfsHash} onComplexity={handleComplexity} />
-                    <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} networkMap={networkMap} />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
@@ -597,10 +620,23 @@ export default function SubgraphDirectory() {
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/subgraphs/${row.ipfsHash}`}
-                          className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+                          className="hover:text-[var(--accent)] transition-colors"
                           title={row.ipfsHash}
                         >
-                          {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
+                          {row.displayName ? (
+                            <div>
+                              <span className="text-sm font-medium text-[var(--text)] block truncate max-w-[220px]">
+                                {row.displayName}
+                              </span>
+                              <span className="text-[10px] font-mono text-[var(--text-faint)]">
+                                {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="font-mono text-sm text-[var(--text)]">
+                              {row.ipfsHash.slice(0, 8)}...{row.ipfsHash.slice(-6)}
+                            </span>
+                          )}
                         </Link>
                         {row.isElite && (
                       <span className="relative group/elite">
@@ -634,7 +670,17 @@ export default function SubgraphDirectory() {
                       {formatGRT(row.queryFees)}
                     </td>
                     <td className={`px-4 py-3 text-right font-mono text-sm text-[var(--text)] ${tdBorder}`}>
-                      {row.indexerCount}
+                      <span className="inline-flex items-center justify-end gap-1.5">
+                        {row.indexerCount}
+                        {row.indexerCount <= 1 && (
+                          <span className="relative group/lowidx">
+                            <span className="text-[var(--amber)] text-xs cursor-default">&#9888;</span>
+                            <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 px-2 py-1 text-[10px] text-white bg-[var(--bg-elevated)] border border-[var(--border)] rounded whitespace-nowrap opacity-0 group-hover/lowidx:opacity-100 transition-opacity z-50">
+                              Only {row.indexerCount} active indexer — may be hard to sync
+                            </span>
+                          </span>
+                        )}
+                      </span>
                     </td>
                     <td
                       className={cn(
