@@ -79,14 +79,26 @@ export async function fetchEnrichedIndexers(): Promise<{
 /**
  * Fetch leaderboard scores from Redis cache
  */
-export async function fetchLeaderboard(): Promise<{
+export async function fetchLeaderboard(period?: string): Promise<{
   periodStart: string;
   periodEnd: string;
   computedAt: number;
   entries: LeaderboardEntry[];
 }> {
-  const response = await fetch('/api/leaderboard');
+  const qs = period ? `?period=${encodeURIComponent(period)}` : '';
+  const response = await fetch(`/api/leaderboard${qs}`);
   if (!response.ok) throw new Error('Leaderboard data not available');
+  return response.json();
+}
+
+/**
+ * Fetch available leaderboard periods
+ */
+export async function fetchLeaderboardPeriods(): Promise<{
+  periods: { start: string; end: string }[];
+}> {
+  const response = await fetch('/api/leaderboard?periods=true');
+  if (!response.ok) throw new Error('Failed to fetch periods');
   return response.json();
 }
 

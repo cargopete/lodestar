@@ -19,6 +19,7 @@ import {
   fetchIndexingStatus,
   fetchNetworksRegistry,
   fetchLeaderboard,
+  fetchLeaderboardPeriods,
   fetchDelegatorPortfolio,
   fetchCuratorPortfolio,
 } from '@/lib/api';
@@ -389,12 +390,23 @@ export function useENSName(address: string) {
 /**
  * Hook for leaderboard scores (monthly, cached for long periods)
  */
-export function useLeaderboard() {
+export function useLeaderboard(period?: string) {
   return useQuery({
-    queryKey: ['leaderboard'],
-    queryFn: fetchLeaderboard,
+    queryKey: ['leaderboard', period],
+    queryFn: () => fetchLeaderboard(period),
     staleTime: ONE_HOUR,
-    refetchInterval: ONE_HOUR,
+    refetchInterval: period ? false : ONE_HOUR, // don't refetch historical
     placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Hook for available leaderboard periods
+ */
+export function useLeaderboardPeriods() {
+  return useQuery({
+    queryKey: ['leaderboardPeriods'],
+    queryFn: fetchLeaderboardPeriods,
+    staleTime: ONE_HOUR,
   });
 }

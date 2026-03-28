@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useLeaderboard, useEnrichedIndexers } from '@/hooks/useNetworkStats';
+import { useLeaderboard, useLeaderboardPeriods, useEnrichedIndexers } from '@/hooks/useNetworkStats';
 import { Card } from '@/components/ui/Card';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Pagination } from '@/components/ui/Pagination';
@@ -79,8 +79,15 @@ const SCORE_SECTIONS = [
   },
 ] as const;
 
+function periodToYYYYMM(start: string): string {
+  const d = new Date(start + 'T00:00:00Z');
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
 export default function LeaderboardPage() {
-  const { data, isLoading, isError } = useLeaderboard();
+  const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>(undefined);
+  const { data, isLoading, isError } = useLeaderboard(selectedPeriod);
+  const { data: periodsData } = useLeaderboardPeriods();
   const { data: enrichedData } = useEnrichedIndexers();
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -129,17 +136,41 @@ export default function LeaderboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--text)]">Indexer Leaderboard</h1>
-        <p className="text-sm text-[var(--text-muted)] mt-1">
-          Community favourites — recognising the indexers who contribute most to The Graph network.
-          Scored on subgraph coverage, query serving, trust, and community votes.
-          For delegator-focused metrics like APR and effective cut, see the{' '}
-          <Link href="/indexers" className="text-[var(--accent)] hover:underline">Indexer Directory</Link> scores.
-          {data.periodStart && (
-            <span className="text-[var(--text)]"> {formatPeriod(data.periodStart)}</span>
-          )}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-[var(--text)]">Indexer Leaderboard</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1">
+            Community favourites — recognising the indexers who contribute most to The Graph network.
+            Scored on subgraph coverage, query serving, trust, and community votes.
+            For delegator-focused metrics like APR and effective cut, see the{' '}
+            <Link href="/indexers" className="text-[var(--accent)] hover:underline">Indexer Directory</Link> scores.
+          </p>
+        </div>
+        {periodsData && periodsData.periods.length > 0 && (
+          <select
+            value={selectedPeriod ?? ''}
+            onChange={(e) => {
+              setSelectedPeriod(e.target.value || undefined);
+              setPage(0);
+            }}
+            className={cn(
+              'px-3 py-2 text-sm rounded-[var(--radius-button)] shrink-0',
+              'bg-[var(--bg-surface)] border border-[var(--border)]',
+              'text-[var(--text)]',
+              'focus:outline-none focus:border-[var(--accent)]'
+            )}
+          >
+            <option value="">Latest</option>
+            {periodsData.periods.map((p) => {
+              const ym = periodToYYYYMM(p.start);
+              return (
+                <option key={ym} value={ym}>
+                  {formatPeriod(p.start)}
+                </option>
+              );
+            })}
+          </select>
+        )}
       </div>
 
       {/* Overview stats */}
