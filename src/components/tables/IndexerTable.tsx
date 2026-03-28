@@ -86,6 +86,22 @@ const nameAddressFilter: FilterFn<IndexerRow> = (row, _columnId, filterValue) =>
 
 const columnHelper = createColumnHelper<IndexerRow>();
 
+/** Column header with an info tooltip on hover */
+function HeaderTip({ label, tip }: { label: string; tip: string }) {
+  return (
+    <span className="relative group/tip inline-flex items-center gap-1">
+      {label}
+      <svg className="w-3 h-3 text-[var(--text-faint)] opacity-0 group-hover/tip:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <circle cx="12" cy="12" r="10" />
+        <path strokeLinecap="round" d="M12 16v-4m0-4h.01" />
+      </svg>
+      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-56 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/tip:opacity-100 transition-opacity z-50 text-[11px] font-normal normal-case tracking-normal text-[var(--text)]">
+        {tip}
+      </span>
+    </span>
+  );
+}
+
 export function IndexerTable() {
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'score', desc: true },
@@ -294,7 +310,7 @@ export function IndexerTable() {
         },
       }),
       columnHelper.accessor('score', {
-        header: 'Score',
+        header: () => <HeaderTip label="Score" tip="Composite grade (A-F) across 7 dimensions: REO compliance, self-stake, cut stability, allocation efficiency, over-delegation, transparency, and delegation trend." />,
         cell: (info) => {
           const row = info.row.original;
           const score = info.getValue();
@@ -312,7 +328,7 @@ export function IndexerTable() {
         sortUndefined: 'last',
       }),
       columnHelper.accessor('selfStake', {
-        header: 'Self-Stake',
+        header: () => <HeaderTip label="Self-Stake" tip="GRT the indexer has staked from their own wallet. Higher self-stake means more skin in the game and greater slashing risk if they misbehave." />,
         cell: (info) => (
           <span className="font-mono text-[var(--text)]">
             {formatGRT(info.getValue())} GRT
@@ -320,7 +336,7 @@ export function IndexerTable() {
         ),
       }),
       columnHelper.accessor('delegated', {
-        header: 'Delegated',
+        header: () => <HeaderTip label="Delegated" tip="Total GRT delegated to this indexer by other token holders. Delegators earn a share of indexing rewards minus the indexer's cut." />,
         cell: (info) => (
           <span className="font-mono text-[var(--green)]">
             {formatGRT(info.getValue())} GRT
@@ -328,7 +344,7 @@ export function IndexerTable() {
         ),
       }),
       columnHelper.accessor('capacity', {
-        header: 'Capacity',
+        header: () => <HeaderTip label="Capacity" tip="How full the indexer's delegation pool is. Over 100% means overdelegated — your rewards get diluted proportionally." />,
         cell: (info) => {
           const value = info.getValue();
           return (
@@ -347,7 +363,7 @@ export function IndexerTable() {
         },
       }),
       columnHelper.accessor('rewardCut', {
-        header: 'Reward Cut',
+        header: () => <HeaderTip label="Reward Cut" tip="The % of indexing rewards the indexer keeps. 'Effective cut' below factors in overdelegation dilution — what you actually lose. A 100% cut means delegators earn nothing." />,
         cell: (info) => {
           const row = info.row.original;
           const lastUpdate = row.raw.lastDelegationParameterUpdate;
@@ -386,7 +402,7 @@ export function IndexerTable() {
         },
       }),
       columnHelper.accessor('apr', {
-        header: 'APR',
+        header: () => <HeaderTip label="APR" tip="Current annualised return based on live allocations. Fluctuates each epoch — treat as a snapshot, not a guarantee." />,
         cell: (info) => {
           const value = info.getValue();
           if (value === null) return <span className="text-[var(--text-faint)]">—</span>;
@@ -401,7 +417,7 @@ export function IndexerTable() {
         },
       }),
       columnHelper.accessor('rollingAPY30d', {
-        header: 'APY 30d',
+        header: () => <HeaderTip label="APY 30d" tip="Actual compounded return over the last 30 days from closed allocations. More reliable than instant APR for judging real performance. Hover a value to see 90d APY." />,
         cell: (info) => {
           const value = info.getValue();
           const row = info.row.original;
@@ -424,7 +440,7 @@ export function IndexerTable() {
         sortUndefined: 'last',
       }),
       columnHelper.accessor('feesCollected', {
-        header: 'Fees',
+        header: () => <HeaderTip label="Fees" tip="Total query fees collected. Higher fees suggest the indexer is actively serving real traffic from dApps." />,
         cell: (info) => {
           const value = info.getValue();
           if (!value) return <span className="text-[var(--text-faint)]">—</span>;
@@ -437,7 +453,7 @@ export function IndexerTable() {
         sortUndefined: 'last',
       }),
       columnHelper.accessor('allocations', {
-        header: 'Allocations',
+        header: () => <HeaderTip label="Allocations" tip="Number of active subgraph allocations. More allocations generally means broader network coverage, but quality matters more than quantity." />,
         cell: (info) => (
           <span className="font-mono text-[var(--text)]">{info.getValue()}</span>
         ),
