@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const analysis = await cached(`lodestar:manifest:${hash}`, 86400, async () => {
+    const analysis = await cached(`lodestar:manifest:v2:${hash}`, 86400, async () => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
 

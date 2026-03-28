@@ -44,6 +44,43 @@ export interface ManifestAnalysis {
   pruning: string | null;
 }
 
+// ---------- chain block times (seconds) ----------
+// Used for chain-aware scoring. Includes canonical Graph IDs and common aliases.
+
+const CHAIN_BLOCK_TIMES: Record<string, number> = {
+  // L1s
+  mainnet: 12,
+  gnosis: 5,
+  xdai: 5,      // alias
+  celo: 5,
+  bsc: 3,
+  chapel: 3,    // BSC testnet alias
+  avalanche: 2,
+  fantom: 1,
+  // L2s / rollups
+  base: 2,
+  optimism: 2,
+  matic: 2,
+  polygon: 2,   // alias
+  'arbitrum-one': 0.25,
+  'arbitrum-sepolia': 0.25,
+  scroll: 3,
+  linea: 3,
+  'zksync-era': 1,
+  'polygon-zkevm': 5,
+  blast: 2,
+  mode: 2,
+  mantle: 2,
+  'base-sepolia': 2,
+  'optimism-sepolia': 2,
+};
+
+const ETH_BLOCK_TIME = 12; // baseline for normalisation
+
+function getBlockTime(network: string): number {
+  return CHAIN_BLOCK_TIMES[network] ?? ETH_BLOCK_TIME;
+}
+
 // ---------- scoring ----------
 
 function categoryFromScore(score: number): ComplexityCategory {
@@ -98,28 +135,35 @@ function computeComplexityScore(
   features: string[],
   pruning: string | null,
   graft: { base: string; block: number } | null,
+  network: string,
 ): { score: number; breakdown: ScoreBreakdown[] } {
   const breakdown: ScoreBreakdown[] = [];
+  const blockTime = getBlockTime(network);
 
-  // 1. Block range (25) — lowest startBlock across all sources
+  // 1. Block range (20) — normalised to Ethereum-equivalent blocks
+  // A start block of 25M on Base (2s) ≈ 4.17M on Ethereum (12s)
   const lowestStart = dataSources.reduce(
     (min, ds) => Math.min(min, ds.startBlock),
     Number.MAX_SAFE_INTEGER,
   );
   const startBlock = lowestStart === Number.MAX_SAFE_INTEGER ? 0 : lowestStart;
+  const ethEquivalent = Math.round(startBlock * (blockTime / ETH_BLOCK_TIME));
   let blockScore: number;
-  if (startBlock === 0) blockScore = 25;
-  else if (startBlock < 1_000_000) blockScore = 22;
-  else if (startBlock < 5_000_000) blockScore = 18;
-  else if (startBlock < 10_000_000) blockScore = 12;
-  else if (startBlock < 15_000_000) blockScore = 8;
-  else if (startBlock < 18_000_000) blockScore = 4;
+  if (ethEquivalent === 0) blockScore = 20;
+  else if (ethEquivalent < 1_000_000) blockScore = 18;
+  else if (ethEquivalent < 5_000_000) blockScore = 14;
+  else if (ethEquivalent < 10_000_000) blockScore = 10;
+  else if (ethEquivalent < 15_000_000) blockScore = 6;
+  else if (ethEquivalent < 18_000_000) blockScore = 3;
   else blockScore = 0;
+  const blockRawLabel = blockTime !== ETH_BLOCK_TIME
+    ? `${startBlock.toLocaleString()} (~${ethEquivalent.toLocaleString()} ETH-eq)`
+    : startBlock.toLocaleString();
   breakdown.push({
     dimension: 'Block Range',
-    rawValue: startBlock.toLocaleString(),
+    rawValue: blockRawLabel,
     score: blockScore,
-    maxScore: 25,
+    maxScore: 20,
   });
 
   // 2. Handler types (25)
@@ -155,18 +199,18 @@ function computeComplexityScore(
     maxScore: 10,
   });
 
-  // 4. Templates (15)
+  // 4. Templates (10)
   const tplCount = templates.length;
   let tplScore: number;
   if (tplCount === 0) tplScore = 0;
-  else if (tplCount <= 2) tplScore = 5;
-  else if (tplCount <= 4) tplScore = 10;
-  else tplScore = 15;
+  else if (tplCount <= 2) tplScore = 3;
+  else if (tplCount <= 4) tplScore = 7;
+  else tplScore = 10;
   breakdown.push({
     dimension: 'Templates',
     rawValue: String(tplCount),
     score: tplScore,
-    maxScore: 15,
+    maxScore: 10,
   });
 
   // 5. Missing source.address (10)
@@ -179,7 +223,24 @@ function computeComplexityScore(
     maxScore: 10,
   });
 
-  // 6. Features overhead (5)
+  // 6. Chain Throughput (15) — faster chains are harder to keep up with
+  let chainScore: number;
+  if (blockTime < 1) chainScore = 15;        // Arbitrum (~0.25s)
+  else if (blockTime <= 2) chainScore = 12;   // Base, OP, Polygon, Avalanche
+  else if (blockTime <= 4) chainScore = 8;    // BNB
+  else if (blockTime <= 8) chainScore = 4;    // Gnosis, Celo
+  else chainScore = 0;                        // Ethereum, slow chains
+  const chainLabel = blockTime !== ETH_BLOCK_TIME
+    ? `${blockTime}s blocks (${Math.round(ETH_BLOCK_TIME / blockTime)}x Ethereum)`
+    : `${blockTime}s blocks`;
+  breakdown.push({
+    dimension: 'Chain Throughput',
+    rawValue: chainLabel,
+    score: chainScore,
+    maxScore: 15,
+  });
+
+  // 7. Features overhead (5)
   const heavyFeatures = ['ipfsOnEthereumContracts', 'fullTextSearch', 'nonDeterministicIpfs'];
   const activeHeavy = features.filter((f) => heavyFeatures.includes(f));
   const featScore = Math.min(activeHeavy.length * 2, 5);
@@ -190,7 +251,7 @@ function computeComplexityScore(
     maxScore: 5,
   });
 
-  // 7. Pruning (5)
+  // 8. Pruning (5)
   let pruneScore: number;
   if (pruning === 'auto') pruneScore = 0;
   else pruneScore = 5; // 'never' or absent
@@ -201,19 +262,19 @@ function computeComplexityScore(
     maxScore: 5,
   });
 
-  // 8. Graft (5)
-  const graftScore = graft ? 5 : 0;
+  // 9. Graft (5) — removed from score as it doesn't affect sync difficulty
+  // Kept as informational row with 0 weight
   breakdown.push({
     dimension: 'Graft',
     rawValue: graft ? `From ${graft.base.slice(0, 12)}... at block ${graft.block.toLocaleString()}` : 'None',
-    score: graftScore,
-    maxScore: 5,
+    score: 0,
+    maxScore: 0,
   });
 
   let total = breakdown.reduce((sum, b) => sum + b.score, 0);
 
-  // Override rules
-  if (hasBlock && startBlock < 5_000_000) total = 100;
+  // Override rules (use normalised block for consistency)
+  if (hasBlock && ethEquivalent < 5_000_000) total = 100;
   if (missingAddress && hasBlock) total = 100;
 
   return { score: Math.min(total, 100), breakdown };
@@ -252,6 +313,7 @@ export function parseManifest(yamlString: string): ManifestAnalysis {
     rawFeatures,
     pruning,
     graft,
+    network,
   );
 
   return {
