@@ -118,7 +118,7 @@ export async function GET() {
             signalledTokens
             stakedTokens
             queryFeesAmount
-            indexerAllocations { id }
+            indexerAllocations(where: { status: Active }) { id }
             curatorSignals { id }
           }
         }`);

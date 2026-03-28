@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       signalledTokens
       stakedTokens
       queryFeesAmount
-      indexerAllocations {
+      indexerAllocations(where: { status: Active }) {
         id
       }
       curatorSignals {
