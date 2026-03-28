@@ -235,9 +235,9 @@ Monthly leaderboard scoring engine with percentile-normalised scores across 10 d
 - [x] Indexer of the Month badge (#1 ranked indexer each month)
 
 ### Leaderboard Page
-- [ ] `/leaderboard` route with monthly rankings
-- [ ] Period selector (month/year toggle)
-- [ ] Expandable score breakdown per indexer (all 12 sub-dimensions)
+- [x] `/leaderboard` route with monthly rankings
+- [x] Period selector (month/year toggle)
+- [x] Expandable score breakdown per indexer (all 12 sub-dimensions)
 - [ ] Badge indicator for eligible indexers
 - [ ] Wire leaderboard data into Redis for Vercel reads
 
