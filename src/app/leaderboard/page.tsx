@@ -149,7 +149,7 @@ export default function LeaderboardPage() {
             <Link href="/indexers" className="text-[var(--accent)] hover:underline">Indexer Directory</Link> scores.
           </p>
         </div>
-        {periodsData && periodsData.periods.length > 0 && (
+        {periodsData && periodsData.periods.length > 1 && (
           <select
             value={selectedPeriod ?? ''}
             onChange={(e) => {
@@ -163,11 +163,10 @@ export default function LeaderboardPage() {
               'focus:outline-none focus:border-[var(--accent)]'
             )}
           >
-            <option value="">Latest</option>
-            {periodsData.periods.map((p) => {
+            {periodsData.periods.map((p, i) => {
               const ym = periodToYYYYMM(p.start);
               return (
-                <option key={ym} value={ym}>
+                <option key={ym} value={i === 0 ? '' : ym}>
                   {formatPeriod(p.start)}
                 </option>
               );
