@@ -272,7 +272,7 @@ Monthly leaderboard scoring engine with percentile-normalised scores across 10 d
 ### Indexer Operations (Gemma / LunaNova — 2026-03-25)
 - [ ] Indexing status at indexer level — show all allocated subgraphs and how close to chainhead each is
 - [ ] Query traffic over recent windows (1d / 2d / 7d) per indexer
-- [ ] Subgraph indexer count on `/subgraphs` should only count active allocations (not historical)
+- [x] Subgraph indexer count on `/subgraphs` should only count active allocations (not historical)
 
 ---
 
