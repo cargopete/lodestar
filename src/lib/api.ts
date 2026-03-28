@@ -84,6 +84,7 @@ export async function fetchLeaderboard(period?: string): Promise<{
   periodEnd: string;
   computedAt: number;
   entries: LeaderboardEntry[];
+  badgeHolder?: { address: string; score: number; period: string } | null;
 }> {
   const qs = period ? `?period=${encodeURIComponent(period)}` : '';
   const response = await fetch(`/api/leaderboard${qs}`);

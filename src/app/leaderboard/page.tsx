@@ -136,8 +136,52 @@ export default function LeaderboardPage() {
     );
   }
 
+  // Badge holder logic:
+  // - Historical view: use is_eligible_for_badge from that month's data
+  // - Live/current view: use badgeHolder from API (previous month's winner)
+  const historicalBadgeWinner = selectedPeriod ? entries.find((e) => e.is_eligible_for_badge) : null;
+  const liveBadgeHolder = !selectedPeriod ? data?.badgeHolder ?? null : null;
+
+  // Address of the badge holder to highlight in the table
+  const badgeHolderAddress = historicalBadgeWinner?.indexer_address ?? liveBadgeHolder?.address ?? null;
+
+  // Banner info
+  const bannerAddress = badgeHolderAddress;
+  const bannerName = bannerAddress
+    ? nameMap.get(bannerAddress.toLowerCase()) ?? shortenAddress(bannerAddress)
+    : null;
+  const bannerScore = historicalBadgeWinner?.final_score ?? liveBadgeHolder?.score ?? null;
+  const bannerPeriod = historicalBadgeWinner
+    ? data.periodStart
+    : liveBadgeHolder?.period ?? null;
+
   return (
     <div className="space-y-6">
+      {/* Indexer of the Month banner */}
+      {bannerAddress && bannerPeriod && (
+        <div className="relative overflow-hidden rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 sm:p-5">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 shrink-0">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-amber-400/80 uppercase tracking-wider">Indexer of the Month</p>
+              <Link
+                href={`/indexers/${bannerAddress}`}
+                className="text-lg font-semibold text-[var(--text)] hover:text-amber-400 transition-colors"
+              >
+                {bannerName}
+              </Link>
+              <p className="text-sm text-[var(--text-muted)] mt-0.5">
+                {formatPeriod(bannerPeriod)} — scored {bannerScore?.toFixed(1)} / 100
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
@@ -193,6 +237,7 @@ export default function LeaderboardPage() {
             key={entry.indexer_address}
             entry={entry}
             name={nameMap.get(entry.indexer_address.toLowerCase())}
+            isBadgeHolder={entry.indexer_address.toLowerCase() === badgeHolderAddress?.toLowerCase()}
             expanded={expanded === entry.indexer_address}
             onToggle={() => setExpanded(expanded === entry.indexer_address ? null : entry.indexer_address)}
           />
@@ -228,6 +273,7 @@ export default function LeaderboardPage() {
                   key={entry.indexer_address}
                   entry={entry}
                   name={nameMap.get(entry.indexer_address.toLowerCase())}
+                  isBadgeHolder={entry.indexer_address.toLowerCase() === badgeHolderAddress?.toLowerCase()}
                   expanded={expanded === entry.indexer_address}
                   onToggle={() => setExpanded(expanded === entry.indexer_address ? null : entry.indexer_address)}
                 />
@@ -292,11 +338,13 @@ const TD_BORDER = 'border-r border-[var(--border)]/20 last:border-r-0';
 function DesktopRow({
   entry,
   name,
+  isBadgeHolder,
   expanded,
   onToggle,
 }: {
   entry: LeaderboardEntry;
   name: string | undefined;
+  isBadgeHolder?: boolean;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -312,23 +360,30 @@ function DesktopRow({
         onClick={onToggle}
       >
         <td className={`px-4 py-3 text-center ${TD_BORDER}`}>
-          <RankBadge rank={entry.rank ?? 0} />
+          <RankBadge rank={entry.rank ?? 0} isBadgeWinner={isBadgeHolder} />
         </td>
         <td className={`px-4 py-3 ${TD_BORDER}`}>
-          <Link
-            href={`/indexers/${entry.indexer_address}`}
-            className="hover:text-[var(--accent)] transition-colors"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span className="text-sm font-medium text-[var(--text)]">
-              {name ?? shortenAddress(entry.indexer_address)}
-            </span>
-            {name && (
-              <span className="text-xs text-[var(--text-faint)] ml-2 font-mono">
-                {shortenAddress(entry.indexer_address)}
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/indexers/${entry.indexer_address}`}
+              className="hover:text-[var(--accent)] transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="text-sm font-medium text-[var(--text)]">
+                {name ?? shortenAddress(entry.indexer_address)}
+              </span>
+              {name && (
+                <span className="text-xs text-[var(--text-faint)] ml-2 font-mono">
+                  {shortenAddress(entry.indexer_address)}
+                </span>
+              )}
+            </Link>
+            {isBadgeHolder && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[10px] font-medium whitespace-nowrap">
+                Indexer of the Month
               </span>
             )}
-          </Link>
+          </div>
         </td>
         <td className={`px-4 py-3 text-center ${TD_BORDER}`}>
           <VoteButton indexerAddress={entry.indexer_address} />
@@ -373,11 +428,13 @@ function DesktopRow({
 function MobileCard({
   entry,
   name,
+  isBadgeHolder,
   expanded,
   onToggle,
 }: {
   entry: LeaderboardEntry;
   name: string | undefined;
+  isBadgeHolder?: boolean;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -385,15 +442,22 @@ function MobileCard({
     <Card className="cursor-pointer" onClick={onToggle}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <RankBadge rank={entry.rank ?? 0} />
+          <RankBadge rank={entry.rank ?? 0} isBadgeWinner={isBadgeHolder} />
           <div>
-            <Link
-              href={`/indexers/${entry.indexer_address}`}
-              className="text-sm font-medium text-[var(--text)] hover:text-[var(--accent)]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {name ?? shortenAddress(entry.indexer_address)}
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/indexers/${entry.indexer_address}`}
+                className="text-sm font-medium text-[var(--text)] hover:text-[var(--accent)]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {name ?? shortenAddress(entry.indexer_address)}
+              </Link>
+              {isBadgeHolder && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[10px] font-medium">
+                  IOTM
+                </span>
+              )}
+            </div>
             {name && (
               <p className="text-xs text-[var(--text-faint)] font-mono">
                 {shortenAddress(entry.indexer_address)}
@@ -526,11 +590,18 @@ function ScoreBreakdown({ entry }: { entry: LeaderboardEntry }) {
 
 // ── Small components ──────────────────────────────────────
 
-function RankBadge({ rank }: { rank: number }) {
+function RankBadge({ rank, isBadgeWinner }: { rank: number; isBadgeWinner?: boolean }) {
   if (rank === 1) {
     return (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold font-mono">
-        1
+      <span className="relative inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold font-mono">
+        {isBadgeWinner ? (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+        ) : '1'}
+        {isBadgeWinner && (
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border border-[var(--bg-surface)]" />
+        )}
       </span>
     );
   }

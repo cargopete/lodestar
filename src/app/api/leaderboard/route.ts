@@ -47,7 +47,29 @@ export async function GET(request: NextRequest) {
         { status: 503 }
       );
     }
-    return NextResponse.json(cached, {
+
+    // Look up previous month's badge holder from Postgres
+    let badgeHolder: { address: string; score: number; period: string } | null = null;
+    if (hasDbAccess() && db) {
+      const badgeRows = await db`
+        SELECT indexer_address, final_score, period_start
+        FROM indexer_scores
+        WHERE period_type = 'monthly'
+          AND is_eligible_for_badge = true
+          AND period_start::text < ${cached.periodStart.slice(0, 10)}
+        ORDER BY period_start DESC
+        LIMIT 1
+      `;
+      if (badgeRows.length > 0) {
+        badgeHolder = {
+          address: badgeRows[0].indexer_address,
+          score: Number(badgeRows[0].final_score),
+          period: String(badgeRows[0].period_start).slice(0, 10),
+        };
+      }
+    }
+
+    return NextResponse.json({ ...cached, badgeHolder }, {
       headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200' },
     });
   }
