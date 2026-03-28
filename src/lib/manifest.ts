@@ -20,6 +20,8 @@ export interface DataSourceSignal {
   eventHandlers: number;
   callHandlers: number;
   blockHandlers: number;
+  /** Smallest polling interval among block handlers (1 = every block, Infinity = no block handlers) */
+  blockHandlerInterval: number;
 }
 
 export interface TemplateSignal {
@@ -29,6 +31,7 @@ export interface TemplateSignal {
   eventHandlers: number;
   callHandlers: number;
   blockHandlers: number;
+  blockHandlerInterval: number;
 }
 
 export interface ManifestAnalysis {
@@ -71,6 +74,7 @@ const CHAIN_BLOCK_TIMES: Record<string, number> = {
   blast: 2,
   mode: 2,
   mantle: 2,
+  berachain: 2,
   'base-sepolia': 2,
   'optimism-sepolia': 2,
 };
@@ -94,11 +98,28 @@ function extractHandlers(mapping: Record<string, unknown>): {
   eventHandlers: number;
   callHandlers: number;
   blockHandlers: number;
+  blockHandlerInterval: number;
 } {
   const eh = Array.isArray(mapping?.eventHandlers) ? mapping.eventHandlers.length : 0;
   const ch = Array.isArray(mapping?.callHandlers) ? mapping.callHandlers.length : 0;
-  const bh = Array.isArray(mapping?.blockHandlers) ? mapping.blockHandlers.length : 0;
-  return { eventHandlers: eh, callHandlers: ch, blockHandlers: bh };
+  const rawBh = Array.isArray(mapping?.blockHandlers) ? mapping.blockHandlers : [];
+  const bh = rawBh.length;
+
+  // Find the smallest polling interval across all block handlers.
+  // A handler with no filter fires every block (interval = 1).
+  let minInterval = Infinity;
+  for (const handler of rawBh) {
+    const h = handler as Record<string, unknown>;
+    const filter = h?.filter as Record<string, unknown> | undefined;
+    const every = filter?.every;
+    if (typeof every === 'number' && every > 0) {
+      minInterval = Math.min(minInterval, every);
+    } else {
+      minInterval = 1; // no filter = every block
+    }
+  }
+
+  return { eventHandlers: eh, callHandlers: ch, blockHandlers: bh, blockHandlerInterval: minInterval };
 }
 
 function extractDataSource(ds: Record<string, unknown>): DataSourceSignal {
@@ -170,17 +191,32 @@ function computeComplexityScore(
   const allSources = [...dataSources, ...templates];
   const hasBlock = allSources.some((s) => s.blockHandlers > 0);
   const hasCall = allSources.some((s) => s.callHandlers > 0);
+  // Smallest polling interval across all sources (1 = every block)
+  const minBlockInterval = allSources.reduce(
+    (min, s) => s.blockHandlers > 0 ? Math.min(min, s.blockHandlerInterval) : min,
+    Infinity,
+  );
+  const isPollingOnly = hasBlock && minBlockInterval > 1;
+
   let handlerScore = 0;
-  if (hasBlock) handlerScore += 18;
+  if (hasBlock) {
+    if (minBlockInterval >= 1000) handlerScore += 4;      // very infrequent polling
+    else if (minBlockInterval >= 100) handlerScore += 8;   // moderate polling
+    else if (minBlockInterval > 1) handlerScore += 12;     // frequent polling
+    else handlerScore += 18;                                // every block
+  }
   if (hasCall) handlerScore += 7;
   if (!hasBlock && !hasCall) handlerScore = 0; // events only
+
+  const handlerLabel = [
+    hasBlock && (isPollingOnly ? `block (every ${minBlockInterval.toLocaleString()})` : 'block'),
+    hasCall && 'call',
+    'event',
+  ].filter(Boolean).join(', ');
+
   breakdown.push({
     dimension: 'Handler Types',
-    rawValue: [
-      hasBlock && 'block',
-      hasCall && 'call',
-      'event',
-    ].filter(Boolean).join(', '),
+    rawValue: handlerLabel,
     score: handlerScore,
     maxScore: 25,
   });
@@ -274,8 +310,10 @@ function computeComplexityScore(
   let total = breakdown.reduce((sum, b) => sum + b.score, 0);
 
   // Override rules (use normalised block for consistency)
-  if (hasBlock && ethEquivalent < 5_000_000) total = 100;
-  if (missingAddress && hasBlock) total = 100;
+  // Only raw block handlers (every block) trigger the extreme override — polling handlers don't
+  const hasRawBlock = hasBlock && !isPollingOnly;
+  if (hasRawBlock && ethEquivalent < 5_000_000) total = 100;
+  if (missingAddress && hasRawBlock) total = 100;
 
   return { score: Math.min(total, 100), breakdown };
 }
