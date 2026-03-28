@@ -7,6 +7,7 @@ import { Topbar } from '@/components/layout/Topbar';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { IntelFeed } from '@/components/layout/IntelFeed';
 import { Footer } from '@/components/layout/Footer';
+import { StarPrompt } from '@/components/StarPrompt';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -61,6 +62,7 @@ export default function RootLayout({
               <div className="p-4 md:p-6 max-w-[1440px]">{children}</div>
             </main>
             <Footer />
+            <StarPrompt />
           </div>
         </Providers>
       </body>

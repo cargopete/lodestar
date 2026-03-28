@@ -14,8 +14,8 @@
 
   /* Text */
   --text: #EEEEF2;
-  --text-muted: #6B6B80;
-  --text-faint: #7B77A3;
+  --text-muted: #9494A8;
+  --text-faint: #9590BD;
 
   /* Borders */
   --border: rgba(255, 255, 255, 0.07);
@@ -155,6 +155,11 @@ body {
 
 .animate-slide-up {
   animation: slide-up 0.25s ease-out;
+}
+
+@keyframes star-slide-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Line clamp utilities */

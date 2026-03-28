@@ -106,11 +106,13 @@ export function PortfolioChart({
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-mid)',
                     borderRadius: 'var(--radius-button)',
                     color: 'var(--text)',
                   }}
+                  labelStyle={{ color: 'var(--text)' }}
+                  itemStyle={{ color: 'var(--text-muted)' }}
                   formatter={(value, name) => [
                     formatValue(Number(value)),
                     name === 'displayValue' ? 'Total Value' : name === 'displayRewards' ? 'Rewards' : 'Principal',

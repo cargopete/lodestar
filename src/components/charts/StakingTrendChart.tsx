@@ -78,12 +78,14 @@ export function StakingTrendChart() {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-mid)',
                     borderRadius: 'var(--radius-button)',
                     color: 'var(--text)',
                     fontSize: 13,
                   }}
+                  labelStyle={{ color: 'var(--text)' }}
+                  itemStyle={{ color: 'var(--text-muted)' }}
                   labelFormatter={(label) => `Epoch ${label}`}
                   formatter={(value, name) => [
                     formatGRT(Number(value)) + ' GRT',

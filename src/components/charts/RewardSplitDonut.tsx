@@ -56,11 +56,13 @@ export function RewardSplitDonut() {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-mid)',
                     borderRadius: 'var(--radius-button)',
                     color: 'var(--text)',
                   }}
+                  labelStyle={{ color: 'var(--text)' }}
+                  itemStyle={{ color: 'var(--text-muted)' }}
                   formatter={(value) => [formatGRT(Number(value)) + ' GRT', '']}
                 />
               </PieChart>
