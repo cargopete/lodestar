@@ -2,18 +2,23 @@ import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 
-interface AllocationRaw {
+interface AllocationSlim {
   id: string;
   queryFeesCollected: string;
   subgraphDeployment: {
     id: string;
     ipfsHash: string;
-    signalledTokens: string;
-    stakedTokens: string;
-    queryFeesAmount: string;
-    indexerAllocations: { id: string }[];
-    curatorSignals: { id: string }[];
   };
+}
+
+interface DeploymentDetail {
+  id: string;
+  ipfsHash: string;
+  signalledTokens: string;
+  stakedTokens: string;
+  queryFeesAmount: string;
+  indexerAllocations: { id: string }[];
+  curatorSignals: { id: string }[];
 }
 
 interface AggregatedDeployment {
@@ -31,6 +36,10 @@ interface AggregatedDeployment {
  * Fetches all allocations closed in the last 30 days and aggregates
  * query fees per subgraph deployment. Returns deployments sorted by
  * 30-day fees descending.
+ *
+ * Two-pass approach to avoid expensive nested queries:
+ *   1. Lightweight allocation scan (id + fees + deployment id/hash only)
+ *   2. Targeted deployment detail fetch for the top results
  */
 export async function GET() {
   if (!hasSubgraphAccess()) {
@@ -42,12 +51,14 @@ export async function GET() {
   try {
     const data = await cached(cacheKey, 300, async () => {
       const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 86400;
+
+      // --- Pass 1: lightweight allocation scan ---
       const feesByDeployment = new Map<string, bigint>();
-      const deploymentData = new Map<string, AllocationRaw['subgraphDeployment']>();
+      const ipfsByDeployment = new Map<string, string>();
 
       let lastId = '';
       while (true) {
-        const result = await subgraphQuery<{ allocations: AllocationRaw[] }>(`{
+        const result = await subgraphQuery<{ allocations: AllocationSlim[] }>(`{
           allocations(
             first: 1000
             orderBy: id
@@ -63,11 +74,6 @@ export async function GET() {
             subgraphDeployment {
               id
               ipfsHash
-              signalledTokens
-              stakedTokens
-              queryFeesAmount
-              indexerAllocations(first: 1000) { id }
-              curatorSignals(first: 1000) { id }
             }
           }
         }`);
@@ -78,9 +84,8 @@ export async function GET() {
           const depId = alloc.subgraphDeployment.id;
           const fees = BigInt(alloc.queryFeesCollected);
           feesByDeployment.set(depId, (feesByDeployment.get(depId) ?? BigInt(0)) + fees);
-          // Keep the latest deployment data (all point to same entity)
-          if (!deploymentData.has(depId)) {
-            deploymentData.set(depId, alloc.subgraphDeployment);
+          if (!ipfsByDeployment.has(depId)) {
+            ipfsByDeployment.set(depId, alloc.subgraphDeployment.ipfsHash);
           }
         }
 
@@ -88,10 +93,45 @@ export async function GET() {
         if (result.allocations.length < 1000) break;
       }
 
-      // Build aggregated list, filter dust signal (same as main endpoint)
+      // Sort deployment IDs by 30d fees descending, take top 200
+      const sorted = [...feesByDeployment.entries()]
+        .sort(([, a], [, b]) => (b > a ? 1 : b < a ? -1 : 0))
+        .slice(0, 200);
+
+      if (sorted.length === 0) return [];
+
+      // --- Pass 2: fetch deployment details in batches ---
+      const deploymentIds = sorted.map(([id]) => id);
+      const detailMap = new Map<string, DeploymentDetail>();
+      const BATCH = 100;
+
+      for (let i = 0; i < deploymentIds.length; i += BATCH) {
+        const batch = deploymentIds.slice(i, i + BATCH);
+        const idList = batch.map((id) => `"${id}"`).join(', ');
+        const result = await subgraphQuery<{ subgraphDeployments: DeploymentDetail[] }>(`{
+          subgraphDeployments(
+            first: ${batch.length}
+            where: { id_in: [${idList}] }
+          ) {
+            id
+            ipfsHash
+            signalledTokens
+            stakedTokens
+            queryFeesAmount
+            indexerAllocations { id }
+            curatorSignals { id }
+          }
+        }`);
+
+        for (const dep of result.subgraphDeployments) {
+          detailMap.set(dep.id, dep);
+        }
+      }
+
+      // --- Assemble results ---
       const aggregated: AggregatedDeployment[] = [];
-      for (const [depId, fees30d] of feesByDeployment) {
-        const dep = deploymentData.get(depId);
+      for (const [depId, fees30d] of sorted) {
+        const dep = detailMap.get(depId);
         if (!dep) continue;
         // Skip dust signal deployments (< 1 GRT)
         if (BigInt(dep.signalledTokens) <= BigInt('1000000000000000000')) continue;
@@ -107,15 +147,6 @@ export async function GET() {
           curatorSignals: dep.curatorSignals,
         });
       }
-
-      // Sort by 30-day fees descending
-      aggregated.sort((a, b) => {
-        const fa = BigInt(a.queryFees30d);
-        const fb = BigInt(b.queryFees30d);
-        if (fb > fa) return 1;
-        if (fb < fa) return -1;
-        return 0;
-      });
 
       return aggregated;
     });
