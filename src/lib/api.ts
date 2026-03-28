@@ -273,6 +273,41 @@ export async function fetchIndexingStatus(hash: string): Promise<DeploymentIndex
 }
 
 /**
+ * Fetch indexing status for all deployments of a specific indexer
+ */
+export async function fetchIndexerStatus(address: string): Promise<{
+  indexerAddress: string;
+  indexerUrl: string | null;
+  totalAllocations: number;
+  syncedCount: number;
+  syncingCount: number;
+  failedCount: number;
+  unreachableCount: number;
+  deployments: Array<{
+    deploymentId: string;
+    ipfsHash: string;
+    allocatedTokens: string;
+    signalledTokens: string;
+    stakedTokens: string;
+    createdAtEpoch: number;
+    status: 'synced' | 'syncing' | 'failed' | 'unreachable';
+    health?: 'healthy' | 'unhealthy' | 'failed';
+    network?: string;
+    chainHeadBlock?: number;
+    latestBlock?: number;
+    blocksBehind?: number;
+    syncProgress?: number;
+    entityCount?: string;
+    fatalError?: string;
+  }>;
+}> {
+  const response = await fetch(`/api/indexer-status/${encodeURIComponent(address)}`);
+  if (!response.ok) throw new Error(`Indexer status failed: ${response.status}`);
+  const json = await response.json();
+  return json.data;
+}
+
+/**
  * Fetch networks registry (cached 24h server-side)
  */
 export async function fetchNetworksRegistry(): Promise<{

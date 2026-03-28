@@ -3,7 +3,7 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName, useEnrichedIndexers } from '@/hooks/useNetworkStats';
+import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName, useEnrichedIndexers, useIndexerStatus } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
   formatGRT,
@@ -100,6 +100,7 @@ export default function IndexerDetailPage({
   const { data: recentDelegations } = useRecentDelegations(address);
   const { data: ensData } = useENSName(address);
   const { data: enrichedData } = useEnrichedIndexers();
+  const { data: statusData, isLoading: statusLoading } = useIndexerStatus(address);
 
   // Pull pre-computed fields from enriched cache (rolling APY, score)
   const enrichedIndexer = enrichedData?.indexers?.find(
@@ -705,59 +706,151 @@ export default function IndexerDetailPage({
         </div>
       </div>
 
-      {/* Allocations */}
+      {/* Allocations with Indexing Status */}
       {indexer.allocations.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Active Allocations</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Active Allocations</CardTitle>
+              {statusData && (
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[var(--green)]" />
+                    {statusData.syncedCount} synced
+                  </span>
+                  {statusData.syncingCount > 0 && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[var(--amber)]" />
+                      {statusData.syncingCount} syncing
+                    </span>
+                  )}
+                  {statusData.failedCount > 0 && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[var(--red)]" />
+                      {statusData.failedCount} failed
+                    </span>
+                  )}
+                  {statusData.unreachableCount > 0 && (
+                    <span className="flex items-center gap-1.5 text-[var(--text-faint)]">
+                      {statusData.unreachableCount} unreachable
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[var(--border)]">
-                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Subgraph</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Deployment</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Status</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase hidden sm:table-cell">Blocks Behind</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Allocated</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Signalled</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Epoch</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase hidden lg:table-cell">Signalled</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
-                  {indexer.allocations
+                  {(statusData?.deployments ?? indexer.allocations.map((a) => ({
+                    deploymentId: a.subgraphDeployment.id,
+                    ipfsHash: '',
+                    allocatedTokens: a.allocatedTokens,
+                    signalledTokens: a.subgraphDeployment.signalledTokens,
+                    stakedTokens: a.subgraphDeployment.stakedTokens,
+                    createdAtEpoch: a.createdAtEpoch,
+                    status: 'unreachable' as const,
+                    network: undefined as string | undefined,
+                    syncProgress: undefined as number | undefined,
+                    blocksBehind: undefined as number | undefined,
+                    fatalError: undefined as string | undefined,
+                  })))
                     .slice(allocPage * ALLOC_PAGE_SIZE, (allocPage + 1) * ALLOC_PAGE_SIZE)
-                    .map((alloc) => (
-                    <tr key={alloc.id} className="hover:bg-[var(--bg-elevated)]">
-                      <td className="px-4 py-3">
-                        <span className="font-mono text-sm text-[var(--text)]">
-                          {shortenAddress(alloc.subgraphDeployment.id)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="font-mono text-sm text-[var(--text)]">
-                          {formatGRT(weiToGRT(alloc.allocatedTokens))} GRT
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="font-mono text-sm text-[var(--green)]">
-                          {formatGRT(weiToGRT(alloc.subgraphDeployment.signalledTokens))} GRT
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="font-mono text-sm text-[var(--text-muted)]">
-                          {alloc.createdAtEpoch}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                    .map((dep) => {
+                    const statusColor = {
+                      synced: 'var(--green)',
+                      syncing: 'var(--amber)',
+                      failed: 'var(--red)',
+                      unreachable: 'var(--text-faint)',
+                    }[dep.status];
+                    const statusLabel = {
+                      synced: 'Synced',
+                      syncing: 'Syncing',
+                      failed: 'Failed',
+                      unreachable: statusLoading ? '...' : '—',
+                    }[dep.status];
+
+                    return (
+                      <tr key={dep.deploymentId} className="hover:bg-[var(--bg-elevated)]">
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col">
+                            <Link
+                              href={dep.ipfsHash ? `/subgraphs/${dep.ipfsHash}` : '#'}
+                              className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+                            >
+                              {shortenAddress(dep.deploymentId)}
+                            </Link>
+                            {dep.network && (
+                              <span className="text-[10px] text-[var(--text-faint)]">{dep.network}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: statusColor }} />
+                            <span className="text-sm" style={{ color: statusColor }}>
+                              {statusLabel}
+                            </span>
+                          </div>
+                          {dep.status === 'syncing' && dep.syncProgress != null && (
+                            <div className="mt-1.5 w-24 h-1 rounded-full bg-[var(--bg)] overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-[var(--amber)] transition-all"
+                                style={{ width: `${dep.syncProgress}%` }}
+                              />
+                            </div>
+                          )}
+                          {dep.status === 'failed' && dep.fatalError && (
+                            <p className="text-[10px] text-[var(--red)] mt-0.5 max-w-[200px] truncate" title={dep.fatalError}>
+                              {dep.fatalError}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right hidden sm:table-cell">
+                          {dep.blocksBehind != null ? (
+                            <span className={cn(
+                              'font-mono text-sm',
+                              dep.blocksBehind <= 50 ? 'text-[var(--green)]' : dep.blocksBehind <= 500 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                            )}>
+                              {dep.blocksBehind === 0 ? 'At head' : dep.blocksBehind.toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-[var(--text-faint)]">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="font-mono text-sm text-[var(--text)]">
+                            {formatGRT(weiToGRT(dep.allocatedTokens))}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right hidden lg:table-cell">
+                          <span className="font-mono text-sm text-[var(--green)]">
+                            {formatGRT(weiToGRT(dep.signalledTokens))}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-            {indexer.allocations.length > ALLOC_PAGE_SIZE && (() => {
-              const totalPages = Math.ceil(indexer.allocations.length / ALLOC_PAGE_SIZE);
+            {(statusData?.totalAllocations ?? indexer.allocations.length) > ALLOC_PAGE_SIZE && (() => {
+              const total = statusData?.totalAllocations ?? indexer.allocations.length;
+              const totalPages = Math.ceil(total / ALLOC_PAGE_SIZE);
               return (
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--border)]">
                   <span className="text-sm text-[var(--text-faint)]">
-                    {allocPage * ALLOC_PAGE_SIZE + 1}–{Math.min((allocPage + 1) * ALLOC_PAGE_SIZE, indexer.allocations.length)} of {indexer.allocations.length}
+                    {allocPage * ALLOC_PAGE_SIZE + 1}–{Math.min((allocPage + 1) * ALLOC_PAGE_SIZE, total)} of {total}
                   </span>
                   <div className="flex items-center gap-2">
                     <button

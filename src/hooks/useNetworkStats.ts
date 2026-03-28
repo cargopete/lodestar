@@ -17,6 +17,7 @@ import {
   fetchPOIOverview,
   fetchPOIDeployment,
   fetchIndexingStatus,
+  fetchIndexerStatus,
   fetchNetworksRegistry,
   fetchLeaderboard,
   fetchLeaderboardPeriods,
@@ -408,5 +409,18 @@ export function useLeaderboardPeriods() {
     queryKey: ['leaderboardPeriods'],
     queryFn: fetchLeaderboardPeriods,
     staleTime: ONE_HOUR,
+  });
+}
+
+/**
+ * Hook for indexer-level indexing status (all allocated deployments)
+ */
+export function useIndexerStatus(address: string | null) {
+  return useQuery({
+    queryKey: ['indexerStatus', address],
+    queryFn: () => fetchIndexerStatus(address!),
+    staleTime: THIRTY_SECONDS,
+    refetchInterval: THIRTY_SECONDS,
+    enabled: !!address,
   });
 }
