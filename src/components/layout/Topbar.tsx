@@ -60,7 +60,7 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="fixed top-0 left-0 md:left-[var(--sidebar-width)] right-0 h-[var(--topbar-height)] bg-[var(--bg)] border-b-[0.5px] border-[var(--border)] z-20">
+    <header className="fixed top-0 left-0 md:left-[var(--sidebar-width)] right-0 h-[var(--topbar-height)] bg-[var(--bg)] border-b-[0.5px] border-[var(--border)] z-30">
       <div className="h-full px-4 md:px-6 flex items-center justify-between">
         {/* Left side — page title */}
         <span className="text-[15px] font-medium text-[var(--text)]">
