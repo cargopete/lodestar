@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
       ORDER BY period_start DESC
     `;
     const periods = rows.map((r) => ({
-      start: r.period_start,
-      end: r.period_end,
+      start: String(r.period_start).slice(0, 10),
+      end: String(r.period_end).slice(0, 10),
     }));
     return NextResponse.json({ periods }, {
       headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200' },

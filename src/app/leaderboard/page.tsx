@@ -20,7 +20,9 @@ const MONTH_NAMES = [
 ];
 
 function formatPeriod(periodStart: string): string {
-  const d = new Date(periodStart + 'T00:00:00Z');
+  // Handle both YYYY-MM-DD and ISO datetime strings from Postgres
+  const d = new Date(periodStart.length === 10 ? periodStart + 'T00:00:00Z' : periodStart);
+  if (isNaN(d.getTime())) return periodStart;
   return `${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
@@ -80,7 +82,8 @@ const SCORE_SECTIONS = [
 ] as const;
 
 function periodToYYYYMM(start: string): string {
-  const d = new Date(start + 'T00:00:00Z');
+  const d = new Date(start.length === 10 ? start + 'T00:00:00Z' : start);
+  if (isNaN(d.getTime())) return start.slice(0, 7);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
