@@ -350,6 +350,27 @@ export async function submitVote(message: VoteMessage, signature: string): Promi
 }
 
 /**
+ * Fetch rewards accrual history for a delegator address
+ */
+export async function fetchRewardsHistory(
+  address: string,
+  days = 90
+): Promise<{
+  history: Array<{
+    date: string;
+    timestamp: number;
+    value: number;
+    rewards: number;
+    principal: number;
+  }>;
+}> {
+  const qs = new URLSearchParams({ address, days: String(days) });
+  const response = await fetch(`/api/rewards-history?${qs}`);
+  if (!response.ok) throw new Error(`Rewards history failed: ${response.status}`);
+  return response.json();
+}
+
+/**
  * Generic fetch with error handling
  */
 export async function fetchWithRetry<T>(

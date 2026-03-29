@@ -23,6 +23,7 @@ import {
   fetchLeaderboardPeriods,
   fetchDelegatorPortfolio,
   fetchCuratorPortfolio,
+  fetchRewardsHistory,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -409,6 +410,19 @@ export function useLeaderboardPeriods() {
     queryKey: ['leaderboardPeriods'],
     queryFn: fetchLeaderboardPeriods,
     staleTime: ONE_HOUR,
+  });
+}
+
+/**
+ * Hook for delegator rewards accrual history (exchange-rate-based)
+ */
+export function useRewardsHistory(address: string | undefined, days = 90) {
+  return useQuery({
+    queryKey: ['rewardsHistory', address, days],
+    queryFn: () => fetchRewardsHistory(address!, days),
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    enabled: !!address,
   });
 }
 

@@ -6,7 +6,7 @@ import {
   type DelegatedStake,
   type Indexer,
 } from '@/lib/queries';
-import { useGRTPrice, useIndexers, useDelegatorPortfolio } from '@/hooks/useNetworkStats';
+import { useGRTPrice, useIndexers, useDelegatorPortfolio, useEnrichedIndexers, useRewardsHistory } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
   formatGRT,
@@ -19,12 +19,15 @@ import {
 } from '@/lib/utils';
 import {
   calculateUnrealizedRewards,
+  generateRewardsCSV,
 } from '@/lib/rewards';
 import { useAccount } from 'wagmi';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { UndelegatePanel } from '@/components/ui/UndelegatePanel';
+import { PortfolioChart } from '@/components/charts/PortfolioChart';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 /** Estimate a simple APR from an indexer's rewards earned and total stake */
 function estimateIndexerAPR(indexer: {
@@ -120,9 +123,22 @@ export default function DelegatorPortfolioPage({
   const delegator = portfolioData?.delegator ?? null;
   const { data: priceData } = useGRTPrice();
   const { data: indexersData } = useIndexers({ first: 100, orderBy: 'stakedTokens', orderDirection: 'desc' });
+  const { data: enrichedData } = useEnrichedIndexers();
+  const { data: rewardsHistoryData, isLoading: rewardsHistoryLoading } = useRewardsHistory(address);
 
   const grtPrice = priceData?.price ?? 0;
   const allIndexers = indexersData?.indexers ?? [];
+
+  // Enriched indexer lookup for APY trend indicators
+  const enrichedLookup = useMemo(() => {
+    const map = new Map<string, { rollingAPY30d: number | null; rollingAPY90d: number | null }>();
+    if (enrichedData?.indexers) {
+      for (const idx of enrichedData.indexers) {
+        map.set(idx.id, { rollingAPY30d: idx.rollingAPY30d, rollingAPY90d: idx.rollingAPY90d });
+      }
+    }
+    return map;
+  }, [enrichedData]);
 
   // Network median APR across top indexers
   const networkMedianAPR = useMemo(() => {
@@ -222,6 +238,22 @@ export default function DelegatorPortfolioPage({
 
   const portfolioValue = totalStaked + totalUnrealized;
 
+  // CSV export handler
+  const handleExportCSV = useMemo(() => {
+    if (!delegator) return () => '';
+    return () => {
+      const delegationData = positions.map((pos) => ({
+        indexerName: resolveIndexerName(pos.stake.indexer.account, pos.stake.indexer.id),
+        indexerAddress: pos.stake.indexer.id,
+        stakedTokens: pos.stakedGRT,
+        realizedRewards: pos.realizedGRT,
+        unrealizedRewards: pos.unrealizedGRT,
+        createdAt: pos.stake.createdAt,
+      }));
+      return generateRewardsCSV(delegationData, grtPrice);
+    };
+  }, [delegator, positions, grtPrice]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -280,10 +312,19 @@ export default function DelegatorPortfolioPage({
           <Badge variant="accent">Delegator</Badge>
           <p className="text-sm text-[var(--text-muted)] font-mono">{shortenAddress(address, 6)}</p>
         </div>
-        <div className="text-right">
-          <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.06em]">Portfolio Value</p>
-          <p className="text-[22px] font-mono font-medium text-[var(--text)]">{formatGRT(portfolioValue)} GRT</p>
-          <p className="text-[11px] font-mono text-[var(--text-faint)]">{formatUSD(portfolioValue * grtPrice)}</p>
+        <div className="flex items-center gap-4">
+          {positions.length > 0 && (
+            <ExportButton
+              onExport={handleExportCSV}
+              filename={`lodestar-rewards-${address.slice(0, 8)}-${new Date().toISOString().split('T')[0]}`}
+              label="Export CSV"
+            />
+          )}
+          <div className="text-right">
+            <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.06em]">Portfolio Value</p>
+            <p className="text-[22px] font-mono font-medium text-[var(--text)]">{formatGRT(portfolioValue)} GRT</p>
+            <p className="text-[11px] font-mono text-[var(--text-faint)]">{formatUSD(portfolioValue * grtPrice)}</p>
+          </div>
         </div>
       </div>
 
@@ -310,6 +351,14 @@ export default function DelegatorPortfolioPage({
           subtitle={formatUSD(portfolioValue * grtPrice)}
         />
       </StatGrid>
+
+      {/* Rewards Accrual Chart */}
+      <PortfolioChart
+        data={rewardsHistoryData?.history ?? []}
+        grtPrice={grtPrice}
+        isLoading={rewardsHistoryLoading}
+        showUSD={false}
+      />
 
       {/* Portfolio Health */}
       {portfolioHealth && (
@@ -395,6 +444,7 @@ export default function DelegatorPortfolioPage({
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Current Value</th>
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Unrealized P&amp;L</th>
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Realized</th>
+                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">APY (30d)</th>
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Reward Cut</th>
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Status</th>
                   {isOwnPortfolio && (
@@ -448,6 +498,45 @@ export default function DelegatorPortfolioPage({
                         <p className={cn('text-sm font-mono', pos.realizedGRT > 0 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
                           {pos.realizedGRT > 0 ? '+' : ''}{formatGRT(pos.realizedGRT)}
                         </p>
+                      </td>
+
+                      {/* APY (30d) with trend */}
+                      <td className="text-right py-3 px-4">
+                        {(() => {
+                          const enriched = enrichedLookup.get(pos.stake.indexer.id);
+                          const apy30d = enriched?.rollingAPY30d;
+                          const apy90d = enriched?.rollingAPY90d;
+                          if (apy30d == null) {
+                            return <p className="text-sm font-mono text-[var(--text-faint)]">&mdash;</p>;
+                          }
+                          // Trend: compare 30d vs 90d — >10% relative change = trending
+                          const hasTrend = apy90d != null && apy90d > 0;
+                          const trendDelta = hasTrend ? ((apy30d - apy90d!) / apy90d!) * 100 : 0;
+                          const isUp = trendDelta > 10;
+                          const isDown = trendDelta < -10;
+                          return (
+                            <div className="flex items-center justify-end gap-1">
+                              <p className="text-sm font-mono text-[var(--text)]">
+                                {apy30d.toFixed(1)}%
+                              </p>
+                              {isUp && (
+                                <svg className="w-3.5 h-3.5 text-[var(--green)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                                </svg>
+                              )}
+                              {isDown && (
+                                <svg className="w-3.5 h-3.5 text-[var(--red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                </svg>
+                              )}
+                              {!isUp && !isDown && hasTrend && (
+                                <svg className="w-3.5 h-3.5 text-[var(--text-faint)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                                </svg>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Reward Cut */}
@@ -511,7 +600,7 @@ export default function DelegatorPortfolioPage({
                     {/* Inline manage panel */}
                     {isOwnPortfolio && managingPosition === pos.stake.id && (
                       <tr>
-                        <td colSpan={isOwnPortfolio ? 8 : 7} className="py-3">
+                        <td colSpan={isOwnPortfolio ? 9 : 8} className="py-3">
                           <UndelegatePanel
                             position={pos.stake}
                             onClose={() => setManagingPosition(null)}
