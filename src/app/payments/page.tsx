@@ -13,19 +13,23 @@ const ARBISCAN = 'https://arbiscan.io/address/';
 
 type Tab = 'escrow' | 'activity' | 'collectors';
 
-function ExperimentalBanner() {
+function PageHeader() {
   return (
-    <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--amber)]/30 bg-[var(--amber)]/5">
-      <svg className="w-5 h-5 text-[var(--amber)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
-      </svg>
-      <div>
-        <p className="text-sm font-medium text-[var(--amber)]">Experimental Feature — In Development</p>
-        <p className="text-xs text-[var(--text-muted)] mt-0.5">
-          This dashboard tracks GraphTally/TAP payment pipeline data from Horizon smart contracts.
-          Data accuracy and coverage are being validated. Features may change.
-        </p>
-      </div>
+    <div>
+      <h1 className="text-xl font-semibold text-[var(--text)]">Payment Pipeline</h1>
+      <p className="text-sm text-[var(--text-muted)] mt-1">
+        Query fee payments flowing through Horizon&apos;s GraphTally/TAP system — escrow balances,
+        on-chain redemptions, and collection activity. Data sourced from the PaymentsEscrow and
+        GraphTallyCollector contracts via the{' '}
+        <a
+          href="https://thegraph.com/explorer/subgraphs/DZz4kDTdmzWLWsV373w2bSmoar3umKKH9y82SUKr5qmp"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[var(--accent)] hover:underline"
+        >
+          network subgraph
+        </a>.
+      </p>
     </div>
   );
 }
@@ -93,7 +97,7 @@ export default function PaymentsPage() {
   if (isError || !data) {
     return (
       <div className="space-y-6">
-        <ExperimentalBanner />
+        <PageHeader />
         <Card>
           <CardContent className="p-8 text-center">
             <p className="text-[var(--text-muted)]">
@@ -111,7 +115,7 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-6">
-      <ExperimentalBanner />
+      <PageHeader />
 
       {/* Overview stats */}
       <StatGrid>
