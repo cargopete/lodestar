@@ -21,7 +21,6 @@ import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { DelegationCalculator } from '@/components/ui/DelegationCalculator';
-import { DelegatePanel } from '@/components/ui/DelegatePanel';
 import { ProvisionsPanel } from '@/components/ui/ProvisionsPanel';
 import { DelegationFeed } from '@/components/feed/DelegationFeed';
 import { calculateIndexerScore, SCORE_WEIGHTS, SCORE_LABELS, type IndexerScore } from '@/lib/risk-score';
@@ -402,45 +401,58 @@ export default function IndexerDetailPage({
         return null;
       })()}
 
+      {/* Delegate CTA */}
+      <Link
+        href={`/indexers/${address}/delegate`}
+        className={cn(
+          'flex items-center justify-between gap-4 px-6 py-5',
+          'rounded-lg border border-[var(--accent)] bg-[var(--accent-dim)]',
+          'hover:bg-[var(--accent)]/20 transition-colors group'
+        )}
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-11 h-11 rounded-full bg-[var(--accent)] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-base font-semibold text-[var(--text)]">Delegate to {name}</p>
+            <p className="text-sm text-[var(--text-muted)]">
+              {formatGRT(capacity.availableCapacity)} GRT capacity available · {enrichedIndexer?.delegatorAPR?.toFixed(1) ?? '—'}% APR
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-[var(--accent)]/15 text-[var(--accent)]">
+            Experimental
+          </span>
+          <svg className="w-5 h-5 text-[var(--accent)] group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+          </svg>
+        </div>
+      </Link>
+
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left column - Calculator + Delegate */}
-        <div className="space-y-6">
-          <DelegationCalculator
-            indexer={{
-              id: indexer.id,
-              name,
-              stakedTokens: indexer.stakedTokens,
-              lockedTokens: indexer.lockedTokens,
-              delegatedTokens: indexer.delegatedTokens,
-              indexingRewardCut: indexer.indexingRewardCut,
-              queryFeeCut: indexer.queryFeeCut,
-              delegatorParameterCooldown: indexer.delegatorParameterCooldown,
-              lastDelegationParameterUpdate: indexer.lastDelegationParameterUpdate,
-              allocations: indexer.allocations,
-            }}
-            delegationRatio={delegationRatio}
-            totalNetworkSignal={totalNetworkSignal}
-            annualIssuance={annualIssuance}
-          />
-
-          <DelegatePanel
-            indexer={{
-              id: indexer.id,
-              name,
-              stakedTokens: indexer.stakedTokens,
-              lockedTokens: indexer.lockedTokens,
-              delegatedTokens: indexer.delegatedTokens,
-              indexingRewardCut: indexer.indexingRewardCut,
-              allocations: indexer.allocations,
-            }}
-            riskGrade={indexerScore?.grade ?? null}
-            reoEligible={reoData?.status?.status === 'eligible' ? true : reoData?.status?.status === 'ineligible' ? false : null}
-            delegationRatio={delegationRatio}
-            totalNetworkSignal={totalNetworkSignal}
-            annualIssuance={annualIssuance}
-          />
-        </div>
+        {/* Left column - Calculator */}
+        <DelegationCalculator
+          indexer={{
+            id: indexer.id,
+            name,
+            stakedTokens: indexer.stakedTokens,
+            lockedTokens: indexer.lockedTokens,
+            delegatedTokens: indexer.delegatedTokens,
+            indexingRewardCut: indexer.indexingRewardCut,
+            queryFeeCut: indexer.queryFeeCut,
+            delegatorParameterCooldown: indexer.delegatorParameterCooldown,
+            lastDelegationParameterUpdate: indexer.lastDelegationParameterUpdate,
+            allocations: indexer.allocations,
+          }}
+          delegationRatio={delegationRatio}
+          totalNetworkSignal={totalNetworkSignal}
+          annualIssuance={annualIssuance}
+        />
 
         {/* Right column - Details */}
         <div className="space-y-6">
