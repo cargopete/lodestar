@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useMemo } from 'react';
+import React, { use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   type DelegatedStake,
@@ -20,9 +20,11 @@ import {
 import {
   calculateUnrealizedRewards,
 } from '@/lib/rewards';
+import { useAccount } from 'wagmi';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
+import { UndelegatePanel } from '@/components/ui/UndelegatePanel';
 
 /** Estimate a simple APR from an indexer's rewards earned and total stake */
 function estimateIndexerAPR(indexer: {
@@ -111,6 +113,9 @@ export default function DelegatorPortfolioPage({
   params: Promise<{ address: string }>;
 }) {
   const { address } = use(params);
+  const { address: connectedAddress } = useAccount();
+  const isOwnPortfolio = connectedAddress?.toLowerCase() === address.toLowerCase();
+  const [managingPosition, setManagingPosition] = useState<string | null>(null);
   const { data: portfolioData, isLoading, error } = useDelegatorPortfolio(address);
   const delegator = portfolioData?.delegator ?? null;
   const { data: priceData } = useGRTPrice();
@@ -391,7 +396,10 @@ export default function DelegatorPortfolioPage({
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Unrealized P&amp;L</th>
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Realized</th>
                   <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Reward Cut</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 pl-4">Status</th>
+                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Status</th>
+                  {isOwnPortfolio && (
+                    <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 pl-4">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -400,8 +408,8 @@ export default function DelegatorPortfolioPage({
                   const isThawing = weiToGRT(pos.stake.lockedTokens) > 0;
 
                   return (
+                    <React.Fragment key={pos.stake.id}>
                     <tr
-                      key={pos.stake.id}
                       className="border-b border-[var(--border-mid)] last:border-b-0 hover:bg-[var(--bg-elevated)] transition-colors"
                     >
                       {/* Indexer */}
@@ -470,7 +478,7 @@ export default function DelegatorPortfolioPage({
                       </td>
 
                       {/* Status */}
-                      <td className="text-right py-3 pl-4">
+                      <td className="text-right py-3 px-4">
                         {isThawing ? (
                           <Badge variant="warning">Thawing</Badge>
                         ) : pos.isActive ? (
@@ -479,7 +487,39 @@ export default function DelegatorPortfolioPage({
                           <Badge variant="default">Closed</Badge>
                         )}
                       </td>
+                      {/* Actions */}
+                      {isOwnPortfolio && (
+                        <td className="text-right py-3 pl-4">
+                          {(pos.isActive || isThawing) && (
+                            <button
+                              onClick={() => setManagingPosition(
+                                managingPosition === pos.stake.id ? null : pos.stake.id
+                              )}
+                              className={cn(
+                                'px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
+                                managingPosition === pos.stake.id
+                                  ? 'bg-[var(--accent)] text-white'
+                                  : 'bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25'
+                              )}
+                            >
+                              {managingPosition === pos.stake.id ? 'Close' : 'Manage'}
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
+                    {/* Inline manage panel */}
+                    {isOwnPortfolio && managingPosition === pos.stake.id && (
+                      <tr>
+                        <td colSpan={isOwnPortfolio ? 8 : 7} className="py-3">
+                          <UndelegatePanel
+                            position={pos.stake}
+                            onClose={() => setManagingPosition(null)}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

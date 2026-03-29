@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { DelegationCalculator } from '@/components/ui/DelegationCalculator';
+import { DelegatePanel } from '@/components/ui/DelegatePanel';
 import { ProvisionsPanel } from '@/components/ui/ProvisionsPanel';
 import { DelegationFeed } from '@/components/feed/DelegationFeed';
 import { calculateIndexerScore, SCORE_WEIGHTS, SCORE_LABELS, type IndexerScore } from '@/lib/risk-score';
@@ -403,24 +404,43 @@ export default function IndexerDetailPage({
 
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left column - Calculator */}
-        <DelegationCalculator
-          indexer={{
-            id: indexer.id,
-            name,
-            stakedTokens: indexer.stakedTokens,
-            lockedTokens: indexer.lockedTokens,
-            delegatedTokens: indexer.delegatedTokens,
-            indexingRewardCut: indexer.indexingRewardCut,
-            queryFeeCut: indexer.queryFeeCut,
-            delegatorParameterCooldown: indexer.delegatorParameterCooldown,
-            lastDelegationParameterUpdate: indexer.lastDelegationParameterUpdate,
-            allocations: indexer.allocations,
-          }}
-          delegationRatio={delegationRatio}
-          totalNetworkSignal={totalNetworkSignal}
-          annualIssuance={annualIssuance}
-        />
+        {/* Left column - Calculator + Delegate */}
+        <div className="space-y-6">
+          <DelegationCalculator
+            indexer={{
+              id: indexer.id,
+              name,
+              stakedTokens: indexer.stakedTokens,
+              lockedTokens: indexer.lockedTokens,
+              delegatedTokens: indexer.delegatedTokens,
+              indexingRewardCut: indexer.indexingRewardCut,
+              queryFeeCut: indexer.queryFeeCut,
+              delegatorParameterCooldown: indexer.delegatorParameterCooldown,
+              lastDelegationParameterUpdate: indexer.lastDelegationParameterUpdate,
+              allocations: indexer.allocations,
+            }}
+            delegationRatio={delegationRatio}
+            totalNetworkSignal={totalNetworkSignal}
+            annualIssuance={annualIssuance}
+          />
+
+          <DelegatePanel
+            indexer={{
+              id: indexer.id,
+              name,
+              stakedTokens: indexer.stakedTokens,
+              lockedTokens: indexer.lockedTokens,
+              delegatedTokens: indexer.delegatedTokens,
+              indexingRewardCut: indexer.indexingRewardCut,
+              allocations: indexer.allocations,
+            }}
+            riskGrade={indexerScore?.grade ?? null}
+            reoEligible={reoData?.status?.status === 'eligible' ? true : reoData?.status?.status === 'ineligible' ? false : null}
+            delegationRatio={delegationRatio}
+            totalNetworkSignal={totalNetworkSignal}
+            annualIssuance={annualIssuance}
+          />
+        </div>
 
         {/* Right column - Details */}
         <div className="space-y-6">
