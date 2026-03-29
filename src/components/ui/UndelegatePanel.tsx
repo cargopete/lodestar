@@ -16,6 +16,7 @@ import {
   resolveIndexerName,
   cn,
 } from '@/lib/utils';
+import { downloadThawingReminder } from '@/lib/calendar';
 import type { DelegatedStake } from '@/lib/queries';
 
 interface UndelegatePanelProps {
@@ -153,7 +154,7 @@ export function UndelegatePanel({ position, className, onClose }: UndelegatePane
             variant={thawing.isComplete ? 'teal' : 'orange'}
             size="sm"
           />
-          {thawing.isComplete && (
+          {thawing.isComplete ? (
             <button
               onClick={() => setMode('withdraw')}
               className={cn(
@@ -164,6 +165,20 @@ export function UndelegatePanel({ position, className, onClose }: UndelegatePane
               )}
             >
               Ready to withdraw {formatGRT(lockedGRT)} GRT
+            </button>
+          ) : (
+            <button
+              onClick={() => downloadThawingReminder({
+                lockedUntil: position.lockedUntil,
+                amountGRT: lockedGRT,
+                indexerName,
+              })}
+              className="flex items-center justify-center gap-1.5 w-full py-1.5 text-[11px] font-medium rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent-hover)] hover:text-[var(--accent)] transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+              </svg>
+              Add thaw reminder to calendar
             </button>
           )}
         </div>
