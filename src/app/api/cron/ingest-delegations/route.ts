@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { ingestDelegationEvents } from '@/lib/ingest/delegations';
+import { withCronTracking } from '@/lib/cron-runs';
+import { log } from '@/lib/logger';
 
 export const maxDuration = 120;
 
@@ -19,13 +21,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const start = Date.now();
-    const result = await ingestDelegationEvents(db);
-    const duration = Date.now() - start;
-    console.log(`Delegation ingestion: ${result.ingested} events in ${duration}ms`);
-    return NextResponse.json({ ok: true, ...result, durationMs: duration });
+    const result = await withCronTracking(db!, 'delegations', () => ingestDelegationEvents(db!));
+    log.cron.info({ step: 'delegations', ingested: result.ingested, durationMs: result.durationMs }, 'Delegation ingestion complete');
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
-    console.error('Delegation ingestion failed:', error);
+    log.cron.error({ err: error, step: 'delegations' }, 'Delegation ingestion failed');
     return NextResponse.json(
       { error: 'Delegation ingestion failed', details: String(error) },
       { status: 500 }

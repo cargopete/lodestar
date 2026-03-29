@@ -1,3 +1,4 @@
+import { log } from './logger';
 import { cacheSet } from './cache';
 import { subgraphQuery, delegationEventsQuery, ensQuery, hasSubgraphAccess } from './subgraph';
 import { weiToGRT, resolveIndexerName } from './utils';
@@ -239,7 +240,7 @@ export async function refreshIndexers(opts: {
       }
     }
   } catch (e) {
-    console.warn('Delegation events fetch failed, continuing without:', e);
+    log.refresh.warn({ err: e }, 'Delegation events fetch failed, continuing without');
   }
 
   // Step 4: Resolve ENS names
@@ -262,9 +263,9 @@ export async function refreshIndexers(opts: {
         }
       }
     }
-    console.log(`ENS: resolved ${Object.keys(ensNames).length} names`);
+    log.refresh.info({ count: Object.keys(ensNames).length }, 'ENS names resolved');
   } catch (e) {
-    console.warn('ENS lookup failed, continuing without:', e);
+    log.refresh.warn({ err: e }, 'ENS lookup failed, continuing without');
   }
 
   // Step 5: Batch-read REO oracle
@@ -273,9 +274,9 @@ export async function refreshIndexers(opts: {
   try {
     reoMap = await batchCheckEligibility(indexerIds);
     reoSource = 'oracle';
-    console.log(`REO oracle: checked ${reoMap.size} indexers`);
+    log.refresh.info({ count: reoMap.size }, 'REO oracle checked');
   } catch (e) {
-    console.warn('REO oracle batch call failed, falling back to heuristics:', e);
+    log.refresh.warn({ err: e }, 'REO oracle batch call failed, falling back to heuristics');
   }
 
   // Step 5b: Fetch closed allocations (last 90d) for rolling APY
@@ -330,9 +331,9 @@ export async function refreshIndexers(opts: {
       if (result.allocations.length < 1000) break;
     }
 
-    console.log(`Rolling APY: loaded ${totalRows} closed allocations for ${closedAllocsByIndexer.size} indexers`);
+    log.refresh.info({ rows: totalRows, indexers: closedAllocsByIndexer.size }, 'Rolling APY loaded');
   } catch (e) {
-    console.warn('Rolling APY subgraph query failed (non-fatal):', e);
+    log.refresh.warn({ err: e }, 'Rolling APY subgraph query failed (non-fatal)');
   }
 
   // Step 5c: Fetch historical exchange rates for exchange-rate-based APY
@@ -372,9 +373,9 @@ export async function refreshIndexers(opts: {
         exchangeRateHistory.set(r.indexer_address, existing);
       }
 
-      console.log(`Exchange rate history: ${exchangeRateHistory.size} indexers with historical rates`);
+      log.refresh.info({ count: exchangeRateHistory.size }, 'Exchange rate history loaded');
     } catch (e) {
-      console.warn('Exchange rate history fetch failed (non-fatal):', e);
+      log.refresh.warn({ err: e }, 'Exchange rate history fetch failed (non-fatal)');
     }
   }
 
@@ -547,14 +548,14 @@ export async function refreshIndexers(opts: {
   if (sql) {
     try {
       const pgResult = await writeIndexers(sql, enriched, network.currentEpoch);
-      console.log(`Postgres: ${pgResult.upserted} indexers, ${pgResult.snapshots} snapshots, ${pgResult.paramChanges} param changes`);
+      log.refresh.info({ upserted: pgResult.upserted, snapshots: pgResult.snapshots, paramChanges: pgResult.paramChanges }, 'Postgres write complete');
     } catch (e) {
-      console.warn('Postgres write failed (non-fatal):', e);
+      log.refresh.warn({ err: e }, 'Postgres write failed (non-fatal)');
     }
   }
 
   const duration = Date.now() - startTime;
-  console.log(`Refresh completed: ${enriched.length} indexers enriched in ${duration}ms`);
+  log.refresh.info({ count: enriched.length, durationMs: duration }, 'Refresh completed');
 
   return { count: enriched.length, durationMs: duration };
 }

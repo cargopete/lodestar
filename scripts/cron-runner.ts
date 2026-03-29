@@ -50,14 +50,17 @@ async function main() {
   }
 
   const pg = await import('postgres');
+  const { log } = await import('../src/lib/logger.js');
+  const { recordCronRun } = await import('../src/lib/cron-runs.js');
+
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {
-    console.error('Missing DATABASE_URL');
+    log.cron.fatal('Missing DATABASE_URL');
     process.exit(1);
   }
   if (!process.env.GRAPH_API_KEY) {
-    console.error('Missing GRAPH_API_KEY');
+    log.cron.fatal('Missing GRAPH_API_KEY');
     process.exit(1);
   }
 
@@ -67,55 +70,64 @@ async function main() {
     connect_timeout: 10,
   });
 
+  const startedAt = new Date();
   const start = Date.now();
 
   try {
+    let rowsAffected: number | undefined;
+
     switch (step) {
       case 'refresh': {
         if (!process.env.UPSTASH_REDIS_REST_URL) {
-          console.warn('Warning: UPSTASH_REDIS_REST_URL not set — skipping Redis write');
+          log.cron.warn('UPSTASH_REDIS_REST_URL not set — skipping Redis write');
         }
         const { refreshIndexers } = await import('../src/lib/refresh.js');
         const result = await refreshIndexers({
           sql,
           writeToRedis: !!process.env.UPSTASH_REDIS_REST_URL,
         });
-        console.log(`✓ refresh: ${result.count} indexers in ${result.durationMs}ms`);
+        rowsAffected = result.count;
+        log.cron.info({ step, count: result.count, durationMs: result.durationMs }, 'Step complete');
         break;
       }
 
       case 'epochs': {
         const { ingestEpochs } = await import('../src/lib/ingest/epochs.js');
         const result = await ingestEpochs(sql);
-        console.log(`✓ epochs: ${result.ingested} ingested in ${Date.now() - start}ms`);
+        rowsAffected = result.ingested;
+        log.cron.info({ step, ingested: result.ingested, durationMs: Date.now() - start }, 'Step complete');
         break;
       }
 
       case 'allocations': {
         const { ingestAllocations } = await import('../src/lib/ingest/allocations.js');
         const result = await ingestAllocations(sql);
-        console.log(`✓ allocations: ${result.ingested} ingested in ${Date.now() - start}ms`);
+        rowsAffected = result.ingested;
+        log.cron.info({ step, ingested: result.ingested, durationMs: Date.now() - start }, 'Step complete');
         break;
       }
 
       case 'delegations': {
         const { ingestDelegationEvents } = await import('../src/lib/ingest/delegations.js');
         const result = await ingestDelegationEvents(sql);
-        console.log(`✓ delegations: ${result.ingested} ingested in ${Date.now() - start}ms`);
+        rowsAffected = result.ingested;
+        log.cron.info({ step, ingested: result.ingested, durationMs: Date.now() - start }, 'Step complete');
         break;
       }
 
       case 'disputes': {
         const { ingestDisputes } = await import('../src/lib/ingest/disputes.js');
         const result = await ingestDisputes(sql);
-        console.log(`✓ disputes: ${result.ingested} ingested in ${Date.now() - start}ms`);
+        rowsAffected = result.ingested;
+        log.cron.info({ step, ingested: result.ingested, durationMs: Date.now() - start }, 'Step complete');
         break;
       }
 
       case 'snapshot': {
         const { writeNetworkSnapshot } = await import('../src/lib/ingest/network-snapshot.js');
         await writeNetworkSnapshot(sql);
-        console.log(`✓ snapshot: captured in ${Date.now() - start}ms`);
+        rowsAffected = 1;
+        log.cron.info({ step, durationMs: Date.now() - start }, 'Step complete');
         break;
       }
 
@@ -135,19 +147,39 @@ async function main() {
             computedAt: Date.now(),
             entries: result.entries,
           }, 86400 * 35); // 35 days — refreshed monthly
-          console.log(`Redis: leaderboard scores pushed (${result.entries.length} entries)`);
+          log.cron.info({ entries: result.entries.length }, 'Redis: leaderboard scores pushed');
         }
-        console.log(`✓ compute-scores: ${result.scored} indexers scored in ${Date.now() - start}ms`);
+        rowsAffected = result.scored;
+        log.cron.info({ step, scored: result.scored, durationMs: Date.now() - start }, 'Step complete');
         break;
       }
 
       default:
-        console.error(`Unknown step: ${step}`);
-        console.error('Valid steps: refresh, epochs, allocations, delegations, disputes, snapshot, compute-scores');
+        log.cron.fatal({ step }, 'Unknown step');
         process.exit(1);
     }
+
+    // Record successful run
+    await recordCronRun(sql, {
+      step,
+      startedAt,
+      durationMs: Date.now() - start,
+      rowsAffected,
+      success: true,
+    });
   } catch (e) {
-    console.error(`✗ ${step} failed:`, e);
+    const durationMs = Date.now() - start;
+    log.cron.error({ err: e, step, durationMs }, 'Step failed');
+
+    // Record failed run
+    await recordCronRun(sql, {
+      step,
+      startedAt,
+      durationMs,
+      success: false,
+      errorMessage: String(e),
+    });
+
     await sql.end();
     process.exit(1);
   }

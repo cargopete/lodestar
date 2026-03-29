@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { hasSubgraphAccess } from '@/lib/subgraph';
 import { ingestDisputes } from '@/lib/ingest/disputes';
+import { withCronTracking } from '@/lib/cron-runs';
+import { log } from '@/lib/logger';
 
 export const maxDuration = 60;
 
@@ -23,13 +25,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const start = Date.now();
-    const result = await ingestDisputes(db);
-    const duration = Date.now() - start;
-    console.log(`Dispute ingestion: ${result.ingested} disputes in ${duration}ms`);
-    return NextResponse.json({ ok: true, ...result, durationMs: duration });
+    const result = await withCronTracking(db!, 'disputes', () => ingestDisputes(db!));
+    log.cron.info({ step: 'disputes', ingested: result.ingested, durationMs: result.durationMs }, 'Dispute ingestion complete');
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
-    console.error('Dispute ingestion failed:', error);
+    log.cron.error({ err: error, step: 'disputes' }, 'Dispute ingestion failed');
     return NextResponse.json(
       { error: 'Dispute ingestion failed', details: String(error) },
       { status: 500 }

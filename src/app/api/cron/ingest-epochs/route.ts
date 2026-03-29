@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { hasSubgraphAccess } from '@/lib/subgraph';
 import { ingestEpochs } from '@/lib/ingest/epochs';
+import { withCronTracking } from '@/lib/cron-runs';
+import { log } from '@/lib/logger';
 
 export const maxDuration = 60;
 
@@ -23,13 +25,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const start = Date.now();
-    const result = await ingestEpochs(db);
-    const duration = Date.now() - start;
-    console.log(`Epoch ingestion: ${result.ingested} epochs in ${duration}ms`);
-    return NextResponse.json({ ok: true, ...result, durationMs: duration });
+    const result = await withCronTracking(db!, 'epochs', () => ingestEpochs(db!));
+    log.cron.info({ step: 'epochs', ingested: result.ingested, durationMs: result.durationMs }, 'Epoch ingestion complete');
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
-    console.error('Epoch ingestion failed:', error);
+    log.cron.error({ err: error, step: 'epochs' }, 'Epoch ingestion failed');
     return NextResponse.json(
       { error: 'Epoch ingestion failed', details: String(error) },
       { status: 500 }

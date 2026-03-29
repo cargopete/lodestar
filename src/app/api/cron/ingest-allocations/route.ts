@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { hasSubgraphAccess } from '@/lib/subgraph';
 import { ingestAllocations } from '@/lib/ingest/allocations';
+import { withCronTracking } from '@/lib/cron-runs';
+import { log } from '@/lib/logger';
 
 export const maxDuration = 300;
 
@@ -23,13 +25,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const start = Date.now();
-    const result = await ingestAllocations(db);
-    const duration = Date.now() - start;
-    console.log(`Allocation ingestion: ${result.ingested} allocations in ${duration}ms`);
-    return NextResponse.json({ ok: true, ...result, durationMs: duration });
+    const result = await withCronTracking(db!, 'allocations', () => ingestAllocations(db!));
+    log.cron.info({ step: 'allocations', ingested: result.ingested, durationMs: result.durationMs }, 'Allocation ingestion complete');
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
-    console.error('Allocation ingestion failed:', error);
+    log.cron.error({ err: error, step: 'allocations' }, 'Allocation ingestion failed');
     return NextResponse.json(
       { error: 'Allocation ingestion failed', details: String(error) },
       { status: 500 }

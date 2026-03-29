@@ -2,6 +2,7 @@ import type { DbClient } from '../db';
 import { getIngestionState, updateIngestionState } from '../db';
 import { subgraphQuery } from '../subgraph';
 import { weiToGRT } from '../utils';
+import { log } from '../logger';
 
 interface SubgraphAllocation {
   id: string;
@@ -117,7 +118,7 @@ async function backfillAllocations(sql: DbClient): Promise<{ ingested: number }>
     lastId = result.allocations[result.allocations.length - 1].id;
 
     if (totalIngested % 5000 === 0) {
-      console.log(`  Allocations backfill: ${totalIngested} so far...`);
+      log.ingest.info({ step: 'allocations', totalIngested }, 'Backfill progress');
     }
 
     if (result.allocations.length < 1000) break;

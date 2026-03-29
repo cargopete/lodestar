@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { hasSubgraphAccess } from '@/lib/subgraph';
 import { writeNetworkSnapshot } from '@/lib/ingest/network-snapshot';
+import { withCronTracking } from '@/lib/cron-runs';
+import { log } from '@/lib/logger';
 
 export const maxDuration = 30;
 
@@ -23,8 +25,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const start = Date.now();
-
     // Try to grab GRT price for snapshot enrichment
     let grtPriceUsd: number | undefined;
     try {
@@ -37,12 +37,15 @@ export async function GET(request: NextRequest) {
       // Price fetch is best-effort
     }
 
-    await writeNetworkSnapshot(db, { grtPriceUsd });
-    const duration = Date.now() - start;
-    console.log(`Network snapshot captured in ${duration}ms`);
-    return NextResponse.json({ ok: true, durationMs: duration });
+    const result = await withCronTracking(db!, 'snapshot', async () => {
+      await writeNetworkSnapshot(db!, { grtPriceUsd });
+      return { ingested: 1 };
+    });
+
+    log.cron.info({ step: 'snapshot', durationMs: result.durationMs }, 'Network snapshot captured');
+    return NextResponse.json({ ok: true, durationMs: result.durationMs });
   } catch (error) {
-    console.error('Network snapshot failed:', error);
+    log.cron.error({ err: error, step: 'snapshot' }, 'Network snapshot failed');
     return NextResponse.json(
       { error: 'Network snapshot failed', details: String(error) },
       { status: 500 }

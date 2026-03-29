@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis';
+import { log } from './logger';
 
 const redis = Redis.fromEnv();
 
@@ -15,7 +16,7 @@ export async function cached<T>(
     const existing = await redis.get<T>(key);
     if (existing !== null && existing !== undefined) return existing;
   } catch (e) {
-    console.warn(`Redis read failed for ${key}:`, e);
+    log.cache.warn({ err: e, key }, 'Redis read failed');
   }
 
   const fresh = await fetcher();
@@ -23,7 +24,7 @@ export async function cached<T>(
   try {
     await redis.set(key, fresh, { ex: ttlSeconds });
   } catch (e) {
-    console.warn(`Redis write failed for ${key}:`, e);
+    log.cache.warn({ err: e, key }, 'Redis write failed');
   }
 
   return fresh;
