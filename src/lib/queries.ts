@@ -778,3 +778,63 @@ export interface ServiceProvisionsResponse {
 export interface ThawRequestsResponse {
   thawRequests: ThawRequest[];
 }
+
+// =============================================================================
+// PAYMENTS / ESCROW / TAP TYPES
+// =============================================================================
+
+/** Escrow account state (payer → receiver deposit) */
+export interface PaymentsEscrowAccount {
+  id: string;
+  sender: { id: string };
+  receiver: { id: string };
+  balance: string;
+  totalAmountThawing: string;
+  thawEndTimestamp: string;
+}
+
+/** Escrow transaction (deposit, withdraw, thaw, collect) */
+export interface PaymentsEscrowTransaction {
+  id: string;
+  type: string;
+  sender: { id: string };
+  receiver: { id: string };
+  amount: string;
+  timestamp: string;
+}
+
+/** Cumulative tokens collected per payer/receiver pair */
+export interface GraphTallyTokensCollected {
+  id: string;
+  sender: { id: string };
+  receiver: { id: string };
+  tokens: string;
+}
+
+/** Aggregated payment stats for the payments overview API */
+export interface PaymentsOverview {
+  totalEscrowBalance: string;
+  totalThawing: string;
+  totalCollected: string;
+  activeSenders: number;
+  activeReceivers: number;
+  escrowAccounts: PaymentsEscrowAccount[];
+  recentTransactions: PaymentsEscrowTransaction[];
+  topCollectors: GraphTallyTokensCollected[];
+}
+
+// =============================================================================
+// PAYMENTS RESPONSE TYPES
+// =============================================================================
+
+export interface PaymentsEscrowAccountsResponse {
+  paymentsEscrowAccounts: PaymentsEscrowAccount[];
+}
+
+export interface PaymentsEscrowTransactionsResponse {
+  paymentsEscrowTransactions: PaymentsEscrowTransaction[];
+}
+
+export interface GraphTallyTokensCollectedResponse {
+  graphTallyTokensCollecteds: GraphTallyTokensCollected[];
+}

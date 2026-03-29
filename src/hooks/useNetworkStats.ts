@@ -24,6 +24,8 @@ import {
   fetchDelegatorPortfolio,
   fetchCuratorPortfolio,
   fetchRewardsHistory,
+  fetchPayments,
+  fetchIndexerPayments,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -436,5 +438,30 @@ export function useIndexerStatus(address: string | null) {
     staleTime: THIRTY_SECONDS,
     refetchInterval: THIRTY_SECONDS,
     enabled: !!address,
+  });
+}
+
+/**
+ * Hook for network-wide payment pipeline stats
+ */
+export function usePayments() {
+  return useQuery({
+    queryKey: ['payments'],
+    queryFn: fetchPayments,
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+  });
+}
+
+/**
+ * Hook for per-indexer payment data
+ */
+export function useIndexerPayments(receiver: string) {
+  return useQuery({
+    queryKey: ['indexerPayments', receiver],
+    queryFn: () => fetchIndexerPayments(receiver),
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    enabled: !!receiver,
   });
 }

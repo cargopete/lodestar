@@ -7,6 +7,7 @@ import {
   type ServiceProvisionsResponse,
   type DelegatorPortfolioResponse,
   type CuratorPortfolioResponse,
+  type PaymentsOverview,
 } from './queries';
 import type { EnrichedIndexer } from './enriched';
 import type { ManifestAnalysis } from './manifest';
@@ -368,6 +369,26 @@ export async function fetchRewardsHistory(
   const response = await fetch(`/api/rewards-history?${qs}`);
   if (!response.ok) throw new Error(`Rewards history failed: ${response.status}`);
   return response.json();
+}
+
+/**
+ * Fetch network-wide payment pipeline overview
+ */
+export async function fetchPayments(): Promise<PaymentsOverview> {
+  const response = await fetch('/api/payments');
+  if (!response.ok) throw new Error(`Payments failed: ${response.status}`);
+  const json = await response.json();
+  return json.data as PaymentsOverview;
+}
+
+/**
+ * Fetch payment data for a specific indexer (receiver)
+ */
+export async function fetchIndexerPayments(receiver: string): Promise<PaymentsOverview> {
+  const response = await fetch(`/api/payments?receiver=${encodeURIComponent(receiver)}`);
+  if (!response.ok) throw new Error(`Indexer payments failed: ${response.status}`);
+  const json = await response.json();
+  return json.data as PaymentsOverview;
 }
 
 /**
