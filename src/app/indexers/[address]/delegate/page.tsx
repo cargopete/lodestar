@@ -327,7 +327,7 @@ export default function DelegatePage({
             <span className="w-6 h-6 rounded-full bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--accent)]">1</span>
             <div>
               <p className="text-sm font-medium text-[var(--text)]">Approve &amp; Delegate</p>
-              <p className="text-[11px] text-[var(--text-faint)]">Approve GRT spend, then delegate to the indexer. 0.5% protocol tax applies.</p>
+              <p className="text-[11px] text-[var(--text-faint)]">Approve GRT spend, then delegate to the indexer. No protocol tax since Horizon.</p>
             </div>
           </div>
           <div className="flex gap-3">

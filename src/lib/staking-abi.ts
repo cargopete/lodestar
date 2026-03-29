@@ -101,7 +101,3 @@ export const GRT_ABI = [
     outputs: [{ name: '', type: 'uint256' }],
   },
 ] as const;
-
-/** Delegation tax rate (0.5% = 5000 PPM) */
-export const DELEGATION_TAX_PPM = 5000;
-export const DELEGATION_TAX_RATE = DELEGATION_TAX_PPM / 1_000_000; // 0.005

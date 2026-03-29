@@ -9,7 +9,6 @@ import { ProgressBar } from './ProgressBar';
 import { TransactionStatus } from './TransactionStatus';
 import { useGRTBalance } from '@/hooks/useGRTBalance';
 import { useDelegation, type DelegationStep } from '@/hooks/useDelegation';
-import { DELEGATION_TAX_RATE } from '@/lib/staking-abi';
 import {
   formatGRT,
   formatGRTFull,
@@ -71,21 +70,17 @@ export function DelegatePanel({
     [selfStake, currentDelegated, delegationRatio]
   );
 
-  // Tax
-  const taxAmount = amountGRT * DELEGATION_TAX_RATE;
-  const effectiveAmount = amountGRT - taxAmount;
-
   // APR projection after delegation
   const projectedAPR = useMemo(() => {
     if (!indexer.allocations?.length || totalNetworkSignal === 0 || annualIssuance === 0) return 0;
     return calculateDelegatorAPR(
       indexer.allocations,
       indexer.indexingRewardCut,
-      currentDelegated + effectiveAmount || 1,
+      currentDelegated + amountGRT || 1,
       totalNetworkSignal,
       annualIssuance
     );
-  }, [indexer.allocations, indexer.indexingRewardCut, currentDelegated, effectiveAmount, totalNetworkSignal, annualIssuance]);
+  }, [indexer.allocations, indexer.indexingRewardCut, currentDelegated, amountGRT, totalNetworkSignal, annualIssuance]);
 
   // Pre-flight warnings
   const isGreedy = isGreedyCut(indexer.indexingRewardCut);
@@ -213,14 +208,9 @@ export function DelegatePanel({
         {/* Pre-flight info */}
         {amountGRT > 0 && (
           <div className="space-y-2 p-3 rounded-lg bg-[var(--bg-elevated)]">
-            {/* Tax */}
             <div className="flex justify-between text-xs">
-              <span className="text-[var(--text-muted)]">Delegation tax (0.5%)</span>
-              <span className="font-mono text-[var(--amber)]">-{formatGRT(taxAmount, 4)} GRT</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-[var(--text-muted)]">Effective delegation</span>
-              <span className="font-mono text-[var(--text)]">{formatGRT(effectiveAmount, 4)} GRT</span>
+              <span className="text-[var(--text-muted)]">Delegation amount</span>
+              <span className="font-mono text-[var(--text)]">{formatGRT(amountGRT, 4)} GRT</span>
             </div>
             {/* APR */}
             {projectedAPR > 0 && (
@@ -235,7 +225,7 @@ export function DelegatePanel({
               <div className="flex justify-between text-xs">
                 <span className="text-[var(--text-muted)]">Est. annual reward</span>
                 <span className="font-mono text-[var(--green)]">
-                  ~{formatGRT(effectiveAmount * (projectedAPR / 100))} GRT
+                  ~{formatGRT(amountGRT * (projectedAPR / 100))} GRT
                 </span>
               </div>
             )}
