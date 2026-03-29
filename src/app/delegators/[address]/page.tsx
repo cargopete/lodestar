@@ -578,7 +578,7 @@ export default function DelegatorPortfolioPage({
                       </td>
                       {/* Actions */}
                       {isOwnPortfolio && (
-                        <td className="text-right py-3 pl-4">
+                        <td className="text-right py-3 px-4">
                           {(pos.isActive || isThawing) && (
                             <button
                               onClick={() => setManagingPosition(
