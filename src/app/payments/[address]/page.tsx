@@ -48,9 +48,9 @@ export default function IndexerPaymentsPage({
   const totalThawing = weiToGRT(data.totalThawing);
   const totalCollected = weiToGRT(data.totalCollected);
 
-  // Compute collection by type for the revenue breakdown
-  const collectTransactions = data.recentTransactions.filter((tx) => tx.type === 'collect');
-  const totalCollectAmount = collectTransactions.reduce(
+  // Compute redemptions for the revenue breakdown
+  const redeemTransactions = data.recentTransactions.filter((tx) => tx.type === 'redeem');
+  const totalRedeemed = redeemTransactions.reduce(
     (sum, tx) => sum + weiToGRT(tx.amount),
     0
   );
@@ -68,7 +68,10 @@ export default function IndexerPaymentsPage({
           </svg>
         </Link>
         <div>
-          <h1 className="text-xl font-semibold text-[var(--text)]">{displayName}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-[var(--text)]">{displayName}</h1>
+            <Badge variant="default">Experimental</Badge>
+          </div>
           <p className="text-xs font-mono text-[var(--text-faint)]">{address}</p>
         </div>
         <Link
@@ -94,7 +97,7 @@ export default function IndexerPaymentsPage({
         <StatCard
           label="Active Escrow Accounts"
           value={String(data.escrowAccounts.length)}
-          delta={{ value: `from ${data.activeSenders} gateway${data.activeSenders !== 1 ? 's' : ''}`, positive: true }}
+          delta={{ value: `from ${data.activePayers} gateway${data.activePayers !== 1 ? 's' : ''}`, positive: true }}
         />
         {totalThawing > 0 && (
           <StatCard
@@ -120,14 +123,14 @@ export default function IndexerPaymentsPage({
                 </div>
                 <ProgressBar value={100} max={100} variant="teal" size="sm" />
               </div>
-              {totalCollectAmount > 0 && (
+              {totalRedeemed > 0 && (
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-[var(--text-muted)]">Recent Collections (on-chain)</span>
-                    <span className="font-mono text-[var(--text)]">{formatGRT(totalCollectAmount)} GRT</span>
+                    <span className="text-[var(--text-muted)]">Recent Redemptions</span>
+                    <span className="font-mono text-[var(--text)]">{formatGRT(totalRedeemed)} GRT</span>
                   </div>
                   <ProgressBar
-                    value={totalCollected > 0 ? (totalCollectAmount / totalCollected) * 100 : 0}
+                    value={totalCollected > 0 ? (totalRedeemed / totalCollected) * 100 : 0}
                     max={100}
                     variant="teal"
                     size="sm"
@@ -163,7 +166,7 @@ export default function IndexerPaymentsPage({
                       <div>
                         <p className="text-xs text-[var(--text-faint)]">Gateway</p>
                         <p className="font-mono text-sm text-[var(--text)]">
-                          {shortenAddress(acct.sender.id)}
+                          {shortenAddress(acct.payer.id)}
                         </p>
                       </div>
                       <p className="font-mono text-[var(--text)]">{formatGRT(balance)} GRT</p>
@@ -215,7 +218,7 @@ export default function IndexerPaymentsPage({
                       <tr key={acct.id} className="hover:bg-[var(--bg-elevated)]">
                         <td className="px-4 py-3">
                           <p className="font-mono text-sm text-[var(--text)]">
-                            {shortenAddress(acct.sender.id)}
+                            {shortenAddress(acct.payer.id)}
                           </p>
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -265,7 +268,7 @@ export default function IndexerPaymentsPage({
                 const timestamp = Number(tx.timestamp);
                 const typeColors: Record<string, string> = {
                   deposit: 'text-[var(--green)]',
-                  collect: 'text-[var(--green)]',
+                  redeem: 'text-[var(--green)]',
                   withdraw: 'text-[var(--red)]',
                   thaw: 'text-[var(--amber)]',
                 };
@@ -277,7 +280,7 @@ export default function IndexerPaymentsPage({
                     <div className="flex items-center gap-3">
                       <Badge
                         variant={
-                          tx.type === 'deposit' || tx.type === 'collect'
+                          tx.type === 'deposit' || tx.type === 'redeem'
                             ? 'success'
                             : tx.type === 'withdraw'
                             ? 'error'
@@ -288,7 +291,7 @@ export default function IndexerPaymentsPage({
                       </Badge>
                       <div>
                         <p className="font-mono text-sm text-[var(--text-faint)]">
-                          from {shortenAddress(tx.sender.id)}
+                          from {shortenAddress(tx.payer.id)}
                         </p>
                         {timestamp > 0 && (
                           <p className="text-xs text-[var(--text-faint)] mt-0.5">
@@ -324,7 +327,7 @@ export default function IndexerPaymentsPage({
                     className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-elevated)]"
                   >
                     <p className="font-mono text-sm text-[var(--text)]">
-                      {shortenAddress(c.sender.id)}
+                      {shortenAddress(c.payer.id)}
                     </p>
                     <div className="text-right">
                       <p className="font-mono text-sm text-[var(--text)]">{formatGRT(amount)} GRT</p>

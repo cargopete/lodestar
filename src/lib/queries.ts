@@ -786,28 +786,30 @@ export interface ThawRequestsResponse {
 /** Escrow account state (payer → receiver deposit) */
 export interface PaymentsEscrowAccount {
   id: string;
-  sender: { id: string };
+  payer: { id: string };
   receiver: { id: string };
   balance: string;
   totalAmountThawing: string;
   thawEndTimestamp: string;
 }
 
-/** Escrow transaction (deposit, withdraw, thaw, collect) */
+/** Escrow transaction (deposit or redeem) */
 export interface PaymentsEscrowTransaction {
   id: string;
   type: string;
-  sender: { id: string };
+  payer: { id: string };
   receiver: { id: string };
+  allocationId: string | null;
   amount: string;
   timestamp: string;
 }
 
-/** Cumulative tokens collected per payer/receiver pair */
+/** Cumulative tokens collected per payer/receiver/collectionId */
 export interface GraphTallyTokensCollected {
   id: string;
-  sender: { id: string };
+  payer: { id: string };
   receiver: { id: string };
+  collectionId: string;
   tokens: string;
 }
 
@@ -816,7 +818,7 @@ export interface PaymentsOverview {
   totalEscrowBalance: string;
   totalThawing: string;
   totalCollected: string;
-  activeSenders: number;
+  activePayers: number;
   activeReceivers: number;
   escrowAccounts: PaymentsEscrowAccount[];
   recentTransactions: PaymentsEscrowTransaction[];

@@ -16,7 +16,7 @@ const ESCROW_ACCOUNTS_QUERY = `{
     where: { balance_gt: "0" }
   ) {
     id
-    sender { id }
+    payer { id }
     receiver { id }
     balance
     totalAmountThawing
@@ -32,8 +32,9 @@ const RECENT_TRANSACTIONS_QUERY = `{
   ) {
     id
     type
-    sender { id }
+    payer { id }
     receiver { id }
+    allocationId
     amount
     timestamp
   }
@@ -46,8 +47,9 @@ const TOP_COLLECTORS_QUERY = `{
     orderDirection: desc
   ) {
     id
-    sender { id }
+    payer { id }
     receiver { id }
+    collectionId
     tokens
   }
 }`;
@@ -63,7 +65,7 @@ function receiverQuery(receiver: string) {
         orderDirection: desc
       ) {
         id
-        sender { id }
+        payer { id }
         receiver { id }
         balance
         totalAmountThawing
@@ -79,8 +81,9 @@ function receiverQuery(receiver: string) {
       ) {
         id
         type
-        sender { id }
+        payer { id }
         receiver { id }
+        allocationId
         amount
         timestamp
       }
@@ -93,8 +96,9 @@ function receiverQuery(receiver: string) {
         orderDirection: desc
       ) {
         id
-        sender { id }
+        payer { id }
         receiver { id }
+        collectionId
         tokens
       }
     }`,
@@ -112,13 +116,13 @@ function aggregateOverview(
 
   let totalBalance = BigInt(0);
   let totalThawing = BigInt(0);
-  const senders = new Set<string>();
+  const payers = new Set<string>();
   const receivers = new Set<string>();
 
   for (const acct of accounts) {
     totalBalance += BigInt(acct.balance);
     totalThawing += BigInt(acct.totalAmountThawing);
-    senders.add(acct.sender.id);
+    payers.add(acct.payer.id);
     receivers.add(acct.receiver.id);
   }
 
@@ -131,7 +135,7 @@ function aggregateOverview(
     totalEscrowBalance: totalBalance.toString(),
     totalThawing: totalThawing.toString(),
     totalCollected: totalCollected.toString(),
-    activeSenders: senders.size,
+    activePayers: payers.size,
     activeReceivers: receivers.size,
     escrowAccounts: accounts,
     recentTransactions: transactions,

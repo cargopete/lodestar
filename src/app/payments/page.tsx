@@ -11,6 +11,23 @@ import type { PaymentsEscrowAccount, PaymentsEscrowTransaction, GraphTallyTokens
 
 type Tab = 'escrow' | 'activity' | 'collectors';
 
+function ExperimentalBanner() {
+  return (
+    <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--amber)]/30 bg-[var(--amber)]/5">
+      <svg className="w-5 h-5 text-[var(--amber)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+      </svg>
+      <div>
+        <p className="text-sm font-medium text-[var(--amber)]">Experimental Feature — In Development</p>
+        <p className="text-xs text-[var(--text-muted)] mt-0.5">
+          This dashboard tracks GraphTally/TAP payment pipeline data from Horizon smart contracts.
+          Data accuracy and coverage are being validated. Features may change.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function PaymentsPage() {
   const { data, isLoading, isError } = usePayments();
   const { data: priceData } = useGRTPrice();
@@ -28,7 +45,8 @@ export default function PaymentsPage() {
 
   if (isError || !data) {
     return (
-      <div className="flex items-center justify-center py-24">
+      <div className="space-y-6">
+        <ExperimentalBanner />
         <Card>
           <CardContent className="p-8 text-center">
             <p className="text-[var(--text-muted)]">
@@ -46,6 +64,8 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-6">
+      <ExperimentalBanner />
+
       {/* Overview stats */}
       <StatGrid>
         <StatCard
@@ -60,7 +80,7 @@ export default function PaymentsPage() {
         />
         <StatCard
           label="Active Gateways"
-          value={String(data.activeSenders)}
+          value={String(data.activePayers)}
           delta={{ value: 'funding escrow', positive: true }}
         />
         <StatCard
@@ -181,9 +201,9 @@ function EscrowAccountsPanel({
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="text-xs text-[var(--text-faint)]">Sender</p>
+                    <p className="text-xs text-[var(--text-faint)]">Gateway</p>
                     <p className="font-mono text-sm text-[var(--text)]">
-                      {shortenAddress(acct.sender.id)}
+                      {shortenAddress(acct.payer.id)}
                     </p>
                   </div>
                   <p className="font-mono text-[var(--text)] text-sm">{formatGRT(balance)} GRT</p>
@@ -215,7 +235,7 @@ function EscrowAccountsPanel({
             <thead>
               <tr className="border-b border-[var(--border)]">
                 <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">
-                  Sender (Gateway)
+                  Gateway (Payer)
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">
                   Receiver (Indexer)
@@ -236,7 +256,7 @@ function EscrowAccountsPanel({
                   <tr key={acct.id} className="hover:bg-[var(--bg-elevated)]">
                     <td className="px-4 py-3">
                       <p className="font-mono text-sm text-[var(--text)]">
-                        {shortenAddress(acct.sender.id)}
+                        {shortenAddress(acct.payer.id)}
                       </p>
                     </td>
                     <td className="px-4 py-3">
@@ -293,15 +313,15 @@ function TransactionsPanel({
 
   const typeLabel: Record<string, string> = {
     deposit: 'Deposit',
+    redeem: 'Redeem',
     withdraw: 'Withdraw',
     thaw: 'Thaw',
     cancelThaw: 'Cancel Thaw',
-    collect: 'Collect',
   };
 
   const typeVariant: Record<string, 'success' | 'error' | 'default'> = {
     deposit: 'success',
-    collect: 'success',
+    redeem: 'success',
     withdraw: 'error',
     thaw: 'default',
     cancelThaw: 'default',
@@ -332,7 +352,7 @@ function TransactionsPanel({
                   <div>
                     <div className="flex items-center gap-2 text-sm">
                       <span className="font-mono text-[var(--text-faint)]">
-                        {shortenAddress(tx.sender.id)}
+                        {shortenAddress(tx.payer.id)}
                       </span>
                       <span className="text-[var(--text-faint)]">&rarr;</span>
                       <Link
