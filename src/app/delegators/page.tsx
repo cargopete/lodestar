@@ -36,31 +36,56 @@ export default function DelegatorsPage() {
         Enter a delegator address to view their portfolio, delegation positions, and rebalancing insights.
       </p>
 
-      {/* Connected wallet shortcut */}
+      {/* Connected wallet shortcuts */}
       {isConnected && connectedAddress && (
-        <Link
-          href={`/delegators/${connectedAddress}`}
-          className={cn(
-            'w-full max-w-lg mb-4 flex items-center justify-between px-5 py-4',
-            'rounded-[var(--radius-button)] border border-[var(--accent)]',
-            'bg-[var(--accent-dim)] hover:bg-[var(--accent)]/20 transition-colors'
-          )}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[var(--accent)] flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-              </svg>
+        <div className="w-full max-w-lg space-y-3 mb-4">
+          <Link
+            href={`/delegators/${connectedAddress}`}
+            className={cn(
+              'w-full flex items-center justify-between px-5 py-4',
+              'rounded-[var(--radius-button)] border border-[var(--accent)]',
+              'bg-[var(--accent-dim)] hover:bg-[var(--accent)]/20 transition-colors'
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[var(--accent)] flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-[var(--accent)]">View My Portfolio</p>
+                <p className="text-[11px] font-mono text-[var(--text-muted)]">{shortenAddress(connectedAddress, 6)}</p>
+              </div>
             </div>
-            <div className="text-left">
-              <p className="text-sm font-semibold text-[var(--accent)]">View My Portfolio</p>
-              <p className="text-[11px] font-mono text-[var(--text-muted)]">{shortenAddress(connectedAddress, 6)}</p>
+            <svg className="w-5 h-5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
+          </Link>
+          <Link
+            href="/indexers"
+            className={cn(
+              'w-full flex items-center justify-between px-5 py-4',
+              'rounded-[var(--radius-button)] border border-[var(--border)]',
+              'bg-[var(--bg-surface)] hover:border-[var(--accent-hover)] transition-colors'
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center">
+                <svg className="w-4 h-4 text-[var(--green)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-[var(--text)]">Delegate GRT</p>
+                <p className="text-[11px] text-[var(--text-muted)]">Browse indexers and delegate from their profile page</p>
+              </div>
             </div>
-          </div>
-          <svg className="w-5 h-5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </svg>
-        </Link>
+            <svg className="w-5 h-5 text-[var(--text-faint)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
+          </Link>
+        </div>
       )}
 
       <Card className="w-full max-w-lg">
