@@ -1,0 +1,93 @@
+{
+  "dashboard": {
+    "title": "Lodestar — Protocol Metrics",
+    "uid": "lodestar-protocol",
+    "tags": ["lodestar"],
+    "timezone": "utc",
+    "refresh": "1h",
+    "time": { "from": "now-30d", "to": "now" },
+    "panels": [
+      {
+        "title": "Total Staked GRT",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "fieldConfig": {
+          "defaults": { "unit": "short", "displayName": "Staked GRT" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT snapshot_at AS time, total_staked AS value FROM network_snapshots WHERE $__timeFilter(snapshot_at) ORDER BY snapshot_at",
+            "format": "time_series"
+          }
+        ]
+      },
+      {
+        "title": "Total Delegated GRT",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "fieldConfig": {
+          "defaults": { "unit": "short", "displayName": "Delegated GRT" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT snapshot_at AS time, total_delegated AS value FROM network_snapshots WHERE $__timeFilter(snapshot_at) ORDER BY snapshot_at",
+            "format": "time_series"
+          }
+        ]
+      },
+      {
+        "title": "GRT Price (USD)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+        "fieldConfig": {
+          "defaults": { "unit": "currencyUSD", "displayName": "GRT" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT snapshot_at AS time, grt_price_usd AS value FROM network_snapshots WHERE grt_price_usd IS NOT NULL AND $__timeFilter(snapshot_at) ORDER BY snapshot_at",
+            "format": "time_series"
+          }
+        ]
+      },
+      {
+        "title": "Active Indexers",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+        "fieldConfig": {
+          "defaults": { "displayName": "Indexers" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT snapshot_at AS time, active_indexer_count AS value FROM network_snapshots WHERE $__timeFilter(snapshot_at) ORDER BY snapshot_at",
+            "format": "time_series"
+          }
+        ]
+      },
+      {
+        "title": "Participants Over Time",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+        "targets": [
+          {
+            "rawSql": "SELECT snapshot_at AS time, active_indexer_count AS \"Indexers\", active_delegator_count AS \"Delegators\", active_curator_count AS \"Curators\" FROM network_snapshots WHERE $__timeFilter(snapshot_at) ORDER BY snapshot_at",
+            "format": "time_series"
+          }
+        ]
+      },
+      {
+        "title": "Total Signalled vs Allocated",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+        "fieldConfig": {
+          "defaults": { "unit": "short" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT snapshot_at AS time, total_signalled AS \"Signalled GRT\", total_allocated AS \"Allocated GRT\" FROM network_snapshots WHERE $__timeFilter(snapshot_at) ORDER BY snapshot_at",
+            "format": "time_series"
+          }
+        ]
+      }
+    ]
+  }
+}

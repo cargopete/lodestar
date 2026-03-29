@@ -1,0 +1,74 @@
+{
+  "dashboard": {
+    "title": "Lodestar — Cron Performance",
+    "uid": "lodestar-cron-perf",
+    "tags": ["lodestar"],
+    "timezone": "utc",
+    "refresh": "5m",
+    "time": { "from": "now-7d", "to": "now" },
+    "templating": {
+      "list": [
+        {
+          "name": "step",
+          "type": "query",
+          "query": "SELECT DISTINCT step FROM cron_runs ORDER BY step",
+          "multi": true,
+          "includeAll": true,
+          "current": { "text": "All", "value": "$__all" }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "title": "Duration Over Time",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+        "fieldConfig": {
+          "defaults": { "unit": "ms" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT started_at AS time, duration_ms AS value, step AS metric FROM cron_runs WHERE step IN ($step) AND $__timeFilter(started_at) ORDER BY started_at",
+            "format": "time_series"
+          }
+        ]
+      },
+      {
+        "title": "Rows Affected Over Time",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+        "targets": [
+          {
+            "rawSql": "SELECT started_at AS time, rows_affected AS value, step AS metric FROM cron_runs WHERE step IN ($step) AND rows_affected IS NOT NULL AND $__timeFilter(started_at) ORDER BY started_at",
+            "format": "time_series"
+          }
+        ]
+      },
+      {
+        "title": "Success/Failure Count by Step (7d)",
+        "type": "barchart",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+        "targets": [
+          {
+            "rawSql": "SELECT step AS \"Step\", COUNT(*) FILTER (WHERE success) AS \"Success\", COUNT(*) FILTER (WHERE NOT success) AS \"Failed\" FROM cron_runs WHERE started_at > NOW() - INTERVAL '7 days' GROUP BY step ORDER BY step",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "title": "Average Duration by Step (7d)",
+        "type": "barchart",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+        "fieldConfig": {
+          "defaults": { "unit": "ms" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT step AS \"Step\", ROUND(AVG(duration_ms)) AS \"Avg (ms)\", ROUND(MAX(duration_ms)) AS \"Max (ms)\", ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration_ms)) AS \"p95 (ms)\" FROM cron_runs WHERE success AND started_at > NOW() - INTERVAL '7 days' GROUP BY step ORDER BY step",
+            "format": "table"
+          }
+        ]
+      }
+    ]
+  }
+}

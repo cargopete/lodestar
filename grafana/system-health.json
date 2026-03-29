@@ -1,0 +1,56 @@
+{
+  "dashboard": {
+    "title": "Lodestar — System Health",
+    "uid": "lodestar-system-health",
+    "tags": ["lodestar"],
+    "timezone": "utc",
+    "refresh": "5m",
+    "time": { "from": "now-24h", "to": "now" },
+    "panels": [
+      {
+        "title": "Ingestion Freshness",
+        "type": "table",
+        "gridPos": { "h": 6, "w": 12, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "rawSql": "SELECT key AS \"Data Type\", updated_at AS \"Last Updated\", ROUND(EXTRACT(EPOCH FROM (NOW() - updated_at)) / 60) AS \"Age (min)\" FROM ingestion_state ORDER BY key",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "title": "Last Cron Run Per Step",
+        "type": "table",
+        "gridPos": { "h": 6, "w": 12, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "rawSql": "SELECT DISTINCT ON (step) step AS \"Step\", started_at AS \"Last Run\", duration_ms AS \"Duration (ms)\", rows_affected AS \"Rows\", CASE WHEN success THEN '✓' ELSE '✗' END AS \"Status\" FROM cron_runs ORDER BY step, started_at DESC",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "title": "Cron Success Rate (24h)",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 6, "x": 0, "y": 6 },
+        "targets": [
+          {
+            "rawSql": "SELECT CASE WHEN success THEN 'Success' ELSE 'Failed' END AS \"Result\", COUNT(*) AS \"Count\" FROM cron_runs WHERE started_at > NOW() - INTERVAL '24 hours' GROUP BY success",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "title": "Cron Failures (7d)",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 18, "x": 6, "y": 6 },
+        "targets": [
+          {
+            "rawSql": "SELECT step AS \"Step\", started_at AS \"Time\", duration_ms AS \"Duration (ms)\", LEFT(error_message, 200) AS \"Error\" FROM cron_runs WHERE NOT success AND started_at > NOW() - INTERVAL '7 days' ORDER BY started_at DESC LIMIT 50",
+            "format": "table"
+          }
+        ]
+      }
+    ]
+  }
+}

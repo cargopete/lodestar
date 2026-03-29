@@ -1,0 +1,70 @@
+{
+  "dashboard": {
+    "title": "Lodestar — Indexer Analytics",
+    "uid": "lodestar-indexers",
+    "tags": ["lodestar"],
+    "timezone": "utc",
+    "refresh": "1h",
+    "time": { "from": "now-30d", "to": "now" },
+    "panels": [
+      {
+        "title": "Score Distribution (Latest)",
+        "type": "histogram",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "rawSql": "SELECT composite_score AS \"Score\" FROM indexer_snapshots WHERE snapshot_at = (SELECT MAX(snapshot_at) FROM indexer_snapshots) AND composite_score IS NOT NULL",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "title": "Top 10 Indexers by Score (Latest)",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "rawSql": "SELECT i.name AS \"Indexer\", s.composite_score AS \"Score\", s.score_grade AS \"Grade\", ROUND(s.self_stake::numeric, 0) AS \"Self Stake\", ROUND(s.delegated_tokens::numeric, 0) AS \"Delegated\" FROM indexer_snapshots s JOIN indexers i ON i.address = s.indexer_address WHERE s.snapshot_at = (SELECT MAX(snapshot_at) FROM indexer_snapshots) AND s.composite_score IS NOT NULL ORDER BY s.composite_score DESC LIMIT 10",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "title": "Average Score Over Time",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+        "targets": [
+          {
+            "rawSql": "SELECT snapshot_at AS time, ROUND(AVG(composite_score)::numeric, 1) AS \"Avg Score\", ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY composite_score)::numeric, 1) AS \"Median Score\" FROM indexer_snapshots WHERE composite_score IS NOT NULL AND $__timeFilter(snapshot_at) GROUP BY snapshot_at ORDER BY snapshot_at",
+            "format": "time_series"
+          }
+        ]
+      },
+      {
+        "title": "Total Stake Movement (Daily)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+        "fieldConfig": {
+          "defaults": { "unit": "short" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT DATE_TRUNC('day', snapshot_at) AS time, ROUND(SUM(self_stake)::numeric, 0) AS \"Total Self Stake\", ROUND(SUM(delegated_tokens)::numeric, 0) AS \"Total Delegated\" FROM indexer_snapshots WHERE $__timeFilter(snapshot_at) GROUP BY DATE_TRUNC('day', snapshot_at) ORDER BY time",
+            "format": "time_series"
+          }
+        ]
+      },
+      {
+        "title": "Delegation Events (Daily)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+        "targets": [
+          {
+            "rawSql": "SELECT DATE_TRUNC('day', timestamp) AS time, COUNT(*) FILTER (WHERE event_type = 'delegation') AS \"Delegations\", COUNT(*) FILTER (WHERE event_type = 'undelegation') AS \"Undelegations\" FROM delegation_events WHERE $__timeFilter(timestamp) GROUP BY DATE_TRUNC('day', timestamp) ORDER BY time",
+            "format": "time_series"
+          }
+        ]
+      }
+    ]
+  }
+}
