@@ -2,12 +2,30 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import { useIndexerPayments, useGRTPrice, useENSName } from '@/hooks/useNetworkStats';
+import { useIndexerPayments, useGRTPrice, useEnrichedIndexers } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { weiToGRT, formatGRT, formatUSD, shortenAddress, formatRelativeTime, cn } from '@/lib/utils';
+
+const ARBISCAN = 'https://arbiscan.io/address/';
+
+function PayerLink({ address }: { address: string }) {
+  return (
+    <a
+      href={`${ARBISCAN}${address}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+    >
+      {address}
+      <svg className="w-3 h-3 inline-block ml-1 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+      </svg>
+    </a>
+  );
+}
 
 export default function IndexerPaymentsPage({
   params,
@@ -17,10 +35,15 @@ export default function IndexerPaymentsPage({
   const { address } = use(params);
   const { data, isLoading, isError } = useIndexerPayments(address);
   const { data: priceData } = useGRTPrice();
-  const { data: ensData } = useENSName(address);
+  const { data: enrichedData } = useEnrichedIndexers();
 
   const grtPrice = priceData?.price ?? 0;
-  const displayName = ensData?.ensName ?? shortenAddress(address);
+
+  // Resolve indexer name from enriched data
+  const indexer = enrichedData?.indexers?.find(
+    (idx) => idx.id.toLowerCase() === address.toLowerCase()
+  );
+  const displayName = indexer?.name ?? shortenAddress(address);
 
   if (isLoading) {
     return (
@@ -162,28 +185,20 @@ export default function IndexerPaymentsPage({
                     key={acct.id}
                     className="p-4 rounded-lg border border-[var(--border)]"
                   >
+                    <div className="mb-2">
+                      <p className="text-xs text-[var(--text-faint)] mb-1">Gateway</p>
+                      <PayerLink address={acct.payer.id} />
+                    </div>
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <p className="text-xs text-[var(--text-faint)]">Gateway</p>
-                        <p className="font-mono text-sm text-[var(--text)]">
-                          {shortenAddress(acct.payer.id)}
-                        </p>
+                        <p className="text-xs text-[var(--text-faint)]">Balance</p>
+                        <p className="font-mono text-[var(--text)]">{formatGRT(balance)} GRT</p>
                       </div>
-                      <p className="font-mono text-[var(--text)]">{formatGRT(balance)} GRT</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2 rounded bg-[var(--bg-elevated)]">
-                        <p className="text-[10px] text-[var(--text-faint)]">USD Value</p>
-                        <p className="text-xs font-mono text-[var(--text)]">
-                          {formatUSD(balance * grtPrice)}
+                      {thawing > 0 && (
+                        <p className={cn('text-xs font-mono text-[var(--amber)]')}>
+                          {formatGRT(thawing)} thawing
                         </p>
-                      </div>
-                      <div className="p-2 rounded bg-[var(--bg-elevated)]">
-                        <p className="text-[10px] text-[var(--text-faint)]">Thawing</p>
-                        <p className={cn('text-xs font-mono', thawing > 0 ? 'text-[var(--amber)]' : 'text-[var(--text-faint)]')}>
-                          {thawing > 0 ? formatGRT(thawing) : '-'}
-                        </p>
-                      </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -217,9 +232,7 @@ export default function IndexerPaymentsPage({
                     return (
                       <tr key={acct.id} className="hover:bg-[var(--bg-elevated)]">
                         <td className="px-4 py-3">
-                          <p className="font-mono text-sm text-[var(--text)]">
-                            {shortenAddress(acct.payer.id)}
-                          </p>
+                          <PayerLink address={acct.payer.id} />
                         </td>
                         <td className="px-4 py-3 text-right">
                           <p className="font-mono text-[var(--text)]">{formatGRT(balance)} GRT</p>
@@ -290,9 +303,14 @@ export default function IndexerPaymentsPage({
                         {tx.type}
                       </Badge>
                       <div>
-                        <p className="font-mono text-sm text-[var(--text-faint)]">
-                          from {shortenAddress(tx.payer.id)}
-                        </p>
+                        <a
+                          href={`${ARBISCAN}${tx.payer.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-sm text-[var(--text-faint)] hover:text-[var(--accent)]"
+                        >
+                          from {tx.payer.id}
+                        </a>
                         {timestamp > 0 && (
                           <p className="text-xs text-[var(--text-faint)] mt-0.5">
                             {formatRelativeTime(timestamp)}
@@ -300,7 +318,7 @@ export default function IndexerPaymentsPage({
                         )}
                       </div>
                     </div>
-                    <p className={cn('font-mono text-sm', typeColors[tx.type] ?? 'text-[var(--text)]')}>
+                    <p className={cn('font-mono text-sm shrink-0 ml-3', typeColors[tx.type] ?? 'text-[var(--text)]')}>
                       {tx.type === 'withdraw' ? '-' : '+'}{formatGRT(amount)} GRT
                     </p>
                   </div>
@@ -326,10 +344,18 @@ export default function IndexerPaymentsPage({
                     key={c.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-elevated)]"
                   >
-                    <p className="font-mono text-sm text-[var(--text)]">
-                      {shortenAddress(c.payer.id)}
-                    </p>
-                    <div className="text-right">
+                    <a
+                      href={`${ARBISCAN}${c.payer.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)]"
+                    >
+                      {c.payer.id}
+                      <svg className="w-3 h-3 inline-block ml-1 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                      </svg>
+                    </a>
+                    <div className="text-right shrink-0 ml-3">
                       <p className="font-mono text-sm text-[var(--text)]">{formatGRT(amount)} GRT</p>
                       <p className="text-xs text-[var(--text-faint)]">{formatUSD(amount * grtPrice)}</p>
                     </div>

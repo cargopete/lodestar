@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { usePayments, useGRTPrice } from '@/hooks/useNetworkStats';
+import { usePayments, useGRTPrice, useEnrichedIndexers } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
-import { weiToGRT, formatGRT, formatUSD, shortenAddress, formatRelativeTime, cn } from '@/lib/utils';
+import { weiToGRT, formatGRT, formatUSD, formatRelativeTime, cn } from '@/lib/utils';
 import type { PaymentsEscrowAccount, PaymentsEscrowTransaction, GraphTallyTokensCollected } from '@/lib/queries';
+
+const ARBISCAN = 'https://arbiscan.io/address/';
 
 type Tab = 'escrow' | 'activity' | 'collectors';
 
@@ -28,9 +30,61 @@ function ExperimentalBanner() {
   );
 }
 
+/** Build a map of indexer address → display name from enriched data */
+function useIndexerNames(): Map<string, string> {
+  const { data } = useEnrichedIndexers();
+  return useMemo(() => {
+    const map = new Map<string, string>();
+    if (data?.indexers) {
+      for (const idx of data.indexers) {
+        if (idx.name && idx.name !== idx.id) {
+          map.set(idx.id.toLowerCase(), idx.name);
+        }
+      }
+    }
+    return map;
+  }, [data]);
+}
+
+function ReceiverLink({ address, names }: { address: string; names: Map<string, string> }) {
+  const name = names.get(address.toLowerCase());
+  return (
+    <Link
+      href={`/payments/${address}`}
+      className="text-[var(--accent)] hover:underline"
+    >
+      {name ? (
+        <span>
+          <span className="font-medium">{name}</span>
+          <span className="font-mono text-[var(--text-faint)] ml-1.5 text-xs">{address}</span>
+        </span>
+      ) : (
+        <span className="font-mono">{address}</span>
+      )}
+    </Link>
+  );
+}
+
+function PayerLink({ address }: { address: string }) {
+  return (
+    <a
+      href={`${ARBISCAN}${address}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-mono text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+    >
+      {address}
+      <svg className="w-3 h-3 inline-block ml-1 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+      </svg>
+    </a>
+  );
+}
+
 export default function PaymentsPage() {
   const { data, isLoading, isError } = usePayments();
   const { data: priceData } = useGRTPrice();
+  const names = useIndexerNames();
   const [activeTab, setActiveTab] = useState<Tab>('escrow');
 
   const grtPrice = priceData?.price ?? 0;
@@ -121,13 +175,13 @@ export default function PaymentsPage() {
 
       {/* Active tab content */}
       {activeTab === 'escrow' && (
-        <EscrowAccountsPanel accounts={data.escrowAccounts} grtPrice={grtPrice} />
+        <EscrowAccountsPanel accounts={data.escrowAccounts} grtPrice={grtPrice} names={names} />
       )}
       {activeTab === 'activity' && (
-        <TransactionsPanel transactions={data.recentTransactions} grtPrice={grtPrice} />
+        <TransactionsPanel transactions={data.recentTransactions} grtPrice={grtPrice} names={names} />
       )}
       {activeTab === 'collectors' && (
-        <TopCollectorsPanel collectors={data.topCollectors} grtPrice={grtPrice} />
+        <TopCollectorsPanel collectors={data.topCollectors} grtPrice={grtPrice} names={names} />
       )}
 
       {/* Info panel */}
@@ -166,9 +220,11 @@ export default function PaymentsPage() {
 function EscrowAccountsPanel({
   accounts,
   grtPrice,
+  names,
 }: {
   accounts: PaymentsEscrowAccount[];
   grtPrice: number;
+  names: Map<string, string>;
 }) {
   if (accounts.length === 0) {
     return (
@@ -199,31 +255,22 @@ function EscrowAccountsPanel({
                 key={acct.id}
                 className="p-4 rounded-lg border border-[var(--border)] hover:border-[var(--accent-hover)] transition-colors"
               >
+                <div className="mb-3">
+                  <p className="text-xs text-[var(--text-faint)] mb-1">Gateway</p>
+                  <PayerLink address={acct.payer.id} />
+                </div>
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="text-xs text-[var(--text-faint)]">Gateway</p>
-                    <p className="font-mono text-sm text-[var(--text)]">
-                      {shortenAddress(acct.payer.id)}
-                    </p>
+                    <p className="text-xs text-[var(--text-faint)] mb-1">Receiver</p>
+                    <ReceiverLink address={acct.receiver.id} names={names} />
                   </div>
                   <p className="font-mono text-[var(--text)] text-sm">{formatGRT(balance)} GRT</p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-[var(--text-faint)]">Receiver</p>
-                    <Link
-                      href={`/payments/${acct.receiver.id}`}
-                      className="font-mono text-sm text-[var(--accent)] hover:underline"
-                    >
-                      {shortenAddress(acct.receiver.id)}
-                    </Link>
-                  </div>
-                  {thawing > 0 && (
-                    <p className="font-mono text-xs text-[var(--amber)]">
-                      {formatGRT(thawing)} thawing
-                    </p>
-                  )}
-                </div>
+                {thawing > 0 && (
+                  <p className="font-mono text-xs text-[var(--amber)]">
+                    {formatGRT(thawing)} thawing
+                  </p>
+                )}
               </div>
             );
           })}
@@ -255,17 +302,10 @@ function EscrowAccountsPanel({
                 return (
                   <tr key={acct.id} className="hover:bg-[var(--bg-elevated)]">
                     <td className="px-4 py-3">
-                      <p className="font-mono text-sm text-[var(--text)]">
-                        {shortenAddress(acct.payer.id)}
-                      </p>
+                      <PayerLink address={acct.payer.id} />
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/payments/${acct.receiver.id}`}
-                        className="font-mono text-sm text-[var(--accent)] hover:underline"
-                      >
-                        {shortenAddress(acct.receiver.id)}
-                      </Link>
+                      <ReceiverLink address={acct.receiver.id} names={names} />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <p className="font-mono text-[var(--text)]">{formatGRT(balance)} GRT</p>
@@ -297,9 +337,11 @@ function EscrowAccountsPanel({
 function TransactionsPanel({
   transactions,
   grtPrice,
+  names,
 }: {
   transactions: PaymentsEscrowTransaction[];
   grtPrice: number;
+  names: Map<string, string>;
 }) {
   if (transactions.length === 0) {
     return (
@@ -345,22 +387,22 @@ function TransactionsPanel({
                 key={tx.id}
                 className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-elevated)]"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <Badge variant={typeVariant[tx.type] ?? 'default'}>
                     {typeLabel[tx.type] ?? tx.type}
                   </Badge>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="font-mono text-[var(--text-faint)]">
-                        {shortenAddress(tx.payer.id)}
-                      </span>
-                      <span className="text-[var(--text-faint)]">&rarr;</span>
-                      <Link
-                        href={`/payments/${tx.receiver.id}`}
-                        className="font-mono text-[var(--accent)] hover:underline"
+                      <a
+                        href={`${ARBISCAN}${tx.payer.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-[var(--text-faint)] hover:text-[var(--accent)] truncate"
                       >
-                        {shortenAddress(tx.receiver.id)}
-                      </Link>
+                        {tx.payer.id}
+                      </a>
+                      <span className="text-[var(--text-faint)] shrink-0">&rarr;</span>
+                      <ReceiverLink address={tx.receiver.id} names={names} />
                     </div>
                     {timestamp > 0 && (
                       <p className="text-xs text-[var(--text-faint)] mt-0.5">
@@ -369,7 +411,7 @@ function TransactionsPanel({
                     )}
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0 ml-3">
                   <p className="font-mono text-sm text-[var(--text)]">{formatGRT(amount)} GRT</p>
                   <p className="text-xs text-[var(--text-faint)]">{formatUSD(amount * grtPrice)}</p>
                 </div>
@@ -385,9 +427,11 @@ function TransactionsPanel({
 function TopCollectorsPanel({
   collectors,
   grtPrice,
+  names,
 }: {
   collectors: GraphTallyTokensCollected[];
   grtPrice: number;
+  names: Map<string, string>;
 }) {
   if (collectors.length === 0) {
     return (
@@ -425,18 +469,13 @@ function TopCollectorsPanel({
                 key={receiver}
                 className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-elevated)]"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-mono text-[var(--text-faint)] w-6 text-right">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-sm font-mono text-[var(--text-faint)] w-6 text-right shrink-0">
                     {i + 1}.
                   </span>
-                  <Link
-                    href={`/payments/${receiver}`}
-                    className="font-mono text-sm text-[var(--accent)] hover:underline"
-                  >
-                    {shortenAddress(receiver)}
-                  </Link>
+                  <ReceiverLink address={receiver} names={names} />
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0 ml-3">
                   <p className="font-mono text-sm text-[var(--text)]">{formatGRT(amount)} GRT</p>
                   <p className="text-xs text-[var(--text-faint)]">{formatUSD(amount * grtPrice)}</p>
                 </div>
