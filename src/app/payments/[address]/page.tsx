@@ -19,7 +19,7 @@ function PayerLink({ address }: { address: string }) {
       rel="noopener noreferrer"
       className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
     >
-      {address}
+      {shortenAddress(address, 6)}
       <svg className="w-3 h-3 inline-block ml-1 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
       </svg>
@@ -309,7 +309,7 @@ export default function IndexerPaymentsPage({
                           rel="noopener noreferrer"
                           className="font-mono text-sm text-[var(--text-faint)] hover:text-[var(--accent)]"
                         >
-                          from {tx.payer.id}
+                          from {shortenAddress(tx.payer.id, 6)}
                         </a>
                         {timestamp > 0 && (
                           <p className="text-xs text-[var(--text-faint)] mt-0.5">
@@ -350,7 +350,7 @@ export default function IndexerPaymentsPage({
                       rel="noopener noreferrer"
                       className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)]"
                     >
-                      {c.payer.id}
+                      {shortenAddress(c.payer.id, 6)}
                       <svg className="w-3 h-3 inline-block ml-1 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                       </svg>

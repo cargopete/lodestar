@@ -6,7 +6,7 @@ import { usePayments, useGRTPrice, useEnrichedIndexers } from '@/hooks/useNetwor
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
-import { weiToGRT, formatGRT, formatUSD, formatRelativeTime, cn } from '@/lib/utils';
+import { weiToGRT, formatGRT, formatUSD, shortenAddress, formatRelativeTime, cn } from '@/lib/utils';
 import type { PaymentsEscrowAccount, PaymentsEscrowTransaction, GraphTallyTokensCollected } from '@/lib/queries';
 
 const ARBISCAN = 'https://arbiscan.io/address/';
@@ -51,16 +51,9 @@ function ReceiverLink({ address, names }: { address: string; names: Map<string, 
   return (
     <Link
       href={`/payments/${address}`}
-      className="text-[var(--accent)] hover:underline"
+      className="text-[var(--accent)] hover:underline font-medium"
     >
-      {name ? (
-        <span>
-          <span className="font-medium">{name}</span>
-          <span className="font-mono text-[var(--text-faint)] ml-1.5 text-xs">{address}</span>
-        </span>
-      ) : (
-        <span className="font-mono">{address}</span>
-      )}
+      {name || shortenAddress(address)}
     </Link>
   );
 }
@@ -71,9 +64,9 @@ function PayerLink({ address }: { address: string }) {
       href={`${ARBISCAN}${address}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="font-mono text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+      className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
     >
-      {address}
+      {shortenAddress(address, 6)}
       <svg className="w-3 h-3 inline-block ml-1 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
       </svg>
@@ -397,9 +390,9 @@ function TransactionsPanel({
                         href={`${ARBISCAN}${tx.payer.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-mono text-[var(--text-faint)] hover:text-[var(--accent)] truncate"
+                        className="font-mono text-[var(--text-faint)] hover:text-[var(--accent)]"
                       >
-                        {tx.payer.id}
+                        {shortenAddress(tx.payer.id, 6)}
                       </a>
                       <span className="text-[var(--text-faint)] shrink-0">&rarr;</span>
                       <ReceiverLink address={tx.receiver.id} names={names} />
