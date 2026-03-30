@@ -38,6 +38,29 @@ function barWidth(score: number, max: number): string {
   return `${Math.min(100, (score / max) * 100)}%`;
 }
 
+const MAX_SUBTOTAL = 81;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type VoteTallies = { indexer_address: string; weighted_votes: number }[];
+
+/** Pure function: compute live score + community score for one entry */
+function computeLiveScores(
+  entry: LeaderboardEntry,
+  tallies: VoteTallies | undefined,
+  maxWeighted: number,
+): { liveScore: number; liveCommunityScore: number } {
+  if (!tallies?.length || maxWeighted === 0)
+    return { liveScore: entry.final_score, liveCommunityScore: entry.community_vote_score };
+  const tally = tallies.find(
+    (t) => t.indexer_address.toLowerCase() === entry.indexer_address.toLowerCase()
+  );
+  const liveCommunityScore = ((tally?.weighted_votes ?? 0) / maxWeighted) * 10;
+  const delta = liveCommunityScore - entry.community_vote_score;
+  if (delta === 0) return { liveScore: entry.final_score, liveCommunityScore };
+  const adjusted = entry.final_score + (delta * entry.penalty_multiplier / MAX_SUBTOTAL) * 100;
+  return { liveScore: Math.min(100, Math.max(0, +adjusted.toFixed(2))), liveCommunityScore };
+}
+
 // Component score sections for the expanded breakdown
 const SCORE_SECTIONS = [
   {
@@ -106,7 +129,24 @@ export default function LeaderboardPage() {
     return map;
   }, [enrichedData]);
 
-  const entries = data?.entries ?? [];
+  const { data: votes } = useVotes();
+  const rawEntries = data?.entries ?? [];
+
+  // Compute live scores, re-sort, and assign live ranks
+  const entries = useMemo(() => {
+    if (!rawEntries.length) return rawEntries;
+    const tallies = votes?.tallies as VoteTallies | undefined;
+    const maxWeighted = tallies?.length
+      ? Math.max(...tallies.map((t) => t.weighted_votes))
+      : 0;
+    const withLive = rawEntries.map((e) => {
+      const { liveScore } = computeLiveScores(e, tallies, maxWeighted);
+      return { ...e, final_score: liveScore };
+    });
+    withLive.sort((a, b) => b.final_score - a.final_score);
+    withLive.forEach((e, i) => { e.rank = i + 1; });
+    return withLive;
+  }, [rawEntries, votes]);
 
   const paginatedEntries = useMemo(() => {
     const start = page * PAGE_SIZE;
@@ -175,7 +215,7 @@ export default function LeaderboardPage() {
                 {bannerName}
               </Link>
               <p className="text-sm text-[var(--text-muted)] mt-0.5">
-                {formatPeriod(bannerPeriod)} — scored {bannerScore?.toFixed(1)} / 100
+                {formatPeriod(bannerPeriod)} — scored {bannerScore?.toFixed(2)} / 100
               </p>
             </div>
           </div>
@@ -224,10 +264,10 @@ export default function LeaderboardPage() {
         <StatCard label="Indexers Ranked" value={String(entries.length)} />
         <StatCard
           label="Top Score"
-          value={topScore.toFixed(1)}
+          value={topScore.toFixed(2)}
           delta={{ value: `/ 100`, positive: topScore >= 70 }}
         />
-        <StatCard label="Median Score" value={medianScore.toFixed(1)} />
+        <StatCard label="Median Score" value={medianScore.toFixed(2)} />
       </StatGrid>
 
       {/* Mobile cards */}
@@ -390,7 +430,7 @@ function DesktopRow({
         </td>
         <td className={`px-4 py-3 text-right ${TD_BORDER}`}>
           <span className="font-mono text-sm font-semibold" style={{ color: scoreColor(entry.final_score) }}>
-            {entry.final_score.toFixed(1)}
+            {entry.final_score.toFixed(2)}
           </span>
         </td>
         <td className={`px-4 py-3 text-right hidden lg:table-cell ${TD_BORDER}`}>
@@ -467,7 +507,7 @@ function MobileCard({
         </div>
         <div className="text-right">
           <span className="font-mono text-lg font-bold" style={{ color: scoreColor(entry.final_score) }}>
-            {entry.final_score.toFixed(1)}
+            {entry.final_score.toFixed(2)}
           </span>
         </div>
       </div>
@@ -529,16 +569,15 @@ function MobileCard({
 
 function ScoreBreakdown({ entry }: { entry: LeaderboardEntry }) {
   const { data: votes } = useVotes();
-
-  // Compute live community score from real-time vote tallies
   const liveCommunityScore = useMemo(() => {
-    if (!votes?.tallies?.length) return entry.community_vote_score;
-    const maxWeighted = Math.max(...votes.tallies.map((t) => t.weighted_votes));
+    const tallies = votes?.tallies as VoteTallies | undefined;
+    if (!tallies?.length) return entry.community_vote_score;
+    const maxWeighted = Math.max(...tallies.map((t) => t.weighted_votes));
     if (maxWeighted === 0) return 0;
-    const indexerTally = votes.tallies.find(
+    const tally = tallies.find(
       (t) => t.indexer_address.toLowerCase() === entry.indexer_address.toLowerCase()
     );
-    return ((indexerTally?.weighted_votes ?? 0) / maxWeighted) * 10;
+    return ((tally?.weighted_votes ?? 0) / maxWeighted) * 10;
   }, [votes, entry.indexer_address, entry.community_vote_score]);
 
   return (
@@ -553,7 +592,7 @@ function ScoreBreakdown({ entry }: { entry: LeaderboardEntry }) {
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-[var(--text)]">{section.label}</span>
               <span className="text-xs font-mono text-[var(--text-muted)]">
-                {sectionTotal.toFixed(1)} / {section.max}
+                {sectionTotal.toFixed(2)} / {section.max}
               </span>
             </div>
             <div className="space-y-1.5">
@@ -565,7 +604,7 @@ function ScoreBreakdown({ entry }: { entry: LeaderboardEntry }) {
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-[var(--text-faint)]">{item.label}</span>
                       <span className="font-mono text-[var(--text-muted)]">
-                        {value.toFixed(1)} / {item.max}
+                        {value.toFixed(2)} / {item.max}
                       </span>
                     </div>
                     <div className="h-1.5 rounded-full bg-[var(--bg)] mt-0.5">
@@ -640,7 +679,7 @@ function ComponentCell({ score, max }: { score: number; max: number }) {
         />
       </div>
       <span className="font-mono text-xs text-[var(--text-muted)] w-10 text-right">
-        {score.toFixed(1)}
+        {score.toFixed(2)}
       </span>
     </div>
   );
