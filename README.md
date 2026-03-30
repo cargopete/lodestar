@@ -120,6 +120,7 @@ Multiplicative penalties stack and reduce the final score. Minimum multiplier: 0
 | 3+ reward cut increases (12 months) | ×0.75 |
 | Zero query fees (30 days, active allocs) | ×0.85 |
 | Self-stake below 100K GRT | ×0.90 |
+| POI consensus < 50% (30 days) | ×0.80 |
 
 The #1 ranked indexer at month-end is named **Indexer of the Month**.
 
