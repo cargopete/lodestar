@@ -92,7 +92,7 @@ export async function computeMonthlyScores(
   const indexers = await sql`
     SELECT address, self_stake_grt, delegated_grt, delegator_apr,
            effective_cut, delegation_capacity_pct, reo_status,
-           created_at_ts, allocation_count
+           created_at_epoch, allocation_count
     FROM indexers
     WHERE self_stake_grt > 0
   `;
@@ -209,8 +209,8 @@ export async function computeMonthlyScores(
     const hasActiveAllocs = (Number(idx.allocation_count) || 0) > 0;
     const fees30d = fees30dMap.get(addr) ?? 0;
 
-    const monthsActive = idx.created_at_ts
-      ? Math.floor((now - new Date(idx.created_at_ts).getTime()) / (30 * 24 * 3600 * 1000))
+    const monthsActive = idx.created_at_epoch
+      ? Math.floor((now - Number(idx.created_at_epoch) * 1000) / (30 * 24 * 3600 * 1000))
       : 0;
 
     return {
