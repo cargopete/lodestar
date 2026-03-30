@@ -8,7 +8,7 @@
  */
 
 import type { DbClient } from '../db';
-import { computeBounds, normalizeUncapped } from './normalize';
+import { computeBounds } from './normalize';
 import {
   scoreAllocationBreadth,
   scoreQueryFees,
@@ -260,7 +260,6 @@ export async function computeMonthlyScores(
   // ── Score each indexer ────────────────────────────────
 
   const scored = metrics.map((m) => {
-    // Capped scores for component breakdown display
     const breadthScore = scoreAllocationBreadth(m.distinctDeployments, breadthBounds.p10, breadthBounds.p90);
     const queryFeeScore = scoreQueryFees(m.queryFees, feeBounds.p10, feeBounds.p90);
     const allocEffScore = scoreAllocationEfficiency(m.allocEfficiency, effBounds.p10, effBounds.p90);
@@ -276,11 +275,6 @@ export async function computeMonthlyScores(
       ? (voterWeighted / maxWeightedVotes) * MAX_COMMUNITY_VOTE_SCORE
       : 0;
 
-    // Uncapped continuous scores for final_score — preserves differentiation above p90
-    const breadthUncapped = normalizeUncapped(m.distinctDeployments, breadthBounds.p10, breadthBounds.p90, 20);
-    const feesUncapped = normalizeUncapped(m.queryFees, feeBounds.p10, feeBounds.p90, 10);
-    const effUncapped = normalizeUncapped(m.allocEfficiency, effBounds.p10, effBounds.p90, 10);
-
     const subtotal =
       breadthScore + queryFeeScore + allocEffScore +
       communityVoteScore +
@@ -288,18 +282,10 @@ export async function computeMonthlyScores(
       reoScore +
       capScore;
 
-    // Use uncapped continuous values for ranking precision
-    const rankingSubtotal =
-      breadthUncapped + feesUncapped + effUncapped +
-      communityVoteScore +
-      stabilityScore + tenureScore + retScore +
-      reoScore +
-      capScore;
-
     const { multiplier: penaltyMultiplier } = calculatePenalties(m.penalties);
 
-    // Normalise to 0–100 using uncapped subtotal for differentiation
-    const penalised = rankingSubtotal * penaltyMultiplier;
+    // Normalise to 0–100 (max subtotal is 96 with community votes)
+    const penalised = subtotal * penaltyMultiplier;
     const finalScore = (penalised / MAX_SUBTOTAL) * 100;
 
     return {
@@ -321,7 +307,7 @@ export async function computeMonthlyScores(
       community_vote_score: round2(communityVoteScore),
       subtotal: round2(subtotal),
       penalty_multiplier: round2(penaltyMultiplier),
-      final_score: round4(Math.min(100, Math.max(0, finalScore))),
+      final_score: round2(Math.min(100, Math.max(0, finalScore))),
       months_active: m.monthsActive,
       is_eligible_for_badge: false, // set after ranking — #1 gets the badge
     };
@@ -340,6 +326,12 @@ export async function computeMonthlyScores(
     if (deployDiff !== 0) return deployDiff;
     return mb.monthsActive - ma.monthsActive;
   });
+  // Nudge tied scores apart by 0.01 so they display differently
+  for (let i = 1; i < scored.length; i++) {
+    if (scored[i].final_score >= scored[i - 1].final_score) {
+      scored[i].final_score = round4(scored[i - 1].final_score - 0.01);
+    }
+  }
   scored.forEach((s, i) => {
     (s as Record<string, unknown>).rank = i + 1;
   });
