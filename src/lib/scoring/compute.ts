@@ -25,6 +25,11 @@ import { calculatePenalties, type PenaltyInput } from './penalties';
 const MAX_SUBTOTAL = 81;
 const MAX_COMMUNITY_VOTE_SCORE = 10;
 
+// Protocol team indexers excluded from the community leaderboard
+const LEADERBOARD_BLACKLIST = new Set([
+  '0xbdfb5ee5a2abf4fc7bb1bd1221067aef7f9de491', // upgradeindexer (Edge & Node)
+]);
+
 interface IndexerMetrics {
   address: string;
   // Network Contribution
@@ -88,14 +93,17 @@ export async function computeMonthlyScores(
 
   // ── Gather raw metrics from Postgres ──────────────────
 
-  // 1. Active indexers with current state
-  const indexers = await sql`
+  // 1. Active indexers with current state (excluding blacklisted)
+  const allIndexers = await sql`
     SELECT address, self_stake_grt, delegated_grt, delegator_apr,
            effective_cut, delegation_capacity_pct, reo_status,
            created_at_epoch, allocation_count
     FROM indexers
     WHERE self_stake_grt > 0
   `;
+  const indexers = allIndexers.filter(
+    (idx) => !LEADERBOARD_BLACKLIST.has(idx.address.toLowerCase())
+  );
 
   if (indexers.length === 0) {
     console.log('No indexers found — skipping score computation');
