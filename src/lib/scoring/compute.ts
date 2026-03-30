@@ -313,8 +313,19 @@ export async function computeMonthlyScores(
     };
   });
 
-  // Assign ranks by final_score descending
-  scored.sort((a, b) => b.final_score - a.final_score);
+  // Assign ranks by final_score descending, with tiebreakers:
+  // 1. More distinct deployments (rewards broader network service)
+  // 2. Longer tenure (continuous months, not tiered)
+  const metricsMap = new Map(metrics.map((m) => [m.address, m]));
+  scored.sort((a, b) => {
+    const diff = b.final_score - a.final_score;
+    if (diff !== 0) return diff;
+    const ma = metricsMap.get(a.indexer_address)!;
+    const mb = metricsMap.get(b.indexer_address)!;
+    const deployDiff = mb.distinctDeployments - ma.distinctDeployments;
+    if (deployDiff !== 0) return deployDiff;
+    return mb.monthsActive - ma.monthsActive;
+  });
   scored.forEach((s, i) => {
     (s as Record<string, unknown>).rank = i + 1;
   });

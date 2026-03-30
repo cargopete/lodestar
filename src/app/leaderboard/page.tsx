@@ -143,7 +143,12 @@ export default function LeaderboardPage() {
       const { liveScore } = computeLiveScores(e, tallies, maxWeighted);
       return { ...e, final_score: liveScore };
     });
-    withLive.sort((a, b) => b.final_score - a.final_score);
+    withLive.sort((a, b) => {
+      const diff = b.final_score - a.final_score;
+      if (diff !== 0) return diff;
+      // Tiebreaker: more months active (longer tenure wins)
+      return b.months_active - a.months_active;
+    });
     withLive.forEach((e, i) => { e.rank = i + 1; });
     return withLive;
   }, [rawEntries, votes]);
