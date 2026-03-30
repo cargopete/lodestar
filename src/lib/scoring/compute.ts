@@ -8,7 +8,7 @@
  */
 
 import type { DbClient } from '../db';
-import { computeBounds } from './normalize';
+import { computeBounds, normalizeUncapped } from './normalize';
 import {
   scoreAllocationBreadth,
   scoreQueryFees,
@@ -260,6 +260,7 @@ export async function computeMonthlyScores(
   // ── Score each indexer ────────────────────────────────
 
   const scored = metrics.map((m) => {
+    // Capped scores for component breakdown display
     const breadthScore = scoreAllocationBreadth(m.distinctDeployments, breadthBounds.p10, breadthBounds.p90);
     const queryFeeScore = scoreQueryFees(m.queryFees, feeBounds.p10, feeBounds.p90);
     const allocEffScore = scoreAllocationEfficiency(m.allocEfficiency, effBounds.p10, effBounds.p90);
@@ -275,6 +276,11 @@ export async function computeMonthlyScores(
       ? (voterWeighted / maxWeightedVotes) * MAX_COMMUNITY_VOTE_SCORE
       : 0;
 
+    // Uncapped continuous scores for final_score — preserves differentiation above p90
+    const breadthUncapped = normalizeUncapped(m.distinctDeployments, breadthBounds.p10, breadthBounds.p90, 20);
+    const feesUncapped = normalizeUncapped(m.queryFees, feeBounds.p10, feeBounds.p90, 10);
+    const effUncapped = normalizeUncapped(m.allocEfficiency, effBounds.p10, effBounds.p90, 10);
+
     const subtotal =
       breadthScore + queryFeeScore + allocEffScore +
       communityVoteScore +
@@ -282,10 +288,18 @@ export async function computeMonthlyScores(
       reoScore +
       capScore;
 
+    // Use uncapped continuous values for ranking precision
+    const rankingSubtotal =
+      breadthUncapped + feesUncapped + effUncapped +
+      communityVoteScore +
+      stabilityScore + tenureScore + retScore +
+      reoScore +
+      capScore;
+
     const { multiplier: penaltyMultiplier } = calculatePenalties(m.penalties);
 
-    // Normalise to 0–100 (max subtotal is 96 with community votes)
-    const penalised = subtotal * penaltyMultiplier;
+    // Normalise to 0–100 using uncapped subtotal for differentiation
+    const penalised = rankingSubtotal * penaltyMultiplier;
     const finalScore = (penalised / MAX_SUBTOTAL) * 100;
 
     return {

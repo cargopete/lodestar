@@ -49,6 +49,22 @@ export function normalize(
 }
 
 /**
+ * Like normalize, but does not cap at maxPoints.
+ * Values above p90 continue to increase linearly.
+ * Used for final score calculation to break ties among top indexers.
+ */
+export function normalizeUncapped(
+  value: number,
+  p10: number,
+  p90: number,
+  maxPoints: number
+): number {
+  if (p90 <= p10) return value >= p10 ? maxPoints : 0;
+  const bounded = Math.max(p10, value);
+  return ((bounded - p10) / (p90 - p10)) * maxPoints;
+}
+
+/**
  * Inverted normalization — lower values score higher.
  * Values at p10 (lowest) → maxPoints. Values at p90 (highest) → 0.
  */
