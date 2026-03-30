@@ -307,7 +307,7 @@ export async function computeMonthlyScores(
       community_vote_score: round2(communityVoteScore),
       subtotal: round2(subtotal),
       penalty_multiplier: round2(penaltyMultiplier),
-      final_score: round2(Math.min(100, Math.max(0, finalScore))),
+      final_score: round4(Math.min(100, Math.max(0, finalScore))),
       months_active: m.monthsActive,
       is_eligible_for_badge: false, // set after ranking — #1 gets the badge
     };
@@ -346,4 +346,8 @@ export async function computeMonthlyScores(
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+function round4(n: number): number {
+  return Math.round(n * 10000) / 10000;
 }
