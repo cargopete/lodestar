@@ -26,6 +26,7 @@ import {
   fetchRewardsHistory,
   fetchPayments,
   fetchIndexerPayments,
+  fetchIndexerTrends,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -463,5 +464,20 @@ export function useIndexerPayments(receiver: string) {
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
     enabled: !!receiver,
+  });
+}
+
+/**
+ * Hook for indexer daily reward & query fee trends
+ * (supplementary data from community Horizon Performance subgraph)
+ */
+export function useIndexerTrends(indexer: string | null, days = 30) {
+  return useQuery({
+    queryKey: ['indexerTrends', indexer, days],
+    queryFn: () => fetchIndexerTrends(indexer!, days),
+    staleTime: TEN_MINUTES,
+    refetchInterval: TEN_MINUTES,
+    enabled: !!indexer,
+    retry: 1, // supplementary — don't hammer it
   });
 }

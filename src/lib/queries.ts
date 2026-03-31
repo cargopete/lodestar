@@ -840,3 +840,32 @@ export interface PaymentsEscrowTransactionsResponse {
 export interface GraphTallyTokensCollectedResponse {
   graphTallyTokensCollecteds: GraphTallyTokensCollected[];
 }
+
+// =============================================================================
+// HORIZON PERFORMANCE SUBGRAPH TYPES (community — supplementary timeseries)
+// =============================================================================
+
+/** Daily reward aggregation from Horizon Performance subgraph */
+export interface RewardDailyAgg {
+  timestamp: string;
+  indexer: string;
+  totalRewards: string;
+  totalIndexerRewards: string;
+  totalDelegationRewards: string;
+  rewardCount: string;
+}
+
+/** Daily query fee aggregation from Horizon Performance subgraph */
+export interface QueryFeeDailyAgg {
+  timestamp: string;
+  indexer: string;
+  totalCollected: string;
+  totalCurators: string;
+  feeCount: string;
+}
+
+/** Combined response from indexer trends API */
+export interface IndexerTrendsResponse {
+  rewards: RewardDailyAgg[];
+  queryFees: QueryFeeDailyAgg[];
+}

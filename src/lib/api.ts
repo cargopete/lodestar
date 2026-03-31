@@ -8,6 +8,7 @@ import {
   type DelegatorPortfolioResponse,
   type CuratorPortfolioResponse,
   type PaymentsOverview,
+  type IndexerTrendsResponse,
 } from './queries';
 import type { EnrichedIndexer } from './enriched';
 import type { ManifestAnalysis } from './manifest';
@@ -389,6 +390,21 @@ export async function fetchIndexerPayments(receiver: string): Promise<PaymentsOv
   if (!response.ok) throw new Error(`Indexer payments failed: ${response.status}`);
   const json = await response.json();
   return json.data as PaymentsOverview;
+}
+
+/**
+ * Fetch daily reward and query fee trends for an indexer
+ * (supplementary data from community Horizon Performance subgraph)
+ */
+export async function fetchIndexerTrends(
+  indexer: string,
+  days = 30
+): Promise<IndexerTrendsResponse> {
+  const qs = new URLSearchParams({ indexer, days: String(days) });
+  const response = await fetch(`/api/indexer-trends?${qs}`);
+  if (!response.ok) throw new Error(`Indexer trends failed: ${response.status}`);
+  const json = await response.json();
+  return json.data as IndexerTrendsResponse;
 }
 
 /**

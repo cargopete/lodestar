@@ -23,6 +23,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { DelegationCalculator } from '@/components/ui/DelegationCalculator';
 import { ProvisionsPanel } from '@/components/ui/ProvisionsPanel';
 import { DelegationFeed } from '@/components/feed/DelegationFeed';
+import { IndexerTrendsChart } from '@/components/charts/IndexerTrendsChart';
 import { calculateIndexerScore, SCORE_WEIGHTS, SCORE_LABELS, type IndexerScore } from '@/lib/risk-score';
 
 interface IndexerDetail {
@@ -660,6 +661,9 @@ export default function IndexerDetailPage({
 
           {/* Recent Delegation Activity — reusable feed component pre-filtered to this indexer */}
           <DelegationFeed indexerAddress={address} />
+
+          {/* Daily Reward & Query Fee Trends (supplementary — community subgraph) */}
+          <IndexerTrendsChart indexer={address} />
 
           {/* Parameters */}
           <Card>

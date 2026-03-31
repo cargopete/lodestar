@@ -67,6 +67,35 @@ export async function ensQuery<T = Record<string, unknown>>(query: string): Prom
   return json.data as T;
 }
 
+// Horizon Indexer Performance subgraph (community — supplementary timeseries data)
+// https://thegraph.com/explorer/subgraphs/eD1TVayj2NtmCjWFr4hZhc1APHQs9iR2Xah6KNE8Y4h
+const HORIZON_PERF_URL = process.env.GRAPH_API_KEY
+  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/eD1TVayj2NtmCjWFr4hZhc1APHQs9iR2Xah6KNE8Y4h`
+  : null;
+
+export async function horizonPerfQuery<T = Record<string, unknown>>(query: string): Promise<T> {
+  if (!HORIZON_PERF_URL) {
+    throw new Error('GRAPH_API_KEY not configured');
+  }
+
+  const res = await fetch(HORIZON_PERF_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Horizon performance subgraph request failed: ${res.status}`);
+  }
+
+  const json = await res.json();
+  if (json.errors) {
+    throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
+  }
+
+  return json.data as T;
+}
+
 export async function delegationEventsQuery<T = Record<string, unknown>>(query: string): Promise<T> {
   if (!DELEGATION_EVENTS_URL) {
     throw new Error('GRAPH_API_KEY not configured');
