@@ -72,7 +72,7 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 ### 3.2 Indexer Comparison Tool ✅
 - [x] Side-by-side comparison (2-4 indexers)
 - [x] Metrics: stake, delegation, capacity, cuts, APR
-- [ ] Parameter change history timeline
+- [x] Parameter change history timeline
 - [x] Cooldown status indicator (shows "Locked" badge when in cooldown)
 - [ ] "Locked parameters" badge for marketing analysis
 
@@ -234,20 +234,23 @@ Monthly leaderboard scoring engine with percentile-normalised scores across 10 d
 - [x] Unit tests covering all components, normalization, and penalties
 - [x] Indexer of the Month badge (#1 ranked indexer each month)
 
-### Leaderboard Page
+### Leaderboard Page ✅
 - [x] `/leaderboard` route with monthly rankings
-- [x] Period selector (month/year toggle)
+- [x] Period selector (month toggle)
 - [x] Expandable score breakdown per indexer (all 12 sub-dimensions)
-- [ ] Badge indicator for eligible indexers
-- [ ] Wire leaderboard data into Redis for Vercel reads
+- [x] Badge indicator for eligible indexers (trophy icon + tooltip)
+- [x] Wire leaderboard data into Redis for Vercel reads
+- [x] Historical period viewing via Postgres fallback
 
-### Community Voting (Phase 3 — deferred)
-- [ ] Wallet-signature voting mechanism (10pts max, reserved in formula)
-- [ ] Vote tallying and integration into final score
-- [ ] Anti-gaming measures
+### Community Voting ✅
+- [x] EIP-712 wallet-signature voting mechanism (10pts max)
+- [x] Vote tallying and integration into final score (weighted: delegators 5x)
+- [x] Anti-gaming measures (SIWE auth, 1 vote per address, delegator verification)
 
-### Indexer of the Month (Partial)
+### Indexer of the Month ✅
 - [x] Monthly badge assignment (#1 ranked scorer)
+- [x] Banner on leaderboard page with period label ("for March 2026")
+- [x] Trophy icon with hover tooltip in leaderboard table rows
 - [ ] Intel Feed integration
 - [ ] Historical badge display on indexer profile
 
@@ -268,6 +271,15 @@ Monthly leaderboard scoring engine with percentile-normalised scores across 10 d
 - [x] Add educational tooltips at top of indexer table explaining reward cut, effective cut, and warning signs
 - [x] 30/90-day rolling APY alongside current APR for longer-term performance view
 - Reference: https://github.com/PaulieB14/delegator-apy-dashboard
+
+### Delegation & Network Charts (Andrew Clews — 2026-03-30)
+- [x] Delegation inflows/outflows chart on `/delegators` (30d/90d/180d/1y)
+- [x] Token issuance & burn chart on `/delegators` (net issuance + burn breakdown per epoch)
+
+### Subgraph UX (IroqouisPliskin — 2026-03-30)
+- [x] Subgraph name & network badge shown prominently on `/subgraphs/[hash]`
+- [x] Browser tab title updated to subgraph name
+- [x] Filter state persistence via URL search params on `/subgraphs` (survives back-navigation)
 
 ### Indexer Operations (Gemma / LunaNova — 2026-03-25)
 - [ ] Indexing status at indexer level — show all allocated subgraphs and how close to chainhead each is
@@ -354,6 +366,17 @@ GET  /api/reo                       # REO eligibility status
 GET  /api/manifest                  # IPFS manifest parse
 GET  /api/feed                      # Activity feed
 GET  /api/delegation-events         # Raw delegation events
+GET  /api/delegation-flows          # Daily inflow/outflow aggregates
+GET  /api/token-metrics             # Per-epoch issuance & burn
+GET  /api/parameter-history/[addr]  # Indexer parameter change timeline
+GET  /api/leaderboard               # Monthly leaderboard (Redis + Postgres)
+GET  /api/vote                      # Community vote tallies
+POST /api/vote                      # Submit EIP-712 signed vote
+GET  /api/indexer-trends            # Daily reward & fee trends per indexer
+GET  /api/indexer-status/[addr]     # Indexer subgraph sync status
+GET  /api/payments                  # GraphTally payment pipeline overview
+GET  /api/payments/[addr]           # Per-indexer payment details
+GET  /api/rewards-history           # Historical rewards for portfolio
 
 # Subgraph / Search
 POST /api/subgraph                  # Raw subgraph query proxy
@@ -397,6 +420,12 @@ GET  /api/ens                       # ENS name resolution
 | Rolling APY (30/90d) | ✅ Live | PaulieB14's dashboard is standalone |
 | Greedy indexer warnings | ✅ Live | Novel feature |
 | Delegation activity feed | ✅ Live | Novel feature |
-| Indexer leaderboard scoring | ✅ Engine live | Novel feature (RFC-003) |
+| Indexer leaderboard + IOTM | ✅ Live | Novel feature (RFC-003) |
+| Community voting (EIP-712) | ✅ Live | Novel feature |
+| Parameter change timeline | ✅ Live | Stake Machine dead, nobody else |
+| Delegation flow charts | ✅ Live | Novel feature |
+| Token issuance/burn charts | ✅ Live | Novel feature |
+| GraphTally payment pipeline | ✅ Live | Novel feature |
+| Indexer daily trends | ✅ Live | Novel feature |
 
 The window is open. Let's build.

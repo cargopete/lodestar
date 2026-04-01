@@ -47,6 +47,7 @@ Features from the community needs report that are already built:
 | Delegation flows chart | Done | v1.5.9 |
 | Token issuance & burn chart | Done | v1.5.9 |
 | Mobile responsive | Done | Throughout |
+| Parameter change timeline | Done | ParameterHistory component on indexer pages, `/api/parameter-history` |
 | Blog | Done | Three posts live |
 
 ---
