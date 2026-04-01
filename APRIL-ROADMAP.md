@@ -57,7 +57,7 @@ Features from the community needs report that are already built:
 
 | # | Feature | Effort | Impact | Status |
 |---|---------|--------|--------|--------|
-| 9 | **Parameter change timeline** — timestamped log of every indexer reward/fee cut change. Stake Machine did this but is dead. | Medium | High | Not started |
+| 9 | **Parameter change timeline** — timestamped log of every indexer reward/fee cut change. Stake Machine did this but is dead. | Medium | High | Done |
 | 10 | **Revenue decomposition per subgraph** — net profitability per allocation after gas costs | High | High (indexers) | Not started |
 | 11 | **APR transparency breakdown** — show every variable in the APR formula with conservative/optimistic projections | Low-Med | Medium | Not started |
 
