@@ -1,100 +1,106 @@
-# April 2026 — Community Feature Requests
+# April 2026 — Roadmap
 
-Tracking community-requested features and enhancements from user feedback.
-
----
-
-## Andrew Clews (via EthCC, 30 Mar 2026)
-
-### 1. Delegator Historical Inflows/Outflows Chart
-- **Page:** `/delegators`
-- **Request:** Chart over time showing net historical inflows and outflows
-- **Effort:** Medium
-- **Status:** Not started
-
-**What we have:**
-- `delegation_events` table already ingested continuously (event_type, delegator, indexer, tokens_grt, timestamp)
-- `indexer_db.net_flow_grt_7d` already aggregated for 7d window
-- `IndexerTrendsChart` component is a good pattern to follow (tabbed AreaChart/BarChart)
-
-**Plan:**
-1. New API route `/api/delegation-flows` — aggregate `delegation_events` by day, splitting inflows (StakeDelegated) vs outflows (StakeUndelegated), with configurable time range (30d/90d/1y)
-2. New `DelegationFlowChart` component — stacked bar or area chart (green inflows, red outflows, line for net flow)
-3. New hook `useDelegationFlows(days)` — React Query wrapper
-4. Place on `/delegators` page above or below the existing DelegationFeed
-
-### 2. Net Token Issuance / Burn Over Time
-- **Request:** Historical chart of net GRT issuance vs burn
-- **Bonus:** Break out burn source by type (curation tax, query fee burn, etc.)
-- **Effort:** Medium-High
-- **Status:** Not started
-
-**What we have:**
-- `epochs` table has `total_rewards` (issuance), `taxed_query_fees` (fee burn), per-epoch
-- `disputes` table has `tokens_burned_grt` (slashing burn)
-- `network_snapshots` captures staked/delegated/signalled but NOT `totalSupply`
-- `networkGRTIssuancePerBlock` fetched in refresh.ts but not persisted historically
-
-**Plan:**
-1. Add `total_supply_grt` column to `network_snapshots` — store from `graphNetwork.totalSupply` during snapshot cron
-2. New API route `/api/token-metrics` — join epochs + disputes to compute per-epoch: issuance, dispute burn, query fee tax burn, net issuance
-3. New `TokenIssuanceChart` component — stacked area chart with burn breakdown by source
-4. Place on `/delegators` or a new `/network` overview page
-
-**Burn sources to break out:**
-- Indexing reward issuance (positive)
-- Query fee tax burn (negative)
-- Dispute/slashing burn (negative)
-- Delegation tax (removed in Horizon — historical only)
+Tracking community-requested features, gap analysis items, and enhancements.
 
 ---
 
-## IroqouisPliskin (via GRT chat, 30 Mar 2026)
+## Community Feature Requests (v1.5.9 — all shipped)
 
-### 3. Subgraph Detail — Show Name & Network at Top
-- **Page:** `/subgraphs/[hash]`
-- **Request:** Display high-level info (subgraph name, network) prominently at the top so users can distinguish between multiple open tabs
-- **Effort:** Low
-- **Status:** Not started
-
-**What we have:**
-- Detail page currently only shows "Deployment" + IPFS hash in header
-- `displayName` is available from the subgraph deployments API but not passed to detail page
-- Network is available via `useManifestAnalysis(hash)` (already fetched on detail page for ManifestSection)
-
-**Plan:**
-1. Fetch subgraph metadata on detail page (either pass via link state or add a lightweight lookup endpoint)
-2. Pull network from manifest analysis (already loaded)
-3. Update header: show subgraph name as `<h1>`, network badge, IPFS hash as secondary info
-4. Update `<title>` tag so browser tabs show the subgraph name too
-
-### 4. Subgraph List — Retain Filter State on Back Navigation
-- **Page:** `/subgraphs`
-- **Request:** When filtering the list, clicking into a subgraph, then pressing back, the filters should be preserved rather than reset
-- **Effort:** Low-Medium
-- **Status:** Not started
-
-**What we have:**
-- Filters are all React state: `page`, `sortKey`, `sortDesc`, `searchQuery`, `feeWindow`, `eliteOnly`, `networkFilter`, `complexityFilter`
-- Zero URL search params currently — back button resets everything
-- Back link is hardcoded `<Link href="/subgraphs">`
-
-**Plan:**
-1. Sync all filter state to URL search params via `useSearchParams` + `useRouter.replace`
-2. On mount, read initial state from URL params (fallback to defaults)
-3. Change "Back to Subgraphs" link on detail page to use `router.back()` or preserve the query string
-4. This also gives users shareable filtered views for free
-
----
-
-## Status
+### Andrew Clews (via EthCC, 30 Mar 2026)
 
 | # | Feature | Status |
 |---|---------|--------|
-| 1 | Delegation inflows/outflows chart | Done |
-| 2 | Token issuance/burn chart | Done |
-| 3 | Subgraph name/network header | Done |
-| 4 | Filter state persistence | Done |
+| 1 | Delegation inflows/outflows chart (`/delegators`) | Done (v1.5.9) |
+| 2 | Token issuance/burn chart (`/delegators`) | Done (v1.5.9) |
+
+### IroqouisPliskin (via GRT chat, 30 Mar 2026)
+
+| # | Feature | Status |
+|---|---------|--------|
+| 3 | Subgraph name/network header (`/subgraphs/[hash]`) | Done (v1.5.9) |
+| 4 | Filter state persistence (`/subgraphs`) | Done (v1.5.9) |
+
+---
+
+## Gap Analysis — What's Already in Lodestar
+
+Features from the community needs report that are already built:
+
+| Feature | Status | Where |
+|---------|--------|-------|
+| Provision management dashboard | Done | ProvisionsPanel, `/api/provisions` |
+| GraphTally payment flow tracker | Done | `/payments` — escrow, redemptions, collection |
+| POI tracking | Partial | `/poi` explorer + detail pages (no countdown timers or alerts) |
+| Multi-data-service comparison | Partial | `/services` page, per-service breakdown |
+| Indexer trust/risk score | Done | 10-dimension composite (A–F), `risk-score.ts` |
+| Effective commission display | Done | Indexer profiles + `/compare` |
+| Network health dashboard | Done | Home page — staked, delegated, fees, TVL, epochs |
+| Overdelegation detection | Partial | Scored in risk model, no simulator |
+| Tax-ready CSV export | Done | ExportButton on delegator portfolio |
+| Governance tracker | Done | `/governance` — GIP status, impact, forum links |
+| Subgraph health monitor | Done | Sync status, block lag, errors on detail pages |
+| Allocation tracker per subgraph | Partial | Visible on detail pages, no dedicated trend view |
+| Community voting | Done | EIP-712, weighted votes (delegators 5x) |
+| REO eligibility | Done | Oracle-sourced, shown on indexer pages |
+| Indexer trends chart | Done | Daily rewards & query fees (v1.5.8) |
+| Leaderboard + IOTM | Done | Monthly scoring, badge holder, trophy icon |
+| Delegation flows chart | Done | v1.5.9 |
+| Token issuance & burn chart | Done | v1.5.9 |
+| Mobile responsive | Done | Throughout |
+| Blog | Done | Three posts live |
+
+---
+
+## Gap Analysis — What's NOT Built Yet
+
+### Tier 2 — Analytics & Charting
+
+| # | Feature | Effort | Impact | Status |
+|---|---------|--------|--------|--------|
+| 9 | **Parameter change timeline** — timestamped log of every indexer reward/fee cut change. Stake Machine did this but is dead. | Medium | High | Not started |
+| 10 | **Revenue decomposition per subgraph** — net profitability per allocation after gas costs | High | High (indexers) | Not started |
+| 11 | **APR transparency breakdown** — show every variable in the APR formula with conservative/optimistic projections | Low-Med | Medium | Not started |
+
+### Tier 1 — Horizon-Native (remaining gaps)
+
+| # | Feature | Effort | Impact | Status |
+|---|---------|--------|--------|--------|
+| 5 | **Stake-to-fees collateral monitor** — real-time view of provisioned stake locked as fee collection collateral | Medium | High (indexers) | Not started |
+| 6 | **Legacy → Horizon migration status** — which allocations/delegations have migrated | Medium | Diminishing | Not started |
+
+### Tier 3 — Community & Social
+
+| # | Feature | Effort | Impact | Status |
+|---|---------|--------|--------|--------|
+| 13 | **"What-if" delegation simulator** — model moving GRT between indexers, break-even analysis | Medium | High (delegators) | Not started |
+| 15 | **Parameter change alerts** — push notifications when a delegated indexer modifies cuts | Medium | High | Not started |
+
+### Tier 4 — Developer Tooling
+
+| # | Feature | Effort | Impact | Status |
+|---|---------|--------|--------|--------|
+| 19 | **Signal adequacy indicator** — is curation signal sufficient to attract quality indexers? | Low | Medium | Not started |
+| 20 | **Version migration dashboard** — track signal migration, indexer adoption across subgraph versions | Medium | Niche | Not started |
+
+### Enhancements to Existing Features
+
+| Feature | Effort | Impact | Status |
+|---------|--------|--------|--------|
+| **POI staleness countdown timers** — days since last POI per allocation, alerts before 28-day force-close | Low-Med | High (indexers) | Not started |
+| **Allocation trend view per subgraph** — time-series of indexer count + total stake per deployment | Medium | Medium | Not started |
+| **Multi-service delegation comparison** — cross-indexer comparison across data services | Medium | High (when more services launch) | Not started |
+
+---
+
+## Data Integration Opportunities
+
+Potential external data sources to enrich Lodestar:
+
+- **Dune Analytics** — historical L1→L2 bridge data, whale tracking, gas cost analysis, cross-protocol comparisons. No Graph Spellbook spell exists yet — building one would be a competitive edge.
+- **Messari API** — macro context (price, market cap, DePIN sector comparisons, quarterly KPIs). Free tier: 20 req/min.
+- **Horizon contract events on Dune** — HorizonStaking, GraphPayments, PaymentsEscrow, SubgraphService. First dashboard to decode these wins.
+
+---
 
 ## Pre-deploy: Database Migration
 
