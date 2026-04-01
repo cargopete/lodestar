@@ -286,6 +286,7 @@ export default function LeaderboardPage() {
             entry={entry}
             name={nameMap.get(entry.indexer_address.toLowerCase())}
             isBadgeHolder={entry.indexer_address.toLowerCase() === badgeHolderAddress?.toLowerCase()}
+            badgePeriod={bannerPeriod}
             expanded={expanded === entry.indexer_address}
             onToggle={() => setExpanded(expanded === entry.indexer_address ? null : entry.indexer_address)}
           />
@@ -322,6 +323,7 @@ export default function LeaderboardPage() {
                   entry={entry}
                   name={nameMap.get(entry.indexer_address.toLowerCase())}
                   isBadgeHolder={entry.indexer_address.toLowerCase() === badgeHolderAddress?.toLowerCase()}
+                  badgePeriod={bannerPeriod}
                   expanded={expanded === entry.indexer_address}
                   onToggle={() => setExpanded(expanded === entry.indexer_address ? null : entry.indexer_address)}
                 />
@@ -387,12 +389,14 @@ function DesktopRow({
   entry,
   name,
   isBadgeHolder,
+  badgePeriod,
   expanded,
   onToggle,
 }: {
   entry: LeaderboardEntry;
   name: string | undefined;
   isBadgeHolder?: boolean;
+  badgePeriod?: string | null;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -427,8 +431,13 @@ function DesktopRow({
               )}
             </Link>
             {isBadgeHolder && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[10px] font-medium whitespace-nowrap">
-                Indexer of the Month
+              <span
+                title={`Indexer of the Month${badgePeriod ? ` (${formatPeriodFull(badgePeriod)})` : ''}`}
+                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/15 text-amber-400 cursor-help"
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
               </span>
             )}
           </div>
@@ -477,12 +486,14 @@ function MobileCard({
   entry,
   name,
   isBadgeHolder,
+  badgePeriod,
   expanded,
   onToggle,
 }: {
   entry: LeaderboardEntry;
   name: string | undefined;
   isBadgeHolder?: boolean;
+  badgePeriod?: string | null;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -501,8 +512,13 @@ function MobileCard({
                 {name ?? shortenAddress(entry.indexer_address)}
               </Link>
               {isBadgeHolder && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[10px] font-medium">
-                  IOTM
+                <span
+                  title={`Indexer of the Month${badgePeriod ? ` (${formatPeriodFull(badgePeriod)})` : ''}`}
+                  className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/15 text-amber-400"
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
                 </span>
               )}
             </div>
