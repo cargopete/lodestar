@@ -282,8 +282,8 @@ function SubgraphDirectory() {
   const rows = useMemo(() => {
     let filtered = allRows;
     if (eliteOnly) filtered = filtered.filter((r) => r.isElite);
-    if (networkFilter !== 'all') filtered = filtered.filter((r) => rowNetworks[r.ipfsHash] === networkFilter);
-    if (complexityFilter !== 'all') filtered = filtered.filter((r) => rowComplexities[r.ipfsHash] === complexityFilter);
+    if (networkFilter !== 'all') filtered = filtered.filter((r) => !rowNetworks[r.ipfsHash] || rowNetworks[r.ipfsHash] === networkFilter);
+    if (complexityFilter !== 'all') filtered = filtered.filter((r) => !rowComplexities[r.ipfsHash] || rowComplexities[r.ipfsHash] === complexityFilter);
     // In 30d mode, paginate client-side
     if (is30d) {
       return filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -296,8 +296,8 @@ function SubgraphDirectory() {
     if (is30d) {
       let filtered = allRows;
       if (eliteOnly) filtered = filtered.filter((r) => r.isElite);
-      if (networkFilter !== 'all') filtered = filtered.filter((r) => rowNetworks[r.ipfsHash] === networkFilter);
-      if (complexityFilter !== 'all') filtered = filtered.filter((r) => rowComplexities[r.ipfsHash] === complexityFilter);
+      if (networkFilter !== 'all') filtered = filtered.filter((r) => !rowNetworks[r.ipfsHash] || rowNetworks[r.ipfsHash] === networkFilter);
+      if (complexityFilter !== 'all') filtered = filtered.filter((r) => !rowComplexities[r.ipfsHash] || rowComplexities[r.ipfsHash] === complexityFilter);
       return filtered.length;
     }
     return undefined; // use estimate for all-time

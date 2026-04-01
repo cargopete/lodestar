@@ -30,11 +30,11 @@ export async function GET(request: NextRequest) {
         SELECT
           DATE(timestamp) AS date,
           COALESCE(SUM(CASE
-            WHEN event_type IN ('StakeDelegated', 'StakeDelegatedLocked') THEN tokens_grt
+            WHEN event_type = 'delegation' THEN tokens_grt
             ELSE 0
           END), 0) AS inflows,
           COALESCE(SUM(CASE
-            WHEN event_type IN ('StakeUndelegated', 'StakeUndelegatedLocked') THEN tokens_grt
+            WHEN event_type = 'undelegation' THEN tokens_grt
             ELSE 0
           END), 0) AS outflows
         FROM delegation_events
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       `;
 
       return rows.map((r) => ({
-        date: String(r.date),
+        date: r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
         inflows: Number(r.inflows),
         outflows: Number(r.outflows),
         net: Number(r.inflows) - Number(r.outflows),
