@@ -29,6 +29,7 @@ import {
   fetchIndexerTrends,
   fetchDelegationFlows,
   fetchTokenMetrics,
+  fetchParameterHistory,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -505,5 +506,18 @@ export function useTokenMetrics(count = 100) {
     queryFn: () => fetchTokenMetrics(count),
     staleTime: TEN_MINUTES,
     refetchInterval: TEN_MINUTES,
+  });
+}
+
+/**
+ * Hook for indexer parameter change history (reward cut, query fee cut)
+ */
+export function useParameterHistory(address: string | null) {
+  return useQuery({
+    queryKey: ['parameterHistory', address],
+    queryFn: () => fetchParameterHistory(address!),
+    staleTime: TEN_MINUTES,
+    refetchInterval: TEN_MINUTES,
+    enabled: !!address,
   });
 }

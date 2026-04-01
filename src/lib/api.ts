@@ -462,3 +462,16 @@ export async function fetchDelegationFlows(days = 90): Promise<{
   const json = await response.json();
   return json.data ?? [];
 }
+
+export async function fetchParameterHistory(address: string): Promise<{
+  param_name: string;
+  old_value: number | null;
+  new_value: number;
+  epoch: number | null;
+  detected_at: string;
+}[]> {
+  const response = await fetch(`/api/parameter-history/${encodeURIComponent(address)}`);
+  if (!response.ok) throw new Error(`Parameter history failed: ${response.status}`);
+  const json = await response.json();
+  return json.data ?? [];
+}

@@ -24,6 +24,7 @@ import { DelegationCalculator } from '@/components/ui/DelegationCalculator';
 import { ProvisionsPanel } from '@/components/ui/ProvisionsPanel';
 import { DelegationFeed } from '@/components/feed/DelegationFeed';
 import { IndexerTrendsChart } from '@/components/charts/IndexerTrendsChart';
+import { ParameterHistory } from '@/components/ParameterHistory';
 import { calculateIndexerScore, SCORE_WEIGHTS, SCORE_LABELS, type IndexerScore } from '@/lib/risk-score';
 
 interface IndexerDetail {
@@ -697,6 +698,9 @@ export default function IndexerDetailPage({
               </div>
             </CardContent>
           </Card>
+
+          {/* Parameter Change History */}
+          <ParameterHistory address={address} />
 
           {/* Horizon Metrics */}
           {(indexer.overDelegationDilution || indexer.ownStakeRatio || indexer.provisionedTokens) && (
