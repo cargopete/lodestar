@@ -19,8 +19,15 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+/** Month name only — used in the period selector dropdown */
 function formatPeriod(periodStart: string): string {
-  // Handle both YYYY-MM-DD and ISO datetime strings from Postgres
+  const d = new Date(periodStart.length === 10 ? periodStart + 'T00:00:00Z' : periodStart);
+  if (isNaN(d.getTime())) return periodStart;
+  return MONTH_NAMES[d.getUTCMonth()];
+}
+
+/** "March 2026" — used in the banner */
+function formatPeriodFull(periodStart: string): string {
   const d = new Date(periodStart.length === 10 ? periodStart + 'T00:00:00Z' : periodStart);
   if (isNaN(d.getTime())) return periodStart;
   return `${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
@@ -181,24 +188,18 @@ export default function LeaderboardPage() {
     );
   }
 
-  // Badge holder logic:
-  // - Historical view: use is_eligible_for_badge from that month's data
-  // - Live/current view: use badgeHolder from API (previous month's winner)
-  const historicalBadgeWinner = selectedPeriod ? entries.find((e) => e.is_eligible_for_badge) : null;
-  const liveBadgeHolder = !selectedPeriod ? data?.badgeHolder ?? null : null;
-
-  // Address of the badge holder to highlight in the table
-  const badgeHolderAddress = historicalBadgeWinner?.indexer_address ?? liveBadgeHolder?.address ?? null;
+  // Badge holder: API returns badgeHolder for both current (previous month's winner)
+  // and historical views (that month's winner)
+  const badgeHolder = data?.badgeHolder ?? null;
+  const badgeHolderAddress = badgeHolder?.address ?? null;
 
   // Banner info
   const bannerAddress = badgeHolderAddress;
   const bannerName = bannerAddress
     ? nameMap.get(bannerAddress.toLowerCase()) ?? shortenAddress(bannerAddress)
     : null;
-  const bannerScore = historicalBadgeWinner?.final_score ?? liveBadgeHolder?.score ?? null;
-  const bannerPeriod = historicalBadgeWinner
-    ? data.periodStart
-    : liveBadgeHolder?.period ?? null;
+  const bannerScore = badgeHolder?.score ?? null;
+  const bannerPeriod = badgeHolder?.period ?? null;
 
   return (
     <div className="space-y-6">
@@ -212,7 +213,9 @@ export default function LeaderboardPage() {
               </svg>
             </div>
             <div>
-              <p className="text-xs font-medium text-amber-400/80 uppercase tracking-wider">Indexer of the Month</p>
+              <p className="text-xs font-medium text-amber-400/80 uppercase tracking-wider">
+                Indexer of the Month{bannerPeriod ? ` (for ${formatPeriodFull(bannerPeriod)})` : ''}
+              </p>
               <Link
                 href={`/indexers/${bannerAddress}`}
                 className="text-lg font-semibold text-[var(--text)] hover:text-amber-400 transition-colors"
@@ -220,7 +223,7 @@ export default function LeaderboardPage() {
                 {bannerName}
               </Link>
               <p className="text-sm text-[var(--text-muted)] mt-0.5">
-                {formatPeriod(bannerPeriod)} — scored {bannerScore?.toFixed(2)} / 100
+                Scored {bannerScore?.toFixed(2)} / 100
               </p>
             </div>
           </div>

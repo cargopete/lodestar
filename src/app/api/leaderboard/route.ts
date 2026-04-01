@@ -10,6 +10,18 @@ interface LeaderboardCache {
   entries: LeaderboardEntry[];
 }
 
+/** Safely convert a Postgres date (may be a Date object) to YYYY-MM-DD */
+function toDateStr(val: unknown): string {
+  if (val instanceof Date) return val.toISOString().slice(0, 10);
+  const s = String(val);
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  // Fallback: try parsing
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return s.slice(0, 10);
+}
+
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
 
@@ -25,8 +37,8 @@ export async function GET(request: NextRequest) {
       ORDER BY period_start DESC
     `;
     const periods = rows.map((r) => ({
-      start: String(r.period_start).slice(0, 10),
-      end: String(r.period_end).slice(0, 10),
+      start: toDateStr(r.period_start),
+      end: toDateStr(r.period_end),
     }));
     return NextResponse.json({ periods }, {
       headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200' },
@@ -39,8 +51,11 @@ export async function GET(request: NextRequest) {
   // Try Redis cache first (always has "latest")
   const cached = await cacheGet<LeaderboardCache>('lodestar:leaderboard:latest');
 
+  // Normalise cached periodStart to YYYY-MM for comparison
+  const cachedYM = cached ? toDateStr(cached.periodStart).slice(0, 7) : null;
+
   // If no specific period requested, or requested period matches cached period, use Redis
-  if (!periodParam || (cached && cached.periodStart.startsWith(periodParam))) {
+  if (!periodParam || (cached && cachedYM === periodParam)) {
     if (!cached) {
       return NextResponse.json(
         { error: 'Leaderboard data not yet available — scores have not been computed' },
@@ -51,12 +66,13 @@ export async function GET(request: NextRequest) {
     // Look up previous month's badge holder from Postgres
     let badgeHolder: { address: string; score: number; period: string } | null = null;
     if (hasDbAccess() && db) {
+      const cachedDate = toDateStr(cached.periodStart);
       const badgeRows = await db`
         SELECT indexer_address, final_score, period_start
         FROM indexer_scores
         WHERE period_type = 'monthly'
           AND is_eligible_for_badge = true
-          AND period_start::text < ${cached.periodStart.slice(0, 10)}
+          AND period_start::date < ${cachedDate}::date
         ORDER BY period_start DESC
         LIMIT 1
       `;
@@ -64,7 +80,7 @@ export async function GET(request: NextRequest) {
         badgeHolder = {
           address: badgeRows[0].indexer_address,
           score: Number(badgeRows[0].final_score),
-          period: String(badgeRows[0].period_start).slice(0, 10),
+          period: toDateStr(badgeRows[0].period_start),
         };
       }
     }
@@ -130,11 +146,32 @@ export async function GET(request: NextRequest) {
     rank: i + 1,
   }));
 
-  const data: LeaderboardCache = {
-    periodStart: String(rows[0].period_start),
-    periodEnd: String(rows[0].period_end),
+  // Also look up badge holder for this historical period
+  let badgeHolder: { address: string; score: number; period: string } | null = null;
+  const thisPeriodDate = toDateStr(rows[0].period_start);
+  const badgeRows = await db`
+    SELECT indexer_address, final_score, period_start
+    FROM indexer_scores
+    WHERE period_type = 'monthly'
+      AND is_eligible_for_badge = true
+      AND period_start::text LIKE ${periodPrefix + '%'}
+    ORDER BY final_score DESC
+    LIMIT 1
+  `;
+  if (badgeRows.length > 0) {
+    badgeHolder = {
+      address: badgeRows[0].indexer_address,
+      score: Number(badgeRows[0].final_score),
+      period: toDateStr(badgeRows[0].period_start),
+    };
+  }
+
+  const data = {
+    periodStart: thisPeriodDate,
+    periodEnd: toDateStr(rows[0].period_end),
     computedAt: Date.now(),
     entries,
+    badgeHolder,
   };
 
   return NextResponse.json(data, {
