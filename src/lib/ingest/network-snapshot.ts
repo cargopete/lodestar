@@ -8,6 +8,7 @@ interface SubgraphNetworkStats {
     totalDelegatedTokens: string;
     totalTokensSignalled: string;
     totalTokensAllocated: string;
+    totalSupply: string;
     indexerCount: number;
     stakedIndexersCount: number;
     delegatorCount: number;
@@ -34,6 +35,7 @@ export async function writeNetworkSnapshot(
       totalDelegatedTokens
       totalTokensSignalled
       totalTokensAllocated
+      totalSupply
       indexerCount
       stakedIndexersCount
       delegatorCount
@@ -50,7 +52,7 @@ export async function writeNetworkSnapshot(
 
   await sql`
     INSERT INTO network_snapshots (
-      total_staked, total_delegated, total_signalled, total_allocated,
+      total_staked, total_delegated, total_signalled, total_allocated, total_supply_grt,
       indexer_count, active_indexer_count,
       delegator_count, active_delegator_count,
       curator_count, active_curator_count,
@@ -61,6 +63,7 @@ export async function writeNetworkSnapshot(
       ${weiToGRT(n.totalDelegatedTokens)},
       ${weiToGRT(n.totalTokensSignalled)},
       ${weiToGRT(n.totalTokensAllocated)},
+      ${weiToGRT(n.totalSupply)},
       ${n.indexerCount},
       ${n.stakedIndexersCount},
       ${n.delegatorCount},

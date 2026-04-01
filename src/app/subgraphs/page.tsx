@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Pagination } from '@/components/ui/Pagination';
@@ -93,22 +94,59 @@ interface SearchResult {
   } | null;
 }
 
-export default function SubgraphDirectory() {
-  const [page, setPage] = useState(0);
-  const [sortKey, setSortKey] = useState<SortKey>('queryFees');
-  const [sortDesc, setSortDesc] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+export default function SubgraphDirectoryPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-24">
+        <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <SubgraphDirectory />
+    </Suspense>
+  );
+}
+
+function SubgraphDirectory() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Initialise state from URL search params (or defaults)
+  const [page, setPage] = useState(() => Number(searchParams.get('page')) || 0);
+  const [sortKey, setSortKey] = useState<SortKey>(() => {
+    const v = searchParams.get('sort');
+    return (v === 'signal' || v === 'stake' || v === 'queryFees') ? v : 'queryFees';
+  });
+  const [sortDesc, setSortDesc] = useState(() => searchParams.get('dir') !== 'asc');
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
   const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [feeWindow, setFeeWindow] = useState<'allTime' | '30d'>('30d');
-  const [eliteOnly, setEliteOnly] = useState(false);
-  const [networkFilter, setNetworkFilter] = useState<string>('all');
-  const [complexityFilter, setComplexityFilter] = useState<string>('all');
+  const [feeWindow, setFeeWindow] = useState<'allTime' | '30d'>(() =>
+    searchParams.get('window') === 'allTime' ? 'allTime' : '30d'
+  );
+  const [eliteOnly, setEliteOnly] = useState(() => searchParams.get('elite') === '1');
+  const [networkFilter, setNetworkFilter] = useState<string>(() => searchParams.get('network') ?? 'all');
+  const [complexityFilter, setComplexityFilter] = useState<string>(() => searchParams.get('complexity') ?? 'all');
   const [knownNetworks, setKnownNetworks] = useState<Set<string>>(new Set());
   const [rowNetworks, setRowNetworks] = useState<Record<string, string>>({});
   const [knownComplexities, setKnownComplexities] = useState<Set<string>>(new Set());
   const [rowComplexities, setRowComplexities] = useState<Record<string, string>>({});
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Sync filter state → URL search params
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (page > 0) params.set('page', String(page));
+    if (sortKey !== 'queryFees') params.set('sort', sortKey);
+    if (!sortDesc) params.set('dir', 'asc');
+    if (searchQuery) params.set('q', searchQuery);
+    if (feeWindow !== '30d') params.set('window', feeWindow);
+    if (eliteOnly) params.set('elite', '1');
+    if (networkFilter !== 'all') params.set('network', networkFilter);
+    if (complexityFilter !== 'all') params.set('complexity', complexityFilter);
+    const qs = params.toString();
+    const target = qs ? `/subgraphs?${qs}` : '/subgraphs';
+    router.replace(target, { scroll: false });
+  }, [page, sortKey, sortDesc, searchQuery, feeWindow, eliteOnly, networkFilter, complexityFilter, router]);
 
   // Networks registry for display names and icons
   const { data: registryData } = useNetworksRegistry();

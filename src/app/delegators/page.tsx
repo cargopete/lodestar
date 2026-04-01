@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { Card } from '@/components/ui/Card';
 import { DelegationFeed } from '@/components/feed/DelegationFeed';
+import { DelegationFlowChart } from '@/components/charts/DelegationFlowChart';
+import { TokenIssuanceChart } from '@/components/charts/TokenIssuanceChart';
 import { shortenAddress, cn } from '@/lib/utils';
 
 export default function DelegatorsPage() {
@@ -127,6 +129,12 @@ export default function DelegatorsPage() {
         </p>
       )}
     </div>
+
+    {/* Network-wide delegation flows */}
+    <DelegationFlowChart />
+
+    {/* Token issuance & burn */}
+    <TokenIssuanceChart />
 
     {/* Network-wide delegation activity */}
     <DelegationFeed />

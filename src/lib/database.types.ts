@@ -28,6 +28,7 @@ export interface NetworkSnapshotRow {
   total_delegated: number | null;
   total_signalled: number | null;
   total_allocated: number | null;
+  total_supply_grt: number | null;
   indexer_count: number | null;
   active_indexer_count: number | null;
   delegator_count: number | null;

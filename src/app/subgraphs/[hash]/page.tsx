@@ -1,8 +1,9 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect } from 'react';
 import Link from 'next/link';
-import { useIndexingStatus, useManifestAnalysis } from '@/hooks/useNetworkStats';
+import { useRouter } from 'next/navigation';
+import { useIndexingStatus, useManifestAnalysis, useNetworksRegistry } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
@@ -10,6 +11,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { cn, formatNumber, formatGRT, weiToGRT, shortenAddress } from '@/lib/utils';
 import type { IndexerStatusResult } from '@/lib/indexing-status';
 import type { ComplexityCategory, DataSourceSignal, TemplateSignal } from '@/lib/manifest';
+import type { NetworkInfo } from '@/app/api/networks/route';
 
 // ---------------------------------------------------------------------------
 // Shared constants
@@ -715,15 +717,57 @@ export default function DeploymentPage({
   params: Promise<{ hash: string }>;
 }) {
   const { hash } = use(params);
+  const router = useRouter();
+
+  // Fetch display name (from indexing status) and network (from manifest)
+  const { data: statusData } = useIndexingStatus(hash);
+  const { data: manifestData } = useManifestAnalysis(hash);
+  const { data: registryData } = useNetworksRegistry();
+
+  let networkInfo: NetworkInfo | null = null;
+  if (manifestData?.network && registryData?.networks) {
+    for (const n of registryData.networks) {
+      if (n.id === manifestData.network) { networkInfo = n; break; }
+      if (n.aliases.includes(manifestData.network)) { networkInfo = n; break; }
+    }
+  }
+
+  const displayName = statusData?.displayName ?? null;
+  const networkLabel = networkInfo?.fullName ?? manifestData?.network ?? null;
+  const networkIcon = networkInfo?.iconUrl ?? null;
+
+  useEffect(() => {
+    const parts = [displayName, networkLabel].filter(Boolean);
+    if (parts.length > 0) {
+      document.title = `${parts.join(' · ')} — Lodestar`;
+    }
+  }, [displayName, networkLabel]);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-semibold text-[var(--text)] mb-2">
-            Deployment
-          </h1>
+          {displayName ? (
+            <>
+              <h1 className="text-xl sm:text-2xl font-semibold text-[var(--text)] mb-1">
+                {displayName}
+              </h1>
+              <div className="flex items-center gap-2 mb-1">
+                {networkLabel && (
+                  <Badge variant="accent">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {networkIcon && <img src={networkIcon} alt="" className="w-3.5 h-3.5 inline-block mr-1 -mt-px" />}
+                    {networkLabel}
+                  </Badge>
+                )}
+              </div>
+            </>
+          ) : (
+            <h1 className="text-xl sm:text-2xl font-semibold text-[var(--text)] mb-1">
+              {networkLabel ? `Deployment · ${networkLabel}` : 'Deployment'}
+            </h1>
+          )}
           <div className="flex items-center gap-2">
             <p className="text-xs sm:text-sm text-[var(--text-faint)] font-mono truncate">{hash}</p>
             <button
@@ -737,8 +781,8 @@ export default function DeploymentPage({
             </button>
           </div>
         </div>
-        <Link
-          href="/subgraphs"
+        <button
+          onClick={() => router.back()}
           className={cn(
             'px-3 py-2 text-sm rounded-[var(--radius-button)]',
             'border border-[var(--border)] hover:border-[var(--accent-hover)]',
@@ -746,7 +790,7 @@ export default function DeploymentPage({
           )}
         >
           Back to Subgraphs
-        </Link>
+        </button>
       </div>
 
       {/* Indexing Health — the main event */}

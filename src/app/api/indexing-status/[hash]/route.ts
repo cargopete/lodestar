@@ -33,6 +33,7 @@ interface DeploymentRow {
   ipfsHash: string;
   signalledTokens: string;
   stakedTokens: string;
+  versions: { subgraph: { metadata: { displayName: string } | null } }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -46,6 +47,9 @@ function resolveDeploymentQuery(ipfsHash: string) {
       ipfsHash
       signalledTokens
       stakedTokens
+      versions(first: 1, orderBy: createdAt, orderDirection: desc) {
+        subgraph { metadata { displayName } }
+      }
     }
   }`;
 }
@@ -109,6 +113,7 @@ export async function GET(
         let ipfsHash = hash;
         let signalledTokens = '0';
         let stakedTokens = '0';
+        let displayName: string | null = null;
 
         if (hash.startsWith('Qm') || hash.startsWith('bafy')) {
           const resolved = await subgraphQuery<{
@@ -124,6 +129,7 @@ export async function GET(
           ipfsHash = dep.ipfsHash;
           signalledTokens = dep.signalledTokens;
           stakedTokens = dep.stakedTokens;
+          displayName = dep.versions?.[0]?.subgraph?.metadata?.displayName ?? null;
         }
 
         // 2. Fetch indexers with active allocations on this deployment
@@ -171,6 +177,7 @@ export async function GET(
         return {
           deploymentId,
           ipfsHash,
+          displayName,
           signalledTokens,
           stakedTokens,
           indexers,

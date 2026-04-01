@@ -430,3 +430,35 @@ export async function fetchWithRetry<T>(
 
   throw lastError;
 }
+
+/**
+ * Fetch per-epoch token issuance and burn metrics
+ */
+export async function fetchTokenMetrics(count = 100): Promise<{
+  epoch: number;
+  issuance: number;
+  queryFeeTaxBurn: number;
+  disputeBurn: number;
+  totalBurn: number;
+  net: number;
+}[]> {
+  const response = await fetch(`/api/token-metrics?count=${count}`);
+  if (!response.ok) throw new Error(`Token metrics failed: ${response.status}`);
+  const json = await response.json();
+  return json.data ?? [];
+}
+
+/**
+ * Fetch network-wide delegation inflows/outflows aggregated by day
+ */
+export async function fetchDelegationFlows(days = 90): Promise<{
+  date: string;
+  inflows: number;
+  outflows: number;
+  net: number;
+}[]> {
+  const response = await fetch(`/api/delegation-flows?days=${days}`);
+  if (!response.ok) throw new Error(`Delegation flows failed: ${response.status}`);
+  const json = await response.json();
+  return json.data ?? [];
+}

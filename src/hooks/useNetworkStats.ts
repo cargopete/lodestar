@@ -27,6 +27,8 @@ import {
   fetchPayments,
   fetchIndexerPayments,
   fetchIndexerTrends,
+  fetchDelegationFlows,
+  fetchTokenMetrics,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -479,5 +481,29 @@ export function useIndexerTrends(indexer: string | null, days = 30) {
     refetchInterval: TEN_MINUTES,
     enabled: !!indexer,
     retry: 1, // supplementary — don't hammer it
+  });
+}
+
+/**
+ * Hook for network-wide delegation inflows/outflows over time
+ */
+export function useDelegationFlows(days = 90) {
+  return useQuery({
+    queryKey: ['delegationFlows', days],
+    queryFn: () => fetchDelegationFlows(days),
+    staleTime: TEN_MINUTES,
+    refetchInterval: TEN_MINUTES,
+  });
+}
+
+/**
+ * Hook for per-epoch token issuance/burn metrics
+ */
+export function useTokenMetrics(count = 100) {
+  return useQuery({
+    queryKey: ['tokenMetrics', count],
+    queryFn: () => fetchTokenMetrics(count),
+    staleTime: TEN_MINUTES,
+    refetchInterval: TEN_MINUTES,
   });
 }

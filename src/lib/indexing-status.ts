@@ -30,6 +30,7 @@ export interface IndexerStatusResult {
 export interface DeploymentIndexingStatus {
   deploymentId: string;
   ipfsHash: string;
+  displayName: string | null;
   signalledTokens: string;
   stakedTokens: string;
   indexers: IndexerStatusResult[];
