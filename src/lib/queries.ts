@@ -268,6 +268,7 @@ export const DELEGATOR_PORTFOLIO_QUERY = gql`
           }
           stakedTokens
           delegatedTokens
+          delegatedThawingTokens
           delegatorShares
           indexingRewardCut
           queryFeeCut
@@ -552,6 +553,7 @@ export interface DelegatedStake {
     account: IndexerAccount;
     stakedTokens: string;
     delegatedTokens: string;
+    delegatedThawingTokens?: string;
     delegatorShares: string;
     indexingRewardCut: number;
     queryFeeCut: number;

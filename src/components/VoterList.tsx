@@ -8,10 +8,11 @@ import type { CommunityVote } from '@/lib/voting';
 
 interface VoterListProps {
   indexerAddress: string;
+  period?: string;
 }
 
-export function VoterList({ indexerAddress }: VoterListProps) {
-  const { data: votes } = useVotes();
+export function VoterList({ indexerAddress, period }: VoterListProps) {
+  const { data: votes } = useVotes(period);
   const [expanded, setExpanded] = useState(false);
 
   const indexerVoters = (votes?.voters ?? []).filter(
@@ -23,9 +24,7 @@ export function VoterList({ indexerAddress }: VoterListProps) {
   );
 
   if (indexerVoters.length === 0) {
-    return (
-      <p className="text-xs text-[var(--text-faint)]">No votes yet</p>
-    );
+    return null;
   }
 
   return (
@@ -71,8 +70,8 @@ function VoterRow({ voter }: { voter: CommunityVote }) {
 /**
  * Compact vote count shown inline in table rows
  */
-export function VoteCount({ indexerAddress }: { indexerAddress: string }) {
-  const { data: votes } = useVotes();
+export function VoteCount({ indexerAddress, period }: { indexerAddress: string; period?: string }) {
+  const { data: votes } = useVotes(period);
 
   const tally = votes?.tallies?.find(
     (t) => t.indexer_address.toLowerCase() === indexerAddress.toLowerCase()

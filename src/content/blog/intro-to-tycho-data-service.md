@@ -96,7 +96,7 @@ Tycho is live today. If you're a solver or searcher looking to integrate more DE
 
 - **Docs & quickstart:** check the [Tycho documentation](https://docs.propellerheads.xyz/tycho/) to set up your stream
 - **DEX integrations:** submit a PR to [Tycho Protocol Integrations](https://github.com/propellerheads/tycho-protocol-sdk) on GitHub to get your protocol supported
-- **Follow development:** [@propaboratory](https://x.com/propaboratory) on X
+- **Follow development:** [@PropellerSwap](https://x.com/PropellerSwap) on X
 
 ## FAQ
 

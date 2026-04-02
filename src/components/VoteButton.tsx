@@ -4,23 +4,32 @@ import { useState } from 'react';
 import { useAccount, useConnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { useSubmitVote, useVotes } from '@/hooks/useVoting';
+import { getCurrentPeriod } from '@/lib/voting';
 import { cn } from '@/lib/utils';
 
 interface VoteButtonProps {
   indexerAddress: string;
+  period?: string;
   className?: string;
 }
 
-export function VoteButton({ indexerAddress, className }: VoteButtonProps) {
+export function VoteButton({ indexerAddress, period, className }: VoteButtonProps) {
   const { isConnected } = useAccount();
   const { connect } = useConnect();
-  const { data: votes } = useVotes();
+  const isHistorical = !!period && period !== getCurrentPeriod();
+  const { data: votes } = useVotes(isHistorical ? period : undefined);
   const { mutate: vote, isPending, error, reset } = useSubmitVote();
   const [toast, setToast] = useState<string | null>(null);
 
   const userVote = votes?.userVote;
   const hasVoted = !!userVote;
   const votedForThis = userVote?.toLowerCase() === indexerAddress.toLowerCase();
+
+  if (isHistorical) {
+    return (
+      <span className={cn('text-xs text-[var(--text-faint)]', className)}>—</span>
+    );
+  }
 
   if (votedForThis) {
     return (

@@ -11,6 +11,7 @@ import type { LeaderboardEntry } from '@/lib/scoring';
 import { VoteButton } from '@/components/VoteButton';
 import { VoterList, VoteCount } from '@/components/VoterList';
 import { useVotes } from '@/hooks/useVoting';
+import { getCurrentPeriod } from '@/lib/voting';
 
 const PAGE_SIZE = 25;
 
@@ -136,12 +137,31 @@ export default function LeaderboardPage() {
     return map;
   }, [enrichedData]);
 
-  const { data: votes } = useVotes();
+  // Derive the voting period from the data (YYYY-MM of the scores being viewed)
+  const votePeriod = useMemo(() => {
+    if (!data?.periodStart) return getCurrentPeriod();
+    const ps = typeof data.periodStart === 'string' ? data.periodStart : String(data.periodStart);
+    return ps.slice(0, 7); // "2026-03-01" → "2026-03"
+  }, [data?.periodStart]);
+  const isCurrentPeriod = votePeriod === getCurrentPeriod();
+
+  const { data: votes } = useVotes(votePeriod);
   const rawEntries = data?.entries ?? [];
 
   // Compute live scores, re-sort, and assign live ranks
+  // Only overlay live vote tallies when viewing the current scoring period
   const entries = useMemo(() => {
     if (!rawEntries.length) return rawEntries;
+    if (!isCurrentPeriod) {
+      // Historical: use stored scores as-is, just assign ranks
+      const sorted = [...rawEntries].sort((a, b) => {
+        const diff = b.final_score - a.final_score;
+        if (diff !== 0) return diff;
+        return b.months_active - a.months_active;
+      });
+      sorted.forEach((e, i) => { e.rank = i + 1; });
+      return sorted;
+    }
     const tallies = votes?.tallies as VoteTallies | undefined;
     const maxWeighted = tallies?.length
       ? Math.max(...tallies.map((t) => t.weighted_votes))
@@ -158,7 +178,7 @@ export default function LeaderboardPage() {
     });
     withLive.forEach((e, i) => { e.rank = i + 1; });
     return withLive;
-  }, [rawEntries, votes]);
+  }, [rawEntries, votes, isCurrentPeriod]);
 
   const paginatedEntries = useMemo(() => {
     const start = page * PAGE_SIZE;
@@ -287,6 +307,7 @@ export default function LeaderboardPage() {
             name={nameMap.get(entry.indexer_address.toLowerCase())}
             isBadgeHolder={entry.indexer_address.toLowerCase() === badgeHolderAddress?.toLowerCase()}
             badgePeriod={bannerPeriod}
+            votePeriod={votePeriod}
             expanded={expanded === entry.indexer_address}
             onToggle={() => setExpanded(expanded === entry.indexer_address ? null : entry.indexer_address)}
           />
@@ -324,6 +345,7 @@ export default function LeaderboardPage() {
                   name={nameMap.get(entry.indexer_address.toLowerCase())}
                   isBadgeHolder={entry.indexer_address.toLowerCase() === badgeHolderAddress?.toLowerCase()}
                   badgePeriod={bannerPeriod}
+                  votePeriod={votePeriod}
                   expanded={expanded === entry.indexer_address}
                   onToggle={() => setExpanded(expanded === entry.indexer_address ? null : entry.indexer_address)}
                 />
@@ -390,6 +412,7 @@ function DesktopRow({
   name,
   isBadgeHolder,
   badgePeriod,
+  votePeriod,
   expanded,
   onToggle,
 }: {
@@ -397,6 +420,7 @@ function DesktopRow({
   name: string | undefined;
   isBadgeHolder?: boolean;
   badgePeriod?: string | null;
+  votePeriod: string;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -412,7 +436,18 @@ function DesktopRow({
         onClick={onToggle}
       >
         <td className={`px-4 py-3 text-center ${TD_BORDER}`}>
-          <RankBadge rank={entry.rank ?? 0} isBadgeWinner={isBadgeHolder} />
+          <div className="flex items-center justify-center gap-2.5">
+            <svg
+              className={cn('w-3 h-3 text-[var(--text-faint)] transition-transform', expanded && 'rotate-90')}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            <RankBadge rank={entry.rank ?? 0} isBadgeWinner={isBadgeHolder} />
+          </div>
         </td>
         <td className={`px-4 py-3 ${TD_BORDER}`}>
           <div className="flex items-center gap-2">
@@ -443,7 +478,7 @@ function DesktopRow({
           </div>
         </td>
         <td className={`px-4 py-3 text-center ${TD_BORDER}`}>
-          <VoteButton indexerAddress={entry.indexer_address} />
+          <VoteButton indexerAddress={entry.indexer_address} period={votePeriod} />
         </td>
         <td className={`px-4 py-3 text-right ${TD_BORDER}`}>
           <span className="font-mono text-sm font-semibold" style={{ color: scoreColor(entry.final_score) }}>
@@ -463,16 +498,14 @@ function DesktopRow({
           <ComponentCell score={healthScore} max={6} />
         </td>
         <td className="px-4 py-3 text-right hidden lg:table-cell">
-          <VoteCount indexerAddress={entry.indexer_address} />
+          <VoteCount indexerAddress={entry.indexer_address} period={votePeriod} />
         </td>
       </tr>
       {expanded && (
         <tr className="border-b border-[0.5px] border-[var(--border)]">
           <td colSpan={9} className="px-4 py-4 bg-[var(--bg-elevated)]">
-            <ScoreBreakdown entry={entry} />
-            <div className="mt-4 pt-3 border-t border-[var(--border)]">
-              <VoterList indexerAddress={entry.indexer_address} />
-            </div>
+            <ScoreBreakdown entry={entry} votePeriod={votePeriod} />
+            <VoterListSection indexerAddress={entry.indexer_address} period={votePeriod} />
           </td>
         </tr>
       )}
@@ -487,6 +520,7 @@ function MobileCard({
   name,
   isBadgeHolder,
   badgePeriod,
+  votePeriod,
   expanded,
   onToggle,
 }: {
@@ -494,13 +528,23 @@ function MobileCard({
   name: string | undefined;
   isBadgeHolder?: boolean;
   badgePeriod?: string | null;
+  votePeriod: string;
   expanded: boolean;
   onToggle: () => void;
 }) {
   return (
     <Card className="cursor-pointer" onClick={onToggle}>
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <svg
+            className={cn('w-3 h-3 text-[var(--text-faint)] transition-transform shrink-0', expanded && 'rotate-90')}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
           <RankBadge rank={entry.rank ?? 0} isBadgeWinner={isBadgeHolder} />
           <div>
             <div className="flex items-center gap-2">
@@ -574,14 +618,14 @@ function MobileCard({
 
       {/* Vote button */}
       <div className="mt-3">
-        <VoteButton indexerAddress={entry.indexer_address} />
+        <VoteButton indexerAddress={entry.indexer_address} period={votePeriod} />
       </div>
 
       {expanded && (
         <div className="mt-4 pt-4 border-t border-[var(--border)]">
-          <ScoreBreakdown entry={entry} />
+          <ScoreBreakdown entry={entry} votePeriod={votePeriod} />
           <div className="mt-4 pt-3 border-t border-[var(--border)]">
-            <VoterList indexerAddress={entry.indexer_address} />
+            <VoterList indexerAddress={entry.indexer_address} period={votePeriod} />
           </div>
         </div>
       )}
@@ -589,20 +633,38 @@ function MobileCard({
   );
 }
 
+// ── Voter list wrapper (hides border when no voters) ──────
+
+function VoterListSection({ indexerAddress, period }: { indexerAddress: string; period: string }) {
+  const { data: votes } = useVotes(period);
+  const hasVoters = (votes?.voters ?? []).some(
+    (v) => v.indexer_address.toLowerCase() === indexerAddress.toLowerCase()
+  );
+  if (!hasVoters) return null;
+  return (
+    <div className="mt-4 pt-3 border-t border-[var(--border)]">
+      <VoterList indexerAddress={indexerAddress} period={period} />
+    </div>
+  );
+}
+
 // ── Score breakdown (shared between mobile/desktop) ───────
 
-function ScoreBreakdown({ entry }: { entry: LeaderboardEntry }) {
-  const { data: votes } = useVotes();
+function ScoreBreakdown({ entry, votePeriod }: { entry: LeaderboardEntry; votePeriod: string }) {
+  const isCurrentPeriod = votePeriod === getCurrentPeriod();
+  const { data: votes } = useVotes(votePeriod);
   const liveCommunityScore = useMemo(() => {
+    // For historical periods, use the stored score as-is
+    if (!isCurrentPeriod) return entry.community_vote_score;
     const tallies = votes?.tallies as VoteTallies | undefined;
     if (!tallies?.length) return entry.community_vote_score;
     const maxWeighted = Math.max(...tallies.map((t) => t.weighted_votes));
-    if (maxWeighted === 0) return 0;
+    if (maxWeighted === 0) return entry.community_vote_score;
     const tally = tallies.find(
       (t) => t.indexer_address.toLowerCase() === entry.indexer_address.toLowerCase()
     );
     return ((tally?.weighted_votes ?? 0) / maxWeighted) * 10;
-  }, [votes, entry.indexer_address, entry.community_vote_score]);
+  }, [votes, entry.indexer_address, entry.community_vote_score, isCurrentPeriod]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

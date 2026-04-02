@@ -35,11 +35,16 @@ export function calculateUnrealizedRewards(
   stakedTokens: string,
   shareAmount: string,
   indexerDelegatedTokens: string,
-  indexerDelegatorShares: string
+  indexerDelegatorShares: string,
+  indexerDelegatedThawingTokens: string = '0'
 ): number {
   const originalStake = weiToGRT(stakedTokens);
   const shares = weiToGRT(shareAmount);
-  const exchangeRate = calculateExchangeRate(indexerDelegatedTokens, indexerDelegatorShares);
+  const exchangeRate = calculatePoolExchangeRate(
+    indexerDelegatedTokens,
+    indexerDelegatedThawingTokens,
+    indexerDelegatorShares
+  );
 
   // Current value of shares
   const currentValue = shares * exchangeRate;

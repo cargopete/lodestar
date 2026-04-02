@@ -58,8 +58,8 @@ function DelegationCard({
   stake: DelegatedStake;
   grtPrice: number;
 }) {
-  const stakedGRT = weiToGRT(stake.stakedTokens);
   const lockedGRT = weiToGRT(stake.lockedTokens);
+  const stakedGRT = Math.max(weiToGRT(stake.stakedTokens) - lockedGRT, 0);
   const realizedGRT = weiToGRT(stake.realizedRewards);
   const indexer = stake.indexer;
   const indexerName = resolveIndexerName(indexer.account, indexer.id);
@@ -69,7 +69,8 @@ function DelegationCard({
     stake.stakedTokens,
     stake.shareAmount,
     indexer.delegatedTokens,
-    indexer.delegatorShares
+    indexer.delegatorShares,
+    indexer.delegatedThawingTokens ?? '0'
   );
 
   // Calculate share of indexer's delegation pool
@@ -188,12 +189,13 @@ export default function ProfilePage() {
   const isLoading = delegatorLoading || curatorLoading;
 
   // Calculate totals
-  const { totalStaked, totalRealized, totalUnrealized, delegationData } = useMemo(() => {
+  const { totalStaked, totalThawing, totalRealized, totalUnrealized, delegationData } = useMemo(() => {
     if (!delegator) {
-      return { totalStaked: 0, totalRealized: 0, totalUnrealized: 0, delegationData: [] };
+      return { totalStaked: 0, totalThawing: 0, totalRealized: 0, totalUnrealized: 0, delegationData: [] };
     }
 
     let staked = 0;
+    let thawing = 0;
     let realized = 0;
     let unrealized = 0;
     const data: Array<{
@@ -206,16 +208,19 @@ export default function ProfilePage() {
     }> = [];
 
     for (const stake of delegator.stakes) {
-      const stakedGRT = weiToGRT(stake.stakedTokens);
+      const lockedGRT = weiToGRT(stake.lockedTokens ?? '0');
+      const stakedGRT = Math.max(weiToGRT(stake.stakedTokens) - lockedGRT, 0);
       const realizedGRT = weiToGRT(stake.realizedRewards);
       const unrealizedGRT = calculateUnrealizedRewards(
         stake.stakedTokens,
         stake.shareAmount,
         stake.indexer.delegatedTokens,
-        stake.indexer.delegatorShares
+        stake.indexer.delegatorShares,
+        stake.indexer.delegatedThawingTokens ?? '0'
       );
 
       staked += stakedGRT;
+      thawing += lockedGRT;
       realized += realizedGRT;
       unrealized += unrealizedGRT;
 
@@ -229,7 +234,7 @@ export default function ProfilePage() {
       });
     }
 
-    return { totalStaked: staked, totalRealized: realized, totalUnrealized: unrealized, delegationData: data };
+    return { totalStaked: staked, totalThawing: thawing, totalRealized: realized, totalUnrealized: unrealized, delegationData: data };
   }, [delegator]);
 
   const totalSignalled = curator ? weiToGRT(curator.totalSignalledTokens) : 0;
@@ -300,6 +305,16 @@ export default function ProfilePage() {
                     positive: true,
                   }}
                 />
+                {totalThawing > 0 && (
+                  <StatCard
+                    label="Thawing"
+                    value={`${formatGRT(totalThawing)} GRT`}
+                    delta={{
+                      value: formatUSD(totalThawing * grtPrice),
+                      positive: true,
+                    }}
+                  />
+                )}
                 <StatCard
                   label="Unrealized Rewards"
                   value={`${formatGRT(totalUnrealized)} GRT`}
@@ -318,9 +333,9 @@ export default function ProfilePage() {
                 />
                 <StatCard
                   label="Portfolio Value"
-                  value={`${formatGRT(totalStaked + totalUnrealized)} GRT`}
+                  value={`${formatGRT(totalStaked + totalThawing + totalUnrealized)} GRT`}
                   delta={{
-                    value: formatUSD((totalStaked + totalUnrealized) * grtPrice),
+                    value: formatUSD((totalStaked + totalThawing + totalUnrealized) * grtPrice),
                     positive: true,
                   }}
                 />

@@ -9,15 +9,15 @@ import type { VoteMessage, VotesResponse } from '@/lib/voting';
 const FIVE_MINUTES = 1000 * 60 * 5;
 
 /**
- * Hook for fetching community votes for the current period
+ * Hook for fetching community votes for a given period (defaults to current)
  */
-export function useVotes() {
+export function useVotes(period?: string) {
   const { address } = useAccount();
-  const period = getCurrentPeriod();
+  const effectivePeriod = period ?? getCurrentPeriod();
 
   return useQuery({
-    queryKey: ['votes', period, address?.toLowerCase()],
-    queryFn: () => fetchVotes(period, address?.toLowerCase()),
+    queryKey: ['votes', effectivePeriod, address?.toLowerCase()],
+    queryFn: () => fetchVotes(effectivePeriod, address?.toLowerCase()),
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
   });

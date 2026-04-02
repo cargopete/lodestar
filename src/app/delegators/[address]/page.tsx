@@ -153,17 +153,19 @@ export default function DelegatorPortfolioPage({
   const MIN_STAKE_REO = 100000;
 
   // Calculate totals and per-position data
-  const { totalStaked, totalRealized, totalUnrealized, positions, portfolioHealth } = useMemo(() => {
+  const { totalStaked, totalThawing, totalRealized, totalUnrealized, positions, portfolioHealth } = useMemo(() => {
     if (!delegator) {
-      return { totalStaked: 0, totalRealized: 0, totalUnrealized: 0, positions: [], portfolioHealth: null };
+      return { totalStaked: 0, totalThawing: 0, totalRealized: 0, totalUnrealized: 0, positions: [], portfolioHealth: null };
     }
 
     let staked = 0;
+    let thawing = 0;
     let realized = 0;
     let unrealized = 0;
     const posData: Array<{
       stake: DelegatedStake;
       stakedGRT: number;
+      lockedGRT: number;
       currentValue: number;
       unrealizedGRT: number;
       realizedGRT: number;
@@ -173,13 +175,15 @@ export default function DelegatorPortfolioPage({
     }> = [];
 
     for (const stake of delegator.stakes) {
-      const stakedGRT = weiToGRT(stake.stakedTokens);
+      const lockedGRT = weiToGRT(stake.lockedTokens ?? '0');
+      const stakedGRT = Math.max(weiToGRT(stake.stakedTokens) - lockedGRT, 0);
       const realizedGRT = weiToGRT(stake.realizedRewards);
       const unrealizedGRT = calculateUnrealizedRewards(
         stake.stakedTokens,
         stake.shareAmount,
         stake.indexer.delegatedTokens,
-        stake.indexer.delegatorShares
+        stake.indexer.delegatorShares,
+        stake.indexer.delegatedThawingTokens ?? '0'
       );
       const currentValue = stakedGRT + unrealizedGRT;
       const isActive = stakedGRT > 0;
@@ -195,12 +199,14 @@ export default function DelegatorPortfolioPage({
       const insight = getPositionInsight(stake, allIndexers, posAPR, networkMedianAPR);
 
       staked += stakedGRT;
+      thawing += lockedGRT;
       realized += realizedGRT;
       unrealized += unrealizedGRT;
 
       posData.push({
         stake,
         stakedGRT,
+        lockedGRT,
         currentValue,
         unrealizedGRT,
         realizedGRT,
@@ -233,10 +239,10 @@ export default function DelegatorPortfolioPage({
       topConcentration: (largestPositionGRT / staked) * 100,
     } : null;
 
-    return { totalStaked: staked, totalRealized: realized, totalUnrealized: unrealized, positions: posData, portfolioHealth: health };
+    return { totalStaked: staked, totalThawing: thawing, totalRealized: realized, totalUnrealized: unrealized, positions: posData, portfolioHealth: health };
   }, [delegator, allIndexers, networkMedianAPR]);
 
-  const portfolioValue = totalStaked + totalUnrealized;
+  const portfolioValue = totalStaked + totalThawing + totalUnrealized;
 
   // CSV export handler
   const handleExportCSV = useMemo(() => {
@@ -335,6 +341,13 @@ export default function DelegatorPortfolioPage({
           value={`${formatGRT(totalStaked)} GRT`}
           subtitle={formatUSD(totalStaked * grtPrice)}
         />
+        {totalThawing > 0 && (
+          <StatCard
+            label="Thawing"
+            value={`${formatGRT(totalThawing)} GRT`}
+            subtitle={formatUSD(totalThawing * grtPrice)}
+          />
+        )}
         <StatCard
           label="Unrealized Rewards"
           value={`${formatGRT(totalUnrealized)} GRT`}

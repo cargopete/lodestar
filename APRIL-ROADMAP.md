@@ -52,6 +52,17 @@ Features from the community needs report that are already built:
 
 ---
 
+## URGENT
+
+### Marc Andre (via GRT chat, 1 Apr 2026)
+
+| # | Feature | Effort | Impact | Status |
+|---|---------|--------|--------|--------|
+| U1 | **APR → APY conversion** — convert forward-looking APR to APY with epoch-based compounding (~395 epochs/yr). Adds 1-2% to displayed delegator yields for most indexers, reinforcing that delegating is one of the best staking options. Quick win: `aprToApy()` utility + label changes throughout. Ties into item #11 (APR transparency breakdown). | Low | High | Not started |
+| U2 | **Leaderboard community score bug** — score breakdown shows 0 for everyone because `useVotes()` always fetched current-month tallies, even when viewing historical data. Vote components now period-aware. | Low | High | Done |
+
+---
+
 ## Gap Analysis — What's NOT Built Yet
 
 ### Tier 2 — Analytics & Charting
