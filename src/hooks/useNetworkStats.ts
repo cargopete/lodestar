@@ -34,6 +34,7 @@ import {
 
 const FIVE_MINUTES = 1000 * 60 * 5;
 const TEN_MINUTES = 1000 * 60 * 10;
+const ONE_MINUTE = 1000 * 60;
 const THIRTY_SECONDS = 1000 * 30;
 const ONE_HOUR = 1000 * 60 * 60;
 
@@ -75,8 +76,8 @@ export function useIndexers(params: {
   return useQuery({
     queryKey: ['indexers', params],
     queryFn: () => fetchIndexers(params),
-    staleTime: FIVE_MINUTES,
-    refetchInterval: FIVE_MINUTES,
+    staleTime: TEN_MINUTES,
+    refetchInterval: TEN_MINUTES,
     placeholderData: keepPreviousData,
   });
 }
@@ -89,7 +90,7 @@ export function useEnrichedIndexers() {
     queryKey: ['enrichedIndexers'],
     queryFn: fetchEnrichedIndexers,
     staleTime: TEN_MINUTES,
-    refetchInterval: FIVE_MINUTES,
+    refetchInterval: TEN_MINUTES,
     placeholderData: keepPreviousData,
   });
 }
@@ -101,8 +102,8 @@ export function useGRTPrice() {
   return useQuery({
     queryKey: ['grtPrice'],
     queryFn: fetchGRTPrice,
-    staleTime: THIRTY_SECONDS,
-    refetchInterval: THIRTY_SECONDS,
+    staleTime: ONE_MINUTE,
+    refetchInterval: ONE_MINUTE,
   });
 }
 

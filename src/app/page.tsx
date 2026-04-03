@@ -6,9 +6,11 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { HorizonParameters } from '@/components/ui/HorizonParameters';
-import { StakingTrendChart } from '@/components/charts/StakingTrendChart';
-import { RewardSplitDonut } from '@/components/charts/RewardSplitDonut';
-import { QueryFeesChart } from '@/components/charts/QueryFeesChart';
+import dynamic from 'next/dynamic';
+
+const StakingTrendChart = dynamic(() => import('@/components/charts/StakingTrendChart').then(m => ({ default: m.StakingTrendChart })), { ssr: false });
+const RewardSplitDonut = dynamic(() => import('@/components/charts/RewardSplitDonut').then(m => ({ default: m.RewardSplitDonut })), { ssr: false });
+const QueryFeesChart = dynamic(() => import('@/components/charts/QueryFeesChart').then(m => ({ default: m.QueryFeesChart })), { ssr: false });
 
 export default function ProtocolOverview() {
   const { data: networkData, isLoading: networkLoading } = useNetworkStats();

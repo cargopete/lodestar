@@ -6,8 +6,10 @@ import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { Card } from '@/components/ui/Card';
 import { DelegationFeed } from '@/components/feed/DelegationFeed';
-import { DelegationFlowChart } from '@/components/charts/DelegationFlowChart';
-import { TokenIssuanceChart } from '@/components/charts/TokenIssuanceChart';
+import dynamic from 'next/dynamic';
+
+const DelegationFlowChart = dynamic(() => import('@/components/charts/DelegationFlowChart').then(m => ({ default: m.DelegationFlowChart })), { ssr: false });
+const TokenIssuanceChart = dynamic(() => import('@/components/charts/TokenIssuanceChart').then(m => ({ default: m.TokenIssuanceChart })), { ssr: false });
 import { shortenAddress, cn } from '@/lib/utils';
 
 export default function DelegatorsPage() {

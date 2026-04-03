@@ -26,7 +26,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { UndelegatePanel } from '@/components/ui/UndelegatePanel';
-import { PortfolioChart } from '@/components/charts/PortfolioChart';
+import dynamic from 'next/dynamic';
+
+const PortfolioChart = dynamic(() => import('@/components/charts/PortfolioChart').then(m => ({ default: m.PortfolioChart })), { ssr: false });
 import { ExportButton } from '@/components/ui/ExportButton';
 
 /** Estimate a simple APR from an indexer's rewards earned and total stake */

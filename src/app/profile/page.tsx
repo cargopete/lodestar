@@ -30,7 +30,10 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { RewardsBreakdown } from '@/components/ui/RewardsBreakdown';
 import { ExportButton } from '@/components/ui/ExportButton';
 import { WalletManager } from '@/components/ui/WalletManager';
-import { PortfolioChart, generateMockPortfolioHistory } from '@/components/charts/PortfolioChart';
+import dynamic from 'next/dynamic';
+import { generateMockPortfolioHistory } from '@/lib/portfolio-utils';
+
+const PortfolioChart = dynamic(() => import('@/components/charts/PortfolioChart').then(m => ({ default: m.PortfolioChart })), { ssr: false });
 
 function ConnectPrompt() {
   return (

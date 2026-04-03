@@ -36,6 +36,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  compress: true,
+  productionBrowserSourceMaps: false,
   async headers() {
     return [
       {

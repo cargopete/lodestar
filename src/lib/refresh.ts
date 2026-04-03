@@ -160,10 +160,14 @@ export async function refreshIndexers(opts: {
   const allocationMap = new Map<string, AllocationData[]>();
 
   const BATCH_SIZE = 10;
+  const batches: string[][] = [];
   for (let i = 0; i < indexerIds.length; i += BATCH_SIZE) {
-    const batch = indexerIds.slice(i, i + BATCH_SIZE);
-    const idList = batch.map((id) => `"${id}"`).join(', ');
+    batches.push(indexerIds.slice(i, i + BATCH_SIZE));
+  }
 
+  const batchResults = await Promise.all(batches.map(async (batch) => {
+    const batchMap = new Map<string, AllocationData[]>();
+    const idList = batch.map((id) => `"${id}"`).join(', ');
     let lastId = '';
     while (true) {
       const result = await subgraphQuery<{ allocations: AllocationData[] }>(`{
@@ -184,13 +188,20 @@ export async function refreshIndexers(opts: {
       }`);
 
       for (const alloc of result.allocations) {
-        const existing = allocationMap.get(alloc.indexer.id) ?? [];
+        const existing = batchMap.get(alloc.indexer.id) ?? [];
         existing.push(alloc);
-        allocationMap.set(alloc.indexer.id, existing);
+        batchMap.set(alloc.indexer.id, existing);
       }
 
       if (result.allocations.length < 1000) break;
       lastId = result.allocations[result.allocations.length - 1].id;
+    }
+    return batchMap;
+  }));
+
+  for (const batchMap of batchResults) {
+    for (const [k, v] of batchMap) {
+      allocationMap.set(k, v);
     }
   }
 
