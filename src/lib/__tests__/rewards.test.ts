@@ -10,6 +10,7 @@ import {
   generateRewardsCSV,
   calculatePoolExchangeRate,
   calculateExchangeRateAPY,
+  calculateRollingAPY,
 } from '../rewards';
 
 // ---------- calculateExchangeRate ----------
@@ -254,6 +255,50 @@ describe('calculateExchangeRateAPY', () => {
     const apy = calculateExchangeRateAPY(1.008, 1.0, 90);
     expect(apy).toBeGreaterThan(3);
     expect(apy).toBeLessThan(4);
+  });
+});
+
+// ---------- calculateRollingAPY ----------
+
+describe('calculateRollingAPY', () => {
+  const now = Math.floor(Date.now() / 1000);
+  const recentAlloc = { delegator_rewards_grt: 1000, closed_at: now - 10 * 86400 }; // 10 days ago
+  const oldAlloc = { delegator_rewards_grt: 2000, closed_at: now - 60 * 86400 };   // 60 days ago
+
+  it('returns 0 when no delegated GRT', () => {
+    expect(calculateRollingAPY([recentAlloc], 0, 30)).toBe(0);
+  });
+
+  it('returns 0 when no allocations', () => {
+    expect(calculateRollingAPY([], 100_000, 30)).toBe(0);
+  });
+
+  it('returns 0 when delegatedGRT is negative', () => {
+    expect(calculateRollingAPY([recentAlloc], -1, 30)).toBe(0);
+  });
+
+  it('returns positive APY for recent allocations within window', () => {
+    const apy = calculateRollingAPY([recentAlloc], 100_000, 30);
+    expect(apy).toBeGreaterThan(0);
+  });
+
+  it('returns 0 when all allocations are outside the rolling window', () => {
+    // 60 days ago, window = 30 days → outside
+    expect(calculateRollingAPY([oldAlloc], 100_000, 30)).toBe(0);
+  });
+
+  it('only counts allocations within the window', () => {
+    const apy = calculateRollingAPY([recentAlloc, oldAlloc], 100_000, 30);
+    // Only recentAlloc counts (oldAlloc is outside 30-day window)
+    expect(apy).toBeGreaterThan(0);
+    const apyOnlyRecent = calculateRollingAPY([recentAlloc], 100_000, 30);
+    expect(apy).toBeCloseTo(apyOnlyRecent, 5);
+  });
+
+  it('scales APY to annualised rate', () => {
+    // 1000 rewards / 100K delegated / 30 days * 365 days = 12.17%
+    const apy = calculateRollingAPY([recentAlloc], 100_000, 30);
+    expect(apy).toBeCloseTo((1000 / 100_000) * (365 / 30) * 100, 2);
   });
 });
 

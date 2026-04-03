@@ -754,6 +754,8 @@ describe('/api/indexer/[address]', () => {
         delegators: [],
       },
     });
+    // Second call: allocation pagination loop (returns empty = exits loop)
+    mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
 
     const req = makeRequest('/api/indexer/0x1234');
     const res = await GET(req, { params: Promise.resolve({ address: '0x1234' }) });
@@ -766,6 +768,7 @@ describe('/api/indexer/[address]', () => {
 
   it('lowercases the address', async () => {
     mockSubgraphQuery.mockResolvedValueOnce({ indexer: { id: '0xabc', allocations: [], delegators: [] } });
+    mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
 
     const req = makeRequest('/api/indexer/0xABC');
     await GET(req, { params: Promise.resolve({ address: '0xABC' }) });
@@ -865,13 +868,14 @@ describe('/api/delegation-events', () => {
   });
 
   it('returns empty data when no API key', async () => {
-    // GRAPH_API_KEY not set in test env
+    mockHasSubgraphAccess.mockReturnValueOnce(false);
     const req = makeRequest('/api/delegation-events');
     const res = await GET(req);
     const json = await getJson(res);
 
     expect(res.status).toBe(200);
     expect(json).toHaveProperty('data');
+    expect(json.data).toHaveProperty('delegationEvents');
   });
 });
 

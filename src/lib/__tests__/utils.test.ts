@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   weiToGRT,
+  isGreedyCut,
   formatGRT,
   formatGRTFull,
   ppmToPercent,
@@ -42,6 +43,30 @@ describe('weiToGRT', () => {
   it('handles small amounts', () => {
     const result = weiToGRT('1000000000000');
     expect(result).toBeCloseTo(0.000001, 6);
+  });
+});
+
+// ---------- isGreedyCut ----------
+
+describe('isGreedyCut', () => {
+  it('returns true for 100% cut (1,000,000 PPM)', () => {
+    expect(isGreedyCut(1_000_000)).toBe(true);
+  });
+
+  it('returns true for above 100%', () => {
+    expect(isGreedyCut(1_000_001)).toBe(true);
+  });
+
+  it('returns false for 99.9999% cut', () => {
+    expect(isGreedyCut(999_999)).toBe(false);
+  });
+
+  it('returns false for 0', () => {
+    expect(isGreedyCut(0)).toBe(false);
+  });
+
+  it('returns false for typical 10% cut', () => {
+    expect(isGreedyCut(100_000)).toBe(false);
   });
 });
 

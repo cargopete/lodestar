@@ -179,12 +179,12 @@ describe('complexity categories', () => {
 // ---------- Individual scoring dimensions ----------
 
 describe('block range scoring', () => {
-  it('scores max (25) for startBlock 0', () => {
+  it('scores max (20) for startBlock 0', () => {
     const result = parseManifest(makeManifestYaml({
       dataSources: [{ startBlock: 0, eventHandlers: 1 }],
     }));
     const blockDim = result.breakdown.find(b => b.dimension === 'Block Range');
-    expect(blockDim?.score).toBe(25);
+    expect(blockDim?.score).toBe(20);
   });
 
   it('scores 0 for very high startBlock (18M+)', () => {
@@ -203,7 +203,7 @@ describe('block range scoring', () => {
       ],
     }));
     const blockDim = result.breakdown.find(b => b.dimension === 'Block Range');
-    expect(blockDim?.score).toBe(22); // < 1M
+    expect(blockDim?.score).toBe(18); // < 1M
   });
 });
 
@@ -276,13 +276,13 @@ describe('template scoring', () => {
     expect(tplDim?.score).toBe(0);
   });
 
-  it('scores 15 for 5+ templates', () => {
+  it('scores 10 for 5+ templates', () => {
     const templates = Array.from({ length: 5 }, (_, i) => ({
       name: `Tpl${i}`, eventHandlers: 1,
     }));
     const result = parseManifest(makeManifestYaml({ templates }));
     const tplDim = result.breakdown.find(b => b.dimension === 'Templates');
-    expect(tplDim?.score).toBe(15);
+    expect(tplDim?.score).toBe(10);
   });
 });
 
@@ -323,12 +323,13 @@ describe('graft scoring', () => {
     expect(graftDim?.score).toBe(0);
   });
 
-  it('scores 5 for graft present', () => {
+  it('scores 0 for graft present (informational only)', () => {
     const result = parseManifest(makeManifestYaml({
       graft: { base: 'QmBase', block: 15000000 },
     }));
     const graftDim = result.breakdown.find(b => b.dimension === 'Graft');
-    expect(graftDim?.score).toBe(5);
+    expect(graftDim?.score).toBe(0);
+    expect(graftDim?.maxScore).toBe(0);
   });
 });
 

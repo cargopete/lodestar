@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { percentile, computeBounds, normalize, normalizeInverted } from '../normalize';
+import { percentile, computeBounds, normalize, normalizeInverted, normalizeUncapped } from '../normalize';
 import {
   scoreQueryFees,
   scoreAllocationEfficiency,
@@ -11,6 +11,12 @@ import {
   scoreAllocationBreadth,
 } from '../components';
 import { calculatePenalties } from '../penalties';
+// Import via the barrel so index.ts is included in coverage
+import {
+  computeBounds as computeBoundsViaIndex,
+  calculatePenalties as calculatePenaltiesViaIndex,
+  scoreQueryFees as scoreQueryFeesViaIndex,
+} from '../index';
 
 // ── Normalization ───────────────────────────────────────
 
@@ -49,6 +55,32 @@ describe('normalize', () => {
 
   it('clamps above p90', () => {
     expect(normalize(100, 10, 90, 20)).toBe(20);
+  });
+});
+
+describe('normalizeUncapped', () => {
+  it('returns maxPoints at p90', () => {
+    expect(normalizeUncapped(90, 10, 90, 20)).toBe(20);
+  });
+
+  it('continues above p90 without capping', () => {
+    expect(normalizeUncapped(170, 10, 90, 20)).toBeGreaterThan(20);
+  });
+
+  it('returns 0 at p10', () => {
+    expect(normalizeUncapped(10, 10, 90, 20)).toBe(0);
+  });
+
+  it('returns 0 below p10 (clamped at p10)', () => {
+    expect(normalizeUncapped(5, 10, 90, 20)).toBe(0);
+  });
+
+  it('returns maxPoints when p90 <= p10 and value >= p10', () => {
+    expect(normalizeUncapped(15, 10, 10, 20)).toBe(20);
+  });
+
+  it('returns 0 when p90 <= p10 and value < p10', () => {
+    expect(normalizeUncapped(5, 10, 10, 20)).toBe(0);
   });
 });
 
@@ -219,5 +251,26 @@ describe('score range validation', () => {
     expect(healthMax).toBe(6);
     expect(economicsMax).toBe(5);
     expect(networkMax + communityMax + trustMax + healthMax + economicsMax).toBe(81);
+  });
+});
+
+// ── Barrel re-exports (covers index.ts) ─────────────────
+
+describe('barrel re-exports', () => {
+  it('computeBounds re-exported correctly', () => {
+    expect(computeBoundsViaIndex([10, 50, 90])).toEqual(computeBounds([10, 50, 90]));
+  });
+
+  it('calculatePenalties re-exported correctly', () => {
+    const clean = {
+      hasActiveDispute: false, hasRecentSlashing: false, hasOlderSlashing: false,
+      hasRepeatedCutIncreases: false, hasLowPoiConsensus: false,
+      hasZeroFees: false, hasBelowMinStake: false,
+    };
+    expect(calculatePenaltiesViaIndex(clean).multiplier).toBe(1.0);
+  });
+
+  it('scoreQueryFees re-exported correctly', () => {
+    expect(scoreQueryFeesViaIndex(1000, 100, 1000)).toBe(scoreQueryFees(1000, 100, 1000));
   });
 });
