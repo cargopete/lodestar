@@ -3,11 +3,19 @@ import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { IndexersResponse } from '@/lib/queries';
 
+const VALID_ORDER_BY = new Set([
+  'stakedTokens', 'delegatedTokens', 'allocatedTokens',
+  'id', 'createdAt', 'queryFeesCollected', 'rewardsEarned',
+]);
+const VALID_ORDER_DIR = new Set(['asc', 'desc']);
+
 export async function GET(request: NextRequest) {
-  const first = Math.min(Number(request.nextUrl.searchParams.get('first') ?? 100), 500);
-  const skip = Number(request.nextUrl.searchParams.get('skip') ?? 0);
-  const orderBy = request.nextUrl.searchParams.get('orderBy') ?? 'stakedTokens';
-  const orderDirection = request.nextUrl.searchParams.get('orderDirection') ?? 'desc';
+  const first = Math.min(Math.max(parseInt(request.nextUrl.searchParams.get('first') ?? '100', 10) || 100, 1), 500);
+  const skip = Math.max(parseInt(request.nextUrl.searchParams.get('skip') ?? '0', 10) || 0, 0);
+  const orderByRaw = request.nextUrl.searchParams.get('orderBy') ?? 'stakedTokens';
+  const orderBy = VALID_ORDER_BY.has(orderByRaw) ? orderByRaw : 'stakedTokens';
+  const orderDirRaw = request.nextUrl.searchParams.get('orderDirection') ?? 'desc';
+  const orderDirection = VALID_ORDER_DIR.has(orderDirRaw) ? orderDirRaw : 'desc';
 
   if (!hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });

@@ -9,7 +9,7 @@ export const maxDuration = 300;
 
 function isAuthorized(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true;
+  if (!cronSecret) return false;
   return request.headers.get('authorization') === `Bearer ${cronSecret}`;
 }
 
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     log.cron.error({ err: error, step: 'allocations' }, 'Allocation ingestion failed');
     return NextResponse.json(
-      { error: 'Allocation ingestion failed', details: String(error) },
+      { error: 'Allocation ingestion failed' },
       { status: 500 }
     );
   }

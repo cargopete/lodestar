@@ -6,7 +6,7 @@ import { log } from '@/lib/logger';
 
 function isAuthorized(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true;
+  if (!cronSecret) return false;
   return request.headers.get('authorization') === `Bearer ${cronSecret}`;
 }
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Cron refresh failed', details: String(error) },
+      { error: 'Cron refresh failed' },
       { status: 500 }
     );
   }

@@ -757,8 +757,8 @@ describe('/api/indexer/[address]', () => {
     // Second call: allocation pagination loop (returns empty = exits loop)
     mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
 
-    const req = makeRequest('/api/indexer/0x1234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234' }) });
+    const req = makeRequest('/api/indexer/0x1234000000000000000000000000000000001234');
+    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
     const json = await getJson(res);
 
     expect(res.status).toBe(200);
@@ -770,8 +770,8 @@ describe('/api/indexer/[address]', () => {
     mockSubgraphQuery.mockResolvedValueOnce({ indexer: { id: '0xabc', allocations: [], delegators: [] } });
     mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
 
-    const req = makeRequest('/api/indexer/0xABC');
-    await GET(req, { params: Promise.resolve({ address: '0xABC' }) });
+    const req = makeRequest('/api/indexer/0xABC0000000000000000000000000000000001234');
+    await GET(req, { params: Promise.resolve({ address: '0xABC0000000000000000000000000000000001234' }) });
 
     const query = mockSubgraphQuery.mock.calls[0][0] as string;
     expect(query).toContain('0xabc');
@@ -779,8 +779,8 @@ describe('/api/indexer/[address]', () => {
 
   it('returns 503 when no API key', async () => {
     mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/indexer/0x1234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234' }) });
+    const req = makeRequest('/api/indexer/0x1234000000000000000000000000000000001234');
+    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
     expect(res.status).toBe(503);
   });
 });

@@ -10,13 +10,19 @@ import type { IndexerTrendsResponse, RewardDailyAgg, QueryFeeDailyAgg } from '@/
  * Horizon Indexer Performance subgraph. Supplementary data — gracefully
  * degrades to empty arrays if the subgraph is unavailable.
  */
-export async function GET(request: NextRequest) {
-  const indexer = request.nextUrl.searchParams.get('indexer')?.toLowerCase();
-  const days = Math.min(Number(request.nextUrl.searchParams.get('days') ?? 30), 90);
+const ETH_ADDRESS_RE = /^0x[0-9a-f]{40}$/;
 
-  if (!indexer) {
+export async function GET(request: NextRequest) {
+  const indexerRaw = request.nextUrl.searchParams.get('indexer')?.toLowerCase();
+  const days = Math.min(Math.max(parseInt(request.nextUrl.searchParams.get('days') ?? '30', 10) || 30, 1), 90);
+
+  if (!indexerRaw) {
     return NextResponse.json({ error: 'indexer parameter required' }, { status: 400 });
   }
+  if (!ETH_ADDRESS_RE.test(indexerRaw)) {
+    return NextResponse.json({ error: 'Invalid indexer address' }, { status: 400 });
+  }
+  const indexer = indexerRaw;
 
   if (!hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });

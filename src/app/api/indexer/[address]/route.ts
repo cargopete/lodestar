@@ -9,6 +9,10 @@ export async function GET(
   const { address } = await params;
   const addr = address.toLowerCase();
 
+  if (!/^0x[0-9a-f]{40}$/.test(addr)) {
+    return NextResponse.json({ error: 'Invalid address format' }, { status: 400 });
+  }
+
   if (!hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }

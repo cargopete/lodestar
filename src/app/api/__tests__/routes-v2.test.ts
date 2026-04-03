@@ -142,14 +142,14 @@ describe('/api/portfolio', () => {
   });
 
   it('returns 400 for invalid type', async () => {
-    const req = makeRequest('/api/portfolio?address=0x1234&type=invalid');
+    const req = makeRequest('/api/portfolio?address=0x1234000000000000000000000000000000001234&type=invalid');
     const res = await GET(req);
     expect(res.status).toBe(400);
   });
 
   it('returns 503 when no API key', async () => {
     mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/portfolio?address=0x1234&type=delegator');
+    const req = makeRequest('/api/portfolio?address=0x1234000000000000000000000000000000001234&type=delegator');
     const res = await GET(req);
     expect(res.status).toBe(503);
   });
@@ -163,7 +163,7 @@ describe('/api/portfolio', () => {
       },
     });
 
-    const req = makeRequest('/api/portfolio?address=0x1234&type=delegator');
+    const req = makeRequest('/api/portfolio?address=0x1234000000000000000000000000000000001234&type=delegator');
     const res = await GET(req);
     const json = await getJson(res);
 
@@ -181,7 +181,7 @@ describe('/api/portfolio', () => {
       },
     });
 
-    const req = makeRequest('/api/portfolio?address=0x1234&type=curator');
+    const req = makeRequest('/api/portfolio?address=0x1234000000000000000000000000000000001234&type=curator');
     const res = await GET(req);
     const json = await getJson(res);
 
@@ -193,7 +193,7 @@ describe('/api/portfolio', () => {
   it('lowercases address', async () => {
     mockSubgraphQuery.mockResolvedValueOnce({ delegator: null });
 
-    const req = makeRequest('/api/portfolio?address=0xABCD&type=delegator');
+    const req = makeRequest('/api/portfolio?address=0xABCD000000000000000000000000000000001234&type=delegator');
     await GET(req);
 
     const query = mockSubgraphQuery.mock.calls[0][0] as string;
@@ -617,7 +617,7 @@ describe('/api/vote GET', () => {
       .mockResolvedValueOnce([])   // voters
       .mockResolvedValueOnce([{ indexer_address: '0xindexer' }]); // user's existing vote
 
-    const req = makeRequest('/api/vote?period=2026-04&voter=0xvoter');
+    const req = makeRequest('/api/vote?period=2026-04&voter=0xaaaa000000000000000000000000000000001234');
     const res = await GET(req);
     const json = await getJson(res);
 
@@ -1144,13 +1144,11 @@ describe('/api/cron/refresh', () => {
     vi.unstubAllEnvs();
   });
 
-  it('proceeds without auth when CRON_SECRET not set', async () => {
+  it('returns 401 when CRON_SECRET not set (fail-closed)', async () => {
     vi.unstubAllEnvs();
     const req = makeRequest('/api/cron/refresh');
     const res = await GET(req);
-    const json = await getJson(res);
 
-    expect(res.status).toBe(200);
-    expect(json.ok).toBe(true);
+    expect(res.status).toBe(401);
   });
 });

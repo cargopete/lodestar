@@ -10,6 +10,9 @@ export async function GET(request: NextRequest) {
   if (!address) {
     return NextResponse.json({ error: 'address parameter required' }, { status: 400 });
   }
+  if (!/^0x[0-9a-f]{40}$/.test(address)) {
+    return NextResponse.json({ error: 'Invalid address format' }, { status: 400 });
+  }
   if (type !== 'delegator' && type !== 'curator') {
     return NextResponse.json({ error: 'type must be delegator or curator' }, { status: 400 });
   }

@@ -8,7 +8,7 @@ export const maxDuration = 120;
 
 function isAuthorized(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true;
+  if (!cronSecret) return false;
   return request.headers.get('authorization') === `Bearer ${cronSecret}`;
 }
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     log.cron.error({ err: error, step: 'delegations' }, 'Delegation ingestion failed');
     return NextResponse.json(
-      { error: 'Delegation ingestion failed', details: String(error) },
+      { error: 'Delegation ingestion failed' },
       { status: 500 }
     );
   }

@@ -16,13 +16,16 @@ interface DelegationEventsResponse {
   delegationEvents: DelegationEvent[];
 }
 
+const ETH_ADDRESS_RE = /^0x[0-9a-f]{40}$/;
+
 export async function GET(request: NextRequest) {
   if (!hasSubgraphAccess()) {
     return NextResponse.json({ data: { delegationEvents: [] } });
   }
 
-  const indexer = request.nextUrl.searchParams.get('indexer')?.toLowerCase();
-  const first = Math.min(parseInt(request.nextUrl.searchParams.get('first') ?? '50', 10), 100);
+  const indexerRaw = request.nextUrl.searchParams.get('indexer')?.toLowerCase();
+  const indexer = indexerRaw && ETH_ADDRESS_RE.test(indexerRaw) ? indexerRaw : null;
+  const first = Math.min(Math.max(parseInt(request.nextUrl.searchParams.get('first') ?? '50', 10) || 50, 1), 100);
 
   try {
     const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;

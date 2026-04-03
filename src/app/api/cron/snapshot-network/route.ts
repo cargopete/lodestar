@@ -9,7 +9,7 @@ export const maxDuration = 30;
 
 function isAuthorized(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true;
+  if (!cronSecret) return false;
   return request.headers.get('authorization') === `Bearer ${cronSecret}`;
 }
 
@@ -27,14 +27,17 @@ export async function GET(request: NextRequest) {
   try {
     // Try to grab GRT price for snapshot enrichment
     let grtPriceUsd: number | undefined;
-    try {
-      const priceRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/price`);
-      if (priceRes.ok) {
-        const priceData = await priceRes.json();
-        grtPriceUsd = priceData.price;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    if (siteUrl) {
+      try {
+        const priceRes = await fetch(`${siteUrl}/api/price`, { signal: AbortSignal.timeout(5000) });
+        if (priceRes.ok) {
+          const priceData = await priceRes.json();
+          grtPriceUsd = typeof priceData.price === 'number' ? priceData.price : undefined;
+        }
+      } catch {
+        // Price fetch is best-effort
       }
-    } catch {
-      // Price fetch is best-effort
     }
 
     const result = await withCronTracking(db!, 'snapshot', async () => {
@@ -47,7 +50,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     log.cron.error({ err: error, step: 'snapshot' }, 'Network snapshot failed');
     return NextResponse.json(
-      { error: 'Network snapshot failed', details: String(error) },
+      { error: 'Network snapshot failed' },
       { status: 500 }
     );
   }

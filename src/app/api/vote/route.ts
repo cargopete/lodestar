@@ -12,9 +12,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
+  const PERIOD_RE = /^\d{4}-\d{2}$/;
+  const ETH_ADDRESS_RE = /^0x[0-9a-f]{40}$/;
+
   const { searchParams } = request.nextUrl;
-  const period = searchParams.get('period') || getCurrentPeriod();
-  const voter = searchParams.get('voter')?.toLowerCase() || null;
+  const periodRaw = searchParams.get('period');
+  const period = periodRaw && PERIOD_RE.test(periodRaw) ? periodRaw : getCurrentPeriod();
+  const voterRaw = searchParams.get('voter')?.toLowerCase() || null;
+  const voter = voterRaw && ETH_ADDRESS_RE.test(voterRaw) ? voterRaw : null;
 
   // Vote tallies per indexer
   const tallies = await db`

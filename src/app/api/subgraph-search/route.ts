@@ -23,9 +23,15 @@ export async function GET(request: NextRequest) {
   if (!q || q.length < 2) {
     return NextResponse.json({ data: [] });
   }
+  if (q.length > 100) {
+    return NextResponse.json({ data: [] });
+  }
 
-  // Sanitise — strip anything that could break the GraphQL string
-  const safe = q.replace(/["\\\n\r]/g, '');
+  // Allowlist: alphanumeric, spaces, hyphens, underscores, dots (covers names + CIDv0/CIDv1 hashes)
+  if (!/^[a-zA-Z0-9\s\-_.]+$/.test(q)) {
+    return NextResponse.json({ data: [] });
+  }
+  const safe = q;
 
   try {
     const isHash = safe.startsWith('Qm') && safe.length >= 8;
