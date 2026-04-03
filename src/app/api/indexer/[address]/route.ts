@@ -34,6 +34,7 @@ export async function GET(
           stakedTokens
           lockedTokens
           delegatedTokens
+          delegatedThawingTokens
           allocatedTokens
           tokenCapacity
           allocationCount

@@ -17,6 +17,7 @@ interface DelegationCalculatorProps {
     stakedTokens: string;
     lockedTokens?: string;
     delegatedTokens: string;
+    delegatedThawingTokens?: string;
     indexingRewardCut: number;
     queryFeeCut: number;
     delegatorParameterCooldown: number;
@@ -44,7 +45,7 @@ export function DelegationCalculator({
   const [delegationAmount, setDelegationAmount] = useState<string>('10000');
 
   const selfStake = weiToGRT(indexer.stakedTokens) - weiToGRT(indexer.lockedTokens ?? '0');
-  const currentDelegated = weiToGRT(indexer.delegatedTokens);
+  const currentDelegated = weiToGRT(indexer.delegatedTokens) - weiToGRT(indexer.delegatedThawingTokens ?? '0');
   const newDelegation = parseFloat(delegationAmount) || 0;
 
   // Calculate capacity

@@ -35,6 +35,7 @@ interface IndexerDetail {
   stakedTokens: string;
   lockedTokens?: string;
   delegatedTokens: string;
+  delegatedThawingTokens?: string;
   allocatedTokens: string;
   allocationCount: number;
   indexingRewardCut: number;
@@ -122,7 +123,7 @@ export default function DelegatePage({
 
   const name = ensData?.ensName || resolveIndexerName(indexer.account, indexer.id);
   const selfStake = weiToGRT(indexer.stakedTokens) - weiToGRT(indexer.lockedTokens ?? '0');
-  const delegated = weiToGRT(indexer.delegatedTokens);
+  const delegated = weiToGRT(indexer.delegatedTokens) - weiToGRT(indexer.delegatedThawingTokens ?? '0');
   const capacity = calculateDelegationCapacity(selfStake, delegated, delegationRatio);
   const rawCut = indexer.indexingRewardCut / 1_000_000;
 
