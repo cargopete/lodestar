@@ -60,6 +60,7 @@ const moreItems = [
   { label: 'Compare', href: '/compare' },
   { label: 'POI Explorer', href: '/poi' },
   { label: 'Governance', href: '/governance' },
+  { label: 'Roadmap', href: '/roadmap' },
 ];
 
 export function BottomNav() {
