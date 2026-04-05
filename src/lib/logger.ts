@@ -20,6 +20,7 @@ export const log = {
   cache: logger.child({ module: 'cache' }),
   health: logger.child({ module: 'health' }),
   refresh: logger.child({ module: 'refresh' }),
+  amp: logger.child({ module: 'amp' }),
 };
 
 export default logger;
