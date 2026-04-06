@@ -8,6 +8,7 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { IntelFeed } from '@/components/layout/IntelFeed';
 import { Footer } from '@/components/layout/Footer';
 import { StarPrompt } from '@/components/StarPrompt';
+import { LodieWidget } from '@/components/LodieWidget';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -63,6 +64,7 @@ export default function RootLayout({
             </main>
             <Footer />
             <StarPrompt />
+            <LodieWidget />
           </div>
         </Providers>
       </body>
