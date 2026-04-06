@@ -136,7 +136,7 @@ function SyncDot({ address, url }: { address: string; url: string | null }) {
         </svg>
         {syncedPct}%
       </span>
-      <span className="absolute left-0 top-full mt-1.5 w-60 p-2.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/sync:opacity-100 transition-opacity z-50 text-[11px]">
+      <span className="absolute left-0 top-full mt-1.5 w-56 p-2.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/sync:opacity-100 transition-opacity z-50 text-[11px] whitespace-normal">
         <span className="block font-semibold text-[var(--text)] mb-1">Sync Warning</span>
         <span className="block text-[var(--text-muted)] leading-relaxed">{tipBody}</span>
       </span>
