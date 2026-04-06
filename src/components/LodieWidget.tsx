@@ -39,7 +39,7 @@ export function LodieWidget() {
   const tip = getTip(pathname);
 
   return (
-    <div className="fixed z-50 right-4 md:right-6 bottom-[calc(var(--bottom-nav-height,0px)+1.5rem)] md:bottom-6 flex flex-col items-end gap-2">
+    <div className="hidden lg:flex fixed z-50 right-6 bottom-6 flex-col items-end gap-2">
       {/* Tip panel */}
       {open && (
         <div
