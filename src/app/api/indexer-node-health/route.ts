@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 
-// Reuse the same SSRF-safe URL check as the indexer-status route
 function isSafeUrl(urlStr: string): boolean {
   try {
     const url = new URL(urlStr);
@@ -25,11 +24,16 @@ export interface NodeHealthSummary {
   reachable: boolean;
   totalDeployments: number;
   syncedCount: number;
+  // worstBlocksBehind is only set for deployments the node itself reports as not-synced,
+  // and is capped at 10,000 to filter out stale/cross-chain noise.
   worstBlocksBehind?: number;
 }
 
 async function fetchNodeHealth(indexerUrl: string): Promise<NodeHealthSummary> {
   const base = indexerUrl.replace(/\/+$/, '');
+  // Ask the node for all deployment statuses. We trust the node's own `synced` flag
+  // as the primary signal — computing blocksBehind ourselves from raw chain numbers
+  // produces false positives when the node hosts stale or cross-chain deployments.
   const query = `{
     indexingStatuses {
       synced
@@ -69,13 +73,23 @@ async function fetchNodeHealth(indexerUrl: string): Promise<NodeHealthSummary> {
     let worstBlocksBehind = 0;
 
     for (const s of statuses) {
-      const chain = s.chains?.[0];
-      const chainHead = chain?.chainHeadBlock ? Number(chain.chainHeadBlock.number) : undefined;
-      const latest = chain?.latestBlock ? Number(chain.latestBlock.number) : undefined;
-      const blocksBehind = chainHead && latest ? Math.max(chainHead - latest, 0) : undefined;
-      const synced = blocksBehind !== undefined ? blocksBehind <= 50 : !!s.synced;
-      if (synced && s.health !== 'failed') syncedCount++;
-      if (blocksBehind !== undefined) worstBlocksBehind = Math.max(worstBlocksBehind, blocksBehind);
+      // Trust the node's own synced flag — it applies the right chain-specific threshold
+      const nodeConsidersSynced = s.synced && s.health !== 'failed';
+      if (nodeConsidersSynced) {
+        syncedCount++;
+      } else if (s.health !== 'failed') {
+        // For lagging (not failed) deployments, record blocksBehind as supplementary info.
+        // Cap at 10,000 to discard stale/abandoned deployments that inflate the number.
+        const chain = s.chains?.[0];
+        const chainHead = chain?.chainHeadBlock ? Number(chain.chainHeadBlock.number) : undefined;
+        const latest = chain?.latestBlock ? Number(chain.latestBlock.number) : undefined;
+        if (chainHead && latest) {
+          const behind = Math.max(chainHead - latest, 0);
+          if (behind <= 10_000) {
+            worstBlocksBehind = Math.max(worstBlocksBehind, behind);
+          }
+        }
+      }
     }
 
     return {

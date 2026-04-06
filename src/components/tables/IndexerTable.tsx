@@ -90,11 +90,9 @@ const columnHelper = createColumnHelper<IndexerRow>();
 const syncHealthCache = new Map<string, { reachable: boolean; totalDeployments: number; syncedCount: number; worstBlocksBehind?: number }>();
 
 /**
- * Small coloured dot indicating an indexer's live node sync health.
- * Green = all (or nearly all) deployments at chain head.
- * Amber = some lag (worst deployment >50 blocks behind).
- * Red = severely lagging, unreachable, or no deployments found.
- * Faint = no public URL to query.
+ * Sync health warning badge — only renders when there's a meaningful issue.
+ * Healthy nodes (≥85% synced) show nothing to keep the UI clean.
+ * Nodes with <3 deployments or unreachable nodes are silently skipped.
  */
 function SyncDot({ address, url }: { address: string; url: string | null }) {
   const [health, setHealth] = useState(syncHealthCache.get(address) ?? null);
@@ -115,40 +113,32 @@ function SyncDot({ address, url }: { address: string; url: string | null }) {
       .finally(() => { fetching.current = false; });
   }, [address, url, health]);
 
-  if (!url) return null;
+  if (!url || health === null) return null;
+  if (!health.reachable || health.totalDeployments < 3) return null;
 
-  let color = 'var(--text-faint)';
-  let tip = 'Loading node health…';
+  const syncedPct = Math.round((health.syncedCount / health.totalDeployments) * 100);
+  if (syncedPct >= 85) return null;
 
-  if (health !== null) {
-    if (!health.reachable || health.totalDeployments === 0) {
-      color = 'var(--text-faint)';
-      tip = 'Node status unavailable';
-    } else {
-      const lag = health.worstBlocksBehind ?? 0;
-      const pct = health.totalDeployments > 0 ? health.syncedCount / health.totalDeployments : 0;
-      if (lag <= 50 && pct >= 0.9) {
-        color = 'var(--green)';
-        tip = `Node healthy — ${health.syncedCount}/${health.totalDeployments} deployments at head`;
-      } else if (lag <= 500 || pct >= 0.6) {
-        color = 'var(--amber)';
-        tip = `Some lag — worst: ${lag.toLocaleString()} blocks behind (${health.syncedCount}/${health.totalDeployments} synced)`;
-      } else {
-        color = 'var(--red)';
-        tip = `Significant lag — worst: ${lag.toLocaleString()} blocks behind (${health.syncedCount}/${health.totalDeployments} synced)`;
-      }
-    }
-  }
+  const isCritical = syncedPct < 50;
+  const color = isCritical ? 'var(--red)' : 'var(--amber)';
+  const behind = health.worstBlocksBehind;
+  const lagText = behind ? `, up to ${behind.toLocaleString()} blocks behind` : '';
+  const tipBody = `${syncedPct}% of deployments at chain head${lagText}. View the indexer profile for per-subgraph detail.`;
 
   return (
-    <span className="relative group/sync inline-flex">
+    <span className="relative group/sync inline-flex items-center">
       <span
-        className="w-2 h-2 rounded-full inline-block"
-        style={{ backgroundColor: color }}
-      />
-      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-56 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/sync:opacity-100 transition-opacity z-50 text-[11px] font-normal">
-        <span className="block font-semibold text-[var(--text)] mb-1">Node Sync Health</span>
-        <span className="block text-[var(--text-muted)]">{tip}</span>
+        className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-semibold leading-none"
+        style={{ color, backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)` }}
+      >
+        <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L1 21h22L12 2zm0 3.5L20.5 19H3.5L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z" />
+        </svg>
+        {syncedPct}%
+      </span>
+      <span className="absolute left-0 top-full mt-1.5 w-60 p-2.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/sync:opacity-100 transition-opacity z-50 text-[11px]">
+        <span className="block font-semibold text-[var(--text)] mb-1">Sync Warning</span>
+        <span className="block text-[var(--text-muted)] leading-relaxed">{tipBody}</span>
       </span>
     </span>
   );
