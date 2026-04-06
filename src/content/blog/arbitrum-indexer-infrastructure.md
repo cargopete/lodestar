@@ -88,9 +88,9 @@ Yes. The short version:
 
 The rule of thumb (courtesy of mindstyle): keep enough history to survive outages and catch up after one. Your pruning depth should be comfortably larger than your `reorg_threshold` (more on that below) plus however long you might be offline.
 
-### On the horizon: Erigon Nitro
+### On the horizon: Erigon Nitro (likely abandoned)
 
-There's a second effort worth watching: Erigon Nitro, a port of the Erigon client to the Arbitrum Nitro stack. On Arbitrum Sepolia testnet it achieves archive storage of ~713GB — a 94% reduction versus the old 12TB+ archive. If that holds for mainnet it would be transformative. But it's **alpha and Sepolia-only** for now. Watch [github.com/erigontech/nitro-erigon](https://github.com/erigontech/nitro-erigon).
+Erigon Nitro was a port of the Erigon client to the Arbitrum Nitro stack that showed impressive numbers on Sepolia testnet — ~713GB archive, a 94% reduction. However, as of April 2026 the Arbitrum team appears to have stopped work on it (per Johnathan at Pinax). It never reached Arbitrum One mainnet and at this point probably won't. Archive-path with PathDB/PebbleDB is the practical choice for the foreseeable future.
 
 ---
 
