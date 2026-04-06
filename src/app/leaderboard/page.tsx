@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useLeaderboard, useLeaderboardPeriods, useEnrichedIndexers } from '@/hooks/useNetworkStats';
@@ -120,6 +120,14 @@ function periodToYYYYMM(start: string): string {
 }
 
 export default function LeaderboardPage() {
+  return (
+    <Suspense>
+      <LeaderboardContent />
+    </Suspense>
+  );
+}
+
+function LeaderboardContent() {
   const searchParams = useSearchParams();
   const highlightParam = searchParams.get('highlight')?.toLowerCase() ?? null;
 
