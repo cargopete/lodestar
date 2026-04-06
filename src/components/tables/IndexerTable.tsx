@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   useReactTable,
@@ -85,6 +85,74 @@ const nameAddressFilter: FilterFn<IndexerRow> = (row, _columnId, filterValue) =>
 };
 
 const columnHelper = createColumnHelper<IndexerRow>();
+
+// Module-level cache so repeated renders / page navigations don't re-fetch
+const syncHealthCache = new Map<string, { reachable: boolean; totalDeployments: number; syncedCount: number; worstBlocksBehind?: number }>();
+
+/**
+ * Small coloured dot indicating an indexer's live node sync health.
+ * Green = all (or nearly all) deployments at chain head.
+ * Amber = some lag (worst deployment >50 blocks behind).
+ * Red = severely lagging, unreachable, or no deployments found.
+ * Faint = no public URL to query.
+ */
+function SyncDot({ address, url }: { address: string; url: string | null }) {
+  const [health, setHealth] = useState(syncHealthCache.get(address) ?? null);
+  const fetching = useRef(false);
+
+  useEffect(() => {
+    if (!url || health !== null || fetching.current) return;
+    fetching.current = true;
+    fetch(`/api/indexer-node-health?url=${encodeURIComponent(url)}&addr=${encodeURIComponent(address)}`)
+      .then((r) => r.json())
+      .then(({ data }) => {
+        if (data) {
+          syncHealthCache.set(address, data);
+          setHealth(data);
+        }
+      })
+      .catch(() => {/* silent */})
+      .finally(() => { fetching.current = false; });
+  }, [address, url, health]);
+
+  if (!url) return null;
+
+  let color = 'var(--text-faint)';
+  let tip = 'Loading node health…';
+
+  if (health !== null) {
+    if (!health.reachable || health.totalDeployments === 0) {
+      color = 'var(--text-faint)';
+      tip = 'Node status unavailable';
+    } else {
+      const lag = health.worstBlocksBehind ?? 0;
+      const pct = health.totalDeployments > 0 ? health.syncedCount / health.totalDeployments : 0;
+      if (lag <= 50 && pct >= 0.9) {
+        color = 'var(--green)';
+        tip = `Node healthy — ${health.syncedCount}/${health.totalDeployments} deployments at head`;
+      } else if (lag <= 500 || pct >= 0.6) {
+        color = 'var(--amber)';
+        tip = `Some lag — worst: ${lag.toLocaleString()} blocks behind (${health.syncedCount}/${health.totalDeployments} synced)`;
+      } else {
+        color = 'var(--red)';
+        tip = `Significant lag — worst: ${lag.toLocaleString()} blocks behind (${health.syncedCount}/${health.totalDeployments} synced)`;
+      }
+    }
+  }
+
+  return (
+    <span className="relative group/sync inline-flex">
+      <span
+        className="w-2 h-2 rounded-full inline-block"
+        style={{ backgroundColor: color }}
+      />
+      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-56 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/sync:opacity-100 transition-opacity z-50 text-[11px] font-normal">
+        <span className="block font-semibold text-[var(--text)] mb-1">Node Sync Health</span>
+        <span className="block text-[var(--text-muted)]">{tip}</span>
+      </span>
+    </span>
+  );
+}
 
 /** Column header with an info tooltip on hover */
 function HeaderTip({ label, tip }: { label: string; tip: string }) {
@@ -277,6 +345,8 @@ export function IndexerTable() {
                     )}
                   </span>
                 </span>
+                {/* Node sync health indicator */}
+                <SyncDot address={row.address} url={row.url} />
                 {/* Recent delegation activity indicator */}
                 {row.recentDelegations && (
                   <span className="relative group/del inline-flex">
@@ -658,6 +728,7 @@ export function IndexerTable() {
                               <path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
                             </svg>
                           )}
+                          <SyncDot address={d.address} url={d.url} />
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">

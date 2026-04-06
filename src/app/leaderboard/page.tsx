@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useLeaderboard, useLeaderboardPeriods, useEnrichedIndexers } from '@/hooks/useNetworkStats';
 import { Card } from '@/components/ui/Card';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
@@ -119,6 +120,9 @@ function periodToYYYYMM(start: string): string {
 }
 
 export default function LeaderboardPage() {
+  const searchParams = useSearchParams();
+  const highlightParam = searchParams.get('highlight')?.toLowerCase() ?? null;
+
   const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>(undefined);
   const { data, isLoading, isError } = useLeaderboard(selectedPeriod);
   const { data: periodsData } = useLeaderboardPeriods();
@@ -184,6 +188,39 @@ export default function LeaderboardPage() {
     const start = page * PAGE_SIZE;
     return entries.slice(start, start + PAGE_SIZE);
   }, [entries, page]);
+
+  // Resolve highlight param to a canonical address (entries must be computed first)
+  const highlightAddress = useMemo(() => {
+    if (!highlightParam || !entries.length) return null;
+    const byAddr = entries.find((e) => e.indexer_address.toLowerCase() === highlightParam);
+    if (byAddr) return byAddr.indexer_address;
+    const byName = entries.find(
+      (e) => (nameMap.get(e.indexer_address.toLowerCase()) ?? '').toLowerCase() === highlightParam,
+    );
+    return byName?.indexer_address ?? null;
+  }, [highlightParam, entries, nameMap]);
+
+  // Jump to the page containing the highlighted entry (once, after entries load)
+  const hasJumped = useRef(false);
+  useEffect(() => {
+    if (hasJumped.current || !highlightAddress || !entries.length) return;
+    const idx = entries.findIndex(
+      (e) => e.indexer_address.toLowerCase() === highlightAddress.toLowerCase(),
+    );
+    if (idx >= 0) {
+      setPage(Math.floor(idx / PAGE_SIZE));
+      hasJumped.current = true;
+    }
+  }, [highlightAddress, entries]);
+
+  // Scroll highlighted row into view after page change settles
+  useEffect(() => {
+    if (!highlightAddress) return;
+    const timer = setTimeout(() => {
+      document.querySelector('[data-highlight-row]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [highlightAddress, page]);
 
   // Summary stats
   const topScore = entries[0]?.final_score ?? 0;
@@ -300,18 +337,23 @@ export default function LeaderboardPage() {
 
       {/* Mobile cards */}
       <div className="block md:hidden space-y-3">
-        {paginatedEntries.map((entry) => (
-          <MobileCard
-            key={entry.indexer_address}
-            entry={entry}
-            name={nameMap.get(entry.indexer_address.toLowerCase())}
-            isBadgeHolder={entry.indexer_address.toLowerCase() === badgeHolderAddress?.toLowerCase()}
-            badgePeriod={bannerPeriod}
-            votePeriod={votePeriod}
-            expanded={expanded === entry.indexer_address}
-            onToggle={() => setExpanded(expanded === entry.indexer_address ? null : entry.indexer_address)}
-          />
-        ))}
+        {paginatedEntries.map((entry) => {
+          const highlighted = !!highlightAddress && entry.indexer_address.toLowerCase() === highlightAddress.toLowerCase();
+          return (
+            <div key={entry.indexer_address} data-highlight-row={highlighted ? '' : undefined}>
+              <MobileCard
+                entry={entry}
+                name={nameMap.get(entry.indexer_address.toLowerCase())}
+                isBadgeHolder={entry.indexer_address.toLowerCase() === badgeHolderAddress?.toLowerCase()}
+                badgePeriod={bannerPeriod}
+                votePeriod={votePeriod}
+                expanded={expanded === entry.indexer_address}
+                onToggle={() => setExpanded(expanded === entry.indexer_address ? null : entry.indexer_address)}
+                isHighlighted={highlighted}
+              />
+            </div>
+          );
+        })}
         <Pagination
           page={page}
           pageSize={PAGE_SIZE}
@@ -348,6 +390,7 @@ export default function LeaderboardPage() {
                   votePeriod={votePeriod}
                   expanded={expanded === entry.indexer_address}
                   onToggle={() => setExpanded(expanded === entry.indexer_address ? null : entry.indexer_address)}
+                  isHighlighted={!!highlightAddress && entry.indexer_address.toLowerCase() === highlightAddress.toLowerCase()}
                 />
               ))}
             </tbody>
@@ -405,6 +448,35 @@ const TH_CLASS_CENTER = `${TH_BASE} text-center`;
 
 const TD_BORDER = 'border-r border-[var(--border)]/20 last:border-r-0';
 
+// ── Copy link button ──────────────────────────────────────
+
+function CopyLinkButton({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      title="Copy shareable link"
+      onClick={(e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(`${window.location.origin}/leaderboard?highlight=${address}`);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      className="opacity-0 group-hover/row:opacity-100 transition-opacity p-1 rounded text-[var(--text-faint)] hover:text-[var(--accent)]"
+    >
+      {copied ? (
+        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <rect x="9" y="9" width="13" height="13" rx="2" />
+          <path strokeLinecap="round" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 // ── Desktop row ───────────────────────────────────────────
 
 function DesktopRow({
@@ -415,6 +487,7 @@ function DesktopRow({
   votePeriod,
   expanded,
   onToggle,
+  isHighlighted,
 }: {
   entry: LeaderboardEntry;
   name: string | undefined;
@@ -423,6 +496,7 @@ function DesktopRow({
   votePeriod: string;
   expanded: boolean;
   onToggle: () => void;
+  isHighlighted?: boolean;
 }) {
   const networkScore = entry.allocation_breadth_score + entry.query_fee_score + entry.allocation_efficiency_score;
   const economicsScore = entry.capacity_score;
@@ -432,7 +506,11 @@ function DesktopRow({
   return (
     <>
       <tr
-        className="border-b border-[0.5px] border-[var(--border)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
+        data-highlight-row={isHighlighted ? '' : undefined}
+        className={cn(
+          'group/row border-b border-[0.5px] border-[var(--border)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer',
+          isHighlighted && 'ring-1 ring-inset ring-[var(--accent)] bg-[var(--accent-dim)]',
+        )}
         onClick={onToggle}
       >
         <td className={`px-4 py-3 text-center ${TD_BORDER}`}>
@@ -475,6 +553,7 @@ function DesktopRow({
                 </span>
               </span>
             )}
+            <CopyLinkButton address={entry.indexer_address} />
           </div>
         </td>
         <td className={`px-4 py-3 text-center ${TD_BORDER}`}>
@@ -523,6 +602,7 @@ function MobileCard({
   votePeriod,
   expanded,
   onToggle,
+  isHighlighted,
 }: {
   entry: LeaderboardEntry;
   name: string | undefined;
@@ -531,9 +611,13 @@ function MobileCard({
   votePeriod: string;
   expanded: boolean;
   onToggle: () => void;
+  isHighlighted?: boolean;
 }) {
   return (
-    <Card className="cursor-pointer" onClick={onToggle}>
+    <Card
+      className={cn('cursor-pointer', isHighlighted && 'ring-1 ring-[var(--accent)] bg-[var(--accent-dim)]')}
+      onClick={onToggle}
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <svg
@@ -565,6 +649,7 @@ function MobileCard({
                   </span>
                 </span>
               )}
+              <CopyLinkButton address={entry.indexer_address} />
             </div>
             {name && (
               <p className="text-xs text-[var(--text-faint)] font-mono">
