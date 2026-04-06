@@ -118,11 +118,15 @@ Three modes:
 
 The problem: if `reorg_threshold` is set too high — say 250 blocks — you're stuck in block-walk mode on fast chains almost permanently. Never far enough behind to use range-scan, never close enough to reach idle. You just lag.
 
+**Important caveat**: lowering the threshold only helps if your lag is *greater than* the threshold. If you're already sitting 10–30 blocks behind with `reorg_threshold=50`, you're already in block-walk mode — lowering to 50 won't change anything because 10–30 < 50. In that case the bottleneck is block-walk throughput itself, not the threshold (more on this below).
+
 ### Why BSC in particular
 
-BSC produces a block every ~3 seconds. With a default `reorg_threshold` of 250 blocks, that's 12.5 minutes of "close to head" window where graph-node is walking blocks one by one. If your polling interval is 500ms but subgraph mappings take 200ms each, you're burning time. High throughput (many transactions, large logs) compounds this.
+BSC produces a block every ~3 seconds. Even in block-walk mode, your subgraph needs to process each block in under ~3 seconds to keep up. If your mappings are doing `eth_call`s, writing lots of entities, or your Postgres is under load, you'll accumulate lag faster than you can drain it. High throughput (many transactions per block, large event logs) compounds this.
 
-### The fix
+Tehn tested `polling_interval=300ms` and `ETHEREUM_REORG_THRESHOLD=50` on BSC — neither closed the lag because his subgraphs were already within the threshold. The sync engine was already in block-walk mode. The bottleneck was elsewhere.
+
+### The threshold fix (when it applies)
 
 In your `config.toml`:
 
@@ -132,9 +136,7 @@ polling_interval = 300     # milliseconds between block polls (default ~500-1000
 reorg_threshold = 50       # blocks; below this, walk one-by-one vs scan ranges
 ```
 
-**polling_interval**: controls how often the ingestor checks for a new block. On fast chains, bring this down to 200–300ms so new blocks hit the cache sooner.
-
-**reorg_threshold**: the more impactful setting. BSC's reorg depth is almost never more than 5–10 blocks. Running 250 is wildly conservative. Dropping to 30–50 means you exit block-walk mode when 30–50 blocks behind (not 250), and reach chain head faster.
+This helps when you're lagging *more than* `reorg_threshold` blocks and stuck in range-scan/block-walk transition. BSC's actual reorg depth is almost never more than 5–10 blocks, so 250 is wildly conservative.
 
 Sensible values by chain:
 
@@ -146,17 +148,43 @@ Sensible values by chain:
 | Arbitrum | Near-instant finality | 20–30 |
 | Ethereum mainnet | Occasional deep reorgs | 100 |
 
+### When you're already in block-walk and still lagging
+
+If your lag is 10–30 blocks and threshold changes do nothing, the problem is that block-walk itself is too slow to keep pace. Things to investigate:
+
+**`eth_call`s in mappings** — every `eth_call` in a subgraph handler is a synchronous RPC call made during indexing. On BSC with 3s blocks, a handful of slow `eth_call`s per block will guarantee lag. Check whether the subgraphs you're running make heavy use of `eth_call` in their handlers. This is the most common culprit.
+
+**RPC provider latency** — `eth_call` performance is entirely dependent on your RPC node's response time. A slow or overloaded provider adds directly to per-block processing time. If you're on a shared public endpoint, this is likely the issue.
+
+**eth_call cache** — graph-node has a built-in `eth_call` cache. Verify it's enabled and sized appropriately:
+```toml
+[store.primary]
+# ... your DB config
+
+[general]
+query_store_connection_pool_size = 10
+
+[deployment]
+# Increase if indexing many subgraphs simultaneously
+```
+The relevant env var is `GRAPH_ETHEREUM_CALL_CACHE_FULL_TRIES`. Check the graph-node docs for current defaults.
+
+**Firehose** — the proper long-term solution for fast chains. Firehose streams pre-decoded block data via gRPC, eliminating the polling loop and JSON-RPC overhead entirely. Providers: Pinax, StreamingFast. If you're running high-value subgraphs on BSC at scale, Firehose is worth the setup cost.
+
+**Profiling graph-node** — Tehn noted that graph-node's profiling tooling is hard to activate in practice. The most useful observable signal is the `subgraph_query_execution_time` and indexing metrics in Prometheus if you have it configured. Failing that, debug-level logs will show per-block timing.
+
 ### Debugging checklist
 
-1. **Check reorg_threshold** — if it's above 100 on BSC/Polygon/Avalanche, drop it to 30–50.
-2. **Check polling_interval** — try halving it and watch whether the lag closes.
-3. **Check your ingestor node** — confirm exactly one node has block ingestion enabled for the chain. See [Rule 1 in the stack architecture post](/blog/graph-node-stack-architecture).
-4. **Check per-block mapping time** — if individual subgraph handlers are slow (complex logic, heavy eth_calls), no config tuning will help. Profile the handler.
-5. **Check the block cache** — if your ingestor is itself behind chain head, fix that first.
+1. **Is your lag > reorg_threshold?** — If yes, lower the threshold. If no (lag < threshold), skip to step 3.
+2. **Check polling_interval** — halve it, observe whether lag closes.
+3. **Check your ingestor node** — confirm exactly one node ingests the chain. See [Rule 1 in the stack architecture post](/blog/graph-node-stack-architecture).
+4. **Count eth_calls in your subgraph handlers** — open the subgraph manifest and look for `eth_call`s in mappings. Each one is a synchronous RPC roundtrip per occurrence per block.
+5. **Benchmark your RPC** — a simple `eth_call` latency test against your provider. If you're getting > 200ms responses, that's your lag multiplied by every block.
+6. **Consider Firehose** — if the subgraphs are long-running and mission-critical, the polling approach has a ceiling on fast chains.
 
 ### Why the defaults don't fit
 
-The defaults were designed for Ethereum mainnet (12-second blocks, occasional deep reorgs). They haven't always been updated for the high-throughput EVM chains added since. Tuning these is expected. The defaults are a starting point.
+The defaults were designed for Ethereum mainnet (12-second blocks, occasional deep reorgs). They haven't always been updated for the high-throughput EVM chains added since. Tuning these is expected — but config tuning has limits. On a chain with 3s blocks, the real ceiling is mapping execution time, not polling frequency.
 
 ---
 
