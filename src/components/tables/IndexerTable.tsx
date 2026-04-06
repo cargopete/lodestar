@@ -89,6 +89,18 @@ const columnHelper = createColumnHelper<IndexerRow>();
 // Module-level cache so repeated renders / page navigations don't re-fetch
 const syncHealthCache = new Map<string, { reachable: boolean; totalDeployments: number; syncedCount: number; worstBlocksBehind?: number }>();
 
+// Dropped chains — fetched once for all indexers via a shared promise
+let droppedChainsPromise: Promise<Record<string, string[]>> | null = null;
+function getDroppedChains(): Promise<Record<string, string[]>> {
+  if (!droppedChainsPromise) {
+    droppedChainsPromise = fetch('/api/dropped-chains')
+      .then((r) => r.json())
+      .then(({ data }) => (data ?? {}) as Record<string, string[]>)
+      .catch(() => ({} as Record<string, string[]>));
+  }
+  return droppedChainsPromise;
+}
+
 /**
  * Sync health warning badge — only renders when there's a meaningful issue.
  * Healthy nodes (≥85% synced) show nothing to keep the UI clean.
@@ -138,6 +150,43 @@ function SyncDot({ address, url }: { address: string; url: string | null }) {
       </span>
       <span className="absolute left-0 top-full mt-1.5 w-56 p-2.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/sync:opacity-100 transition-opacity z-50 text-[11px] whitespace-normal">
         <span className="block font-semibold text-[var(--text)] mb-1">Sync Warning</span>
+        <span className="block text-[var(--text-muted)] leading-relaxed">{tipBody}</span>
+      </span>
+    </span>
+  );
+}
+
+/**
+ * Dropped chain warning — shows when the cron detects a chain was present in the
+ * previous snapshot but absent in the most recent one. Silent delegation risk signal.
+ */
+function DroppedChainDot({ address }: { address: string }) {
+  const [dropped, setDropped] = useState<string[]>([]);
+
+  useEffect(() => {
+    getDroppedChains().then((map) => {
+      setDropped(map[address.toLowerCase()] ?? []);
+    });
+  }, [address]);
+
+  if (!dropped.length) return null;
+
+  const label = dropped.length <= 2 ? dropped.join(', ') : `${dropped.slice(0, 2).join(', ')} +${dropped.length - 2}`;
+  const tipBody = `This indexer appears to have stopped serving: ${dropped.join(', ')}. Chains missing from their node since the last snapshot — may indicate infra changes. Check before delegating.`;
+
+  return (
+    <span className="relative group/drop inline-flex items-center">
+      <span
+        className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-semibold leading-none"
+        style={{ color: 'var(--amber)', backgroundColor: 'color-mix(in srgb, var(--amber) 12%, transparent)' }}
+      >
+        <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 17h8m0 0-3-3m3 3-3 3M6 10v-1a6 6 0 0112 0" />
+        </svg>
+        {label}
+      </span>
+      <span className="absolute left-0 top-full mt-1.5 w-60 p-2.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/drop:opacity-100 transition-opacity z-50 text-[11px] whitespace-normal">
+        <span className="block font-semibold text-[var(--text)] mb-1">Chain Drop Detected</span>
         <span className="block text-[var(--text-muted)] leading-relaxed">{tipBody}</span>
       </span>
     </span>
@@ -337,6 +386,8 @@ export function IndexerTable() {
                 </span>
                 {/* Node sync health indicator */}
                 <SyncDot address={row.address} url={row.url} />
+                {/* Dropped chain signal */}
+                <DroppedChainDot address={row.address} />
                 {/* Recent delegation activity indicator */}
                 {row.recentDelegations && (
                   <span className="relative group/del inline-flex">
@@ -719,6 +770,7 @@ export function IndexerTable() {
                             </svg>
                           )}
                           <SyncDot address={d.address} url={d.url} />
+                          <DroppedChainDot address={d.address} />
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">

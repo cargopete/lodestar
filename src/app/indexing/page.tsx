@@ -7,6 +7,7 @@ import { useSubgraphDeployments } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { cn, weiToGRT, formatGRT, shortenAddress } from '@/lib/utils';
+import type { ChainLagData } from '@/app/api/cron/refresh-chain-health/route';
 
 // ---------------------------------------------------------------------------
 // Types for subgraph name search
@@ -22,6 +23,165 @@ interface SubgraphSearchResult {
       stakedTokens: string;
     };
   } | null;
+}
+
+// ---------------------------------------------------------------------------
+// Chain name mapping — graph-node network IDs → human-readable labels
+// ---------------------------------------------------------------------------
+
+const CHAIN_LABELS: Record<string, string> = {
+  mainnet: 'Ethereum',
+  'arbitrum-one': 'Arbitrum',
+  'bsc': 'BSC',
+  matic: 'Polygon',
+  gnosis: 'Gnosis',
+  avalanche: 'Avalanche',
+  optimism: 'Optimism',
+  base: 'Base',
+  celo: 'Celo',
+  fantom: 'Fantom',
+  moonbeam: 'Moonbeam',
+  moonriver: 'Moonriver',
+  'arbitrum-goerli': 'Arb Goerli',
+  'matic-testnet': 'Mumbai',
+  'goerli': 'Goerli',
+  'sepolia': 'Sepolia',
+};
+
+function chainLabel(network: string): string {
+  return CHAIN_LABELS[network] ?? network;
+}
+
+// ---------------------------------------------------------------------------
+// Chain health hook
+// ---------------------------------------------------------------------------
+
+function useChainLag() {
+  const [data, setData] = useState<ChainLagData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/chain-lag')
+      .then((r) => r.json())
+      .then((json) => setData(json.data ?? null))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { data, loading };
+}
+
+// ---------------------------------------------------------------------------
+// Chain health panel
+// ---------------------------------------------------------------------------
+
+function ChainHealthPanel() {
+  const { data, loading } = useChainLag();
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Chain Sync Health</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-6">
+            <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Chain Sync Health</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-[var(--text-muted)] py-2">
+            No chain data yet — the cron job populates this every 30 minutes.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Sort chains: most-lagging first, then by indexer count
+  const sorted = Object.entries(data.chains).sort((a, b) => {
+    const lagDiff = b[1].medianBlocksBehind - a[1].medianBlocksBehind;
+    if (lagDiff !== 0) return lagDiff;
+    return b[1].sampledIndexers - a[1].sampledIndexers;
+  });
+
+  const age = Math.round((Date.now() - data.computedAt) / 60_000);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Chain Sync Health</CardTitle>
+          <span className="text-[10px] text-[var(--text-faint)]">
+            updated {age < 2 ? 'just now' : `${age}m ago`}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-xs text-[var(--text-muted)] mb-4">
+          Median blocks behind across active indexers per chain. Red chains may indicate a node-side infrastructure issue.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+          {sorted.map(([network, stats]) => {
+            const lag = Math.round(stats.medianBlocksBehind);
+            const isRed = lag > 50;
+            const isAmber = !isRed && lag > 5;
+            const laggingPct = stats.sampledIndexers > 0
+              ? Math.round((stats.laggingCount / stats.sampledIndexers) * 100)
+              : 0;
+
+            return (
+              <div
+                key={network}
+                className={cn(
+                  'flex flex-col gap-1 px-3 py-2.5 rounded-lg border',
+                  isRed
+                    ? 'border-red-500/30 bg-red-500/5'
+                    : isAmber
+                    ? 'border-amber-500/30 bg-amber-500/5'
+                    : 'border-[var(--border)] bg-[var(--bg-elevated)]',
+                )}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-xs font-medium text-[var(--text)] truncate">
+                    {chainLabel(network)}
+                  </span>
+                  <span
+                    className={cn(
+                      'text-[10px] font-mono font-semibold flex-shrink-0',
+                      isRed ? 'text-red-400' : isAmber ? 'text-amber-400' : 'text-emerald-400',
+                    )}
+                  >
+                    {lag === 0 ? '✓' : `${lag.toLocaleString()}b`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[var(--text-faint)]">
+                    {stats.sampledIndexers} indexers
+                  </span>
+                  {stats.laggingCount > 0 && (
+                    <span className="text-[10px] text-[var(--text-faint)]">
+                      {laggingPct}% lagging
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +262,9 @@ export default function IndexingStatusPage() {
           Check the sync health of any subgraph deployment across active indexers.
         </p>
       </div>
+
+      {/* Chain sync health panel */}
+      <ChainHealthPanel />
 
       {/* Search / Lookup */}
       <Card>
