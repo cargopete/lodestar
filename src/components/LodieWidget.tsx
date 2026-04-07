@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
 
-// ─── Content ────────────────────────────────────────────────────────────────
+// ─── Static content ──────────────────────────────────────────────────────────
 
 const PAGE_TIPS: Record<string, { basic: string; deep?: string }> = {
   '/': {
@@ -14,55 +14,55 @@ const PAGE_TIPS: Record<string, { basic: string; deep?: string }> = {
   },
   '/indexers': {
     basic: "Every indexer runs a different course. Check the risk score and cut rate before committing your delegation.",
-    deep: "The risk score is a 7-dimension composite graded A–F: REO compliance (25%), self-stake ratio (20%), cut stability (15%), allocation efficiency (15%), over-delegation (10%), transparency (10%), and delegation trend (5%). An F in REO or self-stake is the most concerning — the others can recover.",
+    deep: "The risk score is a 7-dimension composite graded A–F: REO compliance (25%), self-stake ratio (20%), cut stability (15%), allocation efficiency (15%), over-delegation (10%), transparency (10%), and delegation trend (5%). An F in REO or self-stake is the most concerning.",
   },
   '/delegators': {
     basic: "Positions, rewards, and anything thawing. Track your anchors here.",
-    deep: "Undelegating starts a 28-day thawing period — your GRT is locked and earns nothing during that time. Plan accordingly before moving. The portfolio page shows unrealised rewards, which only materialise when you undelegate.",
+    deep: "Undelegating starts a 28-day thawing period — your GRT is locked and earns nothing during that time. The portfolio page shows unrealised rewards, which only materialise when you undelegate.",
   },
   '/services': {
     basic: "Horizon's new waters. Indexers provision stake here to serve data services beyond subgraphs.",
-    deep: "Horizon separates indexing agreements from the old allocation model. Indexers now provision stake per service type rather than per subgraph deployment. This allows more flexible service pricing and creates new revenue streams beyond query fees.",
+    deep: "Horizon separates indexing agreements from the old allocation model. Indexers provision stake per service type, allowing more flexible pricing and new revenue streams beyond query fees.",
   },
   '/payments': {
     basic: "The TAP pipeline — escrow balances and redemptions. What's been earned and what's been collected.",
-    deep: "TAP (Timeline Aggregation Protocol) replaces the old voucher system. Gateways deposit escrow and issue RAVs (Receipt Aggregate Vouchers) to indexers, who redeem them on-chain. The gap between escrow and redeemed is the outstanding obligation — useful for spotting redemption delays.",
+    deep: "TAP replaces the old voucher system. Gateways deposit escrow and issue RAVs to indexers, who redeem them on-chain. The gap between escrow and redeemed is the outstanding obligation — useful for spotting redemption delays.",
   },
   '/subgraphs': {
     basic: "Each subgraph charts different territory. The complexity score tells you how demanding it is to index.",
-    deep: "Complexity is scored Light→Extreme based on handler count, entity types, `eth_call` usage, and block time normalised by chain. A 'Heavy' or 'Extreme' subgraph on a fast chain (BSC, Polygon) will put pressure on indexer infrastructure — relevant when choosing which deployments to allocate to.",
+    deep: "Complexity is scored Light→Extreme based on handler count, entity types, eth_call usage, and block time normalised by chain. Heavy or Extreme subgraphs on fast chains put real pressure on indexer infrastructure.",
   },
   '/poi': {
-    basic: "Proof of Indexing. If indexers disagree here, someone's off course. Worth investigating before you trust the signal.",
-    deep: "A POI is a cryptographic hash of an indexer's state at a given block. If two indexers produce different POIs for the same deployment and block, one of them is indexing incorrectly. Persistent divergence can lead to disputes and slashing.",
+    basic: "Proof of Indexing. If indexers disagree here, someone's off course.",
+    deep: "A POI is a cryptographic hash of an indexer's state at a given block. If two indexers produce different POIs for the same deployment and block, one is indexing incorrectly. Persistent divergence can lead to disputes and slashing.",
   },
   '/leaderboard': {
     basic: "The monthly standings — community votes and protocol metrics, combined.",
-    deep: "The leaderboard score blends on-chain metrics (allocation efficiency, cut rate, REO status, etc.) with community votes. Delegators with active positions vote with 5× weight. The point system is designed to reward consistent, transparent indexing over raw size.",
+    deep: "The leaderboard score blends on-chain metrics with community votes. Delegators with active positions vote with 5× weight. Designed to reward consistent, transparent indexing over raw size.",
   },
   '/calculator': {
-    basic: "Run the numbers before you move. Redelegation carries a cost. Best to know before you sail.",
-    deep: "The 0.5% delegation tax is the main cost. On a large position it compounds with the opportunity cost of the 28-day thawing period. The calculator shows the break-even point — how long you need to stay with the new indexer before the switch pays off.",
+    basic: "Run the numbers before you move. Redelegation carries a cost.",
+    deep: "The 0.5% delegation tax compounds with the opportunity cost of the 28-day thawing period. The calculator shows the break-even point — how long you need to stay with the new indexer before the switch pays off.",
   },
   '/compare': {
-    basic: "Side by side. Useful when you've narrowed it down to two and need to make the call.",
-    deep: "Focus on cut rate stability over time (not just current), self-stake ratio (skin in the game), and allocation efficiency (are they earning on their allocations?). A high-performing indexer with a volatile cut history is a risk.",
+    basic: "Side by side. Useful when you've narrowed it down to two.",
+    deep: "Focus on cut rate stability over time, self-stake ratio, and allocation efficiency. A high-performing indexer with a volatile cut history is a risk.",
   },
   '/governance': {
     basic: "The protocol's compass. GIPs shape the rules — worth knowing what's in the water ahead.",
-    deep: "GIPs (Graph Improvement Proposals) go through Draft → Candidate → Accepted → Deployed. The ones currently in Candidate stage are the ones to watch — they'll affect indexer economics within the next few epochs once deployed.",
+    deep: "GIPs go through Draft → Candidate → Accepted → Deployed. Candidate-stage GIPs are the ones to watch — they'll affect indexer economics within epochs once deployed.",
   },
   '/roadmap': {
     basic: "What's being built and what's next. The Graph moves steadily.",
-    deep: "The Horizon upgrade introduced provisions and data services. The next major unlocks are on-chain indexing agreements (GIP-0087/0088 still in draft) and a richer rewards model tied to service quality rather than allocation size.",
+    deep: "The next major unlocks are on-chain indexing agreements (GIP-0087/0088 still in draft) and a richer rewards model tied to service quality rather than allocation size.",
   },
   '/blog': {
-    basic: "Guides and notes from the network's edge. Useful if you're setting up infrastructure.",
-    deep: "The posts here cover practical indexer infrastructure — archive node setup, graph-node configuration, chain lag debugging. Sourced from real conversations in The Graph's Discord and indexer community.",
+    basic: "Guides and notes from the network's edge.",
+    deep: "Practical indexer infrastructure — archive node setup, graph-node configuration, chain lag debugging. Sourced from real conversations in The Graph's community.",
   },
   '/indexing': {
     basic: "Sync progress and health across subgraphs. Useful for indexers keeping watch on their fleet.",
-    deep: "If a subgraph is stuck behind chain head, check the graph-node logs for eth_call latency or reorg_threshold misconfiguration. On fast chains (BSC, Polygon), the default reorg threshold of 250 blocks keeps you in slow block-walk mode almost permanently — 50 is usually fine.",
+    deep: "If a subgraph is stuck behind chain head, check graph-node logs for eth_call latency or reorg_threshold misconfiguration. On fast chains, the default 250-block reorg threshold keeps you in slow block-walk mode — 50 is usually fine.",
   },
 };
 
@@ -70,16 +70,25 @@ const WISDOMS = [
   "Steady as she goes. I'm here if you need your bearings.",
   "The sea doesn't rush. Neither should a good delegation decision.",
   "A lighthouse doesn't chase ships — it simply stays lit.",
-  "Every epoch is a new tide. The network keeps turning regardless.",
+  "Every epoch is a new tide. The network keeps turning.",
   "The best indexers are the ones still here in two years.",
   "Fog doesn't mean danger. It just means look more carefully.",
-  "Cut rates change. Habits don't. Watch the history, not just the current number.",
+  "Cut rates change. Habits don't. Watch the history.",
   "GRT delegated is GRT at work. Know where it's pointed.",
+];
+
+const SUGGESTED_QUESTIONS = [
+  "Which indexers have the best APY right now?",
+  "What's the network's current state?",
+  "Explain the risk score system",
+  "How does delegation tax work?",
+  "Which indexers are REO eligible?",
+  "Is my wallet delegation healthy?",
 ];
 
 const ONBOARDING_KEY = 'lodestar:lodie-toured';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getPageTip(pathname: string): { basic: string; deep?: string } | null {
   if (PAGE_TIPS[pathname]) return PAGE_TIPS[pathname];
@@ -95,18 +104,32 @@ function randomWisdom(): string {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+type Mode = 'tip' | 'chat';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  streaming?: boolean;
+}
+
 export function LodieWidget() {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<Mode>('tip');
   const [depth, setDepth] = useState<0 | 1>(0);
   const [wisdom] = useState(randomWisdom);
   const [toured, setToured] = useState(true);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
   const [walletWarning, setWalletWarning] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [streaming, setStreaming] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const pathname = usePathname();
   const { address: walletAddress } = useAccount();
 
-  // Check first visit
+  // First visit onboarding
   useEffect(() => {
     if (!localStorage.getItem(ONBOARDING_KEY)) {
       setToured(false);
@@ -119,6 +142,7 @@ export function LodieWidget() {
     setOpen(false);
     setDepth(0);
     setDataWarning(null);
+    setMode('tip');
   }, [pathname]);
 
   // Keyboard shortcut: L
@@ -133,7 +157,7 @@ export function LodieWidget() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Data-aware: detect greedy/idle indexer on detail page
+  // Data-aware: indexer detail page
   useEffect(() => {
     const match = pathname.match(/^\/indexers\/(0x[a-fA-F0-9]{40})/i);
     if (!match) return;
@@ -144,7 +168,7 @@ export function LodieWidget() {
         if (!ix) return;
         const cut = ix.indexingRewardCut as number;
         if (cut >= 1_000_000) {
-          setDataWarning("This indexer takes 100% of indexing rewards. Delegators earn nothing from indexing — only query fees.");
+          setDataWarning("This indexer takes 100% of indexing rewards. Delegators earn from query fees only.");
         } else if (cut >= 900_000) {
           setDataWarning(`This indexer takes ${(cut / 10_000).toFixed(0)}% of indexing rewards. Delegators keep ${(100 - cut / 10_000).toFixed(0)}%.`);
         } else if ((ix.allocationCount as number) === 0) {
@@ -177,6 +201,18 @@ export function LodieWidget() {
       .catch(() => {});
   }, [walletAddress]);
 
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Focus input when chat opens
+  useEffect(() => {
+    if (mode === 'chat' && open) {
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [mode, open]);
+
   const completeTour = () => {
     localStorage.setItem(ONBOARDING_KEY, '1');
     setToured(true);
@@ -189,11 +225,56 @@ export function LodieWidget() {
     });
   };
 
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || streaming) return;
+    const userMsg: Message = { role: 'user', content: text };
+    setMessages((m) => [...m, userMsg, { role: 'assistant', content: '', streaming: true }]);
+    setInput('');
+    setStreaming(true);
+
+    try {
+      const res = await fetch('/api/lodie/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, page: pathname, walletAddress }),
+      });
+
+      if (!res.ok || !res.body) throw new Error('Failed');
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let full = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        full += dec.decode(value, { stream: true });
+        setMessages((m) => {
+          const updated = [...m];
+          updated[updated.length - 1] = { role: 'assistant', content: full, streaming: true };
+          return updated;
+        });
+      }
+
+      setMessages((m) => {
+        const updated = [...m];
+        updated[updated.length - 1] = { role: 'assistant', content: full, streaming: false };
+        return updated;
+      });
+    } catch {
+      setMessages((m) => {
+        const updated = [...m];
+        updated[updated.length - 1] = { role: 'assistant', content: "The lantern flickered. Couldn't reach Ollama — try again.", streaming: false };
+        return updated;
+      });
+    } finally {
+      setStreaming(false);
+    }
+  };
+
   const pageTip = getPageTip(pathname);
   const mainTip = depth === 1 && pageTip?.deep ? pageTip.deep : (pageTip?.basic ?? wisdom);
   const hasDeep = !!pageTip?.deep;
-
-  // Content priority: onboarding > data warning > page tip/wisdom
   const showOnboarding = !toured;
   const showWarning = !showOnboarding && !!dataWarning;
   const showWalletBanner = !showOnboarding && !showWarning && !!walletWarning;
@@ -203,69 +284,153 @@ export function LodieWidget() {
       right-4 bottom-[calc(var(--bottom-nav-height)+var(--safe-bottom,0px)+72px)]
       lg:right-6 lg:bottom-6">
 
-      {/* Panel */}
       {open && (
         <div
-          className="bg-[var(--bg-elevated)] border border-[var(--border-mid)] rounded-[var(--radius-card)] shadow-2xl p-4 w-72 max-w-[calc(100vw-2rem)]"
-          style={{ animation: 'lodie-panel-in 0.2s ease-out' }}
+          className="bg-[var(--bg-elevated)] border border-[var(--border-mid)] rounded-[var(--radius-card)] shadow-2xl w-80 max-w-[calc(100vw-2rem)] flex flex-col overflow-hidden"
+          style={{ animation: 'lodie-panel-in 0.2s ease-out', maxHeight: mode === 'chat' ? '480px' : 'none' }}
         >
-          <div className="flex items-start gap-3">
-            <div className="shrink-0 w-12 h-12 rounded-full overflow-hidden bg-[#ddeef5] border border-amber-400/20 shadow-md shadow-amber-400/10">
-              <Image src="/lodie.png" alt="Lodie" width={48} height={48} className="w-full h-full object-cover object-top scale-110" />
+          {/* Header */}
+          <div className="flex items-center gap-2.5 px-4 pt-4 pb-3 border-b border-[var(--border)] shrink-0">
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-[#ddeef5] border border-amber-400/20 shrink-0">
+              <Image src="/lodie.png" alt="Lodie" width={32} height={32} className="w-full h-full object-cover object-top scale-110" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-semibold text-[var(--text-faint)] uppercase tracking-widest mb-1">Lodie</p>
+            <span className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-widest flex-1">Lodie</span>
 
-              {showOnboarding && (
-                <p className="text-[12.5px] text-[var(--text-muted)] leading-relaxed">
-                  Welcome aboard. I'm Lodie — spirit of this lighthouse. Navigate to any page and I'll tell you what to look for. Press <kbd className="px-1 py-px rounded bg-[var(--bg)] text-[var(--text-faint)] text-[10px] font-mono">L</kbd> to summon me anytime.
-                </p>
-              )}
-
-              {showWarning && (
-                <p className="text-[12.5px] text-amber-400 leading-relaxed">{dataWarning}</p>
-              )}
-
-              {!showOnboarding && !showWarning && (
-                <p className="text-[12.5px] text-[var(--text-muted)] leading-relaxed">{mainTip}</p>
-              )}
+            {/* Mode toggle */}
+            <div className="flex items-center gap-1 bg-[var(--bg)] rounded-[var(--radius-button)] p-0.5">
+              <button
+                onClick={() => setMode('tip')}
+                className={`px-2 py-0.5 text-[10px] rounded-[5px] transition-colors ${mode === 'tip' ? 'bg-[var(--bg-elevated)] text-[var(--text)]' : 'text-[var(--text-faint)] hover:text-[var(--text)]'}`}
+              >
+                Guide
+              </button>
+              <button
+                onClick={() => setMode('chat')}
+                className={`px-2 py-0.5 text-[10px] rounded-[5px] transition-colors ${mode === 'chat' ? 'bg-[var(--bg-elevated)] text-[var(--text)]' : 'text-[var(--text-faint)] hover:text-[var(--text)]'}`}
+              >
+                Ask
+              </button>
             </div>
+
             <button
               onClick={() => { setOpen(false); setDepth(0); }}
-              className="text-[var(--text-faint)] hover:text-[var(--text)] transition-colors text-xl leading-none -mt-0.5 -mr-0.5 shrink-0"
+              className="text-[var(--text-faint)] hover:text-[var(--text)] transition-colors text-xl leading-none shrink-0"
               aria-label="Close"
             >
               &times;
             </button>
           </div>
 
-          {/* Wallet warning banner */}
-          {showWalletBanner && (
-            <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-start gap-2">
-              <span className="text-amber-400 text-[11px] mt-px">◆</span>
-              <p className="text-[11px] text-amber-400/90 leading-relaxed">{walletWarning}</p>
+          {/* ── Tip mode ── */}
+          {mode === 'tip' && (
+            <div className="p-4">
+              {showOnboarding && (
+                <p className="text-[12.5px] text-[var(--text-muted)] leading-relaxed">
+                  Welcome aboard. I'm Lodie — spirit of this lighthouse. Navigate to any page and I'll tell you what to look for. Press{' '}
+                  <kbd className="px-1 py-px rounded bg-[var(--bg)] text-[var(--text-faint)] text-[10px] font-mono">L</kbd>
+                  {' '}to summon me anytime, or switch to <strong className="text-[var(--text)]">Ask</strong> to chat.
+                </p>
+              )}
+              {showWarning && (
+                <p className="text-[12.5px] text-amber-400 leading-relaxed">{dataWarning}</p>
+              )}
+              {!showOnboarding && !showWarning && (
+                <p className="text-[12.5px] text-[var(--text-muted)] leading-relaxed">{mainTip}</p>
+              )}
+
+              {showWalletBanner && (
+                <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-start gap-2">
+                  <span className="text-amber-400 text-[11px] mt-px">◆</span>
+                  <p className="text-[11px] text-amber-400/90 leading-relaxed">{walletWarning}</p>
+                </div>
+              )}
+
+              <div className="mt-3 flex items-center justify-between">
+                {showOnboarding ? (
+                  <button onClick={completeTour} className="text-[11px] text-[var(--accent)] hover:opacity-80 transition-opacity">
+                    Got it, I'll explore →
+                  </button>
+                ) : depth === 0 && hasDeep ? (
+                  <button onClick={() => setDepth(1)} className="text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">
+                    Tell me more →
+                  </button>
+                ) : depth === 1 ? (
+                  <button onClick={() => setDepth(0)} className="text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">
+                    ← Back
+                  </button>
+                ) : (
+                  <span />
+                )}
+                <span className="text-[10px] text-[var(--text-faint)] font-mono">L to summon</span>
+              </div>
             </div>
           )}
 
-          {/* Footer */}
-          <div className="mt-3 flex items-center justify-between">
-            {showOnboarding ? (
-              <button onClick={completeTour} className="text-[11px] text-[var(--accent)] hover:opacity-80 transition-opacity">
-                Got it, I'll explore →
-              </button>
-            ) : depth === 0 && hasDeep ? (
-              <button onClick={() => setDepth(1)} className="text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">
-                Tell me more →
-              </button>
-            ) : depth === 1 ? (
-              <button onClick={() => setDepth(0)} className="text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">
-                ← Back
-              </button>
-            ) : (
-              <span />
-            )}
-            <span className="text-[10px] text-[var(--text-faint)] font-mono">L to summon</span>
-          </div>
+          {/* ── Chat mode ── */}
+          {mode === 'chat' && (
+            <>
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[160px]">
+                {messages.length === 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-[var(--text-faint)]">Ask me anything about The Graph — or pick a question:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SUGGESTED_QUESTIONS.map((q) => (
+                        <button
+                          key={q}
+                          onClick={() => sendMessage(q)}
+                          className="text-[10.5px] px-2 py-1 rounded-[var(--radius-button)] bg-[var(--bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--border-mid)] transition-colors text-left"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {messages.map((msg, i) => (
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] rounded-[var(--radius-card)] px-3 py-2 text-[12px] leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-[var(--accent-dim)] text-[var(--text)] border border-[var(--accent)]/20'
+                        : 'bg-[var(--bg)] text-[var(--text-muted)] border border-[var(--border)]'
+                    }`}>
+                      {msg.content || (msg.streaming ? <span className="opacity-50">...</span> : null)}
+                      {msg.streaming && msg.content && (
+                        <span className="inline-block w-1 h-3 ml-0.5 bg-current opacity-60 animate-pulse" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input */}
+              <div className="px-3 pb-3 pt-2 border-t border-[var(--border)] shrink-0">
+                <form
+                  onSubmit={(e) => { e.preventDefault(); sendMessage(input); }}
+                  className="flex gap-2"
+                >
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Ask Lodie anything..."
+                    disabled={streaming}
+                    className="flex-1 px-3 py-2 text-[12px] bg-[var(--bg)] border border-[var(--border)] rounded-[var(--radius-button)] text-[var(--text)] placeholder-[var(--text-faint)] outline-none focus:ring-1 focus:ring-[var(--accent)] disabled:opacity-50 transition-shadow"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || streaming}
+                    className="px-3 py-2 bg-[var(--accent)] text-white rounded-[var(--radius-button)] text-[12px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity shrink-0"
+                  >
+                    →
+                  </button>
+                </form>
+              </div>
+            </>
+          )}
         </div>
       )}
 
