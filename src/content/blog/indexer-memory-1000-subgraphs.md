@@ -1,4 +1,10 @@
-# How Much RAM Does It Actually Take to Index 1,000 Subgraphs?
+---
+title: "How Much RAM Does It Actually Take to Index 1,000 Subgraphs?"
+date: "2026-04-07"
+author: "cargopete"
+tags: ["infrastructure", "graph-node", "indexers", "memory", "guide"]
+excerpt: "The Graph's 184 GB 'Large' tier was written four years ago for a few hundred subgraphs. Here's what the memory math actually looks like for 1,000 — and what it would take to index all 15,500."
+---
 
 The Graph's official hardware documentation lists a "Large" tier with 184 GB of VM RAM, described as sufficient for "all currently used subgraphs." Indexers planning to run at scale often treat this as their north star. They shouldn't — that spec is roughly four years old, written when the network had a fraction of today's subgraphs, and it was never designed for the kind of targeted, high-count deployments operators are building today.
 
