@@ -3,7 +3,8 @@
 import { use, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useIndexingStatus, useManifestAnalysis, useNetworksRegistry, useSubgraphCuration } from '@/hooks/useNetworkStats';
+import { useIndexingStatus, useManifestAnalysis, useNetworksRegistry, useSubgraphCuration, useSubgraphHistory } from '@/hooks/useNetworkStats';
+import { SubgraphHistoryChart } from '@/components/charts/SubgraphHistoryChart';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
@@ -626,6 +627,20 @@ function CurationSection({ hash }: { hash: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Signal & Allocation History Section
+// ---------------------------------------------------------------------------
+
+function HistorySection({ hash }: { hash: string }) {
+  const { data, isLoading } = useSubgraphHistory(hash);
+  return (
+    <SubgraphHistoryChart
+      data={data?.history ?? []}
+      isLoading={isLoading}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Manifest Analysis Section (preserved from original page)
 // ---------------------------------------------------------------------------
 
@@ -962,6 +977,9 @@ export default function DeploymentPage({
 
       {/* Curation */}
       <CurationSection hash={hash} />
+
+      {/* Signal & Allocation History */}
+      <HistorySection hash={hash} />
 
       {/* Manifest Analysis — secondary section */}
       <div className="pt-2">

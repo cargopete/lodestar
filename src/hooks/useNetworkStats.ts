@@ -299,6 +299,29 @@ export function useSubgraphCuration(hash: string | null) {
   });
 }
 
+export interface SubgraphHistoryPoint {
+  date: string;
+  signalGrt: number;
+  stakeGrt: number;
+}
+
+async function fetchSubgraphHistory(hash: string): Promise<{ history: SubgraphHistoryPoint[] }> {
+  const res = await fetch(`/api/subgraph-history/${hash}`);
+  if (!res.ok) throw new Error('Failed to fetch subgraph history');
+  const json = await res.json();
+  return json.data;
+}
+
+export function useSubgraphHistory(hash: string | null) {
+  return useQuery({
+    queryKey: ['subgraphHistory', hash],
+    queryFn: () => fetchSubgraphHistory(hash!),
+    staleTime: ONE_HOUR,
+    enabled: !!hash,
+    retry: 1,
+  });
+}
+
 /**
  * Hook for REO (Rewards Eligibility Oracle) status
  */
