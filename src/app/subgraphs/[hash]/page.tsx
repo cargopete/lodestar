@@ -465,15 +465,8 @@ function IndexingHealthSection({ hash }: { hash: string }) {
 // Curation Section
 // ---------------------------------------------------------------------------
 
-function formatRelativeTime(unixSecs: number): string {
-  const now = Math.floor(Date.now() / 1000);
-  const diff = now - unixSecs;
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 86400 * 30) return `${Math.floor(diff / 86400)}d ago`;
-  if (diff < 86400 * 365) return `${Math.floor(diff / (86400 * 30))}mo ago`;
-  return `${Math.floor(diff / (86400 * 365))}y ago`;
+function formatEpoch(epoch: number): string {
+  return epoch > 0 ? `Epoch ${epoch}` : '—';
 }
 
 function CurationSection({ hash }: { hash: string }) {
@@ -563,7 +556,7 @@ function CurationSection({ hash }: { hash: string }) {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right text-xs text-[var(--text-faint)]">
-                        {s.lastSignalChange ? formatRelativeTime(s.lastSignalChange) : '—'}
+                        {formatEpoch(s.lastSignalChange)}
                       </td>
                     </tr>
                   ))}
@@ -586,7 +579,7 @@ function CurationSection({ hash }: { hash: string }) {
                       {shortenAddress(s.curatorAddress, 6)}
                     </Link>
                     <span className="text-[10px] text-[var(--text-faint)]">
-                      {s.lastSignalChange ? formatRelativeTime(s.lastSignalChange) : '—'}
+                      {formatEpoch(s.lastSignalChange)}
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
@@ -953,10 +946,7 @@ export default function DeploymentPage({
       <IndexingHealthSection hash={hash} />
 
       {/* Curation */}
-      <div className="pt-2">
-        <h2 className="text-lg font-semibold text-[var(--text)] mb-4">Curation</h2>
-        <CurationSection hash={hash} />
-      </div>
+      <CurationSection hash={hash} />
 
       {/* Manifest Analysis — secondary section */}
       <div className="pt-2">
