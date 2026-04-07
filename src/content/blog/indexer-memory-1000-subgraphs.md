@@ -94,6 +94,8 @@ Graph-node exposes dozens of environment variables. For a 1,000-subgraph deploym
 
 **`GRAPH_ENTITY_CACHE_SIZE`** — The single most impactful variable. Default is 10,000 KB (10 MB) per subgraph. Halving it to 5,000 KB saves ~5 GB across 1,000 subgraphs at the cost of slightly more frequent database writes. Worth tuning first.
 
+Production operators indexing heavy subgraphs commonly run `GRAPH_ENTITY_CACHE_SIZE=100000` (100 MB) — 10× the default. At that setting, entity caches alone account for ~170 GB at 1,700 subgraphs, which is consistent with real-world figures reported by active indexers running that workload. The estimates in this post assume default cache settings; if you're targeting performance on heavy DeFi or NFT subgraphs, budget accordingly.
+
 **`GRAPH_QUERY_CACHE_MAX_MEM`** — Default 1,000 MB, but actual memory is 2× this by design and can reach 3× in practice. Set conservatively on index nodes (or disable entirely), more aggressively on dedicated query nodes.
 
 **`GRAPH_GRAPHQL_ERROR_RESULT_SIZE`** — Not set by default, meaning a single badly-formed query can trigger an OOM. Set this. It costs nothing.
