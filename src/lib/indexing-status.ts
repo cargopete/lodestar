@@ -20,7 +20,12 @@ export interface IndexerStatusResult {
   latestBlock?: number;
   network?: string;
   entityCount?: string;
-  fatalError?: { message: string; handler?: string | null };
+  fatalError?: {
+    message: string;
+    handler?: string | null;
+    block?: { number: number; hash?: string } | null;
+    deterministic?: boolean;
+  };
   nonFatalErrors?: string[];
   nonFatalErrorCount?: number;
   syncProgress?: number; // 0-100
@@ -56,6 +61,11 @@ function statusQuery(deploymentHash: string) {
     fatalError {
       message
       handler
+      block {
+        number
+        hash
+      }
+      deterministic
     }
     nonFatalErrors {
       message
@@ -82,7 +92,12 @@ interface StatusAPIResponse {
       subgraph: string;
       synced: boolean;
       health: 'healthy' | 'unhealthy' | 'failed';
-      fatalError?: { message: string; handler?: string | null } | null;
+      fatalError?: {
+        message: string;
+        handler?: string | null;
+        block?: { number: string | number; hash?: string } | null;
+        deterministic?: boolean;
+      } | null;
       nonFatalErrors?: Array<{ message: string }>;
       chains?: Array<{
         network?: string;
@@ -179,7 +194,16 @@ export function buildIndexerStatus(
     latestBlock: latest,
     network: chain?.network ?? undefined,
     entityCount: s.entityCount,
-    fatalError: s.fatalError ?? undefined,
+    fatalError: s.fatalError
+      ? {
+          message: s.fatalError.message,
+          handler: s.fatalError.handler,
+          block: s.fatalError.block
+            ? { number: Number(s.fatalError.block.number), hash: s.fatalError.block.hash }
+            : null,
+          deterministic: s.fatalError.deterministic,
+        }
+      : undefined,
     nonFatalErrors: s.nonFatalErrors?.length
       ? s.nonFatalErrors.slice(-5).map((e) => e.message)
       : undefined,
