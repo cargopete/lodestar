@@ -18,10 +18,13 @@ interface SubgraphDelegationEvent {
  */
 export async function ingestDelegationEvents(sql: DbClient): Promise<{ ingested: number }> {
   const state = await getIngestionState(sql, 'delegation_events');
-  const lastId = state.last_id ?? '';
+  // Use timestamp_gt (monotonically increasing) instead of id_gt — delegation event
+  // IDs are random hashes, so lexicographic id_gt breaks once the cursor lands on a
+  // high-value hash (e.g. 0xffffff...) and all newer events with lower hashes are skipped.
+  const lastTimestamp = state.last_block ?? 0;
 
   let totalIngested = 0;
-  let cursor = lastId;
+  let cursor = lastTimestamp;
 
   // Paginate through new events in ascending order
   while (true) {
@@ -30,9 +33,9 @@ export async function ingestDelegationEvents(sql: DbClient): Promise<{ ingested:
     }>(`{
       delegationEvents(
         first: 1000
-        orderBy: id
+        orderBy: timestamp
         orderDirection: asc
-        ${cursor ? `where: { id_gt: "${cursor}" }` : ''}
+        ${cursor ? `where: { timestamp_gt: "${cursor}" }` : ''}
       ) {
         id
         eventType
@@ -66,14 +69,17 @@ export async function ingestDelegationEvents(sql: DbClient): Promise<{ ingested:
     }
 
     totalIngested += rows.length;
-    cursor = events[events.length - 1].id;
+    cursor = Math.max(...events.map((e) => parseInt(e.timestamp)));
 
     if (events.length < 1000) break;
   }
 
-  if (totalIngested > 0) {
-    await updateIngestionState(sql, 'delegation_events', { last_id: cursor });
-  }
+  // Always update updated_at so health checks can distinguish "running idle" from "stuck".
+  await updateIngestionState(
+    sql,
+    'delegation_events',
+    totalIngested > 0 ? { last_block: cursor } : {},
+  );
 
   return { ingested: totalIngested };
 }

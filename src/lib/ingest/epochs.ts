@@ -25,10 +25,13 @@ interface SubgraphEpoch {
  */
 export async function ingestEpochs(sql: DbClient): Promise<{ ingested: number }> {
   const state = await getIngestionState(sql, 'epochs');
-  const lastEpoch = state.last_epoch ?? 0;
+  // Use startBlock_gt (numeric) instead of id_gt (string) — epoch IDs are decimal
+  // strings and lexicographic comparison breaks at id 1000 ("1000" < "999").
+  const lastBlock = state.last_block ?? 0;
 
   let totalIngested = 0;
-  let cursor = lastEpoch;
+  let blockCursor = lastBlock;
+  let lastEpochId = state.last_epoch ?? 0;
 
   // Paginate through new epochs (100 at a time)
   while (true) {
@@ -37,7 +40,7 @@ export async function ingestEpochs(sql: DbClient): Promise<{ ingested: number }>
         first: 100
         orderBy: startBlock
         orderDirection: asc
-        where: { id_gt: "${cursor}" }
+        where: { startBlock_gt: ${blockCursor} }
       ) {
         id startBlock endBlock
         signalledTokens stakeDeposited
@@ -83,14 +86,18 @@ export async function ingestEpochs(sql: DbClient): Promise<{ ingested: number }>
     `;
 
     totalIngested += rows.length;
-    cursor = Math.max(...epochs.map((e) => parseInt(e.id)));
+    blockCursor = Math.max(...epochs.map((e) => e.startBlock));
+    lastEpochId = Math.max(...epochs.map((e) => parseInt(e.id)));
 
     if (epochs.length < 100) break;
   }
 
-  if (totalIngested > 0) {
-    await updateIngestionState(sql, 'epochs', { last_epoch: cursor });
-  }
+  // Always update updated_at so health checks can distinguish "running idle" from "stuck".
+  await updateIngestionState(
+    sql,
+    'epochs',
+    totalIngested > 0 ? { last_epoch: lastEpochId, last_block: blockCursor } : {},
+  );
 
   return { ingested: totalIngested };
 }

@@ -22,18 +22,21 @@ interface SubgraphDispute {
  */
 export async function ingestDisputes(sql: DbClient): Promise<{ ingested: number }> {
   const state = await getIngestionState(sql, 'disputes');
-  const lastId = state.last_id ?? '';
+  // Use createdAt_gt (numeric timestamp) instead of id_gt — dispute IDs are hashes
+  // and lexicographic ordering on random hex strings causes the cursor to get stuck
+  // once it lands on a high-value hash (same bug as delegation_events).
+  const lastCreatedAt = state.last_block ?? 0;
 
   let totalIngested = 0;
-  let cursor = lastId;
+  let cursor = lastCreatedAt;
 
   while (true) {
     const result = await subgraphQuery<{ disputes: SubgraphDispute[] }>(`{
       disputes(
         first: 1000
-        orderBy: id
+        orderBy: createdAt
         orderDirection: asc
-        ${cursor ? `where: { id_gt: "${cursor}" }` : ''}
+        ${cursor ? `where: { createdAt_gt: ${cursor} }` : ''}
       ) {
         id
         type
@@ -76,14 +79,17 @@ export async function ingestDisputes(sql: DbClient): Promise<{ ingested: number 
     `;
 
     totalIngested += rows.length;
-    cursor = disputes[disputes.length - 1].id;
+    cursor = Math.max(...disputes.map((d) => d.createdAt));
 
     if (disputes.length < 1000) break;
   }
 
-  if (totalIngested > 0) {
-    await updateIngestionState(sql, 'disputes', { last_id: cursor });
-  }
+  // Always update updated_at so health checks can distinguish "running idle" from "stuck".
+  await updateIngestionState(
+    sql,
+    'disputes',
+    totalIngested > 0 ? { last_block: cursor } : {},
+  );
 
   return { ingested: totalIngested };
 }
