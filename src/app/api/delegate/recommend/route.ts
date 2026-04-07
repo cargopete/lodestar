@@ -124,10 +124,24 @@ export async function GET(req: NextRequest) {
     .map((i) => ({ indexer: i, score: computeScore(i, weights) }))
     .sort((a, b) => b.score - a.score);
 
-  const { indexer, score } = ranked[0];
+  const count = Math.min(10, Math.max(1, Number(sp.get('count') ?? 1)));
+
+  if (count === 1) {
+    const { indexer, score } = ranked[0];
+    return NextResponse.json(
+      { indexer, score: Math.round(score), reasons: buildReasons(indexer, weights) } satisfies RecommendResponse,
+      { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } },
+    );
+  }
+
+  const candidates = ranked.slice(0, count).map(({ indexer, score }) => ({
+    indexer,
+    score: Math.round(score),
+    reasons: buildReasons(indexer, weights),
+  }));
 
   return NextResponse.json(
-    { indexer, score: Math.round(score), reasons: buildReasons(indexer, weights) } satisfies RecommendResponse,
+    { candidates },
     { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } },
   );
 }
