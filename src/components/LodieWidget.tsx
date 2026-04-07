@@ -345,23 +345,33 @@ export function LodieWidget() {
                 </div>
               )}
 
-              <div className="mt-3 flex items-center justify-between">
-                {showOnboarding ? (
-                  <button onClick={completeTour} className="text-[11px] text-[var(--accent)] hover:opacity-80 transition-opacity">
-                    Got it, I'll explore →
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  {showOnboarding ? (
+                    <button onClick={completeTour} className="text-[11px] text-[var(--accent)] hover:opacity-80 transition-opacity">
+                      Got it, I'll explore →
+                    </button>
+                  ) : depth === 0 && hasDeep ? (
+                    <button onClick={() => setDepth(1)} className="text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">
+                      Tell me more →
+                    </button>
+                  ) : depth === 1 ? (
+                    <button onClick={() => setDepth(0)} className="text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">
+                      ← Back
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                  <span className="text-[10px] text-[var(--text-faint)] font-mono">L to summon</span>
+                </div>
+                {!showOnboarding && (
+                  <button
+                    onClick={() => setMode('chat')}
+                    className="w-full text-[11px] px-3 py-1.5 rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--border-mid)] transition-colors text-left"
+                  >
+                    Chat with Lodie →
                   </button>
-                ) : depth === 0 && hasDeep ? (
-                  <button onClick={() => setDepth(1)} className="text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">
-                    Tell me more →
-                  </button>
-                ) : depth === 1 ? (
-                  <button onClick={() => setDepth(0)} className="text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">
-                    ← Back
-                  </button>
-                ) : (
-                  <span />
                 )}
-                <span className="text-[10px] text-[var(--text-faint)] font-mono">L to summon</span>
               </div>
             </div>
           )}
@@ -395,7 +405,13 @@ export function LodieWidget() {
                         ? 'bg-[var(--accent-dim)] text-[var(--text)] border border-[var(--accent)]/20'
                         : 'bg-[var(--bg)] text-[var(--text-muted)] border border-[var(--border)]'
                     }`}>
-                      {msg.content || (msg.streaming ? <span className="opacity-50">...</span> : null)}
+                      {msg.content || (msg.streaming ? (
+                        <span className="flex items-center gap-1 py-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </span>
+                      ) : null)}
                       {msg.streaming && msg.content && (
                         <span className="inline-block w-1 h-3 ml-0.5 bg-current opacity-60 animate-pulse" />
                       )}
