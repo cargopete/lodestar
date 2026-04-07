@@ -13,6 +13,7 @@ import {
 import { calculateIndexerScore } from './risk-score';
 import type { EnrichedIndexer } from './enriched';
 import type { DbClient } from './db';
+import { updateIngestionState } from './db';
 import { writeIndexers } from './ingest/indexers';
 
 // Minimum self-stake for REO eligibility (100K GRT)
@@ -560,6 +561,7 @@ export async function refreshIndexers(opts: {
     try {
       const pgResult = await writeIndexers(sql, enriched, network.currentEpoch);
       log.refresh.info({ upserted: pgResult.upserted, snapshots: pgResult.snapshots, paramChanges: pgResult.paramChanges }, 'Postgres write complete');
+      await updateIngestionState(sql, 'indexers', {});
     } catch (e) {
       log.refresh.warn({ err: e }, 'Postgres write failed (non-fatal)');
     }
