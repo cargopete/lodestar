@@ -52,23 +52,20 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
   if (intents.some(i => ['indexers', 'top_indexers', 'reo'].includes(i))) {
     try {
       const rows = await db`
-        SELECT address, name, ens_name, score, score_grade, reward_cut,
-               delegator_apr, self_stake_grt, delegated_grt, reo_status, reo_days_remaining
+        SELECT name, ens_name, score_grade, reward_cut, delegator_apr, reo_status
         FROM indexers
         WHERE score IS NOT NULL
         ORDER BY score DESC
-        LIMIT 5
+        LIMIT 3
       `;
       if (rows.length) {
         const lines = rows.map(ix => {
-          const label = ix.ens_name || ix.name || `${ix.address.slice(0, 10)}...`;
-          const apr = ix.delegator_apr != null ? `APY=${Number(ix.delegator_apr).toFixed(1)}%` : '';
-          const reo = ix.reo_status === 'eligible'
-            ? `REO✓${ix.reo_days_remaining ? `(${ix.reo_days_remaining}d)` : ''}`
-            : `REO✗`;
-          return `  ${label}: grade=${ix.score_grade} cut=${Number(ix.reward_cut).toFixed(0)}% ${apr} ${reo}`;
+          const label = ix.ens_name || ix.name || '?';
+          const apr = ix.delegator_apr != null ? ` APY=${Number(ix.delegator_apr).toFixed(1)}%` : '';
+          const reo = ix.reo_status === 'eligible' ? ' REO✓' : ' REO✗';
+          return `${label}: ${ix.score_grade} cut=${Number(ix.reward_cut).toFixed(0)}%${apr}${reo}`;
         });
-        parts.push(`TOP 10 INDEXERS BY SCORE:\n${lines.join('\n')}`);
+        parts.push(`TOP INDEXERS: ${lines.join(' | ')}`);
       }
     } catch { /* non-fatal */ }
   }
@@ -85,17 +82,15 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
         WHERE d.delegator_address = ${walletAddress.toLowerCase()}
           AND d.staked_tokens > 0
         ORDER BY d.staked_tokens DESC
-        LIMIT 8
+        LIMIT 5
       `;
       if (stakes.length) {
         const lines = stakes.map(s => {
-          const label = s.ens_name || s.name || `${s.address.slice(0, 10)}...`;
-          const thawing = Number(s.locked_tokens) > 0
-            ? ` | ${Number(s.locked_tokens).toFixed(0)} GRT thawing`
-            : '';
-          return `  ${label}: ${Number(s.staked_tokens).toFixed(0)} GRT | cut=${Number(s.reward_cut).toFixed(0)}% grade=${s.score_grade} reo=${s.reo_status}${thawing}`;
+          const label = s.ens_name || s.name || s.address.slice(0, 8);
+          const thaw = Number(s.locked_tokens) > 0 ? ` thawing=${Number(s.locked_tokens).toFixed(0)}` : '';
+          return `${label}: ${Number(s.staked_tokens).toFixed(0)}GRT cut=${Number(s.reward_cut).toFixed(0)}% ${s.score_grade} ${s.reo_status}${thaw}`;
         });
-        parts.push(`WALLET PORTFOLIO (${walletAddress.slice(0, 8)}...):\n${lines.join('\n')}`);
+        parts.push(`WALLET: ${lines.join(' | ')}`);
       } else {
         parts.push(`WALLET ${walletAddress.slice(0, 8)}...: No active delegations found.`);
       }
@@ -155,7 +150,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: MODEL,
         stream: true,
-        options: { temperature: 0.5, num_predict: 150 },
+        options: { temperature: 0.5, num_predict: 150, think: false },
         messages: [
           { role: 'system', content: systemContent },
           { role: 'user', content: `/no_think ${message}` },
