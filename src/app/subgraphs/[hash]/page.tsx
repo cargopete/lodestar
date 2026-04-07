@@ -328,9 +328,9 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                               {indexer.fatalError.deterministic && (
                                 <Badge variant="error">deterministic</Badge>
                               )}
-                              {indexer.fatalError.block && (
+                              {(indexer.fatalError.block?.number ?? indexer.latestBlock) && (
                                 <span className="text-[10px] font-mono text-[var(--red)]">
-                                  block {formatNumber(indexer.fatalError.block.number)}
+                                  block {formatNumber((indexer.fatalError.block?.number ?? indexer.latestBlock)!)}
                                 </span>
                               )}
                             </div>
@@ -441,9 +441,9 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                       <div className="mt-3 p-2 rounded bg-[var(--red-dim)] border border-[var(--red)] border-opacity-20">
                         <div className="flex items-center gap-1.5 mb-0.5">
                           <p className="text-[10px] text-[var(--red)] font-medium">Fatal Error</p>
-                          {indexer.fatalError.block && (
+                          {(indexer.fatalError.block?.number ?? indexer.latestBlock) && (
                             <span className="text-[10px] font-mono text-[var(--red)]">
-                              block {formatNumber(indexer.fatalError.block.number)}
+                              block {formatNumber((indexer.fatalError.block?.number ?? indexer.latestBlock)!)}
                             </span>
                           )}
                         </div>
