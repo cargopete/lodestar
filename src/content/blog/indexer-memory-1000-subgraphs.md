@@ -8,7 +8,7 @@ excerpt: "The Graph's 184 GB 'Large' tier was written four years ago for a few h
 
 The Graph's official hardware documentation lists a "Large" tier with 184 GB of VM RAM, described as sufficient for "all currently used subgraphs." Indexers planning to run at scale often treat this as their north star. They shouldn't — that spec is roughly four years old, written when the network had a fraction of today's subgraphs, and it was never designed for the kind of targeted, high-count deployments operators are building today.
 
-Here's what the memory math actually looks like for 1,000 subgraphs in 2025.
+Here's what the memory math actually looks like for 1,000 subgraphs in 2026.
 
 ---
 
