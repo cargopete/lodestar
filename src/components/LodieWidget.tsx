@@ -400,22 +400,22 @@ export function LodieWidget() {
 
                 {messages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] rounded-[var(--radius-card)] px-3 py-2 text-[12px] leading-relaxed ${
+                    <div className={`rounded-[var(--radius-card)] px-3 py-2 text-[12px] leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-[var(--accent-dim)] text-[var(--text)] border border-[var(--accent)]/20'
-                        : 'bg-[var(--bg)] text-[var(--text-muted)] border border-[var(--border)]'
-                    }`}>
+                        ? 'max-w-[85%] bg-[var(--accent-dim)] text-[var(--text)] border border-[var(--accent)]/20'
+                        : 'max-w-[85%] bg-[var(--bg)] text-[var(--text-muted)] border border-[var(--border)]'
+                    } ${!msg.content && msg.streaming ? 'w-[85%]' : ''}`}>
                       {msg.content || (msg.streaming ? (
-                        <span className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-2">
                           <span className="flex items-center gap-1 py-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '0ms' }} />
                             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '150ms' }} />
                             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '300ms' }} />
                           </span>
-                          <span className="text-[10px] text-[var(--text-faint)] leading-relaxed italic">
+                          <p className="text-[10px] text-[var(--text-faint)] leading-relaxed italic">
                             This might take a while. Please be patient — our budget this month is three times last month&apos;s. (Last month&apos;s budget was $0.)
-                          </span>
-                        </span>
+                          </p>
+                        </div>
                       ) : null)}
                       {msg.streaming && msg.content && (
                         <span className="inline-block w-1 h-3 ml-0.5 bg-current opacity-60 animate-pulse" />
