@@ -14,14 +14,21 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Indexer Directory** — Sortable/filterable table with stake, delegation capacity, reward cuts, REO eligibility indicators, recent delegation activity icons, and mobile card view
 - **Indexer Profiles** — Detailed view with allocations, delegator breakdown, Horizon service provisions, REO eligibility assessment, recent delegation activity, and reward cut change alerts
 - **Accurate APR & Effective Cut** — Per-allocation signal-weighted APR calculation and effective cut formula matching [grtinfo](https://github.com/ellipfra/grtinfo)
-- **Delegator Portfolio** — Position tracking, rebalancing insights, underperforming position detection
+- **Delegator Portfolio** — Position tracking, rebalancing insights, underperforming position detection, CSV export
 - **Curator Portfolio** — Signal positions and query-fee-to-signal ratio analysis
-- **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting
+- **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting and IPFS manifest complexity scoring (Light→Extreme)
 - **Data Services & Provisions** — Horizon-era service providers, provisioned stake, thawing status, verifier cuts
+- **One-Click Delegation** — Algorithmically selected indexer with optional preference tuning; smart default with override. See [below](#one-click-delegation).
 - **Delegation Calculator** — Model redelegation scenarios with thawing period cost analysis and net gain projections
 - **Compare Indexers** — Side-by-side comparison of up to 3 indexers
-- **Wallet Connection** — Connect via MetaMask, WalletConnect, or Coinbase Wallet (Arbitrum only)
+- **POI Consensus Dashboard** — Divergence detection and stake-weighted consensus across active deployments
+- **Governance Tracker** — Live status and impact summaries for active GIPs (0079, 0086, 0087, 0088, 0070) with live protocol metrics
+- **GraphTally / TAP Payments** — Escrow balances, RAV redemptions, top collectors, and per-indexer payment detail
+- **Indexing Health** — Chain-by-chain indexing lag monitoring, sync progress, and subgraph health across the network
+- **Lodie AI Assistant** — Local-inference chat assistant (Ollama/qwen3) with live protocol context for indexer and network queries
 - **Monthly Leaderboard** — Community favourites leaderboard scored on network service, community votes, trust, and protocol health, with expandable score breakdowns and EIP-712 gasless voting
+- **Blog** — Technical writeups on indexer infrastructure, Graph Node architecture, and Horizon tooling
+- **Wallet Connection** — Connect via MetaMask, WalletConnect, or Coinbase Wallet (Arbitrum only)
 - **Mobile-First Layout** — Bottom tab navigation, table-to-card patterns, responsive grids, touch-friendly targets
 
 ## Roadmap
@@ -36,6 +43,12 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 
 ### Shipped
 
+- [x] One-click delegation — algorithmic indexer selection with preference tuning, smart default with override
+- [x] Lodie AI assistant — local Ollama inference with live protocol context
+- [x] GraphTally / TAP payment pipeline — escrow balances, redemptions, per-indexer detail
+- [x] Indexing health — chain lag monitoring, sync status across deployments
+- [x] POI Consensus Dashboard — divergence detection, stake-weighted consensus
+- [x] Governance Tracker — live GIP status and impact summaries
 - [x] REO (Rewards Eligibility Oracle) heuristic — eligibility indicators in indexer table and detailed assessment on profiles (GIP-0079)
 - [x] Recent delegation activity — delegation/undelegation events on indexer profiles, activity indicators in the directory
 - [x] Reward cut change alerts — flagged in indexer table and profile when parameters changed within 30 days
@@ -83,6 +96,44 @@ Each indexer receives a composite score (0–100) across ten dimensions, combine
 - **Delegation-neutral self-stake** — attracting delegation is a sign of trust, not something to penalise
 - **Delegator-first** — the score explicitly penalises high cuts; an operationally excellent indexer that takes 100% of rewards still scores poorly because delegators earn nothing
 - **Feedback welcome** — if the weights or thresholds feel off, [open an issue](https://github.com/cargopete/lodestar/issues)
+
+## One-Click Delegation
+
+`/delegate` is the simplest path to delegating GRT. Connect a wallet, enter an amount, confirm — we handle indexer selection. No research required.
+
+### How it works
+
+**1. Hard filters** — applied at request time, not cached:
+
+- REO ineligible → excluded
+- Delegation capacity ≥ 90% → excluded
+- Reward cut ≥ 90% → excluded
+
+**2. Preference-weighted scoring** — the existing per-indexer `scoreBreakdown` (computed nightly by the cron) is re-weighted based on four optional sliders:
+
+| Preference | Boosts |
+|---|---|
+| Best returns | `delegatorAPY`, `delegatorCut` |
+| Stability | `cutStability` |
+| Safety | `overDelegation`, `selfStake` |
+| Network contribution | `queryVolume`, `allocationEfficiency`, `reo` |
+
+Each slider runs 0–10, default 5 (neutral = standard weights). At 10 the relevant dimension weights are doubled; at 0 they are zeroed. Weights are re-normalized to 100 after adjustment.
+
+**3. Rank and pick** — dot product of adjusted weights × dimension scores across all eligible indexers. The top result is selected. The three highest-contributing dimensions become the "why we picked this" reasons shown in the card.
+
+With default preferences this is effectively "highest overall risk score among REO-eligible, non-full indexers." Adjusting preferences shifts emphasis without changing the underlying scoring model.
+
+### UX flow
+
+1. Page loads → recommendation fetched automatically with default weights
+2. Recommended indexer shown: name, grade, three reasons
+3. Enter amount → approve (first time only) → delegate
+4. Optional: expand "Customise selection" → adjust sliders → recommendation updates live
+
+The approval step is skipped on subsequent delegations if the existing GRT allowance covers the amount. First-time delegators need two transactions; all others need one.
+
+Code: [`src/app/delegate/`](src/app/delegate/) · API: [`src/app/api/delegate/recommend/`](src/app/api/delegate/recommend/)
 
 ## Monthly Leaderboard
 
@@ -136,6 +187,8 @@ Code: [`src/lib/scoring/`](src/lib/scoring/)
 - Self-hosted Postgres (postgres.js) + Upstash Redis
 - CoinGecko + DefiLlama (price/TVL data)
 - The Graph Network subgraph (Arbitrum, inline fetch)
+- Amp (`ampd`) — self-hosted on-chain event indexer for Horizon event history
+- Ollama (qwen3:1.7b) — local inference for the Lodie AI assistant
 
 ## Getting Started
 
@@ -150,27 +203,42 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Description | Required |
 |---|---|---|
-| `GRAPH_API_KEY` | API key from [The Graph Studio](https://thegraph.com/studio/apikeys/) | No (falls back to mock data) |
+| `GRAPH_API_KEY` | API key from [The Graph Studio](https://thegraph.com/studio/apikeys/) | Yes |
+| `DATABASE_URL` | Postgres connection string | Yes |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | Yes |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | Yes |
+| `CRON_SECRET` | Random string to protect cron endpoints | Yes |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | WalletConnect project ID | No (uses demo) |
+| `AMP_ENDPOINT` | Self-hosted `ampd` endpoint for Horizon event history | No |
+| `AMP_TOKEN` | Auth token for the `ampd` nginx proxy | No |
+| `OLLAMA_URL` | Ollama server URL for Lodie AI assistant | No |
+| `OLLAMA_SECRET` | Bearer token for Ollama server (if auth enabled) | No |
 
-Without `GRAPH_API_KEY`, the dashboard runs with mock data for development.
+Horizon event history (`/api/horizon/*`) and Lodie (`/api/lodie/*`) degrade gracefully when their env vars are absent.
 
 ## Project Structure
 
 ```
 src/
   app/           # Next.js pages and API routes
-    api/         # Price, subgraph proxy, TVL, feed endpoints
+    api/         # Price, subgraph proxy, TVL, feed, cron, Amp, Lodie endpoints
+    blog/        # Technical blog (MDX posts)
     calculator/  # Redelegation calculator
     compare/     # Indexer comparison tool
     curators/    # Curator portfolio
     delegators/  # Delegator portfolio
+    governance/  # GIP tracker with live protocol metrics
     indexers/    # Indexer directory + profiles
+    indexing/    # Chain health and subgraph indexing status
     leaderboard/ # Monthly indexer leaderboard
+    payments/    # GraphTally / TAP payment pipeline
+    poi/         # POI consensus dashboard
     profile/     # Connected wallet portfolio
+    roadmap/     # Public roadmap
     services/    # Data services (Horizon)
     subgraphs/   # Subgraph directory
   components/    # UI components, layout, charts, tables, feed
+  content/       # Blog posts (Markdown)
   hooks/         # React Query hooks
   lib/           # API clients, queries, utilities, wallet config
 ```

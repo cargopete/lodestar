@@ -1,25 +1,18 @@
 ---
-title: "How to Run a Local Amp Node for Graph Horizon Data"
+title: "How to Run a Local Amp Node"
 date: "2026-04-07"
 author: "cargopete"
-tags: ["amp", "horizon", "self-hosted", "infrastructure", "arbitrum"]
-excerpt: "Edge & Node's Amp is available as a hosted service — but you can run it yourself. Here's how to self-host a local ampd node indexing Graph Horizon staking events, with no waitlists and no dependency on E&N infrastructure."
+tags: ["amp", "self-hosted", "infrastructure", "arbitrum"]
+excerpt: "Edge & Node's Amp is available as a hosted service — but you can run it yourself. Here's how to self-host a local ampd node, with no waitlists and no dependency on E&N infrastructure."
 ---
+
+*This post is unaffiliated with Edge & Node or The Graph Foundation — just a hobby project documenting what worked.*
 
 Edge & Node's [Amp](https://github.com/edgeandnode/amp) is positioned as a hosted enterprise service, but the daemon — `ampd` — is available as a standalone binary. You can run it yourself, point it at any RPC endpoint, and index whatever on-chain data you need. No waitlist, no E&N account, no hosted service dependency.
 
-This is how we set up a local Amp node indexing **Graph Horizon staking events** on Arbitrum One for Lodestar.
-
 ## Why self-host?
 
-The Graph Network Subgraph gives you current protocol state — indexer stakes, delegation positions, provisions. It's excellent for what it does. But it doesn't give you event history: when a delegator moved their stake, the full timeline of provision changes, the exact block a slashing occurred.
-
-Ampd indexes raw on-chain events and exposes them via SQL. That's a different layer. Used together with the subgraph, you can build things that weren't previously possible from a frontend:
-
-- **Delegation timelines** — every `TokensDelegated` and `TokensUndelegated` event for an address, with exact blocks and amounts
-- **Provision history** — full chronological log of `ProvisionCreated`, `ProvisionSlashed`, parameter changes
-- **Slashing audit trail** — every `ProvisionSlashed` and `DelegationSlashed` ever, queryable by address
-- **Stake flow charts** — net delegation in/out per indexer per week, derived from raw events
+Ampd indexes raw on-chain events and exposes them via SQL. Subgraphs give you current protocol state — but they don't give you event history. Ampd is a different layer: every raw log, queryable by contract address, topic, and block range.
 
 None of this requires E&N's hosted service. You just need a machine, a Postgres instance, and an RPC endpoint.
 
@@ -28,9 +21,9 @@ None of this requires E&N's hosted service. You just need a machine, a Postgres 
 - Linux machine with 16GB+ RAM and fast NVMe storage (a ThinkPad works fine)
 - Postgres
 - An Arbitrum One RPC endpoint (Chainstack, Alchemy, Infura — anything works)
-- ~50GB free disk for 3 months of history, ~400GB+ for full Horizon history
+- ~50GB free disk for a few months of history, ~400GB+ for full chain history
 
-> **On disk space:** The HorizonStaking contract was deployed in June 2024 (block 209819702). Full history to present is ~240M blocks and requires hundreds of GB. Starting from January 2026 (block 416000000) gives you ~3 months of history — enough for all active positions and events — in around 50GB.
+> **On disk space:** Full history from genesis requires hundreds of GB. Picking a sensible start block (e.g. a contract deployment block, or 3–6 months ago) is the practical move — 50–100GB covers most use cases.
 
 ## Install ampd
 
@@ -137,7 +130,7 @@ Generate a manifest and register the dataset:
 ampctl manifest generate \
     --network     arbitrum-one \
     --kind        evm-rpc \
-    --start-block 416000000 \
+    --start-block YOUR_START_BLOCK \
     -o /var/lib/ampd/manifests/arbitrum_one_raw.json
 
 ampctl dataset register _/arbitrum_one /var/lib/ampd/manifests/arbitrum_one_raw.json --tag 1.0.0
@@ -159,7 +152,7 @@ curl -s http://YOUR_HOST:1604/query \
   -H "Content-Type: application/json" \
   -H "X-Amp-Token: YOUR_SECRET_TOKEN" \
   -d '{
-    "sql": "SELECT block_number, tx_hash, topic1, topic2, data FROM \"_/arbitrum_one@1.0.0\".logs WHERE address = '\''0x00669a4cf01450b64e8a2a20e9b1fcb71e61ef03'\'' AND topic0 = '\''0x804c9b842b2748a22bb64b345453a3de7ca54a6ca45ce00d415894979e22897a'\'' ORDER BY block_number DESC LIMIT 10"
+    "sql": "SELECT block_number, tx_hash, address, topic0, topic1, data FROM \"_/arbitrum_one@1.0.0\".logs WHERE address = '\''0xYOUR_CONTRACT_ADDRESS'\'' ORDER BY block_number DESC LIMIT 10"
   }'
 ```
 
@@ -186,11 +179,22 @@ The `logs` table schema:
 
 **Multiple RPC providers don't parallelize.** Adding two `arbitrum-one` provider files doesn't double throughput — ampd appears to use a single provider at a time. The bottleneck is sequential HTTP requests to the RPC endpoint, not local compute.
 
-**The sync speed ceiling is your RPC.** On a Chainstack Growth plan (250 req/s), expect roughly ~100–120 blocks per 15 seconds. At that rate, 33M blocks (Jan 2026 to present) takes ~2–3 days. There's no way to go faster without a local Arbitrum node.
+**The sync speed ceiling is your RPC.** On a Chainstack Growth plan (250 req/s), expect roughly ~100–120 blocks per 15 seconds. There's no way to go faster without a local node.
 
-## Integrating with a Next.js app
+## So you have an amp node — what do you do with it?
 
-In `src/lib/amp.ts`:
+Raw on-chain logs are only useful if you have a question the subgraph can't answer. Here are some things we use ours for.
+
+### Graph Horizon event history
+
+The Graph Network Subgraph gives you current protocol state — indexer stakes, delegation positions, provisions. It doesn't give you event history. With Amp:
+
+- **Delegation timelines** — every `TokensDelegated` and `TokensUndelegated` event for an address, with exact blocks and amounts
+- **Provision history** — full chronological log of `ProvisionCreated`, `ProvisionSlashed`, parameter changes
+- **Slashing audit trail** — every `ProvisionSlashed` and `DelegationSlashed` ever, queryable by address
+- **Stake flow charts** — net delegation in/out per indexer per week
+
+### Integrating with a Next.js app
 
 ```typescript
 import { keccak256, toHex } from 'viem';
@@ -223,8 +227,4 @@ export const TOPIC0 = {
 } as const;
 ```
 
-Set `AMP_ENDPOINT` and `AMP_TOKEN` in your Vercel environment, and your API routes have direct access to the full event history.
-
-## The full setup
-
-The complete setup scripts, provider configs, systemd service, and nginx config are in the [amping repo](https://github.com/cargopete/amping). It covers Manjaro/Arch and Ubuntu, and includes scripts for full history reindex vs. narrowed start blocks.
+Set `AMP_ENDPOINT` and `AMP_TOKEN` in your environment variables, and your API routes have direct access to the full event history.

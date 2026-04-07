@@ -51,6 +51,7 @@ const tabs: TabItem[] = [
 ];
 
 const moreItems = [
+  { label: 'Delegate GRT', href: '/delegate' },
   { label: 'Delegators', href: '/delegators' },
   { label: 'Payments', href: '/payments' },
   { label: 'Subgraphs', href: '/subgraphs' },
