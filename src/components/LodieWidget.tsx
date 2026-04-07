@@ -367,7 +367,7 @@ export function LodieWidget() {
                 {!showOnboarding && (
                   <button
                     onClick={() => setMode('chat')}
-                    className="w-full text-[11px] px-3 py-1.5 rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--border-mid)] transition-colors text-left"
+                    className="w-full text-[11px] px-3 py-1.5 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--bg)] text-[var(--accent)] hover:opacity-80 transition-opacity text-center"
                   >
                     Chat with Lodie →
                   </button>
