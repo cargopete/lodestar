@@ -475,3 +475,25 @@ export async function fetchParameterHistory(address: string): Promise<{
   const json = await response.json();
   return json.data ?? [];
 }
+
+export interface CuratorSignalEntry {
+  id: string;
+  curatorAddress: string;
+  signalledTokens: string;
+  unsignalledTokens: string;
+  signal: string;
+  lastSignalChange: number;
+  realizedRewards: string;
+}
+
+export interface SubgraphCurationData {
+  signals: CuratorSignalEntry[];
+  totalSignalledTokens: string;
+}
+
+export async function fetchSubgraphCuration(hash: string): Promise<SubgraphCurationData> {
+  const response = await fetch(`/api/subgraph-curation/${encodeURIComponent(hash)}`);
+  if (!response.ok) throw new Error(`Subgraph curation failed: ${response.status}`);
+  const json = await response.json();
+  return json.data;
+}

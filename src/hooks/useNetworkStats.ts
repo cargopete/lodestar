@@ -30,6 +30,7 @@ import {
   fetchDelegationFlows,
   fetchTokenMetrics,
   fetchParameterHistory,
+  fetchSubgraphCuration,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -283,6 +284,16 @@ export function useIndexingStatus(hash: string | null) {
     queryFn: () => fetchIndexingStatus(hash!),
     staleTime: THIRTY_SECONDS,
     refetchInterval: THIRTY_SECONDS,
+    enabled: !!hash,
+    retry: 1,
+  });
+}
+
+export function useSubgraphCuration(hash: string | null) {
+  return useQuery({
+    queryKey: ['subgraphCuration', hash],
+    queryFn: () => fetchSubgraphCuration(hash!),
+    staleTime: FIVE_MINUTES,
     enabled: !!hash,
     retry: 1,
   });

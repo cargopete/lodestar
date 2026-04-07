@@ -3,7 +3,7 @@
 import { use, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useIndexingStatus, useManifestAnalysis, useNetworksRegistry } from '@/hooks/useNetworkStats';
+import { useIndexingStatus, useManifestAnalysis, useNetworksRegistry, useSubgraphCuration } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
@@ -462,6 +462,162 @@ function IndexingHealthSection({ hash }: { hash: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Curation Section
+// ---------------------------------------------------------------------------
+
+function formatRelativeTime(unixSecs: number): string {
+  const now = Math.floor(Date.now() / 1000);
+  const diff = now - unixSecs;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 86400 * 30) return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 86400 * 365) return `${Math.floor(diff / (86400 * 30))}mo ago`;
+  return `${Math.floor(diff / (86400 * 365))}y ago`;
+}
+
+function CurationSection({ hash }: { hash: string }) {
+  const { data, isLoading, error } = useSubgraphCuration(hash);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Curation</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex items-center py-8">
+            <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+            <span className="ml-3 text-sm text-[var(--text-muted)]">Loading curator data...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Curation</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-sm text-[var(--text-muted)] py-4">Unable to load curation data.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { signals } = data;
+  const activeCurators = signals.filter((s) => BigInt(s.signal) > 0n);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Curation</CardTitle>
+          <span className="text-xs text-[var(--text-faint)]">
+            {activeCurators.length} active curator{activeCurators.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {signals.length === 0 ? (
+          <p className="text-sm text-[var(--text-muted)] py-4">No curator signals found for this deployment.</p>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Curator</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Signalled</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Withdrawn</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Realized</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Last Changed</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                  {signals.map((s) => (
+                    <tr key={s.id} className="hover:bg-[var(--bg-elevated)] transition-colors">
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/curators/${s.curatorAddress}`}
+                          className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+                        >
+                          {shortenAddress(s.curatorAddress, 6)}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text)]">
+                        {formatGRT(weiToGRT(s.signalledTokens))}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-sm">
+                        {BigInt(s.unsignalledTokens) > 0n ? (
+                          <span className="text-[var(--amber)]">{formatGRT(weiToGRT(s.unsignalledTokens))}</span>
+                        ) : (
+                          <span className="text-[var(--text-faint)]">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-sm">
+                        {BigInt(s.realizedRewards) > 0n ? (
+                          <span className="text-[var(--green)]">{formatGRT(weiToGRT(s.realizedRewards))}</span>
+                        ) : (
+                          <span className="text-[var(--text-faint)]">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right text-xs text-[var(--text-faint)]">
+                        {s.lastSignalChange ? formatRelativeTime(s.lastSignalChange) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              {signals.map((s) => (
+                <div
+                  key={`m-${s.id}`}
+                  className="p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <Link
+                      href={`/curators/${s.curatorAddress}`}
+                      className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+                    >
+                      {shortenAddress(s.curatorAddress, 6)}
+                    </Link>
+                    <span className="text-[10px] text-[var(--text-faint)]">
+                      {s.lastSignalChange ? formatRelativeTime(s.lastSignalChange) : '—'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-1.5 rounded bg-[var(--bg-surface)]">
+                      <p className="text-[10px] text-[var(--text-faint)]">Signalled</p>
+                      <p className="text-xs font-mono text-[var(--text)]">{formatGRT(weiToGRT(s.signalledTokens))}</p>
+                    </div>
+                    <div className="p-1.5 rounded bg-[var(--bg-surface)]">
+                      <p className="text-[10px] text-[var(--text-faint)]">Withdrawn</p>
+                      <p className={cn('text-xs font-mono', BigInt(s.unsignalledTokens) > 0n ? 'text-[var(--amber)]' : 'text-[var(--text-faint)]')}>
+                        {BigInt(s.unsignalledTokens) > 0n ? formatGRT(weiToGRT(s.unsignalledTokens)) : '—'}
+                      </p>
+                    </div>
+                    <div className="p-1.5 rounded bg-[var(--bg-surface)]">
+                      <p className="text-[10px] text-[var(--text-faint)]">Realized</p>
+                      <p className={cn('text-xs font-mono', BigInt(s.realizedRewards) > 0n ? 'text-[var(--green)]' : 'text-[var(--text-faint)]')}>
+                        {BigInt(s.realizedRewards) > 0n ? formatGRT(weiToGRT(s.realizedRewards)) : '—'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Manifest Analysis Section (preserved from original page)
 // ---------------------------------------------------------------------------
 
@@ -795,6 +951,12 @@ export default function DeploymentPage({
 
       {/* Indexing Health — the main event */}
       <IndexingHealthSection hash={hash} />
+
+      {/* Curation */}
+      <div className="pt-2">
+        <h2 className="text-lg font-semibold text-[var(--text)] mb-4">Curation</h2>
+        <CurationSection hash={hash} />
+      </div>
 
       {/* Manifest Analysis — secondary section */}
       <div className="pt-2">
