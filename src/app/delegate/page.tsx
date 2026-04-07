@@ -58,6 +58,7 @@ function useRecommendation(prefs: Prefs) {
       return res.json();
     },
     staleTime: 60_000,
+    placeholderData: (prev) => prev, // keep previous result visible while re-fetching
   });
 }
 
@@ -283,7 +284,7 @@ export default function DelegatePage() {
   const [showPicker, setShowPicker] = useState(false);
   const [override, setOverride] = useState<RecommendResponse | null>(null);
 
-  const { data: rec, isLoading, error } = useRecommendation(prefs);
+  const { data: rec, isLoading, isFetching, error } = useRecommendation(prefs);
   const { data: networkData } = useNetworkStats();
 
   // Use manual override if set, otherwise use recommendation
@@ -338,13 +339,20 @@ export default function DelegatePage() {
       {active && !isLoading && (
         <>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)] mb-2">
-              {override ? 'Selected indexer' : 'Recommended indexer'}
-            </p>
-            <RecommendationCard
-              data={active}
-              onSwap={() => { setShowPicker((v) => !v); setShowPrefs(false); }}
-            />
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
+                {override ? 'Selected indexer' : 'Recommended indexer'}
+              </p>
+              {isFetching && !override && (
+                <div className="w-3 h-3 border border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+              )}
+            </div>
+            <div className={cn('transition-opacity duration-150', isFetching && !override && 'opacity-40 pointer-events-none')}>
+              <RecommendationCard
+                data={active}
+                onSwap={() => { setShowPicker((v) => !v); setShowPrefs(false); }}
+              />
+            </div>
           </div>
 
           {/* Candidate picker */}
