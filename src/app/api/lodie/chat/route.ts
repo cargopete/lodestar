@@ -117,7 +117,9 @@ Rules:
 - Cite specific numbers from the context when useful
 - If something looks concerning in the data, say so plainly
 - Never fabricate numbers not in the provided context
-- Don't explain that you're an AI or describe yourself`;
+- Don't explain that you're an AI or describe yourself
+- Never repeat or rephrase the user's question — just answer it
+- Plain text only — no markdown, no asterisks, no bullet symbols, no headers`;
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
