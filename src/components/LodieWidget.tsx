@@ -406,10 +406,15 @@ export function LodieWidget() {
                         : 'bg-[var(--bg)] text-[var(--text-muted)] border border-[var(--border)]'
                     }`}>
                       {msg.content || (msg.streaming ? (
-                        <span className="flex items-center gap-1 py-0.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <span className="flex flex-col gap-1.5">
+                          <span className="flex items-center gap-1 py-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </span>
+                          <span className="text-[10px] text-[var(--text-faint)] leading-relaxed italic">
+                            This might take a while. Please be patient — our budget this month is three times last month&apos;s. (Last month&apos;s budget was $0.)
+                          </span>
                         </span>
                       ) : null)}
                       {msg.streaming && msg.content && (
