@@ -258,7 +258,11 @@ export function LodieWidget() {
 
       setMessages((m) => {
         const updated = [...m];
-        updated[updated.length - 1] = { role: 'assistant', content: full, streaming: false };
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          content: full || "The lantern flickered. No response came through — try again.",
+          streaming: false,
+        };
         return updated;
       });
     } catch {
@@ -400,11 +404,14 @@ export function LodieWidget() {
 
                 {messages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`rounded-[var(--radius-card)] px-3 py-2 text-[12px] leading-relaxed ${
-                      msg.role === 'user'
-                        ? 'max-w-[85%] bg-[var(--accent-dim)] text-[var(--text)] border border-[var(--accent)]/20'
-                        : 'max-w-[85%] bg-[var(--bg)] text-[var(--text-muted)] border border-[var(--border)]'
-                    } ${!msg.content && msg.streaming ? 'w-[85%]' : ''}`}>
+                    <div
+                      className={`rounded-[var(--radius-card)] px-3 py-2 text-[12px] leading-relaxed max-w-[85%] ${
+                        msg.role === 'user'
+                          ? 'bg-[var(--accent-dim)] text-[var(--text)] border border-[var(--accent)]/20'
+                          : 'bg-[var(--bg)] text-[var(--text-muted)] border border-[var(--border)]'
+                      }`}
+                      style={!msg.content && msg.streaming ? { width: '85%' } : undefined}
+                    >
                       {msg.content || (msg.streaming ? (
                         <div className="flex flex-col gap-2">
                           <span className="flex items-center gap-1 py-0.5">
