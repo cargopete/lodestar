@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: MODEL,
         stream: true,
-        options: { temperature: 0.7, num_predict: 500 },
+        options: { temperature: 0.5, num_predict: 150 },
         messages: [
           { role: 'system', content: systemContent },
           { role: 'user', content: `/no_think ${message}` },
