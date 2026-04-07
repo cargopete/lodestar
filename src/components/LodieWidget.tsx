@@ -264,7 +264,7 @@ export function LodieWidget() {
     } catch {
       setMessages((m) => {
         const updated = [...m];
-        updated[updated.length - 1] = { role: 'assistant', content: "The lantern flickered. Couldn't reach Ollama — try again.", streaming: false };
+        updated[updated.length - 1] = { role: 'assistant', content: "The lantern flickered. Couldn't get a response — try again.", streaming: false };
         return updated;
       });
     } finally {

@@ -131,6 +131,9 @@ export async function POST(req: NextRequest) {
 
   if (!message?.trim()) return new Response('Bad request', { status: 400 });
 
+  const ollamaUrl = process.env.OLLAMA_URL;
+  if (!ollamaUrl) return new Response('Ollama not configured', { status: 503 });
+
   const intents = detectIntents(message);
   const context = await buildContext(intents, walletAddress);
 
@@ -138,11 +141,15 @@ export async function POST(req: NextRequest) {
     ? `${BASE_SYSTEM}\n\nLIVE DATA:\n${context}`
     : BASE_SYSTEM;
 
+  const ollamaSecret = process.env.OLLAMA_SECRET;
+  const ollamaHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (ollamaSecret) ollamaHeaders['Authorization'] = `Bearer ${ollamaSecret}`;
+
   let ollamaRes: Response;
   try {
-    ollamaRes = await fetch(`${process.env.OLLAMA_URL}/api/chat`, {
+    ollamaRes = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: ollamaHeaders,
       body: JSON.stringify({
         model: MODEL,
         stream: true,
