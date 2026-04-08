@@ -203,6 +203,40 @@ export default function ProtocolOverview() {
         </Card>
       </div>
 
+      {/* Friends of the Graph */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Friends of Lodestar</CardTitle>
+          <p className="text-sm text-[var(--text-muted)] mt-1">
+            Other tools and dashboards built by community members — give them a look.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            {[
+              { name: 'GraphTools.pro', url: 'https://graphtools.pro/', description: 'Indexer & delegator tooling' },
+              { name: 'GraphScan', url: 'https://graphscan.io/', description: 'Network explorer & analytics' },
+            ].map(({ name, url, description }) => (
+              <a
+                key={url}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg border border-[var(--border)] hover:border-[var(--accent)] hover:bg-[var(--surface-hover)] transition-colors group"
+              >
+                <div>
+                  <div className="text-sm font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">{name}</div>
+                  <div className="text-xs text-[var(--text-muted)]">{description}</div>
+                </div>
+                <svg className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Horizon Parameters */}
       <HorizonParameters />
     </div>
