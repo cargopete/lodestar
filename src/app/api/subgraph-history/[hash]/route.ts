@@ -3,14 +3,16 @@ import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT } from '@/lib/utils';
 
-interface RawDailyData {
-  dayStart: number;
-  signalledTokens: string;
-  stakedTokens: string;
+interface RawSignalTx {
+  timestamp: number;
+  type: string; // 'MintSignal' | 'BurnSignal'
+  tokens: string;
 }
 
-interface RawDeployment {
-  dailyData: RawDailyData[];
+interface RawAllocation {
+  allocatedTokens: string;
+  createdAt: number;
+  closedAt: number | null;
 }
 
 export async function GET(
@@ -24,28 +26,77 @@ export async function GET(
   }
 
   const query = `{
-    subgraphDeployments(where: { ipfsHash: "${hash}" }, first: 1) {
-      dailyData(orderBy: dayStart, orderDirection: asc, first: 365) {
-        dayStart
-        signalledTokens
-        stakedTokens
-      }
+    signalTransactions(
+      where: { subgraphDeployment_: { ipfsHash: "${hash}" } }
+      orderBy: timestamp
+      orderDirection: asc
+      first: 1000
+    ) {
+      timestamp
+      type
+      tokens
+    }
+    allocations(
+      where: { subgraphDeployment_: { ipfsHash: "${hash}" } }
+      orderBy: createdAt
+      orderDirection: asc
+      first: 1000
+    ) {
+      allocatedTokens
+      createdAt
+      closedAt
     }
   }`;
 
-  const cacheKey = `lodestar:subgraph-history:${hash}`;
+  const cacheKey = `lodestar:subgraph-history-v2:${hash}`;
 
   try {
     const data = await cached(cacheKey, 3600, async () => {
-      const result = await subgraphQuery<{ subgraphDeployments: RawDeployment[] }>(query);
-      const deployment = result.subgraphDeployments[0];
-      if (!deployment) return { history: [] };
+      const result = await subgraphQuery<{
+        signalTransactions: RawSignalTx[];
+        allocations: RawAllocation[];
+      }>(query);
 
-      const history = deployment.dailyData.map((d) => ({
-        date: new Date(d.dayStart * 1000).toISOString().slice(0, 10),
-        signalGrt: weiToGRT(d.signalledTokens),
-        stakeGrt: weiToGRT(d.stakedTokens),
-      }));
+      const { signalTransactions, allocations } = result;
+
+      if (signalTransactions.length === 0 && allocations.length === 0) {
+        return { history: [] };
+      }
+
+      const nowTs = Math.floor(Date.now() / 1000);
+      const oneYear = 365 * 24 * 3600;
+      const earliestTs = Math.min(
+        ...signalTransactions.map(t => t.timestamp),
+        ...allocations.map(a => a.createdAt),
+      );
+      const startTs = Math.max(earliestTs, nowTs - oneYear);
+
+      const weekSecs = 7 * 24 * 3600;
+      const history: { date: string; signalGrt: number; stakeGrt: number }[] = [];
+
+      for (let ts = startTs; ts <= nowTs; ts += weekSecs) {
+        const date = new Date(ts * 1000).toISOString().slice(0, 10);
+
+        // Cumulative signal: sum MintSignal − BurnSignal up to this timestamp
+        let signalGrt = 0;
+        for (const tx of signalTransactions) {
+          if (tx.timestamp > ts) break;
+          const grt = weiToGRT(tx.tokens);
+          signalGrt += tx.type === 'MintSignal' ? grt : -grt;
+        }
+
+        // Active stake: sum allocations open at this timestamp
+        let stakeGrt = 0;
+        for (const alloc of allocations) {
+          if (alloc.createdAt > ts) continue;
+          const closed = alloc.closedAt;
+          if (!closed || closed > ts) {
+            stakeGrt += weiToGRT(alloc.allocatedTokens);
+          }
+        }
+
+        history.push({ date, signalGrt: Math.max(0, signalGrt), stakeGrt });
+      }
 
       return { history };
     });
