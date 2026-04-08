@@ -48,7 +48,7 @@ export async function GET(
     }
   }`;
 
-  const cacheKey = `lodestar:subgraph-history-v2:${hash}`;
+  const cacheKey = `lodestar:subgraph-history-v3:${hash}`;
 
   try {
     const data = await cached(cacheKey, 3600, async () => {
@@ -98,7 +98,9 @@ export async function GET(
         history.push({ date, signalGrt: Math.max(0, signalGrt), stakeGrt });
       }
 
-      return { history };
+      // Trim leading points where activity is negligible (< 1 000 GRT combined)
+      const firstMeaningful = history.findIndex(p => p.signalGrt + p.stakeGrt >= 1000);
+      return { history: firstMeaningful > 0 ? history.slice(firstMeaningful) : history };
     });
 
     return NextResponse.json({ data }, {
