@@ -48,7 +48,7 @@ export async function GET(
     }
   }`;
 
-  const cacheKey = `lodestar:subgraph-history-v3:${hash}`;
+  const cacheKey = `lodestar:subgraph-history-v4:${hash}`;
 
   try {
     const data = await cached(cacheKey, 3600, async () => {
@@ -98,8 +98,10 @@ export async function GET(
         history.push({ date, signalGrt: Math.max(0, signalGrt), stakeGrt });
       }
 
-      // Trim leading points where activity is negligible (< 1 000 GRT combined)
-      const firstMeaningful = history.findIndex(p => p.signalGrt + p.stakeGrt >= 1000);
+      // Trim leading flat section: drop points below 2% of peak combined value
+      const peak = Math.max(...history.map(p => p.signalGrt + p.stakeGrt));
+      const threshold = peak * 0.02;
+      const firstMeaningful = history.findIndex(p => p.signalGrt + p.stakeGrt >= threshold);
       return { history: firstMeaningful > 0 ? history.slice(firstMeaningful) : history };
     });
 
