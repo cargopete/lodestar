@@ -25,7 +25,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Governance Tracker** — Live status and impact summaries for active GIPs (0079, 0086, 0087, 0088, 0070) with live protocol metrics
 - **GraphTally / TAP Payments** — Escrow balances, RAV redemptions, top collectors, and per-indexer payment detail
 - **Indexing Health** — Chain-by-chain indexing lag monitoring, sync progress, and subgraph health across the network
-- **Lodie AI Assistant** — Local-inference chat assistant (Ollama/qwen3) with live protocol context for indexer and network queries
+- **Lodie AI Assistant** — Conversational AI assistant with live protocol context, multi-turn memory, and page-aware suggestions. Runs qwen3:8b via self-hosted Ollama; degrades gracefully if unavailable
 - **Monthly Leaderboard** — Community favourites leaderboard scored on network service, community votes, trust, and protocol health, with expandable score breakdowns and EIP-712 gasless voting
 - **Blog** — Technical writeups on indexer infrastructure, Graph Node architecture, and Horizon tooling
 - **Wallet Connection** — Connect via MetaMask, WalletConnect, or Coinbase Wallet (Arbitrum only)
@@ -40,6 +40,8 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 ### Planned
 
 - [ ] PWA support — installable to home screen for daily portfolio checking
+- [ ] Lodie: stable tunnel — replace ephemeral Cloudflare `trycloudflare.com` URL with a named ngrok/Cloudflare tunnel so the Ollama endpoint survives restarts without requiring a Vercel env var update and redeploy
+- [ ] Lodie: re-enable streaming — currently disabled as a workaround for Cloudflare tunnel buffering; restore token-by-token output once the tunnel is stable
 
 ### Shipped
 
@@ -188,7 +190,7 @@ Code: [`src/lib/scoring/`](src/lib/scoring/)
 - CoinGecko + DefiLlama (price/TVL data)
 - The Graph Network subgraph (Arbitrum, inline fetch)
 - Amp (`ampd`) — self-hosted on-chain event indexer for Horizon event history
-- Ollama (qwen3:1.7b) — local inference for the Lodie AI assistant
+- Ollama (qwen3:8b) — self-hosted inference for the Lodie AI assistant, exposed via Cloudflare tunnel
 
 ## Getting Started
 
