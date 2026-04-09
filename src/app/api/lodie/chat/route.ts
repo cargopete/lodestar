@@ -18,6 +18,9 @@ function detectIntents(msg: string): string[] {
   if (/gip|governance|proposal|vote/i.test(msg)) intents.push('governance');
   if (/reo|eligible|renewal|oracle/i.test(msg)) intents.push('reo');
   if (/delegat/i.test(msg)) intents.push('indexers');
+  // Name lookup — "is there an indexer called X", "find X", "tell me about X"
+  const nameLookup = msg.match(/(?:called|named|about|find|search|is there|who is|what is)\s+([a-z0-9][a-z0-9\-_.]{1,})/i);
+  if (nameLookup) intents.push(`name:${nameLookup[1].toLowerCase()}`);
   return [...new Set(intents)];
 }
 
@@ -59,15 +62,41 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
     }
   } catch { /* non-fatal */ }
 
+  // Named indexer lookup
+  const nameTerm = intents.find(i => i.startsWith('name:'))?.slice(5);
+  if (nameTerm) {
+    try {
+      const rows = await db`
+        SELECT name, ens_name, address, score_grade, reward_cut, delegator_apr, reo_status
+        FROM indexers
+        WHERE name ILIKE ${'%' + nameTerm + '%'}
+           OR ens_name ILIKE ${'%' + nameTerm + '%'}
+        LIMIT 5
+      `;
+      if (rows.length) {
+        const lines = rows.map(ix => {
+          const label = ix.ens_name || ix.name || ix.address.slice(0, 10);
+          const apr = ix.delegator_apr != null ? ` APY=${Number(ix.delegator_apr).toFixed(1)}%` : '';
+          const reo = ix.reo_status === 'eligible' ? ' REO✓' : ' REO✗';
+          return `${label}: ${ix.score_grade} cut=${Number(ix.reward_cut).toFixed(0)}%${apr}${reo}`;
+        });
+        parts.push(`INDEXER SEARCH "${nameTerm}": ${lines.join(' | ')}`);
+      } else {
+        parts.push(`INDEXER SEARCH "${nameTerm}": no matching indexers found.`);
+      }
+    } catch { /* non-fatal */ }
+  }
+
   // Indexer data
   if (intents.some(i => ['indexers', 'top_indexers', 'reo'].includes(i))) {
     try {
+      const limit = intents.some(i => ['top_indexers', 'reo'].includes(i)) ? 20 : 10;
       const rows = await db`
         SELECT name, ens_name, score_grade, reward_cut, delegator_apr, reo_status
         FROM indexers
         WHERE score IS NOT NULL
         ORDER BY score DESC
-        LIMIT 3
+        LIMIT ${limit}
       `;
       if (rows.length) {
         const lines = rows.map(ix => {
