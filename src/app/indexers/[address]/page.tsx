@@ -324,7 +324,7 @@ export default function IndexerDetailPage({
                 )}>
                   {enrichedIndexer.rollingAPY30d.toFixed(2)}%
                 </p>
-                <p className="text-[10px] text-[var(--text-faint)] mt-1">From closed allocation rewards</p>
+                <p className="text-[10px] text-[var(--text-faint)] mt-1">From delegation pool share growth</p>
               </CardContent>
             </Card>
           )}
@@ -338,7 +338,7 @@ export default function IndexerDetailPage({
                 )}>
                   {enrichedIndexer.rollingAPY90d.toFixed(2)}%
                 </p>
-                <p className="text-[10px] text-[var(--text-faint)] mt-1">From closed allocation rewards</p>
+                <p className="text-[10px] text-[var(--text-faint)] mt-1">From delegation pool share growth</p>
               </CardContent>
             </Card>
           )}
