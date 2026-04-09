@@ -527,8 +527,8 @@ export function IndexerTable() {
           );
         },
       }),
-      columnHelper.accessor('rollingAPY30d', {
-        header: () => <HeaderTip label="APY 30d" tip="Actual compounded return over the last 30 days from closed allocations. More reliable than instant APR for judging real performance. Hover a value to see 90d APY." />,
+      columnHelper.accessor('rollingAPY90d', {
+        header: () => <HeaderTip label="APY 90d" tip="Actual compounded return over the last 90 days from delegation pool share growth. More stable than 30d APY. Hover a value to see 30d APY." />,
         cell: (info) => {
           const value = info.getValue();
           const row = info.row.original;
@@ -542,7 +542,7 @@ export function IndexerTable() {
                 {value.toFixed(2)}%
               </span>
               <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-44 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/apy:opacity-100 transition-opacity z-50 text-[11px] font-normal">
-                <span className="block text-[var(--text-muted)]">90d APY: {row.rollingAPY90d !== null ? `${row.rollingAPY90d.toFixed(2)}%` : '—'}</span>
+                <span className="block text-[var(--text-muted)]">30d APY: {row.rollingAPY30d !== null ? `${row.rollingAPY30d.toFixed(2)}%` : '—'}</span>
                 <span className="block text-[var(--text-faint)] mt-0.5">Instant APR: {row.apr !== null ? `${row.apr.toFixed(2)}%` : '—'}</span>
               </span>
             </span>
@@ -806,9 +806,9 @@ export function IndexerTable() {
                         </p>
                       </div>
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
-                        <p className="text-[10px] text-[var(--text-faint)]">APY 30d</p>
-                        <p className={cn('text-xs font-mono', d.rollingAPY30d && d.rollingAPY30d > 5 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
-                          {d.rollingAPY30d !== null ? `${d.rollingAPY30d.toFixed(2)}%` : d.apr !== null ? `${d.apr.toFixed(2)}%` : '—'}
+                        <p className="text-[10px] text-[var(--text-faint)]">APY 90d</p>
+                        <p className={cn('text-xs font-mono', d.rollingAPY90d && d.rollingAPY90d > 5 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
+                          {d.rollingAPY90d !== null ? `${d.rollingAPY90d.toFixed(2)}%` : d.apr !== null ? `${d.apr.toFixed(2)}%` : '—'}
                         </p>
                       </div>
                       <div className="p-1.5 rounded bg-[var(--bg-elevated)]">
