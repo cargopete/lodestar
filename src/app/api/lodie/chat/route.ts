@@ -75,21 +75,42 @@ async function fetchAdvocateData(message: string): Promise<string> {
   try {
     if (rec.recommendation === 'token-api' && rec.query_ready.tool) {
       const { tool, args = {} } = rec.query_ready;
-      const params = new URLSearchParams(Object.fromEntries(Object.entries(args).map(([k, v]) => [k, String(v)])));
-      // Map tool name to REST path: getV1EvmHolders → /v1/evm/holders
-      const path = '/' + tool.replace(/^getV1Evm/, 'v1/evm/').replace(/^getV1/, 'v1/').replace(/([A-Z])/g, m => '/' + m.toLowerCase()).replace(/^\//, '').replace(/\/+/g, '/');
-      const tokenRes = await fetch(`https://token-api.thegraph.com/${path}?${params}`, {
+      const network = args.network ?? 'mainnet';
+      const contract = args.contract ?? '';
+      const address = args.address ?? '';
+      const limit = args.limit ?? '15';
+
+      // Explicit REST path mapping for known Token API tools
+      let url = '';
+      if (/holders/i.test(tool) && contract) {
+        url = `https://token-api.thegraph.com/v1/evm/${network}/tokens/${contract}/holders?limit=${limit}`;
+      } else if (/balance/i.test(tool) && address) {
+        url = `https://token-api.thegraph.com/v1/evm/${network}/accounts/${address}/balances`;
+      } else if (/swap/i.test(tool) && contract) {
+        url = `https://token-api.thegraph.com/v1/evm/${network}/tokens/${contract}/swaps?limit=${limit}`;
+      } else if (/transfer/i.test(tool) && contract) {
+        url = `https://token-api.thegraph.com/v1/evm/${network}/tokens/${contract}/transfers?limit=${limit}`;
+      } else {
+        // Fallback: return what graph-advocate recommended so Lodie can explain
+        return `GRAPH ADVOCATE: for this query, use Token API tool "${tool}" with args ${JSON.stringify(args)}. Direct execution not yet supported for this tool type.`;
+      }
+
+      const tokenRes = await fetch(url, {
         headers: { 'Authorization': `Bearer ${graphApiKey}` },
         signal: AbortSignal.timeout(8_000),
       });
-      if (!tokenRes.ok) return `GRAPH ADVOCATE: recommended Token API (${tool}) but query failed.`;
+      if (!tokenRes.ok) {
+        const errText = await tokenRes.text().catch(() => tokenRes.status.toString());
+        return `GRAPH ADVOCATE: Token API responded ${tokenRes.status}: ${errText.slice(0, 200)}`;
+      }
       const data = await tokenRes.json();
-      const items: unknown[] = data.items ?? data.holders ?? data.balances ?? data.swaps ?? data.data ?? [];
-      if (!Array.isArray(items) || !items.length) return '';
+      const items: unknown[] = data.items ?? data.holders ?? data.balances ?? data.swaps ?? data.transfers ?? data.data ?? [];
+      if (!Array.isArray(items) || !items.length) return 'GRAPH ADVOCATE: Token API returned no results for this query.';
       const lines = (items as Record<string, unknown>[]).slice(0, 15).map(item => {
-        if (item.address && item.balance !== undefined) return `${item.address}: ${Number(item.balance).toLocaleString()}`;
+        if (item.address && item.balance !== undefined) return `${item.address}: ${Number(item.balance).toLocaleString()} GRT`;
         if (item.holder && item.quantity !== undefined) return `${item.holder}: ${Number(item.quantity).toLocaleString()}`;
-        return JSON.stringify(item).slice(0, 120);
+        if (item.owner && item.value !== undefined) return `${item.owner}: ${Number(item.value).toLocaleString()}`;
+        return JSON.stringify(item).slice(0, 150);
       });
       return `EXTERNAL DATA via Token API (${tool}, routed by graph-advocate):\n${lines.join('\n')}`;
     }
@@ -391,7 +412,8 @@ CRITICAL FORMATTING RULES — NEVER VIOLATE:
 - Answer directly and completely using as many sentences as needed.
 - Use live data numbers exactly as provided. Never invent or estimate numbers.
 - Say plainly if something is concerning.
-- Never repeat the question. Never say you are an AI.`;
+- Never repeat the question. Never say you are an AI.
+- If you do not have data to answer a question, say so plainly. Do not invent, speculate, or fill in gaps with plausible-sounding fiction. "I don't have that data" is a complete and honest answer.`;
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
@@ -456,6 +478,16 @@ export async function POST(req: NextRequest) {
   }
 
   if (!content) return new Response('Ollama error', { status: 502 });
+
+  // Strip markdown regardless of model behaviour
+  content = content
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`{1,3}(.+?)`{1,3}/gs, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^[-*+]\s+/gm, '')
+    .replace(/^\d+\.\s+/gm, '')
+    .trim();
 
   return new Response(content, {
     headers: {
