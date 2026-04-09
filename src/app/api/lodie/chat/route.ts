@@ -23,6 +23,7 @@ function detectIntents(msg: string): string[] {
   if (/subgraph|signal|curat|deployment/i.test(msg)) intents.push('subgraphs');
   if (/recent|activity|flow|delegation event|last week|trending/i.test(msg)) intents.push('activity');
   if (/biggest delegator|largest delegator|top delegator|most delegat|whale/i.test(msg)) intents.push('top_delegators');
+  if (/balance|holder|supply|token|nft|swap|defi|aave|uniswap|on.chain|mainnet|ethereum/i.test(msg)) intents.push('external_data');
   // Name/ENS lookup
   const nameLookup = msg.match(/(?:called|named|about|find|search|is there|who is|what is|tell me about|show me)\s+([a-z0-9][a-z0-9\-_.]{1,40})/i);
   if (nameLookup) intents.push(`name:${nameLookup[1].toLowerCase()}`);
@@ -43,14 +44,84 @@ function pageIntents(page: string): string[] {
   return intents;
 }
 
+// ─── Graph Advocate integration ──────────────────────────────────────────────
+
+async function fetchAdvocateData(message: string): Promise<string> {
+  const advocateUrl = process.env.GRAPH_ADVOCATE_URL;
+  const graphApiKey = process.env.GRAPH_API_KEY;
+  if (!advocateUrl || !graphApiKey) return '';
+
+  // Step 1: Ask graph-advocate to route the query
+  let rec: { recommendation: string; query_ready?: { tool?: string; args?: Record<string, string>; query?: string; endpoint?: string; subgraph_id?: string }; reason?: string } | null = null;
+  try {
+    const res = await fetch(advocateUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1, method: 'message/send',
+        params: { id: `lodie-${Date.now()}`, message: { role: 'user', parts: [{ kind: 'text', text: message }] } },
+      }),
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return '';
+    const json = await res.json();
+    const text = json?.result?.status?.message?.parts?.[0]?.text ?? '';
+    rec = text ? JSON.parse(text) : null;
+  } catch { return ''; }
+
+  if (!rec?.query_ready) return '';
+
+  // Step 2: Execute the recommended query
+  try {
+    if (rec.recommendation === 'token-api' && rec.query_ready.tool) {
+      const { tool, args = {} } = rec.query_ready;
+      const params = new URLSearchParams(Object.fromEntries(Object.entries(args).map(([k, v]) => [k, String(v)])));
+      // Map tool name to REST path: getV1EvmHolders → /v1/evm/holders
+      const path = '/' + tool.replace(/^getV1Evm/, 'v1/evm/').replace(/^getV1/, 'v1/').replace(/([A-Z])/g, m => '/' + m.toLowerCase()).replace(/^\//, '').replace(/\/+/g, '/');
+      const tokenRes = await fetch(`https://token-api.thegraph.com/${path}?${params}`, {
+        headers: { 'Authorization': `Bearer ${graphApiKey}` },
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (!tokenRes.ok) return `GRAPH ADVOCATE: recommended Token API (${tool}) but query failed.`;
+      const data = await tokenRes.json();
+      const items: unknown[] = data.items ?? data.holders ?? data.balances ?? data.swaps ?? data.data ?? [];
+      if (!Array.isArray(items) || !items.length) return '';
+      const lines = (items as Record<string, unknown>[]).slice(0, 15).map(item => {
+        if (item.address && item.balance !== undefined) return `${item.address}: ${Number(item.balance).toLocaleString()}`;
+        if (item.holder && item.quantity !== undefined) return `${item.holder}: ${Number(item.quantity).toLocaleString()}`;
+        return JSON.stringify(item).slice(0, 120);
+      });
+      return `EXTERNAL DATA via Token API (${tool}, routed by graph-advocate):\n${lines.join('\n')}`;
+    }
+
+    if (rec.recommendation === 'subgraph-registry' && rec.query_ready.query) {
+      const endpoint = rec.query_ready.endpoint
+        ?? (rec.query_ready.subgraph_id ? `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${rec.query_ready.subgraph_id}` : null);
+      if (!endpoint) return '';
+      const gqlRes = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${graphApiKey}` },
+        body: JSON.stringify({ query: rec.query_ready.query }),
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (!gqlRes.ok) return '';
+      const gqlData = await gqlRes.json();
+      if (gqlData.errors) return '';
+      return `EXTERNAL DATA via Subgraph (routed by graph-advocate):\n${JSON.stringify(gqlData.data).slice(0, 1200)}`;
+    }
+  } catch { /* non-fatal */ }
+
+  return '';
+}
+
 // ─── Context builder ─────────────────────────────────────────────────────────
 
-async function buildContext(intents: string[], walletAddress?: string): Promise<string> {
+async function buildContext(intents: string[], walletAddress?: string, userMessage?: string): Promise<string> {
   if (!db) return '';
   const parts: string[] = [];
   const nameTerm = intents.find(i => i.startsWith('name:'))?.slice(5);
 
-  const [snap, allIndexers, recentEpochs, nameHits, portfolio, leaderboard, activity, topDelegators] =
+  const [snap, allIndexers, recentEpochs, nameHits, portfolio, leaderboard, activity, topDelegators, advocateData] =
     await Promise.allSettled([
 
       // Always: latest network snapshot
@@ -127,6 +198,11 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
              ORDER BY total_staked DESC
              LIMIT 10`
         : Promise.resolve([]),
+
+      // graph-advocate: external on-chain data (Token API / Subgraph Registry)
+      intents.includes('external_data') && userMessage
+        ? fetchAdvocateData(userMessage)
+        : Promise.resolve(''),
     ]);
 
   // ── Network snapshot ──
@@ -234,6 +310,11 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
     parts.push(`TOP DELEGATORS (by total GRT staked, individual wallets):\n${lines.join('\n')}`);
   }
 
+  // ── graph-advocate external data ──
+  if (advocateData.status === 'fulfilled' && advocateData.value) {
+    parts.push(advocateData.value);
+  }
+
   // ── Delegation activity ──
   if (activity.status === 'fulfilled' && activity.value.length) {
     const byType = Object.fromEntries(activity.value.map(r => [r.event_type, r]));
@@ -330,7 +411,7 @@ export async function POST(req: NextRequest) {
   if (!ollamaUrl) return new Response('Ollama not configured', { status: 503 });
 
   const intents = [...new Set([...pageIntents(page ?? ''), ...detectIntents(message)])];
-  const context = await buildContext(intents, walletAddress);
+  const context = await buildContext(intents, walletAddress, message);
 
   const systemContent = context
     ? `${BASE_SYSTEM}\n\nLIVE DATA:\n${context}`

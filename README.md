@@ -42,7 +42,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - [ ] PWA support — installable to home screen for daily portfolio checking
 - [ ] Lodie: stable tunnel — replace ephemeral Cloudflare `trycloudflare.com` URL with a named ngrok/Cloudflare tunnel so the Ollama endpoint survives restarts without requiring a Vercel env var update and redeploy
 - [ ] Lodie: re-enable streaming — currently disabled as a workaround for Cloudflare tunnel buffering; restore token-by-token output once the tunnel is stable
-- [ ] Lodie: evaluate [graph-advocate](https://github.com/PaulieB14/graph-advocate) integration — PaulieB's routing agent for Token API / Subgraph Registry / Substreams queries; useful if Lodie expands to answer raw on-chain questions beyond what Lodestar's Postgres already covers
+- [x] Lodie: [graph-advocate](https://github.com/PaulieB14/graph-advocate) integration — PaulieB's routing agent for Token API / Subgraph Registry queries; fires on token/balance/holder/DeFi questions outside Lodestar's Postgres (free tier: 10 req/day)
 
 ### Shipped
 
@@ -216,6 +216,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `AMP_TOKEN` | Auth token for the `ampd` nginx proxy | No |
 | `OLLAMA_URL` | Ollama server URL for Lodie AI assistant | No |
 | `OLLAMA_SECRET` | Bearer token for Ollama server (if auth enabled) | No |
+| `GRAPH_ADVOCATE_URL` | [graph-advocate](https://github.com/PaulieB14/graph-advocate) A2A endpoint for Token API / Subgraph Registry routing (free tier: 10 req/day) | No |
 
 Horizon event history (`/api/horizon/*`) and Lodie (`/api/lodie/*`) degrade gracefully when their env vars are absent.
 
