@@ -348,47 +348,72 @@ export async function refreshIndexers(opts: {
     log.refresh.warn({ err: e }, 'Rolling APY subgraph query failed (non-fatal)');
   }
 
-  // Step 5c: Fetch historical exchange rates for exchange-rate-based APY
+  // Step 5c: Fetch historical exchange rates via subgraph time-travel.
+  // This is always available and covers all indexers regardless of Postgres snapshot history.
   const exchangeRateHistory = new Map<string, { rate30d: number | null; rate90d: number | null }>();
-  if (sql) {
-    try {
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
-      const ninetyDaysAgo = new Date(Date.now() - 90 * 86400 * 1000).toISOString();
+  try {
+    // Get current block to anchor time-travel
+    const metaResult = await subgraphQuery<{ _meta: { block: { number: number } } }>(`{ _meta { block { number } } }`);
+    const currentBlock = metaResult._meta.block.number;
 
-      const rates30d = await sql`
-        SELECT DISTINCT ON (indexer_address)
-          indexer_address, delegation_exchange_rate
-        FROM indexer_snapshots
-        WHERE snapshot_at <= ${thirtyDaysAgo}
-          AND delegation_exchange_rate IS NOT NULL
-        ORDER BY indexer_address, snapshot_at DESC
-      `;
+    // Arbitrum avg block time ~0.25s (4 blocks/sec)
+    const BLOCKS_PER_DAY = 86400 * 4;
+    const block30d = currentBlock - Math.floor(30 * BLOCKS_PER_DAY);
+    const block90d = currentBlock - Math.floor(90 * BLOCKS_PER_DAY);
 
-      const rates90d = await sql`
-        SELECT DISTINCT ON (indexer_address)
-          indexer_address, delegation_exchange_rate
-        FROM indexer_snapshots
-        WHERE snapshot_at <= ${ninetyDaysAgo}
-          AND delegation_exchange_rate IS NOT NULL
-        ORDER BY indexer_address, snapshot_at DESC
-      `;
+    async function fetchRatesAtBlock(blockNum: number): Promise<Map<string, number>> {
+      const rateMap = new Map<string, number>();
+      let lastId = '';
+      while (true) {
+        const result = await subgraphQuery<{
+          indexers: Array<{ id: string; delegatedTokens: string; delegatedThawingTokens?: string; delegatorShares: string }>;
+        }>(`{
+          indexers(
+            first: 1000
+            orderBy: id
+            orderDirection: asc
+            block: { number: ${blockNum} }
+            where: { stakedTokens_gt: "0"${lastId ? `, id_gt: "${lastId}"` : ''} }
+          ) {
+            id
+            delegatedTokens
+            delegatedThawingTokens
+            delegatorShares
+          }
+        }`);
 
-      for (const r of rates30d) {
-        exchangeRateHistory.set(r.indexer_address, {
-          rate30d: Number(r.delegation_exchange_rate),
-          rate90d: null,
-        });
+        for (const idx of result.indexers) {
+          const rate = calculatePoolExchangeRate(
+            idx.delegatedTokens,
+            idx.delegatedThawingTokens ?? '0',
+            idx.delegatorShares
+          );
+          if (rate > 0) rateMap.set(idx.id, rate);
+        }
+
+        if (result.indexers.length < 1000) break;
+        lastId = result.indexers[result.indexers.length - 1].id;
       }
-      for (const r of rates90d) {
-        const existing = exchangeRateHistory.get(r.indexer_address) ?? { rate30d: null, rate90d: null };
-        existing.rate90d = Number(r.delegation_exchange_rate);
-        exchangeRateHistory.set(r.indexer_address, existing);
-      }
-
-      log.refresh.info({ count: exchangeRateHistory.size }, 'Exchange rate history loaded');
-    } catch (e) {
-      log.refresh.warn({ err: e }, 'Exchange rate history fetch failed (non-fatal)');
+      return rateMap;
     }
+
+    const [rates30d, rates90d] = await Promise.all([
+      fetchRatesAtBlock(block30d),
+      fetchRatesAtBlock(block90d),
+    ]);
+
+    for (const [id, rate] of rates30d) {
+      exchangeRateHistory.set(id, { rate30d: rate, rate90d: null });
+    }
+    for (const [id, rate] of rates90d) {
+      const existing = exchangeRateHistory.get(id) ?? { rate30d: null, rate90d: null };
+      existing.rate90d = rate;
+      exchangeRateHistory.set(id, existing);
+    }
+
+    log.refresh.info({ count: exchangeRateHistory.size, block30d, block90d }, 'Exchange rate history loaded via time-travel');
+  } catch (e) {
+    log.refresh.warn({ err: e }, 'Time-travel exchange rate fetch failed (non-fatal)');
   }
 
   // Step 6: Compute enriched data for each indexer
