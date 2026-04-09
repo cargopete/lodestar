@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MODEL = 'qwen3:8b';
+const MODEL = 'qwen3:1.7b';
 
 // ─── Intent detection ────────────────────────────────────────────────────────
 
@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
         model: MODEL,
         stream: true,
         think: false,
-        options: { temperature: 0.5, num_predict: 350 },
+        options: { temperature: 0.5, num_predict: 200 },
         messages: [
           { role: 'system', content: systemContent },
           ...(history ?? []).slice(-6),
