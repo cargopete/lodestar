@@ -22,6 +22,7 @@ function detectIntents(msg: string): string[] {
   if (/leaderboard|ranking|community|month|favourite|best indexer/i.test(msg)) intents.push('leaderboard');
   if (/subgraph|signal|curat|deployment/i.test(msg)) intents.push('subgraphs');
   if (/recent|activity|flow|delegation event|last week|trending/i.test(msg)) intents.push('activity');
+  if (/biggest delegator|largest delegator|top delegator|most delegat|whale/i.test(msg)) intents.push('top_delegators');
   // Name/ENS lookup
   const nameLookup = msg.match(/(?:called|named|about|find|search|is there|who is|what is|tell me about|show me)\s+([a-z0-9][a-z0-9\-_.]{1,40})/i);
   if (nameLookup) intents.push(`name:${nameLookup[1].toLowerCase()}`);
@@ -49,7 +50,7 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
   const parts: string[] = [];
   const nameTerm = intents.find(i => i.startsWith('name:'))?.slice(5);
 
-  const [snap, allIndexers, recentEpochs, nameHits, portfolio, leaderboard, activity] =
+  const [snap, allIndexers, recentEpochs, nameHits, portfolio, leaderboard, activity, topDelegators] =
     await Promise.allSettled([
 
       // Always: latest network snapshot
@@ -115,6 +116,16 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
              FROM delegation_events
              WHERE timestamp > NOW() - INTERVAL '7 days'
              GROUP BY event_type`
+        : Promise.resolve([]),
+
+      // Top delegators by total staked (not indexer-level — individual wallet positions)
+      intents.includes('top_delegators')
+        ? db`SELECT delegator_address, SUM(staked_tokens) as total_staked, COUNT(*) as indexer_count
+             FROM delegations
+             WHERE staked_tokens > 0
+             GROUP BY delegator_address
+             ORDER BY total_staked DESC
+             LIMIT 10`
         : Promise.resolve([]),
     ]);
 
@@ -215,6 +226,14 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
     parts.push(`LEADERBOARD (current month, top 10):\n${lines.join('\n')}`);
   }
 
+  // ── Top delegators ──
+  if (topDelegators.status === 'fulfilled' && topDelegators.value.length) {
+    const lines = topDelegators.value.map((d, i) =>
+      `#${i + 1} ${d.delegator_address}: ${Math.round(Number(d.total_staked)).toLocaleString()} GRT across ${d.indexer_count} indexer${d.indexer_count > 1 ? 's' : ''}`
+    );
+    parts.push(`TOP DELEGATORS (by total GRT staked, individual wallets):\n${lines.join('\n')}`);
+  }
+
   // ── Delegation activity ──
   if (activity.status === 'fulfilled' && activity.value.length) {
     const byType = Object.fromEntries(activity.value.map(r => [r.event_type, r]));
@@ -285,7 +304,13 @@ LODESTAR PAGES:
 /delegate one-click algorithmic delegation
 /blog technical guides on indexer infrastructure, graph-node, Horizon tooling
 
-RULES: Answer directly and completely — use as many sentences as needed. Use live data numbers when provided. Say plainly if something is concerning. Never invent numbers not in the live data. Plain text only, no markdown, no asterisks, no bullet points. Never repeat the question. Never say you are an AI.`;
+CRITICAL FORMATTING RULES — NEVER VIOLATE:
+- Plain prose only. No asterisks (*), no double-asterisks (**), no markdown of any kind, no bullet points, no numbered lists, no headers.
+- A delegator is a wallet that stakes GRT to indexers. An indexer is a node operator. Never confuse the two.
+- Answer directly and completely using as many sentences as needed.
+- Use live data numbers exactly as provided. Never invent or estimate numbers.
+- Say plainly if something is concerning.
+- Never repeat the question. Never say you are an AI.`;
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
