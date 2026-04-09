@@ -396,6 +396,8 @@ export async function refreshIndexers(opts: {
     const lockedTokens = weiToGRT(indexer.lockedTokens ?? '0');
     const selfStake = weiToGRT(indexer.stakedTokens) - lockedTokens;
     const delegated = weiToGRT(indexer.delegatedTokens);
+    const delegatedThawing = weiToGRT(indexer.delegatedThawingTokens ?? '0');
+    const delegatedActive = delegated - delegatedThawing;
 
     const allocations = (allocationMap.get(indexer.id) ?? []).map((a) => ({
       allocatedTokens: a.allocatedTokens,
@@ -405,7 +407,7 @@ export async function refreshIndexers(opts: {
     const apr = calculateDelegatorAPR(
       allocations,
       indexer.indexingRewardCut,
-      delegated,
+      delegatedActive,
       totalNetworkSignal,
       annualIssuance
     );
