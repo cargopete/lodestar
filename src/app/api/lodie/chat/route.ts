@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
         model: MODEL,
         stream: false,
         think: false,
-        options: { temperature: 0.5, num_predict: 350 },
+        options: { temperature: 0.5, num_predict: 150 },
         messages: [
           { role: 'system', content: systemContent },
           ...(history ?? []).slice(-6),
