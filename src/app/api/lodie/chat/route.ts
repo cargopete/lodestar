@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MODEL = 'qwen3:1.7b';
+const MODEL = 'qwen3:8b';
 
 // ─── Intent detection ────────────────────────────────────────────────────────
 
