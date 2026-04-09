@@ -42,6 +42,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - [ ] PWA support — installable to home screen for daily portfolio checking
 - [ ] Lodie: stable tunnel — replace ephemeral Cloudflare `trycloudflare.com` URL with a named ngrok/Cloudflare tunnel so the Ollama endpoint survives restarts without requiring a Vercel env var update and redeploy
 - [ ] Lodie: re-enable streaming — currently disabled as a workaround for Cloudflare tunnel buffering; restore token-by-token output once the tunnel is stable
+- [ ] Lodie: evaluate [graph-advocate](https://github.com/PaulieB14/graph-advocate) integration — PaulieB's routing agent for Token API / Subgraph Registry / Substreams queries; useful if Lodie expands to answer raw on-chain questions beyond what Lodestar's Postgres already covers
 
 ### Shipped
 
