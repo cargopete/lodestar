@@ -77,7 +77,98 @@ const WISDOMS = [
   "GRT delegated is GRT at work. Know where it's pointed.",
 ];
 
-const SUGGESTED_QUESTIONS = [
+const PAGE_QUESTIONS: Record<string, string[]> = {
+  '/': [
+    "What's the network's current state?",
+    "How many indexers are active?",
+    "How does staking work?",
+    "What is curation?",
+    "Which indexers are REO eligible?",
+    "Is my wallet delegation healthy?",
+  ],
+  '/indexers': [
+    "Which indexers have the best APY right now?",
+    "Which indexers are REO eligible?",
+    "What is the risk score system?",
+    "What does reward cut mean?",
+    "What's over-delegation?",
+    "Which indexers have the lowest cut?",
+  ],
+  '/delegators': [
+    "Is my wallet delegation healthy?",
+    "How does the thawing period work?",
+    "How do I earn rewards as a delegator?",
+    "What's the delegation tax?",
+    "How are delegator rewards calculated?",
+    "Should I redelegate?",
+  ],
+  '/poi': [
+    "What is Proof of Indexing?",
+    "What causes POI divergence?",
+    "Can POI disputes lead to slashing?",
+    "How often are POIs submitted?",
+    "What does it mean if indexers disagree?",
+    "How do I report a POI dispute?",
+  ],
+  '/governance': [
+    "What GIPs are currently active?",
+    "How does GIP voting work?",
+    "Which GIPs affect indexer economics?",
+    "What is a GIP?",
+    "What's the current governance status?",
+    "How do I vote on a GIP?",
+  ],
+  '/payments': [
+    "How does TAP work?",
+    "What are RAVs?",
+    "How is escrow calculated?",
+    "What's the difference between TAP and vouchers?",
+    "How do indexers redeem payments?",
+    "What does outstanding obligation mean?",
+  ],
+  '/services': [
+    "What is Horizon?",
+    "How does stake provisioning work?",
+    "What data services are available?",
+    "How is Horizon different from old allocations?",
+    "How do indexers earn on Horizon?",
+    "What is a data service?",
+  ],
+  '/subgraphs': [
+    "What makes a subgraph high complexity?",
+    "How does curation work?",
+    "What is a bonding curve?",
+    "Why index certain subgraphs over others?",
+    "What does signalled GRT mean?",
+    "What is an IPFS hash deployment?",
+  ],
+  '/calculator': [
+    "How does the delegation tax work?",
+    "When does redelegation break even?",
+    "Is it worth switching indexers?",
+    "How long is the thawing period?",
+    "What's the opportunity cost of thawing?",
+    "How do I calculate my expected APY?",
+  ],
+  '/compare': [
+    "What should I compare between indexers?",
+    "Which indexers have stable cut rates?",
+    "What is self-stake ratio?",
+    "How do I pick the better indexer?",
+    "Which indexers are REO eligible?",
+    "What is allocation efficiency?",
+  ],
+  '/leaderboard': [
+    "How is the leaderboard score calculated?",
+    "How do community votes work?",
+    "Why do delegators vote with 5x weight?",
+    "Who are the top indexers this month?",
+    "What rewards consistent indexers?",
+    "How does community voting affect rankings?",
+  ],
+};
+
+const DEFAULT_QUESTIONS = [
   "Which indexers have the best APY right now?",
   "What's the network's current state?",
   "Explain the risk score system",
@@ -85,6 +176,14 @@ const SUGGESTED_QUESTIONS = [
   "Which indexers are REO eligible?",
   "Is my wallet delegation healthy?",
 ];
+
+function getPageQuestions(pathname: string): string[] {
+  if (PAGE_QUESTIONS[pathname]) return PAGE_QUESTIONS[pathname];
+  for (const key of Object.keys(PAGE_QUESTIONS).sort((a, b) => b.length - a.length)) {
+    if (key !== '/' && pathname.startsWith(key)) return PAGE_QUESTIONS[key];
+  }
+  return DEFAULT_QUESTIONS;
+}
 
 const ONBOARDING_KEY = 'lodestar:lodie-toured';
 
@@ -227,6 +326,9 @@ export function LodieWidget() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || streaming) return;
+    const history = messages
+      .filter((m) => m.content && !m.streaming)
+      .map(({ role, content }) => ({ role, content }));
     const userMsg: Message = { role: 'user', content: text };
     setMessages((m) => [...m, userMsg, { role: 'assistant', content: '', streaming: true }]);
     setInput('');
@@ -236,7 +338,7 @@ export function LodieWidget() {
       const res = await fetch('/api/lodie/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, page: pathname, walletAddress }),
+        body: JSON.stringify({ message: text, page: pathname, walletAddress, history }),
       });
 
       if (!res.ok || !res.body) throw new Error('Failed');
@@ -276,6 +378,7 @@ export function LodieWidget() {
     }
   };
 
+  const suggestedQuestions = getPageQuestions(pathname);
   const pageTip = getPageTip(pathname);
   const mainTip = depth === 1 && pageTip?.deep ? pageTip.deep : (pageTip?.basic ?? wisdom);
   const hasDeep = !!pageTip?.deep;
@@ -389,7 +492,7 @@ export function LodieWidget() {
                   <div className="space-y-2">
                     <p className="text-[11px] text-[var(--text-faint)]">Ask me anything about The Graph — or pick a question:</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {SUGGESTED_QUESTIONS.map((q) => (
+                      {suggestedQuestions.map((q) => (
                         <button
                           key={q}
                           onClick={() => sendMessage(q)}

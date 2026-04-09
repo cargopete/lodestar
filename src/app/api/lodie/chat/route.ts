@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MODEL = 'qwen3:1.7b';
+const MODEL = 'qwen3:8b';
 
 // ─── Intent detection ────────────────────────────────────────────────────────
 
@@ -19,6 +19,17 @@ function detectIntents(msg: string): string[] {
   if (/reo|eligible|renewal|oracle/i.test(msg)) intents.push('reo');
   if (/delegat/i.test(msg)) intents.push('indexers');
   return [...new Set(intents)];
+}
+
+function pageIntents(page: string): string[] {
+  const intents: string[] = [];
+  if (!page || page === '/') intents.push('network');
+  if (page.startsWith('/indexers')) intents.push('indexers');
+  if (page.startsWith('/delegators')) intents.push('portfolio');
+  if (page.startsWith('/poi')) intents.push('poi');
+  if (page.startsWith('/governance')) intents.push('governance');
+  if (page.startsWith('/payments') || page.startsWith('/services')) intents.push('network');
+  return intents;
 }
 
 // ─── Context builders ────────────────────────────────────────────────────────
@@ -118,10 +129,12 @@ RULES: 2-4 sentences max. Use live data numbers when given. Say plainly if somet
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
+interface HistoryMessage { role: 'user' | 'assistant'; content: string; }
+
 export async function POST(req: NextRequest) {
-  let message: string, page: string, walletAddress: string | undefined;
+  let message: string, page: string, walletAddress: string | undefined, history: HistoryMessage[] | undefined;
   try {
-    ({ message, page, walletAddress } = await req.json());
+    ({ message, page, walletAddress, history } = await req.json());
   } catch {
     return new Response('Bad request', { status: 400 });
   }
@@ -131,7 +144,7 @@ export async function POST(req: NextRequest) {
   const ollamaUrl = process.env.OLLAMA_URL;
   if (!ollamaUrl) return new Response('Ollama not configured', { status: 503 });
 
-  const intents = detectIntents(message);
+  const intents = [...new Set([...pageIntents(page ?? ''), ...detectIntents(message)])];
   const context = await buildContext(intents, walletAddress);
 
   const systemContent = context
@@ -151,9 +164,10 @@ export async function POST(req: NextRequest) {
         model: MODEL,
         stream: true,
         think: false,
-        options: { temperature: 0.5, num_predict: 200 },
+        options: { temperature: 0.5, num_predict: 350 },
         messages: [
           { role: 'system', content: systemContent },
+          ...(history ?? []).slice(-6),
           { role: 'user', content: `/no_think ${message}` },
         ],
       }),
