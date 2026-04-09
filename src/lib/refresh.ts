@@ -1,5 +1,5 @@
 import { log } from './logger';
-import { cacheSet } from './cache';
+import { cacheSet, cached } from './cache';
 import { subgraphQuery, delegationEventsQuery, ensQuery, hasSubgraphAccess } from './subgraph';
 import { weiToGRT, resolveIndexerName } from './utils';
 import { batchCheckEligibility, type OracleEligibility } from './reo-contract';
@@ -361,8 +361,8 @@ export async function refreshIndexers(opts: {
     const block30d = currentBlock - Math.floor(30 * BLOCKS_PER_DAY);
     const block90d = currentBlock - Math.floor(90 * BLOCKS_PER_DAY);
 
-    async function fetchRatesAtBlock(blockNum: number): Promise<Map<string, number>> {
-      const rateMap = new Map<string, number>();
+    async function fetchRatesAtBlock(blockNum: number): Promise<Record<string, number>> {
+      const rateMap: Record<string, number> = {};
       let lastId = '';
       while (true) {
         const result = await subgraphQuery<{
@@ -388,7 +388,7 @@ export async function refreshIndexers(opts: {
             idx.delegatedThawingTokens ?? '0',
             idx.delegatorShares
           );
-          if (rate > 0) rateMap.set(idx.id, rate);
+          if (rate > 0) rateMap[idx.id] = rate;
         }
 
         if (result.indexers.length < 1000) break;
@@ -397,15 +397,16 @@ export async function refreshIndexers(opts: {
       return rateMap;
     }
 
+    const TTL_6H = 6 * 3600;
     const [rates30d, rates90d] = await Promise.all([
-      fetchRatesAtBlock(block30d),
-      fetchRatesAtBlock(block90d),
+      cached<Record<string, number>>(`lodestar:er-history:30d:${block30d}`, TTL_6H, () => fetchRatesAtBlock(block30d)),
+      cached<Record<string, number>>(`lodestar:er-history:90d:${block90d}`, TTL_6H, () => fetchRatesAtBlock(block90d)),
     ]);
 
-    for (const [id, rate] of rates30d) {
+    for (const [id, rate] of Object.entries(rates30d)) {
       exchangeRateHistory.set(id, { rate30d: rate, rate90d: null });
     }
-    for (const [id, rate] of rates90d) {
+    for (const [id, rate] of Object.entries(rates90d)) {
       const existing = exchangeRateHistory.get(id) ?? { rate30d: null, rate90d: null };
       existing.rate90d = rate;
       exchangeRateHistory.set(id, existing);
