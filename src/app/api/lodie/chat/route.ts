@@ -162,9 +162,9 @@ export async function POST(req: NextRequest) {
       headers: ollamaHeaders,
       body: JSON.stringify({
         model: MODEL,
-        stream: true,
+        stream: false,
         think: false,
-        options: { temperature: 0.5, num_predict: 200 },
+        options: { temperature: 0.5, num_predict: 350 },
         messages: [
           { role: 'system', content: systemContent },
           ...(history ?? []).slice(-6),
@@ -177,44 +177,21 @@ export async function POST(req: NextRequest) {
     return new Response('Ollama unavailable', { status: 502 });
   }
 
-  if (!ollamaRes.ok || !ollamaRes.body) {
+  if (!ollamaRes.ok) {
     return new Response('Ollama error', { status: 502 });
   }
 
-  // Transform Ollama NDJSON → plain text stream
-  const upstream = ollamaRes.body;
-  const stream = new ReadableStream({
-    async start(controller) {
-      const reader = upstream.getReader();
-      const dec = new TextDecoder();
-      const enc = new TextEncoder();
-      let buf = '';
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += dec.decode(value, { stream: true });
-          const lines = buf.split('\n');
-          buf = lines.pop() ?? '';
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            try {
-              const json = JSON.parse(line);
-              const token: string = json.message?.content ?? '';
-              if (token) controller.enqueue(enc.encode(token));
-              if (json.done) { controller.close(); return; }
-            } catch { /* malformed line, skip */ }
-          }
-        }
-      } catch (e) {
-        controller.error(e);
-      } finally {
-        try { controller.close(); } catch { /* already closed */ }
-      }
-    },
-  });
+  let content: string;
+  try {
+    const json = await ollamaRes.json();
+    content = json.message?.content?.trim() || '';
+  } catch {
+    return new Response('Ollama error', { status: 502 });
+  }
 
-  return new Response(stream, {
+  if (!content) return new Response('Ollama error', { status: 502 });
+
+  return new Response(content, {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
       'X-Content-Type-Options': 'nosniff',
