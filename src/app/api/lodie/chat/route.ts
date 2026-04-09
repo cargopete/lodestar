@@ -48,24 +48,27 @@ function pageIntents(page: string): string[] {
 
 async function fetchAdvocateData(message: string): Promise<string> {
   const advocateUrl = process.env.GRAPH_ADVOCATE_URL;
-  const graphApiKey = process.env.GRAPH_API_KEY;
-  if (!advocateUrl || !graphApiKey) return '';
+  const tokenApiJwt = process.env.TOKEN_API_JWT;
+  if (!advocateUrl || !tokenApiJwt) return '';
 
   // Step 1: Ask graph-advocate to route the query
-  let rec: { recommendation: string; query_ready?: { tool?: string; args?: Record<string, string>; query?: string; endpoint?: string; subgraph_id?: string }; reason?: string } | null = null;
+  let rec: { recommendation: string; query_ready?: { tool?: string; args?: Record<string, unknown>; query?: string; endpoint?: string; subgraph_id?: string }; reason?: string } | null = null;
   try {
     const res = await fetch(advocateUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         jsonrpc: '2.0', id: 1, method: 'message/send',
-        params: { id: `lodie-${Date.now()}`, message: { role: 'user', parts: [{ kind: 'text', text: message }] } },
+        params: {
+          id: `lodie-${Date.now()}`,
+          message: { messageId: `msg-${Date.now()}`, role: 'user', parts: [{ kind: 'text', text: message }] },
+        },
       }),
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) return '';
     const json = await res.json();
-    const text = json?.result?.status?.message?.parts?.[0]?.text ?? '';
+    const text = json?.result?.parts?.[0]?.text ?? '';
     rec = text ? JSON.parse(text) : null;
   } catch { return ''; }
 
@@ -75,53 +78,53 @@ async function fetchAdvocateData(message: string): Promise<string> {
   try {
     if (rec.recommendation === 'token-api' && rec.query_ready.tool) {
       const { tool, args = {} } = rec.query_ready;
-      const network = args.network ?? 'mainnet';
-      const contract = args.contract ?? '';
-      const address = args.address ?? '';
-      const limit = args.limit ?? '15';
+      // Build query params from args, cap limit at 10 (Token API maximum)
+      const params = new URLSearchParams();
+      for (const [k, v] of Object.entries(args)) {
+        params.set(k, k === 'limit' ? String(Math.min(Number(v), 10)) : String(v));
+      }
+      if (!params.has('limit')) params.set('limit', '10');
 
-      // Explicit REST path mapping for known Token API tools
-      let url = '';
-      if (/holders/i.test(tool) && contract) {
-        url = `https://token-api.thegraph.com/v1/evm/${network}/tokens/${contract}/holders?limit=${limit}`;
-      } else if (/balance/i.test(tool) && address) {
-        url = `https://token-api.thegraph.com/v1/evm/${network}/accounts/${address}/balances`;
-      } else if (/swap/i.test(tool) && contract) {
-        url = `https://token-api.thegraph.com/v1/evm/${network}/tokens/${contract}/swaps?limit=${limit}`;
-      } else if (/transfer/i.test(tool) && contract) {
-        url = `https://token-api.thegraph.com/v1/evm/${network}/tokens/${contract}/transfers?limit=${limit}`;
-      } else {
-        // Fallback: return what graph-advocate recommended so Lodie can explain
-        return `GRAPH ADVOCATE: for this query, use Token API tool "${tool}" with args ${JSON.stringify(args)}. Direct execution not yet supported for this tool type.`;
+      // Token API uses flat query params: /v1/evm/holders?network=X&contract=X&limit=X
+      const endpoint = /holder/i.test(tool) ? 'holders'
+        : /balance/i.test(tool) ? 'balances'
+        : /swap/i.test(tool) ? 'swaps'
+        : /transfer/i.test(tool) ? 'transfers'
+        : /nft/i.test(tool) ? 'nfts'
+        : null;
+
+      if (!endpoint) {
+        return `GRAPH ADVOCATE recommends Token API tool "${tool}" with ${JSON.stringify(args)} — not yet directly supported.`;
       }
 
-      const tokenRes = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${graphApiKey}` },
-        signal: AbortSignal.timeout(8_000),
+      const tokenRes = await fetch(`https://token-api.thegraph.com/v1/evm/${endpoint}?${params}`, {
+        headers: { 'Authorization': `Bearer ${tokenApiJwt}` },
+        signal: AbortSignal.timeout(10_000),
       });
       if (!tokenRes.ok) {
         const errText = await tokenRes.text().catch(() => tokenRes.status.toString());
-        return `GRAPH ADVOCATE: Token API responded ${tokenRes.status}: ${errText.slice(0, 200)}`;
+        return `GRAPH ADVOCATE: Token API ${tokenRes.status}: ${errText.slice(0, 200)}`;
       }
       const data = await tokenRes.json();
       const items: unknown[] = data.items ?? data.holders ?? data.balances ?? data.swaps ?? data.transfers ?? data.data ?? [];
-      if (!Array.isArray(items) || !items.length) return 'GRAPH ADVOCATE: Token API returned no results for this query.';
-      const lines = (items as Record<string, unknown>[]).slice(0, 15).map(item => {
-        if (item.address && item.balance !== undefined) return `${item.address}: ${Number(item.balance).toLocaleString()} GRT`;
-        if (item.holder && item.quantity !== undefined) return `${item.holder}: ${Number(item.quantity).toLocaleString()}`;
-        if (item.owner && item.value !== undefined) return `${item.owner}: ${Number(item.value).toLocaleString()}`;
-        return JSON.stringify(item).slice(0, 150);
+      if (!Array.isArray(items) || !items.length) return 'GRAPH ADVOCATE: Token API returned no results.';
+      const lines = (items as Record<string, unknown>[]).slice(0, 10).map((item, i) => {
+        const addr = item.address ?? item.holder ?? item.owner ?? '?';
+        const bal = item.balanceFormatted ?? item.balance ?? item.value ?? item.quantity ?? '';
+        const pct = item.percentage != null ? ` (${Number(item.percentage).toFixed(2)}%)` : '';
+        return `${i + 1}. ${addr}: ${bal}${pct}`;
       });
       return `EXTERNAL DATA via Token API (${tool}, routed by graph-advocate):\n${lines.join('\n')}`;
     }
 
     if (rec.recommendation === 'subgraph-registry' && rec.query_ready.query) {
+      const gqlApiKey = process.env.GRAPH_API_KEY ?? '';
       const endpoint = rec.query_ready.endpoint
-        ?? (rec.query_ready.subgraph_id ? `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${rec.query_ready.subgraph_id}` : null);
+        ?? (rec.query_ready.subgraph_id ? `https://gateway.thegraph.com/api/${gqlApiKey}/subgraphs/id/${rec.query_ready.subgraph_id}` : null);
       if (!endpoint) return '';
       const gqlRes = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${graphApiKey}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gqlApiKey}` },
         body: JSON.stringify({ query: rec.query_ready.query }),
         signal: AbortSignal.timeout(8_000),
       });
