@@ -131,6 +131,15 @@ function SubgraphDirectory() {
   const [knownComplexities, setKnownComplexities] = useState<Set<string>>(new Set());
   const [rowComplexities, setRowComplexities] = useState<Record<string, string>>({});
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [selectedHashes, setSelectedHashes] = useState<Set<string>>(new Set());
+  const toggleSelection = useCallback((hash: string) => {
+    setSelectedHashes((prev) => {
+      const next = new Set(prev);
+      if (next.has(hash)) next.delete(hash);
+      else next.add(hash);
+      return next;
+    });
+  }, []);
 
   // Sync filter state → URL search params
   useEffect(() => {
@@ -290,6 +299,15 @@ function SubgraphDirectory() {
     }
     return filtered;
   }, [allRows, eliteOnly, networkFilter, rowNetworks, complexityFilter, rowComplexities, is30d, page]);
+
+  // Selection aggregates (across all loaded rows, not just current page)
+  const selectedRows = useMemo(
+    () => allRows.filter((r) => selectedHashes.has(r.ipfsHash)),
+    [allRows, selectedHashes],
+  );
+  const selectionFees = selectedRows.reduce((s, r) => s + r.queryFees, 0);
+  const selectionSignal = selectedRows.reduce((s, r) => s + r.signal, 0);
+  const selectionStake = selectedRows.reduce((s, r) => s + r.stake, 0);
 
   // Total count for pagination
   const filteredTotal = useMemo(() => {
@@ -481,6 +499,25 @@ function SubgraphDirectory() {
         )}
       </div>
 
+      {/* Selection summary bar */}
+      {selectedHashes.size > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-[var(--radius-card)] text-sm">
+          <span className="font-medium text-[var(--accent)]">{selectedHashes.size} selected</span>
+          <span className="text-[var(--border-mid)]">·</span>
+          <span className="text-[var(--text-muted)] font-mono">{formatGRT(selectionFees)} GRT {is30d ? '30d fees' : 'fees'}</span>
+          <span className="text-[var(--border-mid)]">·</span>
+          <span className="text-[var(--text-muted)] font-mono">{formatGRT(selectionSignal)} signal</span>
+          <span className="text-[var(--border-mid)]">·</span>
+          <span className="text-[var(--text-muted)] font-mono">{formatGRT(selectionStake)} stake</span>
+          <button
+            onClick={() => setSelectedHashes(new Set())}
+            className="ml-auto text-xs text-[var(--text-faint)] hover:text-[var(--text)] transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Search results */}
       {isSearching && (
         <Card className="overflow-hidden">
@@ -530,8 +567,22 @@ function SubgraphDirectory() {
         {rows.map((row, idx) => {
           const highRatio = row.signalStakeRatio > 0.5;
           return (
-            <Link key={row.id} href={`/subgraphs/${row.ipfsHash}`}>
-              <Card className="hover:border-[var(--accent-hover)] transition-colors">
+            <Link key={row.id} href={`/subgraphs/${row.ipfsHash}`} className="block relative">
+              <Card className={`transition-colors ${selectedHashes.has(row.ipfsHash) ? 'border-[var(--accent)]/50 bg-[var(--accent)]/5' : 'hover:border-[var(--accent-hover)]'}`}>
+                <button
+                  className={`absolute top-2.5 right-2.5 z-10 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                    selectedHashes.has(row.ipfsHash)
+                      ? 'border-[var(--accent)] bg-[var(--accent)]'
+                      : 'border-[var(--border-mid)] bg-[var(--bg-surface)]'
+                  }`}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSelection(row.ipfsHash); }}
+                >
+                  {selectedHashes.has(row.ipfsHash) && (
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0 mr-2">
                     <div className="flex items-center gap-2">
@@ -627,6 +678,24 @@ function SubgraphDirectory() {
           <table className="w-full">
             <thead className="bg-[var(--bg-elevated)]">
               <tr>
+                <th className={cn(thBase, 'w-10 text-center')}>
+                  <input
+                    type="checkbox"
+                    className="cursor-pointer accent-[var(--accent)]"
+                    checked={rows.length > 0 && rows.every((r) => selectedHashes.has(r.ipfsHash))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedHashes((prev) => new Set([...prev, ...rows.map((r) => r.ipfsHash)]));
+                      } else {
+                        setSelectedHashes((prev) => {
+                          const next = new Set(prev);
+                          rows.forEach((r) => next.delete(r.ipfsHash));
+                          return next;
+                        });
+                      }
+                    }}
+                  />
+                </th>
                 <th className={cn(thBase, 'text-left w-12')}>#</th>
                 <th className={cn(thBase, 'text-left')}>Deployment ID</th>
                 <th className={cn(thBase, 'text-center')}>Complexity</th>
@@ -651,8 +720,19 @@ function SubgraphDirectory() {
                 return (
                   <tr
                     key={row.id}
-                    className="border-b border-[0.5px] border-[var(--border)] hover:bg-[var(--bg-elevated)] transition-colors"
+                    className={`border-b border-[0.5px] border-[var(--border)] transition-colors ${selectedHashes.has(row.ipfsHash) ? 'bg-[var(--accent)]/5' : 'hover:bg-[var(--bg-elevated)]'}`}
                   >
+                    <td
+                      className={`px-3 py-3 text-center ${tdBorder}`}
+                      onClick={(e) => { e.stopPropagation(); toggleSelection(row.ipfsHash); }}
+                    >
+                      <input
+                        type="checkbox"
+                        className="cursor-pointer accent-[var(--accent)]"
+                        checked={selectedHashes.has(row.ipfsHash)}
+                        onChange={() => {}}
+                      />
+                    </td>
                     <td className={`px-4 py-3 text-sm text-[var(--text-faint)] ${tdBorder}`}>{page * PAGE_SIZE + idx + 1}</td>
                     <td className={`px-4 py-3 ${tdBorder}`}>
                       <div className="flex items-center gap-2">
