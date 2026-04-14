@@ -408,6 +408,16 @@ export async function fetchIndexerTrends(
 }
 
 /**
+ * Fetch 90-day QoS metrics for an indexer (gateway quality of service oracle)
+ */
+export async function fetchIndexerQoS(address: string) {
+  const response = await fetch(`/api/indexer-qos/${encodeURIComponent(address)}`);
+  if (!response.ok) throw new Error(`QoS fetch failed: ${response.status}`);
+  const json = await response.json();
+  return json.data as { qos: import('@/app/api/indexer-qos/[address]/route').IndexerQoSPoint[] };
+}
+
+/**
  * Fetch 26-week stake history for an indexer (time-travel snapshots)
  */
 export async function fetchIndexerStakeHistory(

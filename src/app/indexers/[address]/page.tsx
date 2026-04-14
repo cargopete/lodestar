@@ -27,6 +27,7 @@ import dynamic from 'next/dynamic';
 
 const IndexerTrendsChart = dynamic(() => import('@/components/charts/IndexerTrendsChart').then(m => ({ default: m.IndexerTrendsChart })), { ssr: false });
 const StakeHistoryChart = dynamic(() => import('@/components/charts/StakeHistoryChart').then(m => ({ default: m.StakeHistoryChart })), { ssr: false });
+const IndexerQoSChart = dynamic(() => import('@/components/charts/IndexerQoSChart').then(m => ({ default: m.IndexerQoSChart })), { ssr: false });
 import { ParameterHistory } from '@/components/ParameterHistory';
 import { calculateIndexerScore, SCORE_WEIGHTS, SCORE_LABELS, type IndexerScore } from '@/lib/risk-score';
 
@@ -667,6 +668,9 @@ export default function IndexerDetailPage({
 
           {/* Recent Delegation Activity — reusable feed component pre-filtered to this indexer */}
           <DelegationFeed indexerAddress={address} />
+
+          {/* Query Performance — QoS oracle: success rate, latency, query count */}
+          <IndexerQoSChart indexer={address} />
 
           {/* Stake History — self-stake vs delegated over 6 months */}
           <StakeHistoryChart indexer={address} />

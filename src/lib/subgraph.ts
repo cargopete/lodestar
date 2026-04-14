@@ -96,6 +96,35 @@ export async function horizonPerfQuery<T = Record<string, unknown>>(query: strin
   return json.data as T;
 }
 
+// Gateway QoS Oracle subgraph (Edge & Node — indexer quality of service timeseries)
+// https://thegraph.com/explorer/subgraphs/8aBSLHQrBkMN9hkAj94TRoKGcjRPHmAkSJ3kggQ26RC5
+const QOS_ORACLE_URL = process.env.GRAPH_API_KEY
+  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/8aBSLHQrBkMN9hkAj94TRoKGcjRPHmAkSJ3kggQ26RC5`
+  : null;
+
+export async function qosOracleQuery<T = Record<string, unknown>>(query: string): Promise<T> {
+  if (!QOS_ORACLE_URL) {
+    throw new Error('GRAPH_API_KEY not configured');
+  }
+
+  const res = await fetch(QOS_ORACLE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`QoS oracle subgraph request failed: ${res.status}`);
+  }
+
+  const json = await res.json();
+  if (json.errors) {
+    throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
+  }
+
+  return json.data as T;
+}
+
 export async function delegationEventsQuery<T = Record<string, unknown>>(query: string): Promise<T> {
   if (!DELEGATION_EVENTS_URL) {
     throw new Error('GRAPH_API_KEY not configured');
