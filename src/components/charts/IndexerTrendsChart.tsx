@@ -17,7 +17,7 @@ import { useIndexerTrends } from '@/hooks/useNetworkStats';
 import { formatGRT, formatGRTFull } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 
-type Tab = 'rewards' | 'fees';
+type Tab = 'rewards' | 'fees' | 'cumulative';
 
 interface RewardPoint {
   date: string;
@@ -47,7 +47,7 @@ function formatTimestamp(ts: string): string {
 
 export function IndexerTrendsChart({ indexer }: { indexer: string }) {
   const [tab, setTab] = useState<Tab>('rewards');
-  const { data, isLoading } = useIndexerTrends(indexer, 30);
+  const { data, isLoading } = useIndexerTrends(indexer, 90);
 
   const rewardData: RewardPoint[] =
     data?.rewards
@@ -74,6 +74,15 @@ export function IndexerTrendsChart({ indexer }: { indexer: string }) {
   const hasFees = feeData.length > 0;
   const hasData = hasRewards || hasFees;
 
+  const cumulativeData = rewardData.reduce<Array<{ date: string; cumulative: number }>>(
+    (acc, point) => {
+      const prev = acc.length > 0 ? acc[acc.length - 1].cumulative : 0;
+      acc.push({ date: point.date, cumulative: prev + point.total });
+      return acc;
+    },
+    []
+  );
+
   return (
     <Card className="min-w-0 overflow-hidden">
       <CardHeader>
@@ -99,6 +108,16 @@ export function IndexerTrendsChart({ indexer }: { indexer: string }) {
               }`}
             >
               Query Fees
+            </button>
+            <button
+              onClick={() => setTab('cumulative')}
+              className={`px-2.5 py-1 text-xs rounded-[var(--radius-button)] transition-colors ${
+                tab === 'cumulative'
+                  ? 'bg-[var(--accent)] text-white'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+              }`}
+            >
+              Cumulative
             </button>
           </div>
         </div>
@@ -185,7 +204,7 @@ export function IndexerTrendsChart({ indexer }: { indexer: string }) {
               </ResponsiveContainer>
             )}
           </div>
-        ) : (
+        ) : tab === 'fees' ? (
           <div className="h-[280px]">
             {!hasFees ? (
               <div className="h-full flex items-center justify-center">
@@ -231,6 +250,59 @@ export function IndexerTrendsChart({ indexer }: { indexer: string }) {
                   <Bar dataKey="collected" fill="var(--accent)" fillOpacity={0.8} radius={[2, 2, 0, 0]} />
                   <Bar dataKey="curators" fill="var(--amber)" fillOpacity={0.6} radius={[2, 2, 0, 0]} />
                 </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        ) : (
+          <div className="h-[280px]">
+            {cumulativeData.length === 0 ? (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-sm text-[var(--text-faint)]">No reward data for cumulative view</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={cumulativeData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="trendCumulativeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="var(--accent)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'var(--text-faint)', fontSize: 10 }}
+                    interval={Math.max(0, Math.floor(cumulativeData.length / 6) - 1)}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'var(--text-faint)', fontSize: 10 }}
+                    tickFormatter={(v) => formatGRT(v)}
+                    width={60}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-mid)',
+                      borderRadius: 'var(--radius-button)',
+                      color: 'var(--text)',
+                      fontSize: 12,
+                    }}
+                    labelStyle={{ color: 'var(--text)' }}
+                    itemStyle={{ color: 'var(--text-muted)' }}
+                    formatter={(value) => [formatGRTFull(Number(value)) + ' GRT', 'Cumulative Rewards']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="cumulative"
+                    stroke="var(--accent)"
+                    strokeWidth={2}
+                    fill="url(#trendCumulativeGrad)"
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             )}
           </div>

@@ -27,6 +27,7 @@ import {
   fetchPayments,
   fetchIndexerPayments,
   fetchIndexerTrends,
+  fetchIndexerStakeHistory,
   fetchDelegationFlows,
   fetchTokenMetrics,
   fetchParameterHistory,
@@ -517,6 +518,19 @@ export function useIndexerTrends(indexer: string | null, days = 30) {
     refetchInterval: TEN_MINUTES,
     enabled: !!indexer,
     retry: 1, // supplementary — don't hammer it
+  });
+}
+
+/**
+ * Hook for indexer stake history (26-week time-travel snapshots)
+ */
+export function useIndexerStakeHistory(address: string | null) {
+  return useQuery({
+    queryKey: ['indexerStakeHistory', address],
+    queryFn: () => fetchIndexerStakeHistory(address!),
+    staleTime: 6 * 60 * 60 * 1000, // 6h — matches server cache
+    enabled: !!address,
+    retry: 1,
   });
 }
 

@@ -408,6 +408,18 @@ export async function fetchIndexerTrends(
 }
 
 /**
+ * Fetch 26-week stake history for an indexer (time-travel snapshots)
+ */
+export async function fetchIndexerStakeHistory(
+  address: string
+): Promise<{ history: Array<{ date: string; selfStakeGrt: number; delegatedGrt: number }> }> {
+  const response = await fetch(`/api/indexer-stake-history/${encodeURIComponent(address)}`);
+  if (!response.ok) throw new Error(`Stake history failed: ${response.status}`);
+  const json = await response.json();
+  return json.data as { history: Array<{ date: string; selfStakeGrt: number; delegatedGrt: number }> };
+}
+
+/**
  * Generic fetch with error handling
  */
 export async function fetchWithRetry<T>(
