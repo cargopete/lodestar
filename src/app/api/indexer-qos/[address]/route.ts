@@ -38,11 +38,13 @@ export async function GET(
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
 
-  const cacheKey = `lodestar:indexer-qos-v2:${address}`;
+  const cacheKey = `lodestar:indexer-qos-v3:${address}`;
 
   try {
     const data = await cached(cacheKey, 3600, async () => {
-      const currentDay = Math.floor(Date.now() / 86400000);
+      // QoS oracle dayNumber = days since The Graph mainnet launch (Dec 17 2020 = Unix day 18613)
+      const GRAPH_EPOCH_DAYS = 18613;
+      const currentDay = Math.floor(Date.now() / 86400000) - GRAPH_EPOCH_DAYS;
       const fromDay = currentDay - 90;
 
       // Paginate — could be many rows if multiple gateways/chains per day
@@ -57,7 +59,7 @@ export async function GET(
             orderDirection: asc
             where: {
               indexer_wallet: "${address}"
-              dayNumber_gte: "${fromDay}"
+              dayNumber_gte: ${fromDay}
               ${lastId ? `id_gt: "${lastId}"` : ''}
             }
           ) {
@@ -105,7 +107,7 @@ export async function GET(
       const qos: IndexerQoSPoint[] = Array.from(byDay.entries())
         .sort(([a], [b]) => a - b)
         .map(([day, agg]) => ({
-          date: new Date(day * 86400000).toISOString().slice(0, 10),
+          date: new Date((day + GRAPH_EPOCH_DAYS) * 86400000).toISOString().slice(0, 10),
           queryCount: agg.queryCount,
           successRate: (agg.successRateSum / agg.count) * 100,
           latencyMs: agg.latencySum / agg.count,
