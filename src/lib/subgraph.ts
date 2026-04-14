@@ -97,9 +97,9 @@ export async function horizonPerfQuery<T = Record<string, unknown>>(query: strin
 }
 
 // Gateway QoS Oracle subgraph (Edge & Node — indexer quality of service timeseries)
-// https://thegraph.com/explorer/subgraphs/8aBSLHQrBkMN9hkAj94TRoKGcjRPHmAkSJ3kggQ26RC5
+// https://thegraph.com/explorer/subgraphs/Dtr9rETvwokot4BSXaD5tECanXfqfJKcvHuaaEgPDD2D
 const QOS_ORACLE_URL = process.env.GRAPH_API_KEY
-  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/8aBSLHQrBkMN9hkAj94TRoKGcjRPHmAkSJ3kggQ26RC5`
+  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/Dtr9rETvwokot4BSXaD5tECanXfqfJKcvHuaaEgPDD2D`
   : null;
 
 export async function qosOracleQuery<T = Record<string, unknown>>(query: string): Promise<T> {
