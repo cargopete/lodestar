@@ -440,6 +440,9 @@ export default function IndexerDetailPage({
         </div>
       </Link>
 
+      {/* Query Performance — full width, QoS oracle */}
+      <IndexerQoSChart indexer={address} />
+
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left column - Calculator */}
@@ -668,9 +671,6 @@ export default function IndexerDetailPage({
 
           {/* Recent Delegation Activity — reusable feed component pre-filtered to this indexer */}
           <DelegationFeed indexerAddress={address} />
-
-          {/* Query Performance — QoS oracle: success rate, latency, query count */}
-          <IndexerQoSChart indexer={address} />
 
           {/* Stake History — self-stake vs delegated over 6 months */}
           <StakeHistoryChart indexer={address} />
