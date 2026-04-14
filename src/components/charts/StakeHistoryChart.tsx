@@ -38,12 +38,12 @@ export function StakeHistoryChart({ indexer }: { indexer: string }) {
               <AreaChart data={history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="stakeHistSelfGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.5} />
+                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.2} />
                   </linearGradient>
                   <linearGradient id="stakeHistDelegGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--green)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="var(--green)" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--green)" stopOpacity={0.6} />
+                    <stop offset="95%" stopColor="var(--green)" stopOpacity={0.2} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -83,6 +83,7 @@ export function StakeHistoryChart({ indexer }: { indexer: string }) {
                 <Area
                   type="monotone"
                   dataKey="selfStakeGrt"
+                  stackId="1"
                   stroke="var(--accent)"
                   strokeWidth={2}
                   fill="url(#stakeHistSelfGrad)"
@@ -90,6 +91,7 @@ export function StakeHistoryChart({ indexer }: { indexer: string }) {
                 <Area
                   type="monotone"
                   dataKey="delegatedGrt"
+                  stackId="1"
                   stroke="var(--green)"
                   strokeWidth={2}
                   fill="url(#stakeHistDelegGrad)"
