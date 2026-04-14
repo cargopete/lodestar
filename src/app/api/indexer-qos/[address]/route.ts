@@ -38,7 +38,7 @@ export async function GET(
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
 
-  const cacheKey = `lodestar:indexer-qos-v3:${address}`;
+  const cacheKey = `lodestar:indexer-qos-v4:${address}`;
 
   try {
     const data = await cached(cacheKey, 3600, async () => {
@@ -99,7 +99,7 @@ export async function GET(
         existing.successRateSum += Number(p.proportion_indexer_200_responses);
         existing.latencySum += Number(p.avg_indexer_latency_ms);
         existing.blocksSum += Number(p.avg_indexer_blocks_behind);
-        existing.totalQueryFees += Number(p.total_query_fees) / 1e18;
+        existing.totalQueryFees += Number(p.total_query_fees);
         existing.count += 1;
         byDay.set(day, existing);
       }
@@ -113,7 +113,7 @@ export async function GET(
           latencyMs: agg.latencySum / agg.count,
           blocksBehind: agg.blocksSum / agg.count,
           avgQueryFee: agg.count > 0 && agg.queryCount > 0
-            ? (agg.totalQueryFees / agg.queryCount) * 1e18 / 1e18
+            ? agg.totalQueryFees / agg.queryCount
             : 0,
           totalQueryFees: agg.totalQueryFees,
         }));
