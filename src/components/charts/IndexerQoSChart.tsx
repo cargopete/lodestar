@@ -29,6 +29,13 @@ function formatMs(n: number): string {
   return n >= 1000 ? (n / 1000).toFixed(2) + 's' : n.toFixed(0) + 'ms';
 }
 
+function formatGRTAuto(n: number): string {
+  if (n === 0) return '0.00';
+  if (n >= 0.01) return n.toFixed(2);
+  if (n >= 0.0001) return n.toFixed(6);
+  return n.toExponential(2);
+}
+
 const TOOLTIP_STYLE = {
   contentStyle: {
     backgroundColor: 'var(--bg-elevated)',
@@ -167,10 +174,10 @@ export function IndexerQoSChart({ indexer }: { indexer: string }) {
               data={qos}
               dataKey="avgQueryFee"
               label="Avg. Query Fee"
-              summary={latest ? formatGRTFull(latest.avgQueryFee) + ' GRT' : '—'}
+              summary={latest ? formatGRTAuto(latest.avgQueryFee) + ' GRT' : '—'}
               color="var(--amber)"
-              formatter={(v) => formatGRTFull(v) + ' GRT'}
-              tickFormatter={(v) => formatGRTFull(v)}
+              formatter={(v) => formatGRTAuto(v) + ' GRT'}
+              tickFormatter={(v) => formatGRTAuto(v)}
             />
             <QoSMiniChart
               data={qos}
