@@ -14,6 +14,11 @@ import { formatGRTFull } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import type { IndexerQoSPoint } from '@/app/api/indexer-qos/[address]/route';
 
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+}
+
 function formatK(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
@@ -76,7 +81,8 @@ function QoSMiniChart({
               axisLine={false}
               tickLine={false}
               tick={{ fill: 'var(--text-faint)', fontSize: 9 }}
-              interval={Math.max(0, Math.floor(data.length / 4) - 1)}
+              tickFormatter={shortDate}
+              interval={Math.max(0, Math.floor(data.length / 3) - 1)}
             />
             <YAxis
               axisLine={false}
