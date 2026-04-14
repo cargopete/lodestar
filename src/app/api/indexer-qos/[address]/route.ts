@@ -38,7 +38,7 @@ export async function GET(
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
 
-  const cacheKey = `lodestar:indexer-qos:${address}`;
+  const cacheKey = `lodestar:indexer-qos-v2:${address}`;
 
   try {
     const data = await cached(cacheKey, 3600, async () => {
