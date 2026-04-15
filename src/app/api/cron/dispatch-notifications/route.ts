@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
       SELECT id, indexer_address, param_name, old_value, new_value
       FROM parameter_changes
       WHERE push_notified = FALSE
-        AND created_at >= NOW() - INTERVAL '24 hours'
-      ORDER BY created_at ASC
+        AND detected_at >= NOW() - INTERVAL '24 hours'
+      ORDER BY detected_at ASC
     ` as unknown as ParamChange[];
 
     // Group changes by indexer
@@ -113,8 +113,8 @@ export async function GET(request: NextRequest) {
     // Inactive indexer notifications
     const newlyInactive = await db!`
       SELECT address, name FROM indexers
-      WHERE is_active = FALSE
-        AND updated_at >= NOW() - INTERVAL '20 minutes'
+      WHERE allocation_count = 0
+        AND last_updated >= NOW() - INTERVAL '20 minutes'
     ` as unknown as InactiveIndexer[];
 
     for (const indexer of newlyInactive) {
