@@ -1,4 +1,4 @@
-export type FeedItemType = 'governance' | 'gip' | 'epoch' | 'announcement' | 'issue' | 'pr' | 'release';
+export type FeedItemType = 'governance' | 'gip' | 'vote' | 'epoch' | 'announcement' | 'issue' | 'pr' | 'release';
 
 export interface FeedItem {
   id: string;
@@ -20,6 +20,11 @@ export interface FeedItem {
     repo?: string;
     labels?: string[];
     releaseTag?: string;
+    // Snapshot
+    snapshotState?: string;
+    snapshotVotes?: number;
+    snapshotEnd?: string;
+    winningChoice?: string;
   };
 }
 
@@ -36,6 +41,11 @@ export const FEED_TYPE_CONFIG: Record<
     label: 'GIP',
     borderColor: 'var(--accent)',
     bgColor: 'var(--accent-dim)',
+  },
+  vote: {
+    label: 'Vote',
+    borderColor: 'var(--cyan)',
+    bgColor: 'var(--cyan-dim)',
   },
   epoch: {
     label: 'Epoch',

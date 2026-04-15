@@ -7,6 +7,7 @@ const FILTERS: { label: string; value: FeedItemType | 'all' }[] = [
   { label: 'All', value: 'all' },
   { label: 'Governance', value: 'governance' },
   { label: 'GIPs', value: 'gip' },
+  { label: 'Votes', value: 'vote' },
   { label: 'Epochs', value: 'epoch' },
   { label: 'News', value: 'announcement' },
   { label: 'Issues', value: 'issue' },

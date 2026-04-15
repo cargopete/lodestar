@@ -21,6 +21,9 @@ const GH_HEADERS: Record<string, string> = {
 const GIP_COMMITS_URL =
   'https://api.github.com/repos/graphprotocol/graph-improvement-proposals/commits?per_page=10';
 
+const SNAPSHOT_GRAPHQL = 'https://hub.snapshot.org/graphql';
+const SNAPSHOT_SPACE = 'council.graphprotocol.eth';
+
 const TRACKED_REPOS = [
   'graphprotocol/graph-node',
   'graphprotocol/indexer',
@@ -207,6 +210,71 @@ async function fetchRepoReleases(): Promise<FeedItem[]> {
   return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
 }
 
+async function fetchSnapshotProposals(): Promise<FeedItem[]> {
+  try {
+    const query = `{
+      proposals(
+        first: 10,
+        where: { space: "${SNAPSHOT_SPACE}" },
+        orderBy: "created",
+        orderDirection: desc
+      ) {
+        id
+        title
+        body
+        state
+        start
+        end
+        choices
+        scores
+        scores_total
+        votes
+        author
+      }
+    }`;
+
+    const res = await fetch(SNAPSHOT_GRAPHQL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!res.ok) return [];
+    const json = await res.json();
+    const proposals = json?.data?.proposals ?? [];
+
+    return proposals.map((p: any): FeedItem => {
+      const bodySnippet = p.body
+        ? p.body.replace(/[#*`[\]]/g, '').replace(/\s+/g, ' ').trim().slice(0, 200)
+        : '';
+
+      const winningIdx = p.scores && p.scores.length > 0
+        ? p.scores.indexOf(Math.max(...p.scores))
+        : -1;
+      const winningChoice = winningIdx >= 0 ? p.choices[winningIdx] : undefined;
+
+      return {
+        id: `snapshot-${p.id}`,
+        type: 'vote',
+        title: p.title,
+        summary: bodySnippet,
+        url: `https://snapshot.org/#/${SNAPSHOT_SPACE}/proposal/${p.id}`,
+        timestamp: new Date(p.start * 1000).toISOString(),
+        tags: [p.state],
+        metadata: {
+          author: p.author ? `${p.author.slice(0, 6)}…${p.author.slice(-4)}` : undefined,
+          snapshotState: p.state,
+          snapshotVotes: p.votes,
+          snapshotEnd: new Date(p.end * 1000).toISOString(),
+          winningChoice,
+        },
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 async function fetchEpochSummaries(): Promise<FeedItem[]> {
   if (!SUBGRAPH_URL) return [];
 
@@ -291,16 +359,17 @@ async function fetchEpochSummaries(): Promise<FeedItem[]> {
 
 export async function GET() {
   const items = await cached('lodestar:feed', 300, async () => {
-    const [forumItems, gipItems, epochItems, issueItems, prItems, releaseItems] = await Promise.all([
+    const [forumItems, gipItems, snapshotItems, epochItems, issueItems, prItems, releaseItems] = await Promise.all([
       fetchForumTopics(),
       fetchGIPCommits(),
+      fetchSnapshotProposals(),
       fetchEpochSummaries(),
       fetchRepoIssues(),
       fetchRepoPRs(),
       fetchRepoReleases(),
     ]);
 
-    return [...forumItems, ...gipItems, ...epochItems, ...issueItems, ...prItems, ...releaseItems]
+    return [...forumItems, ...gipItems, ...snapshotItems, ...epochItems, ...issueItems, ...prItems, ...releaseItems]
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 60);
   });

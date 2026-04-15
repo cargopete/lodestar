@@ -64,28 +64,52 @@ export function FeedCard({ item }: FeedCardProps) {
 
       {/* Footer metadata */}
       <div className="flex items-center gap-3 text-[10px] text-[var(--text-faint)]">
-        {item.metadata.views != null && item.metadata.views > 0 && (
-          <span>{item.metadata.views.toLocaleString()} views</span>
-        )}
-        {item.metadata.replies != null && item.metadata.replies > 0 && (
-          <span>{item.metadata.replies} replies</span>
-        )}
-        {item.metadata.author && (
-          <span>by {item.metadata.author}</span>
-        )}
-        {item.metadata.repo && (
-          <span className="font-mono">{item.metadata.repo}</span>
-        )}
-        {item.metadata.releaseTag && (
-          <span className="font-mono">{item.metadata.releaseTag}</span>
-        )}
-        {item.metadata.epochNumber != null && (
-          <span className="font-mono">#{item.metadata.epochNumber}</span>
-        )}
-        {item.tags.length > 0 && (
-          <span className="truncate">
-            {item.tags.slice(0, 2).join(', ')}
-          </span>
+        {item.type === 'vote' ? (
+          <>
+            {item.metadata.snapshotState && (
+              <span
+                className="font-medium"
+                style={{ color: item.metadata.snapshotState === 'active' ? 'var(--green)' : 'var(--text-faint)' }}
+              >
+                {item.metadata.snapshotState}
+              </span>
+            )}
+            {item.metadata.snapshotVotes != null && (
+              <span>{item.metadata.snapshotVotes.toLocaleString()} votes</span>
+            )}
+            {item.metadata.winningChoice && item.metadata.snapshotState === 'closed' && (
+              <span className="truncate">→ {item.metadata.winningChoice}</span>
+            )}
+            {item.metadata.snapshotEnd && item.metadata.snapshotState === 'active' && (
+              <span>ends {timeAgo(item.metadata.snapshotEnd)}</span>
+            )}
+          </>
+        ) : (
+          <>
+            {item.metadata.views != null && item.metadata.views > 0 && (
+              <span>{item.metadata.views.toLocaleString()} views</span>
+            )}
+            {item.metadata.replies != null && item.metadata.replies > 0 && (
+              <span>{item.metadata.replies} replies</span>
+            )}
+            {item.metadata.author && (
+              <span>by {item.metadata.author}</span>
+            )}
+            {item.metadata.repo && (
+              <span className="font-mono">{item.metadata.repo}</span>
+            )}
+            {item.metadata.releaseTag && (
+              <span className="font-mono">{item.metadata.releaseTag}</span>
+            )}
+            {item.metadata.epochNumber != null && (
+              <span className="font-mono">#{item.metadata.epochNumber}</span>
+            )}
+            {item.tags.length > 0 && (
+              <span className="truncate">
+                {item.tags.slice(0, 2).join(', ')}
+              </span>
+            )}
+          </>
         )}
       </div>
     </Wrapper>

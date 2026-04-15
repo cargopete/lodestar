@@ -1,9 +1,11 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useEnrichedIndexers, useNetworkStats } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { weiToGRT, formatGRT, cn } from '@/lib/utils';
+import { timeAgo } from '@/lib/feed';
 import type { EnrichedIndexer } from '@/lib/enriched';
 
 type GIPStatus = 'deployed' | 'approved' | 'candidate' | 'draft';
@@ -14,6 +16,7 @@ interface GIP {
   status: GIPStatus;
   authors: string;
   forumUrl: string;
+  forumLabel?: string;
   summary: string;
   indexerImpact: string;
   delegatorImpact: string;
@@ -48,6 +51,50 @@ const STATUS_VARIANT: Record<GIPStatus, 'success' | 'accent' | 'warning' | 'erro
   draft: 'error',
 };
 
+const SNAPSHOT_SPACE = 'council.graphprotocol.eth';
+
+interface SnapshotProposal {
+  id: string;
+  title: string;
+  state: 'active' | 'closed' | 'pending';
+  start: number;
+  end: number;
+  choices: string[];
+  scores: number[];
+  scores_total: number;
+  votes: number;
+}
+
+function useSnapshotProposals() {
+  const [proposals, setProposals] = useState<SnapshotProposal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const query = `{
+      proposals(
+        first: 10,
+        where: { space: "${SNAPSHOT_SPACE}" },
+        orderBy: "created",
+        orderDirection: desc
+      ) {
+        id title state start end choices scores scores_total votes
+      }
+    }`;
+
+    fetch('https://hub.snapshot.org/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    })
+      .then(r => r.json())
+      .then(json => setProposals(json?.data?.proposals ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { proposals, loading };
+}
+
 const GIPS: GIP[] = [
   {
     id: 'GIP-0079',
@@ -75,17 +122,17 @@ const GIPS: GIP[] = [
   {
     id: 'GIP-0086',
     title: 'Rewards Manager & Subgraph Service Upgrade',
-    status: 'approved',
+    status: 'candidate',
     authors: 'Edge & Node',
     forumUrl: 'https://forum.thegraph.com/t/gip-0086-rewards-manager-and-subgraph-service-upgrade/6868',
     summary: 'Upgrades the RewardsManager to integrate with the REO oracle and adds POIPresented events with claim/deny/defer outcomes. Prerequisite for on-chain indexing agreements.',
-    indexerImpact: 'RewardsManager now checks REO eligibility at reward claim time. New POIPresented events create richer on-chain data about indexer performance.',
-    delegatorImpact: 'Better reward distribution accuracy. POI presentation data will feed into indexer scoring and compliance tracking.',
+    indexerImpact: 'RewardsManager will check REO eligibility at reward claim time once deployed. New POIPresented events will create richer on-chain data about indexer performance.',
+    delegatorImpact: 'Will improve reward distribution accuracy. POI presentation data will feed into indexer scoring and compliance tracking.',
   },
   {
     id: 'GIP-0087',
     title: 'On-Chain Indexing Agreements',
-    status: 'draft',
+    status: 'candidate',
     authors: 'Rembrandt Kuipers (Edge & Node)',
     forumUrl: 'https://forum.thegraph.com/t/on-chain-indexing-agreements-and-issuance-allocation-gip-0087-gip-0088/6869',
     summary: 'Creates a new marketplace layer for indexing agreements — offers, acceptances, POI presentations, escrow balances, and payment flows. The RecurringAgreementManager receives minted GRT and manages agreement lifecycles.',
@@ -95,7 +142,7 @@ const GIPS: GIP[] = [
   {
     id: 'GIP-0088',
     title: 'Issuance Allocator Deployment',
-    status: 'draft',
+    status: 'candidate',
     authors: 'Edge & Node',
     forumUrl: 'https://forum.thegraph.com/t/on-chain-indexing-agreements-and-issuance-allocation-gip-0087-gip-0088/6869',
     summary: 'Deploys the IssuanceAllocator to split GRT issuance between the RewardsManager and the RecurringAgreementManager. Initial split: ~5% (~6 GRT/block) to agreements, expected to grow to ~10%.',
@@ -115,11 +162,22 @@ const GIPS: GIP[] = [
     },
   },
   {
+    id: 'GIP-0076',
+    title: 'Issuance Allocator Contract',
+    status: 'candidate',
+    authors: 'Rembrandt Kuipers (Edge & Node)',
+    forumUrl: 'https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0076.md',
+    forumLabel: 'GIP',
+    summary: 'Introduces a governance-controlled smart contract that splits protocol GRT issuance across multiple configurable distribution targets. Total issuance is unchanged — this is the infrastructure layer that enables GIP-0087 and GIP-0088 to redirect a portion of minted GRT away from the existing RewardsManager.',
+    indexerImpact: 'No immediate changes to reward amounts. Enables future issuance redirects to new targets like the RecurringAgreementManager. Indexers participating in on-chain agreements (GIP-0087) stand to benefit from those redirected flows.',
+    delegatorImpact: 'No immediate APR impact. Provides the plumbing that GIP-0088 activates — once deployed, a portion of issuance flows to agreement funding rather than purely allocation rewards.',
+  },
+  {
     id: 'GIP-0070',
     title: 'Protocol Economics Evolution',
     status: 'candidate',
     authors: 'Graph Foundation',
-    forumUrl: 'https://forum.thegraph.com/t/gip-0070-evolving-the-graph-protocol-economics/6734',
+    forumUrl: 'https://forum.thegraph.com/t/evolving-the-graph-protocol-vision-2024/6241',
     summary: 'Broader economic restructuring including issuance model updates, fee market evolution, and protocol sustainability mechanisms as The Graph transitions to a multi-service protocol.',
     indexerImpact: 'Long-term economic framework changes affecting reward structures, fee markets, and the balance between issuance-funded and fee-funded revenue.',
     delegatorImpact: 'Economic model changes affect long-term APR sustainability. The shift toward fee-based revenue means delegator returns increasingly depend on actual query volume, not just issuance.',
@@ -129,6 +187,7 @@ const GIPS: GIP[] = [
 export default function GovernancePage() {
   const { data: enrichedData } = useEnrichedIndexers();
   const { data: networkData } = useNetworkStats();
+  const { proposals, loading: snapshotLoading } = useSnapshotProposals();
 
   const indexers: EnrichedIndexer[] = enrichedData?.indexers ?? [];
   const network: NetworkData | null = networkData?.graphNetwork ?? null;
@@ -138,7 +197,7 @@ export default function GovernancePage() {
   // Summary stats
   const deployed = GIPS.filter(g => g.status === 'deployed').length;
   const inProgress = GIPS.filter(g => g.status === 'approved' || g.status === 'candidate').length;
-  const drafts = GIPS.filter(g => g.status === 'draft').length;
+  const activeVotes = proposals.filter(p => p.state === 'active').length;
 
   return (
     <div className="space-y-6">
@@ -146,7 +205,7 @@ export default function GovernancePage() {
       <div>
         <h1 className="text-xl font-semibold text-[var(--text)]">Governance Tracker</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Active GIPs affecting protocol economics — what they mean for your APR, your indexer, and your delegation.
+          Active GIPs and live council votes — what they mean for your APR, your indexer, and your delegation.
         </p>
       </div>
 
@@ -161,8 +220,8 @@ export default function GovernancePage() {
           <p className="text-xs text-[var(--text-faint)] mt-1">In Progress</p>
         </div>
         <div className="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] text-center">
-          <p className="text-2xl font-mono font-bold text-[var(--text-muted)]">{drafts}</p>
-          <p className="text-xs text-[var(--text-faint)] mt-1">Draft</p>
+          <p className="text-2xl font-mono font-bold text-[var(--cyan)]">{activeVotes}</p>
+          <p className="text-xs text-[var(--text-faint)] mt-1">Voting Now</p>
         </div>
       </div>
 
@@ -191,7 +250,7 @@ export default function GovernancePage() {
                     rel="noopener noreferrer"
                     className="text-xs text-[var(--accent)] hover:underline flex-shrink-0 mt-1"
                   >
-                    Forum
+                    {gip.forumLabel ?? 'Forum'}
                   </a>
                 </div>
               </CardHeader>
@@ -237,6 +296,85 @@ export default function GovernancePage() {
             </Card>
           );
         })}
+      </div>
+
+      {/* Snapshot Votes */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-base font-semibold text-[var(--text)]">Council Votes</h2>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              Live from <span className="font-mono">{SNAPSHOT_SPACE}</span>
+            </p>
+          </div>
+          <a
+            href={`https://snapshot.org/#/${SNAPSHOT_SPACE}/proposals`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-[var(--accent)] hover:underline"
+          >
+            All proposals →
+          </a>
+        </div>
+
+        {snapshotLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-16 rounded-lg bg-[var(--bg-elevated)] animate-pulse" />
+            ))}
+          </div>
+        ) : proposals.length === 0 ? (
+          <p className="text-sm text-[var(--text-faint)] text-center py-6">No proposals found</p>
+        ) : (
+          <div className="space-y-2">
+            {proposals.map((p) => {
+              const isActive = p.state === 'active';
+              const winningIdx = p.scores.length > 0 ? p.scores.indexOf(Math.max(...p.scores)) : -1;
+              const winningChoice = winningIdx >= 0 ? p.choices[winningIdx] : null;
+              const winningPct = p.scores_total > 0 && winningIdx >= 0
+                ? ((p.scores[winningIdx] / p.scores_total) * 100).toFixed(0)
+                : null;
+
+              return (
+                <a
+                  key={p.id}
+                  href={`https://snapshot.org/#/${SNAPSHOT_SPACE}/proposal/${p.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block p-3 rounded-lg border-l-[3px] bg-[var(--bg-elevated)] hover:bg-[color-mix(in_srgb,var(--bg-elevated)_90%,var(--cyan)_10%)] transition-colors"
+                  style={{ borderLeftColor: isActive ? 'var(--cyan)' : 'var(--border)' }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-[13px] font-medium text-[var(--text)] leading-snug line-clamp-2 flex-1">
+                      {p.title}
+                    </p>
+                    <span
+                      className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0"
+                      style={{
+                        color: isActive ? 'var(--cyan)' : 'var(--text-faint)',
+                        backgroundColor: isActive ? 'var(--cyan-dim)' : 'var(--bg-surface)',
+                      }}
+                    >
+                      {p.state}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-faint)]">
+                    <span>{p.votes.toLocaleString()} votes</span>
+                    {winningChoice && winningPct && (
+                      <span>
+                        {p.state === 'closed' ? '→ ' : ''}{winningChoice} {winningPct}%
+                      </span>
+                    )}
+                    {isActive
+                      ? <span>ends {timeAgo(new Date(p.end * 1000).toISOString())}</span>
+                      : <span>{timeAgo(new Date(p.start * 1000).toISOString())}</span>
+                    }
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Disclaimer */}
