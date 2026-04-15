@@ -31,7 +31,7 @@ const MCPS: McpEntry[] = [
     description: 'On-chain token data across 9 networks via natural language. ERC-20 & NFT metadata, wallet balances, transfer history, and top holder analysis — no custom subgraph needed.',
     capabilities: ['Token metadata (name, symbol, supply)', 'Wallet balance queries', 'Transfer tracking', 'Top holder analysis', 'Historical data'],
     clients: ['Claude', 'Cursor', 'Cline'],
-    repoUrl: 'https://github.com/graphprotocol/token-api-mcp',
+    repoUrl: 'https://github.com/pinax-network/mcp-token-api',
     docsUrl: 'https://thegraph.com/docs/en/ai-suite/token-api-mcp/introduction/',
     installHint: 'Requires JWT from thegraph.market',
   },
