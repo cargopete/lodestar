@@ -27,7 +27,6 @@ interface ParamChange {
 }
 
 interface DelegatorRow { delegator: string }
-interface SubscriberRow { address: string }
 interface InactiveIndexer { address: string; name: string | null }
 
 export async function GET(request: NextRequest) {
@@ -44,17 +43,14 @@ export async function GET(request: NextRequest) {
   let notified = 0;
 
   try {
-    const subscribers = await db!`
-      SELECT address FROM push_subscriptions WHERE is_active = TRUE
-    ` as unknown as SubscriberRow[];
+    // Quick subscriber count check — bail early if nobody subscribed
+    const subCount = await db!`
+      SELECT COUNT(*) as cnt FROM push_subscriptions WHERE is_active = TRUE
+    ` as unknown as [{ cnt: string }];
 
-    const subscriberSet = new Set(subscribers.map((r) => r.address));
-
-    if (subscriberSet.size === 0) {
+    if (parseInt(subCount[0].cnt) === 0) {
       return NextResponse.json({ ok: true, notified: 0, reason: 'no subscribers' });
     }
-
-    const subscriberList = [...subscriberSet];
 
     // Unnotified parameter changes from the last 24 hours
     const changes = await db!`
@@ -73,11 +69,13 @@ export async function GET(request: NextRequest) {
     }
 
     for (const [indexerAddress, indexerChanges] of byIndexer) {
+      // Find subscribed delegators of this indexer via delegation_events JOIN
       const delegators = await db!`
-        SELECT DISTINCT delegator
-        FROM delegator_positions
-        WHERE indexer_address = ${indexerAddress}
-          AND delegator = ANY(${subscriberList})
+        SELECT DISTINCT de.delegator
+        FROM delegation_events de
+        INNER JOIN push_subscriptions ps ON ps.address = de.delegator AND ps.is_active = TRUE
+        WHERE de.indexer = ${indexerAddress}
+          AND de.event_type = 'delegation'
       ` as unknown as DelegatorRow[];
 
       const changeIds = indexerChanges.map((c) => c.id);
@@ -121,10 +119,11 @@ export async function GET(request: NextRequest) {
 
     for (const indexer of newlyInactive) {
       const delegators = await db!`
-        SELECT DISTINCT delegator
-        FROM delegator_positions
-        WHERE indexer_address = ${indexer.address}
-          AND delegator = ANY(${subscriberList})
+        SELECT DISTINCT de.delegator
+        FROM delegation_events de
+        INNER JOIN push_subscriptions ps ON ps.address = de.delegator AND ps.is_active = TRUE
+        WHERE de.indexer = ${indexer.address}
+          AND de.event_type = 'delegation'
       ` as unknown as DelegatorRow[];
 
       if (delegators.length === 0) continue;
