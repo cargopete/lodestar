@@ -30,6 +30,7 @@ import dynamic from 'next/dynamic';
 
 const PortfolioChart = dynamic(() => import('@/components/charts/PortfolioChart').then(m => ({ default: m.PortfolioChart })), { ssr: false });
 import { ExportButton } from '@/components/ui/ExportButton';
+import { PushSubscribeButton } from '@/components/PushSubscribeButton';
 
 /** Estimate a simple APR from an indexer's rewards earned and total stake */
 function estimateIndexerAPR(indexer: {
@@ -321,6 +322,7 @@ export default function DelegatorPortfolioPage({
           <p className="text-sm text-[var(--text-muted)] font-mono">{shortenAddress(address, 6)}</p>
         </div>
         <div className="flex items-center gap-4">
+          {isOwnPortfolio && <PushSubscribeButton />}
           {positions.length > 0 && (
             <ExportButton
               onExport={handleExportCSV}

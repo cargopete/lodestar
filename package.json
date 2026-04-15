@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@pinax/graph-networks-registry": "^0.7.1",
+    "@pushprotocol/restapi": "^1.7.32",
     "@rainbow-me/rainbowkit": "^2.2.10",
     "@sentry/nextjs": "^10.46.0",
     "@tailwindcss/typography": "^0.5.19",
@@ -22,6 +23,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@upstash/redis": "^1.37.0",
     "clsx": "^2.1.1",
+    "ethers": "^6.16.0",
     "graphql-request": "^7.4.0",
     "gray-matter": "^4.0.3",
     "next": "16.1.7",
