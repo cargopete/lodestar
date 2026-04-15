@@ -62,6 +62,7 @@ const moreItems = [
   { label: 'POI Explorer', href: '/poi' },
   { label: 'Governance', href: '/governance' },
   { label: 'Roadmap', href: '/roadmap' },
+  { label: 'AI / MCPs', href: '/ai' },
 ];
 
 export function BottomNav() {
