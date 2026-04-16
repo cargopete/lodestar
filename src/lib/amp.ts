@@ -101,11 +101,20 @@ export const TOPIC0 = {
 export const AMP_DATASET = '"_/arbitrum_one@1.0.0"';
 
 /**
+ * Strip 0x prefix for ampd SQL comparisons.
+ * ampd stores address/topic as hex without 0x prefix.
+ */
+export function strip0x(hex: string): string {
+  return hex.startsWith('0x') ? hex.slice(2) : hex;
+}
+
+/**
  * Extract a 20-byte address from a 32-byte padded topic hex string.
  * Raw log topics are 0x + 64 hex chars; the address is the last 40.
  */
 export function topicToAddress(topic: string): string {
-  return '0x' + topic.slice(-40);
+  const hex = topic.startsWith('0x') ? topic.slice(2) : topic;
+  return '0x' + hex.slice(-40);
 }
 
 /**
