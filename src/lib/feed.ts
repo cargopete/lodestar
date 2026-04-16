@@ -5,6 +5,7 @@ export interface FeedItem {
   type: FeedItemType;
   title: string;
   summary: string;
+  body?: string; // full text, shown in expanded modal
   url: string;
   timestamp: string; // ISO 8601
   tags: string[];
