@@ -12,7 +12,7 @@ const EVENT_CONFIG: Record<ActivityEvent['type'], { label: string; color: string
   undelegated:     { label: 'Undelegated', color: 'var(--amber)' },
   withdrawn:       { label: 'Withdrawn',   color: 'var(--amber)' },
   delegation_slash:{ label: 'Slashed',     color: 'var(--red)'   },
-  stake_deposit:   { label: 'Staked',      color: 'var(--cyan)'  },
+  stake_deposit:   { label: 'Self-stake',  color: 'var(--cyan)'  },
   stake_lock:      { label: 'Thawing',     color: 'var(--amber)' },
   stake_withdraw:  { label: 'Unstaked',    color: 'var(--amber)' },
   provision:       { label: 'Provision',   color: 'var(--cyan)'  },
@@ -53,7 +53,7 @@ export function HorizonActivity() {
 
           {/* Powered by Amp badge */}
           <a
-            href="https://amp.xyz"
+            href="https://www.edgeandnode.com/amp-dev"
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
