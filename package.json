@@ -1,6 +1,6 @@
 {
   "name": "lodestar",
-  "version": "0.1.0",
+  "version": "2.5.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
