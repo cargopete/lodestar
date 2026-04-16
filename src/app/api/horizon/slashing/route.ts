@@ -32,7 +32,7 @@ interface SlashEvent {
 
 interface RawLog {
   block_num: number;
-  transaction_hash: string;
+  tx_hash: string;
   topic0: string;
   topic1: string;
   topic2: string;
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       const rows = await ampQuery<RawLog>(`
         SELECT
           block_num,
-          transaction_hash,
+          tx_hash,
           topic0,
           topic1,
           topic2,
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
           ? 'provision'
           : 'delegation',
         block: row.block_num,
-        txHash: row.transaction_hash,
+        txHash: row.tx_hash,
         serviceProvider: topicToAddress(row.topic1),
         verifier: topicToAddress(row.topic2),
         tokensGRT: toGRT(row.data.slice(0, 66)),

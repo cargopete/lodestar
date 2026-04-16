@@ -27,7 +27,7 @@ const toGRT = (wei: bigint) => Number(wei) / 1e18;
 
 interface RawLog {
   block_num: number;
-  transaction_hash: string;
+  tx_hash: string;
   log_index: number;
   topic0: string;
   topic1: string;
@@ -65,7 +65,7 @@ function parseDelegationEvent(row: RawLog): DelegationEvent | null {
     return {
       type: 'delegated',
       block: row.block_num,
-      txHash: row.transaction_hash,
+      txHash: row.tx_hash,
       serviceProvider: topicToAddress(row.topic1),
       verifier: topicToAddress(row.topic2),
       delegator: topicToAddress(row.topic3 ?? ''),
@@ -78,7 +78,7 @@ function parseDelegationEvent(row: RawLog): DelegationEvent | null {
     return {
       type: 'undelegated',
       block: row.block_num,
-      txHash: row.transaction_hash,
+      txHash: row.tx_hash,
       serviceProvider: topicToAddress(row.topic1),
       verifier: topicToAddress(row.topic2),
       delegator: topicToAddress(row.topic3 ?? ''),
@@ -91,7 +91,7 @@ function parseDelegationEvent(row: RawLog): DelegationEvent | null {
     return {
       type: 'withdrawn',
       block: row.block_num,
-      txHash: row.transaction_hash,
+      txHash: row.tx_hash,
       serviceProvider: topicToAddress(row.topic1),
       verifier: topicToAddress(row.topic2),
       delegator: topicToAddress(row.topic3 ?? ''),
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
         const rows = await ampQuery<RawLog>(`
           SELECT
             block_num,
-            transaction_hash,
+            tx_hash,
             log_index,
             topic0,
             topic1,
@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
       const rows = await ampQuery<RawLog>(`
         SELECT
           block_num,
-          transaction_hash,
+          tx_hash,
           log_index,
           topic0,
           topic1,
@@ -209,7 +209,7 @@ export async function GET(request: NextRequest) {
             : t0 === TOPIC0.ProvisionCreated.toLowerCase() ? 'provision_created'
             : 'provision_slashed',
           block: row.block_num,
-          txHash: row.transaction_hash,
+          txHash: row.tx_hash,
           serviceProvider: topicToAddress(row.topic1),
           verifier: row.topic2 ? topicToAddress(row.topic2) : undefined,
           tokensGRT: toGRT(tokens),
