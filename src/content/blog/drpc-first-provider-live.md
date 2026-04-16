@@ -1,0 +1,202 @@
+---
+title: "dRPC: The First Decentralised JSON-RPC Provider is Live"
+date: "2026-04-16"
+author: "cargopete"
+tags: ["drpc", "rpc", "data-services", "horizon", "infrastructure", "indexers"]
+excerpt: "Every dApp on Earth relies on Alchemy or Infura for JSON-RPC. We built a decentralised alternative on The Graph's Horizon protocol — and the first provider is live today, serving real traffic on Arbitrum One."
+---
+
+> **This is an experimental proof of concept, built entirely by the community.**
+>
+> dRPC is not affiliated with, endorsed by, backed by, or supported in any way by The Graph Foundation or Edge & Node. It is an independent hobby project that exists to explore what a decentralised JSON-RPC data service on Horizon *might* look like — nothing more. It is not production-ready and should not be used for anything critical.
+>
+> Feedback, comments, and contributions are very warmly welcome. If you have ideas on how this should work, open an issue or PR on [GitHub](https://github.com/cargopete/drpc-service).
+
+Every dApp on Earth quietly depends on Alchemy or Infura. When you call `eth_getBalance` in your frontend, that request is almost certainly hitting a centralised API run by a handful of companies. They can go down, rate-limit you, change pricing overnight, or — in the extreme case — be compelled to censor specific addresses.
+
+The Graph Protocol's entire thesis is that blockchain data infrastructure should be decentralised. It's done that for subgraph data remarkably well. But the most fundamental piece of infrastructure — plain JSON-RPC — has stayed centralised.
+
+This project is an attempt to explore what that might look like — a proof of concept for a decentralised JSON-RPC data service on The Graph's Horizon framework. The first provider is live and serving real traffic, but "live" means "the experiment is running", not "production-ready".
+
+## What is dRPC?
+
+dRPC is an experimental decentralised JSON-RPC data service built on [The Graph's Horizon framework](https://thegraph.com/docs/en/horizon/). The idea: indexers stake GRT, register to serve specific chains, and get paid per request via [GraphTally](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-graphtally.md) (TAP v2) micropayments — the same payment primitive that powers subgraph queries on the network today.
+
+From a consumer's perspective it's just an HTTP endpoint. Under the hood, every request carries a signed EIP-712 receipt. Providers validate receipts, forward requests to their Ethereum client, sign the response, and accumulate receipts for on-chain settlement.
+
+The reference implementation is open source: [github.com/cargopete/drpc-service](https://github.com/cargopete/drpc-service)
+
+## How it works
+
+There are two ways to interact with the network as a consumer:
+
+**Via the gateway** — the managed path. A `drpc-gateway` instance selects providers using QoS scoring (latency EMA, availability, block freshness), signs TAP receipts on your behalf, dispatches requests concurrently, and returns the first valid response. It handles quorum consensus for `eth_call` and `eth_getLogs`, geographic routing, and per-IP rate limiting. You point your app at a gateway URL and it works like any other RPC endpoint.
+
+**Via the consumer SDK** — the trustless path. `@graph-drpc/consumer-sdk` discovers providers directly from the subgraph, signs receipts locally with your own key, and manages QoS scoring in your application. No intermediary.
+
+Either way, the request flow is:
+
+```
+Consumer
+  │  POST /rpc/{chain_id}
+  │  TAP-Receipt: { EIP-712 signed receipt }
+  ▼
+drpc-gateway          ← QoS selection, TAP signing, quorum, routing
+  │
+  ▼
+drpc-service          ← TAP validation, RPC proxy, response attestation
+  │
+  ▼
+Ethereum client       ← Geth / Erigon / Reth / Chainstack / etc.
+```
+
+Payment settlement happens off the critical path:
+
+```
+receipts (per request) → TAP agent aggregates → RAV → RPCDataService.collect()
+                                                       → GraphTallyCollector
+                                                       → PaymentsEscrow → GRT to indexer
+```
+
+## Capability tiers
+
+Not all JSON-RPC requests are equal. An `eth_blockNumber` is cheap and can be answered by any full node. An `eth_getBalance` at a block from two years ago requires an archive node. A `debug_traceTransaction` needs debug APIs enabled.
+
+dRPC handles this with capability tiers:
+
+| Tier | Capability | Example methods |
+|---|---|---|
+| 0 — Standard | Full node | `eth_blockNumber`, `eth_getBalance` (latest), `eth_sendRawTransaction` |
+| 1 — Archive | Archive node | `eth_getBalance` (historical), `eth_getStorageAt` (historical) |
+| 2 — Debug | Debug/trace APIs | `debug_traceTransaction`, `trace_block` |
+
+Providers register per `(chainId, tier)` pair. The gateway routes requests to capable providers only.
+
+## Verification
+
+Three tiers of response verification match the three capability tiers:
+
+**Tier 1 — Merkle-provable.** Methods like `eth_getBalance` and `eth_getStorageAt` can be verified with an EIP-1186 Merkle-Patricia proof against a trusted block header. The `drpc-oracle` daemon feeds L1 state roots to the RPCDataService contract on Arbitrum every ~12 seconds, enabling on-chain `slash()` for provably wrong responses.
+
+**Tier 2 — Quorum.** For `eth_call`, `eth_getLogs`, and similar non-provable methods, the gateway dispatches to multiple providers and takes a majority vote. Minority providers get penalised in QoS scoring.
+
+**Tier 3 — Reputation.** Non-deterministic methods like `eth_estimateGas` are scored by reputation only.
+
+## What's deployed
+
+The on-chain infrastructure lives on Arbitrum One:
+
+| Contract | Address |
+|---|---|
+| HorizonStaking | `0x00669A4CF01450B64E8A2A20E9b1FCB71E61eF03` |
+| GraphTallyCollector | `0x8f69F5C07477Ac46FBc491B1E6D91E2be0111A9e` |
+| RPCDataService | `0x73846272813065c3e4efdb3fb82e0d128c8c2364` |
+
+Subgraph: `https://api.studio.thegraph.com/query/1747796/rpc-network/v0.1.1`
+
+npm packages: `@graph-drpc/consumer-sdk` and `@graph-drpc/indexer-agent` — both published.
+
+## The first provider
+
+The first provider is live at `https://rpc.cargopete.com` serving Arbitrum One (chain ID 42161) with Standard and Archive tiers.
+
+To validate the full consumer → provider → backend flow, the repo includes `drpc-smoke` — a Rust binary that signs real EIP-712 TAP receipts and fires JSON-RPC requests at a live endpoint:
+
+```
+drpc-smoke
+  endpoint   : http://rpc.cargopete.com
+  chain_id   : 42161
+
+  [PASS] GET /health → 200 OK
+  [PASS] eth_blockNumber → "0x1b01312d" [196ms]
+  [PASS] eth_chainId → "0xa4b1" [73ms]
+  [PASS] eth_getBalance (latest/Standard) → "0x6f3a59e597c5342" [94ms]
+  [PASS] eth_getBalance (historical/Archive) → "0x0" [649ms]
+  [PASS] eth_getLogs (quorum) → [...] [83ms]
+
+  5 passed, 0 failed
+```
+
+Archive tier (historical state) working on Arbitrum One in 649ms. That's a real archive query against a real Chainstack endpoint, routed through a real dRPC provider, validated by a real TAP receipt.
+
+## Become a provider
+
+Requirements:
+- ≥ 25,000 GRT staked and provisioned to `0x73846272813065c3e4efdb3fb82e0d128c8c2364` on Arbitrum One
+- A running Ethereum node (full or archive, depending on which tiers you want to serve)
+- `drpc-service` running alongside your node
+
+```bash
+git clone https://github.com/cargopete/drpc-service
+cd drpc-service
+
+cp docker/config.example.toml docker/config.toml
+# fill in: provider address, operator key, backend RPC URL, data service address
+
+docker compose -f docker/docker-compose.yml up
+```
+
+The `@graph-drpc/indexer-agent` npm package handles the on-chain lifecycle — `register`, `startService`, `stopService` — and reconciles automatically on a cron interval.
+
+```typescript
+import { IndexerAgent } from "@graph-drpc/indexer-agent";
+
+const agent = new IndexerAgent({
+  arbitrumRpcUrl: "https://arb1.arbitrum.io/rpc",
+  rpcDataServiceAddress: "0x73846272813065c3e4efdb3fb82e0d128c8c2364",
+  operatorPrivateKey: process.env.OPERATOR_KEY,
+  providerAddress: "0x...",
+  endpoint: "https://rpc.your-indexer.com",
+  geoHash: "u1hx",
+  services: [
+    { chainId: 1,     tier: 0 },
+    { chainId: 42161, tier: 0 },
+    { chainId: 42161, tier: 1 },
+  ],
+});
+
+await agent.reconcile(); // call on a cron/interval
+```
+
+## Use it as a consumer
+
+The simplest path is pointing your app at a gateway. Or, for the trustless path:
+
+```bash
+npm install @graph-drpc/consumer-sdk
+```
+
+```typescript
+import { DRPCClient } from "@graph-drpc/consumer-sdk";
+
+const client = new DRPCClient({
+  chainId: 42161,
+  dataServiceAddress: "0x73846272813065c3e4efdb3fb82e0d128c8c2364",
+  graphTallyCollector: "0x8f69F5C07477Ac46FBc491B1E6D91E2be0111A9e",
+  subgraphUrl: "https://api.studio.thegraph.com/query/1747796/rpc-network/v0.1.1",
+  signerPrivateKey: process.env.CONSUMER_KEY,
+  basePricePerCU: 4_000_000_000_000n,
+});
+
+const block = await client.request("eth_blockNumber", []);
+```
+
+The SDK discovers providers from the subgraph, selects by QoS, signs a TAP receipt per request, and handles retries automatically.
+
+## What's next
+
+The network is live but early. What's needed to make it real:
+
+- **More providers** — a single-provider network isn't decentralised. If you're an existing Graph indexer, you already have the GRT stake. You need a node and `drpc-service`.
+- **TAP aggregation** — the receipts are being signed; the aggregator that batches them into RAVs for on-chain collection needs wiring up
+- **Oracle** — the `drpc-oracle` daemon feeds L1 state roots for Tier 1 slash verification; it needs the contract owner key to start submitting
+- **More chains** — the contract supports permissionless chain registration with a 100k GRT bond. Ethereum mainnet and other L2s are the obvious next additions
+
+The code is all there. The contracts are deployed. The payment primitives are the same ones the subgraph network has been using in production. The main thing needed is more providers.
+
+## Further reading
+
+- [dRPC GitHub repository](https://github.com/cargopete/drpc-service)
+- [The Graph Horizon documentation](https://thegraph.com/docs/en/horizon/)
+- [GraphTally / TAP v2 GIP](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-graphtally.md)
+- [RPCDataService on Arbiscan](https://arbiscan.io/address/0x73846272813065c3e4efdb3fb82e0d128c8c2364)
