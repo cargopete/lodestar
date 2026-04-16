@@ -87,6 +87,8 @@ function HandlerCounts({ source }: { source: DataSourceSignal | TemplateSignal }
 
 function IndexingHealthSection({ hash }: { hash: string }) {
   const { data, isLoading, error } = useIndexingStatus(hash);
+  const { data: curationData } = useSubgraphCuration(hash);
+  const queryFeesGRT = weiToGRT(curationData?.queryFeesAmount ?? '0');
 
   if (isLoading) {
     return (
@@ -158,7 +160,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
       </StatGrid>
 
       {/* Deployment info */}
-      <StatGrid className="lg:grid-cols-2 xl:grid-cols-2">
+      <StatGrid className="lg:grid-cols-3 xl:grid-cols-3">
         <StatCard
           label="Signal"
           value={formatGRT(weiToGRT(data.signalledTokens))}
@@ -168,6 +170,11 @@ function IndexingHealthSection({ hash }: { hash: string }) {
           label="Stake"
           value={formatGRT(weiToGRT(data.stakedTokens))}
           subtitle="GRT staked"
+        />
+        <StatCard
+          label="Query Fees"
+          value={queryFeesGRT > 0 ? `${formatGRT(queryFeesGRT)} GRT` : '—'}
+          subtitle="Lifetime fees collected"
         />
       </StatGrid>
 
@@ -513,21 +520,10 @@ function CurationSection({ hash }: { hash: string }) {
     );
   }
 
-  const { signals, queryFeesAmount } = data;
+  const { signals } = data;
   const activeCurators = signals.filter((s) => BigInt(s.signal) > 0n);
-  const totalQueryFees = weiToGRT(queryFeesAmount ?? '0');
 
   return (
-    <>
-    {totalQueryFees > 0 && (
-      <StatGrid className="lg:grid-cols-1 xl:grid-cols-1">
-        <StatCard
-          label="Total Query Fees"
-          value={`${formatGRT(totalQueryFees)} GRT`}
-          subtitle="Lifetime fees collected by indexers"
-        />
-      </StatGrid>
-    )}
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -634,7 +630,6 @@ function CurationSection({ hash }: { hash: string }) {
         )}
       </CardContent>
     </Card>
-    </>
   );
 }
 
