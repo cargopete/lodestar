@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import {
   AreaChart,
   Area,
@@ -56,9 +57,7 @@ export function PortfolioChart({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[300px] flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-          </div>
+          <ChartSkeleton height="300px" />
         ) : data.length === 0 ? (
           <div className="h-[300px] flex items-center justify-center text-[var(--text-muted)]">
             No historical data available

@@ -1,5 +1,6 @@
 'use client';
 
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import {
   AreaChart,
   Area,
@@ -27,10 +28,7 @@ export function SubgraphHistoryChart({ data, isLoading }: Props) {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[280px] flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-            <span className="ml-3 text-sm text-[var(--text-muted)]">Loading history...</span>
-          </div>
+          <ChartSkeleton height="280px" />
         ) : data.length === 0 ? (
           <div className="h-[280px] flex items-center justify-center">
             <p className="text-sm text-[var(--text-muted)]">No historical data available for this deployment.</p>

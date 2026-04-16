@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import {
   AreaChart,
   Area,
@@ -124,9 +125,7 @@ export function IndexerTrendsChart({ indexer }: { indexer: string }) {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[280px] flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-          </div>
+          <ChartSkeleton height="280px" />
         ) : !hasData ? (
           <div className="h-[280px] flex items-center justify-center">
             <p className="text-sm text-[var(--text-faint)]">No trend data available yet</p>

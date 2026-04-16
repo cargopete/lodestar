@@ -11,6 +11,7 @@ import {
   Legend,
 } from 'recharts';
 import { useEpochHistory } from '@/hooks/useNetworkStats';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import { weiToGRT, formatGRT } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 
@@ -40,9 +41,7 @@ export function StakingTrendChart() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[280px] flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-          </div>
+          <ChartSkeleton height="280px" />
         ) : (
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">

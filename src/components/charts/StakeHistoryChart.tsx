@@ -11,6 +11,7 @@ import {
   Legend,
 } from 'recharts';
 import { useIndexerStakeHistory } from '@/hooks/useNetworkStats';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import { formatGRT, formatGRTFull } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 
@@ -25,9 +26,7 @@ export function StakeHistoryChart({ indexer }: { indexer: string }) {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[280px] flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-          </div>
+          <ChartSkeleton height="280px" />
         ) : history.length === 0 ? (
           <div className="h-[280px] flex items-center justify-center">
             <p className="text-sm text-[var(--text-faint)]">No stake history available</p>

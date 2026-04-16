@@ -1,6 +1,7 @@
 'use client';
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import { useNetworkStats } from '@/hooks/useNetworkStats';
 import { weiToGRT, formatGRT } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
@@ -34,9 +35,7 @@ export function RewardSplitDonut() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[280px] flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-          </div>
+          <ChartSkeleton height="280px" />
         ) : (
           <div className="h-[280px] relative">
             <ResponsiveContainer width="100%" height="100%">

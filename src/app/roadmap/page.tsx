@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
@@ -416,11 +417,7 @@ export default function RoadmapPage() {
       </div>
 
       {/* Loading */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-24">
-          <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-        </div>
-      )}
+      {isLoading && <ChartSkeleton height="200px" />}
 
       {/* Layers */}
       {!isLoading && LAYERS.map((layer) => (

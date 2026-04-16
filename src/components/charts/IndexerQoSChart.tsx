@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useIndexerQoS } from '@/hooks/useNetworkStats';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import { formatGRTFull } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import type { IndexerQoSPoint } from '@/app/api/indexer-qos/[address]/route';
@@ -143,9 +144,7 @@ export function IndexerQoSChart({ indexer }: { indexer: string }) {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[200px] flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-          </div>
+          <ChartSkeleton height="200px" />
         ) : qos.length === 0 ? (
           <div className="h-[200px] flex items-center justify-center">
             <p className="text-sm text-[var(--text-faint)]">No QoS data available</p>

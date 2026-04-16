@@ -6,6 +6,7 @@ import { FeedCard } from '@/components/feed/FeedCard';
 import { FilterBar } from '@/components/feed/FilterBar';
 import { cn } from '@/lib/utils';
 import { FEED_TYPE_CONFIG, timeAgo } from '@/lib/feed';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import type { FeedItem, FeedItemType } from '@/lib/feed';
 
 export function IntelFeed() {
@@ -189,16 +190,7 @@ function FeedContent({
   isLoading: boolean;
 }) {
   if (isLoading) {
-    return (
-      <>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-20 animate-pulse rounded-lg bg-[var(--bg-elevated)]"
-          />
-        ))}
-      </>
-    );
+    return <ChartSkeleton height="300px" />;
   }
 
   if (items.length === 0) {

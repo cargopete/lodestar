@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import {
   BarChart,
   Bar,
@@ -68,9 +69,7 @@ export function DelegationFlowChart() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[300px] flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-          </div>
+          <ChartSkeleton height="300px" />
         ) : !hasData ? (
           <div className="h-[300px] flex items-center justify-center">
             <p className="text-sm text-[var(--text-faint)]">No delegation flow data available</p>

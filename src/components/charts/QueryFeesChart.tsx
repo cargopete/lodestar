@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import {
   BarChart,
   Bar,
@@ -144,9 +145,7 @@ export function QueryFeesChart() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[320px] flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-          </div>
+          <ChartSkeleton height="320px" />
         ) : isYearly ? (
           <>
             {/* Quarterly summary stats */}
