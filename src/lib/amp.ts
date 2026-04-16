@@ -37,13 +37,13 @@ export async function ampQuery<T = Record<string, unknown>>(
     throw new AmpError('AMP_ENDPOINT or AMP_TOKEN not configured');
   }
 
-  const res = await fetch(`${AMP_ENDPOINT}/query`, {
+  const res = await fetch(`${AMP_ENDPOINT}/`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'text/plain',
       'X-Amp-Token': AMP_TOKEN,
     },
-    body: JSON.stringify({ sql }),
+    body: sql,
     signal: AbortSignal.timeout(timeoutMs),
   });
 
@@ -98,7 +98,7 @@ export const TOPIC0 = {
 // ── SQL helpers ───────────────────────────────────────────────────────────────
 
 /** The dataset ref to use in SQL FROM clauses. */
-export const AMP_DATASET = '"_/arbitrum_one@0.3.0"';
+export const AMP_DATASET = '"_/arbitrum_one@1.0.0"';
 
 /**
  * Extract a 20-byte address from a 32-byte padded topic hex string.
