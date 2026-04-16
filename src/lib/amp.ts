@@ -102,10 +102,18 @@ export const AMP_DATASET = '"_/arbitrum_one@1.0.0"';
 
 /**
  * Strip 0x prefix for ampd SQL comparisons.
- * ampd stores address/topic as hex without 0x prefix.
+ * ampd stores address/topic as FixedSizeBinary — use X'hex' literals.
  */
 export function strip0x(hex: string): string {
   return hex.startsWith('0x') ? hex.slice(2) : hex;
+}
+
+/**
+ * Format a hex address/topic as an ampd SQL binary literal: X'deadbeef...'
+ * Use this for WHERE address = hex('...') comparisons.
+ */
+export function hexLit(hex: string): string {
+  return `X'${strip0x(hex)}'`;
 }
 
 /**

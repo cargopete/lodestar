@@ -18,6 +18,7 @@ import {
   topicToAddress,
   hexToBigInt,
   strip0x,
+  hexLit,
 } from '@/lib/amp';
 
 const toGRT = (hex: string) => Number(hexToBigInt(hex)) / 1e18;
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
   }
 
   const addressFilter = address
-    ? `AND topic1 = '${'0'.repeat(24)}${address.slice(2)}'`
+    ? `AND topic1 = ${hexLit('0'.repeat(24) + address.slice(2))}`
     : '';
 
   const cacheKey = `lodestar:horizon:slashing:${address ?? 'all'}:${limit}`;
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
   try {
     const data = await cached(cacheKey, 300, async () => {
       const topic0List = [TOPIC0.ProvisionSlashed, TOPIC0.DelegationSlashed]
-        .map((t) => `'${strip0x(t.toLowerCase())}'`)
+        .map((t) => hexLit(t))
         .join(', ');
 
       const rows = await ampQuery<RawLog>(`
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
           topic2,
           data
         FROM ${AMP_DATASET}.logs
-        WHERE address = '${strip0x(HORIZON_STAKING)}'
+        WHERE address = ${hexLit(HORIZON_STAKING)}
           AND topic0  IN (${topic0List})
           ${addressFilter}
         ORDER BY block_num DESC
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
       `);
 
       return rows.map((row): SlashEvent => ({
-        type: strip0x(row.topic0.toLowerCase()) === strip0x(TOPIC0.ProvisionSlashed.toLowerCase())
+        type: row.topic0.toLowerCase() === strip0x(TOPIC0.ProvisionSlashed)
           ? 'provision'
           : 'delegation',
         block: row.block_num,

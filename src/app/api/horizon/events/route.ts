@@ -20,6 +20,7 @@ import {
   AMP_DATASET,
   topicToAddress,
   hexToBigInt,
+  hexLit,
   strip0x,
 } from '@/lib/amp';
 
@@ -59,7 +60,7 @@ interface StakeEvent {
 }
 
 function parseDelegationEvent(row: RawLog): DelegationEvent | null {
-  const t0 = strip0x(row.topic0.toLowerCase());
+  const t0 = row.topic0.toLowerCase();
 
   if (t0 === TOPIC0.TokensDelegated.toLowerCase()) {
     const [tokensBigInt] = parseData(row.data, 2);
@@ -143,7 +144,7 @@ export async function GET(request: NextRequest) {
           TOPIC0.TokensUndelegated,
           TOPIC0.DelegatedTokensWithdrawn,
         ]
-          .map((t) => `'${strip0x(t.toLowerCase())}'`)
+          .map((t) => hexLit(t))
           .join(', ');
 
         const rows = await ampQuery<RawLog>(`
@@ -157,9 +158,9 @@ export async function GET(request: NextRequest) {
             topic3,
             data
           FROM ${AMP_DATASET}.logs
-          WHERE address   = '${strip0x(HORIZON_STAKING)}'
+          WHERE address   = '${hexLit(HORIZON_STAKING)}'
             AND topic0    IN (${topic0List})
-            AND topic3    = '${strip0x(paddedAddress)}'
+            AND topic3    = '${hexLit(paddedAddress)}'
           ORDER BY block_num DESC
           LIMIT ${limit}
         `);
@@ -192,22 +193,22 @@ export async function GET(request: NextRequest) {
           topic3,
           data
         FROM ${AMP_DATASET}.logs
-        WHERE address = '${strip0x(HORIZON_STAKING)}'
+        WHERE address = '${hexLit(HORIZON_STAKING)}'
           AND topic0  IN (${topic0List})
-          AND topic1  = '${strip0x(paddedAddress)}'
+          AND topic1  = '${hexLit(paddedAddress)}'
         ORDER BY block_num DESC
         LIMIT ${limit}
       `);
 
       return rows.map((row): StakeEvent => {
-        const t0 = strip0x(row.topic0.toLowerCase());
+        const t0 = row.topic0.toLowerCase();
         const [tokens] = parseData(row.data, 1);
         return {
           type:
-            t0 === strip0x(TOPIC0.HorizonStakeDeposited.toLowerCase()) ? 'deposited'
-            : t0 === strip0x(TOPIC0.HorizonStakeLocked.toLowerCase()) ? 'locked'
-            : t0 === strip0x(TOPIC0.HorizonStakeWithdrawn.toLowerCase()) ? 'withdrawn'
-            : t0 === strip0x(TOPIC0.ProvisionCreated.toLowerCase()) ? 'provision_created'
+            t0 === strip0x(TOPIC0.HorizonStakeDeposited) ? 'deposited'
+            : t0 === strip0x(TOPIC0.HorizonStakeLocked) ? 'locked'
+            : t0 === strip0x(TOPIC0.HorizonStakeWithdrawn) ? 'withdrawn'
+            : t0 === strip0x(TOPIC0.ProvisionCreated) ? 'provision_created'
             : 'provision_slashed',
           block: row.block_num,
           txHash: row.tx_hash,
