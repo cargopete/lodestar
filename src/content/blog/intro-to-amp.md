@@ -20,8 +20,6 @@ Amp ships in two distinct flavours.
 
 **Amp for Enterprise** targets regulated banks, stablecoin issuers, and large financial institutions. On-premises, cloud, or hybrid deployment with full data sovereignty. Integration with custody platforms and screening tools. Designed for GENIUS Act compliance, SAR filings, and AML/sanctions screening.
 
-The Depository Trust & Clearing Corporation (DTCC) — which processes trillions of dollars in securities annually — publicly recognised Amp at its launch during Chainlink SmartCon in November 2025. That's not a crypto-native endorsement. That's traditional finance paying attention.
-
 ## How it works under the hood
 
 The core is written in **Rust** (81% of the codebase) with TypeScript for developer tooling. The data stack:

@@ -4,7 +4,6 @@ date: "2026-04-16"
 author: "cargopete"
 tags: ["dispatch", "rpc", "data-services", "horizon", "infrastructure", "indexers"]
 excerpt: "Every dApp on Earth relies on Alchemy or Infura for JSON-RPC. Dispatch is a community-built experiment exploring what a decentralised JSON-RPC data service on The Graph's Horizon protocol might look like — the first provider is live and serving real traffic on Arbitrum One."
-draft: true
 ---
 
 > **This is an experimental, unofficial, community-led project.**
@@ -15,13 +14,13 @@ draft: true
 
 Every dApp on Earth quietly depends on Alchemy or Infura. When you call `eth_getBalance` in your frontend, that request is almost certainly hitting a centralised API run by a handful of companies. They can go down, rate-limit you, change pricing overnight, or — in the extreme case — be compelled to censor specific addresses.
 
-The Graph Protocol's entire thesis is that blockchain data infrastructure should be decentralised. It's done that for subgraph data remarkably well. But the most fundamental piece of infrastructure — plain JSON-RPC — has stayed centralised.
+The Graph Protocol's entire thesis is that blockchain data infrastructure should be decentralised. It's done that for Subgraph data remarkably well. But the most fundamental piece of infrastructure — plain JSON-RPC — has stayed centralised.
 
 **Dispatch** is a community attempt to explore what that might look like. It's a proof of concept for a decentralised JSON-RPC data service built on The Graph's Horizon framework. The first provider is live and serving real traffic — but "live" means "the experiment is running", not "production-ready". This is unofficial, unsupported, and very much a work in progress.
 
 ## What is Dispatch?
 
-Dispatch is an experimental, community-built JSON-RPC data service on [The Graph's Horizon framework](https://thegraph.com/docs/en/horizon/). The idea: indexers stake GRT, register to serve specific chains, and get paid per request via [GraphTally](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-graphtally.md) (TAP v2) micropayments — the same payment primitive that powers subgraph queries on the network today.
+Dispatch is an experimental, community-built JSON-RPC data service on [The Graph's Horizon framework](https://thegraph.com/docs/en/horizon/). The idea: indexers stake GRT, register to serve specific chains, and get paid per request via [GraphTally](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-graphtally.md) (TAP v2) micropayments — the same payment primitive that powers Subgraph queries on the network today.
 
 From a consumer's perspective it's just an HTTP endpoint. Under the hood, every request carries a signed EIP-712 receipt. Providers validate receipts, forward requests to their Ethereum client, sign the response, and accumulate receipts for on-chain settlement.
 
@@ -33,7 +32,7 @@ There are two ways to interact with the network as a consumer:
 
 **Via the gateway** — the managed path. A `dispatch-gateway` instance selects providers using QoS scoring (latency EMA, availability, block freshness), signs TAP receipts on your behalf, dispatches requests concurrently, and returns the first valid response. It handles quorum consensus for `eth_call` and `eth_getLogs`, geographic routing, and per-IP rate limiting. You point your app at a gateway URL and it works like any other RPC endpoint.
 
-**Via the consumer SDK** — the trustless path. `@graph-dispatch/consumer-sdk` discovers providers directly from the subgraph, signs receipts locally with your own key, and manages QoS scoring in your application. No intermediary.
+**Via the consumer SDK** — the trustless path. `@graph-dispatch/consumer-sdk` discovers providers directly from the Subgraph, signs receipts locally with your own key, and manages QoS scoring in your application. No intermediary.
 
 Either way, the request flow is:
 
@@ -182,7 +181,7 @@ const client = new DispatchClient({
 const block = await client.request("eth_blockNumber", []);
 ```
 
-The SDK discovers providers from the subgraph, selects by QoS, signs a TAP receipt per request, and handles retries automatically.
+The SDK discovers providers from the Subgraph, selects by QoS, signs a TAP receipt per request, and handles retries automatically.
 
 ## What's next
 
@@ -193,7 +192,7 @@ The network is live but early. What's needed to make it real:
 - **Oracle** — the `dispatch-oracle` daemon feeds L1 state roots for Tier 1 slash verification; it needs the contract owner key to start submitting
 - **More chains** — the contract supports permissionless chain registration with a 100k GRT bond. Ethereum mainnet and other L2s are the obvious next additions
 
-The code is all there. The contracts are deployed. The payment primitives are the same ones the subgraph network has been using in production. The main thing needed is more providers — and more people poking at the edges to see where it breaks.
+The code is all there. The contracts are deployed. The payment primitives are the same ones the Subgraph network has been using in production. The main thing needed is more providers — and more people poking at the edges to see where it breaks.
 
 This is a community experiment. If you're curious about what decentralised RPC on Horizon could look like, come have a look.
 
