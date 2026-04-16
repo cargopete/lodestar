@@ -513,10 +513,21 @@ function CurationSection({ hash }: { hash: string }) {
     );
   }
 
-  const { signals } = data;
+  const { signals, queryFeesAmount } = data;
   const activeCurators = signals.filter((s) => BigInt(s.signal) > 0n);
+  const totalQueryFees = weiToGRT(queryFeesAmount ?? '0');
 
   return (
+    <>
+    {totalQueryFees > 0 && (
+      <StatGrid className="lg:grid-cols-1 xl:grid-cols-1">
+        <StatCard
+          label="Total Query Fees"
+          value={`${formatGRT(totalQueryFees)} GRT`}
+          subtitle="Lifetime fees collected by indexers"
+        />
+      </StatGrid>
+    )}
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -623,6 +634,7 @@ function CurationSection({ hash }: { hash: string }) {
         )}
       </CardContent>
     </Card>
+    </>
   );
 }
 

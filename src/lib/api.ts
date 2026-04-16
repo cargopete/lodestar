@@ -511,6 +511,7 @@ export interface CuratorSignalEntry {
 export interface SubgraphCurationData {
   signals: CuratorSignalEntry[];
   totalSignalledTokens: string;
+  queryFeesAmount: string;
 }
 
 export async function fetchSubgraphCuration(hash: string): Promise<SubgraphCurationData> {

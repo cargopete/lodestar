@@ -13,6 +13,7 @@ interface RawSignal {
 
 interface RawDeployment {
   signalledTokens: string;
+  queryFeesAmount: string;
   curatorSignals: RawSignal[];
 }
 
@@ -29,6 +30,7 @@ export async function GET(
   const query = `{
     subgraphDeployments(where: { ipfsHash: "${hash}" }, first: 1) {
       signalledTokens
+      queryFeesAmount
       curatorSignals(first: 100, orderBy: signalledTokens, orderDirection: desc) {
         id
         signalledTokens
@@ -57,6 +59,7 @@ export async function GET(
       return {
         signals,
         totalSignalledTokens: deployment.signalledTokens,
+        queryFeesAmount: deployment.queryFeesAmount ?? '0',
       };
     });
 
