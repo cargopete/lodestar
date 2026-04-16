@@ -9,6 +9,8 @@ import { IntelFeed } from '@/components/layout/IntelFeed';
 import { Footer } from '@/components/layout/Footer';
 import { StarPrompt } from '@/components/StarPrompt';
 import { LodieWidget } from '@/components/LodieWidget';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -67,6 +69,8 @@ export default function RootLayout({
             <LodieWidget />
           </div>
         </Providers>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -1,16 +1,32 @@
 import pino from 'pino';
 
 const isDev = process.env.NODE_ENV !== 'production';
+const betterStackToken = process.env.BETTER_STACK_SOURCE_TOKEN;
+
+function getTransport() {
+  if (isDev) {
+    return { target: 'pino-pretty', options: { colorize: true } };
+  }
+  if (betterStackToken) {
+    return {
+      targets: [
+        { target: 'pino/file', options: { destination: 1 }, level: 'info' },
+        { target: '@logtail/pino', options: { sourceToken: betterStackToken }, level: 'info' },
+      ],
+    };
+  }
+  return undefined;
+}
 
 /**
  * Root logger — JSON in production, pretty in dev.
+ * Ships to Better Stack in production when BETTER_STACK_SOURCE_TOKEN is set.
  * Create child loggers with `logger.child({ module: 'xxx' })`.
  */
+const transport = getTransport();
 const logger = pino({
   level: process.env.LOG_LEVEL ?? (isDev ? 'debug' : 'info'),
-  ...(isDev
-    ? { transport: { target: 'pino-pretty', options: { colorize: true } } }
-    : {}),
+  ...(transport && { transport }),
 });
 
 // Pre-built child loggers for common modules
