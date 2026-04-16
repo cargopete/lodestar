@@ -158,9 +158,9 @@ export async function GET(request: NextRequest) {
             topic3,
             data
           FROM ${AMP_DATASET}.logs
-          WHERE address   = '${hexLit(HORIZON_STAKING)}'
+          WHERE address   = ${hexLit(HORIZON_STAKING)}
             AND topic0    IN (${topic0List})
-            AND topic3    = '${hexLit(paddedAddress)}'
+            AND topic3    = ${hexLit(paddedAddress)}
           ORDER BY block_num DESC
           LIMIT ${limit}
         `);
@@ -179,7 +179,7 @@ export async function GET(request: NextRequest) {
         TOPIC0.ProvisionCreated,
         TOPIC0.ProvisionSlashed,
       ]
-        .map((t) => `'${t.toLowerCase()}'`)
+        .map((t) => hexLit(t))
         .join(', ');
 
       const rows = await ampQuery<RawLog>(`
@@ -193,9 +193,9 @@ export async function GET(request: NextRequest) {
           topic3,
           data
         FROM ${AMP_DATASET}.logs
-        WHERE address = '${hexLit(HORIZON_STAKING)}'
+        WHERE address = ${hexLit(HORIZON_STAKING)}
           AND topic0  IN (${topic0List})
-          AND topic1  = '${hexLit(paddedAddress)}'
+          AND topic1  = ${hexLit(paddedAddress)}
         ORDER BY block_num DESC
         LIMIT ${limit}
       `);
