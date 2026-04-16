@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, Suspense } from 'react';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import { useSearchParams } from 'next/navigation';
 import { useIndexers, useEnrichedIndexers, useNetworkStats } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
@@ -219,11 +220,7 @@ function IndexerSearch({ indexers, nameMap, selected, onSelect, placeholder }: I
 
 export default function ComparePage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense fallback={<ChartSkeleton height="300px" />}>
       <CompareContent />
     </Suspense>
   );
@@ -314,11 +311,7 @@ function CompareContent() {
   }, [processed]);
 
   if (indexersLoading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <ChartSkeleton height="300px" />;
   }
 
   return (

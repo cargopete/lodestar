@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'rea
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
+import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import { Badge } from '@/components/ui/Badge';
 import { Pagination } from '@/components/ui/Pagination';
 import { useSubgraphDeployments, useSubgraphDeployments30d, useManifestAnalysis, useNetworksRegistry } from '@/hooks/useNetworkStats';
@@ -96,11 +97,7 @@ interface SearchResult {
 
 export default function SubgraphDirectoryPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense fallback={<ChartSkeleton height="300px" />}>
       <SubgraphDirectory />
     </Suspense>
   );
@@ -346,11 +343,7 @@ function SubgraphDirectory() {
     ) : null;
 
   if (isLoading && page === 0) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <ChartSkeleton height="300px" />;
   }
 
   if (isError || (is30d ? !raw30d : !raw)) {
