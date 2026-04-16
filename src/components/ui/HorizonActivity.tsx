@@ -73,7 +73,7 @@ export function HorizonActivity() {
 
         <div className="flex items-center justify-between mt-1">
           <p className="text-[11px] text-[var(--text-faint)]">
-            All Horizon staking events · refreshes every 30s
+            Live stake deposits, delegations &amp; slashing on Arbitrum One
           </p>
           {lastUpdated && (
             <span className="text-[10px] text-[var(--text-faint)]">

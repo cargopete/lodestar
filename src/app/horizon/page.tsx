@@ -11,7 +11,7 @@ export default function HorizonPage() {
       <div>
         <h1 className="text-[22px] font-semibold text-[var(--text)] tracking-tight">Horizon</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Live on-chain activity from the Horizon staking contract on Arbitrum One.
+          Real-time staking activity from The Graph&apos;s Horizon contract — who&apos;s staking, delegating, and getting slashed.
         </p>
       </div>
 
