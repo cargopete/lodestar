@@ -1,0 +1,26 @@
+[
+  {
+    "id": "discord-2026-04-15-gateway-upgrade",
+    "type": "news",
+    "title": "Gateway upgrade will penalize old graph-node / indexer-service versions",
+    "summary": "Testnet this week, mainnet next week. Minimum versions: graph-node v0.36.0, indexer-service v1.7.0. Only affects query selection scoring — indexing rewards unaffected.",
+    "url": "",
+    "timestamp": "2026-04-15T22:50:00Z",
+    "tags": ["indexers", "graph-node", "indexer-service"],
+    "metadata": {
+      "author": "tmigone | e&n"
+    }
+  },
+  {
+    "id": "discord-2026-04-09-rewards-deprecated",
+    "type": "news",
+    "title": "Indexing rewards deprecated for Substreams-powered Subgraphs effective April 16th",
+    "summary": "Indexers must close allocations or submit POIs between April 13–15 to collect accrued rewards. Follows GIP 0084 — rewards now focus on chains with sustained query volume and active developer usage.",
+    "url": "",
+    "timestamp": "2026-04-09T19:26:00Z",
+    "tags": ["indexers", "rewards", "substreams"],
+    "metadata": {
+      "author": "Ørjan | SlimchanceRole"
+    }
+  }
+]

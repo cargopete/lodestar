@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import type { FeedItem } from '@/lib/feed';
 
 import { cached } from '@/lib/cache';
@@ -355,6 +357,15 @@ async function fetchEpochSummaries(): Promise<FeedItem[]> {
   }
 }
 
+function fetchNewsItems(): FeedItem[] {
+  try {
+    const raw = readFileSync(join(process.cwd(), 'src/data/news.json'), 'utf-8');
+    return JSON.parse(raw) as FeedItem[];
+  } catch {
+    return [];
+  }
+}
+
 // ── Route handler ────────────────────────────────────────────────
 
 export async function GET() {
@@ -369,7 +380,9 @@ export async function GET() {
       fetchRepoReleases(),
     ]);
 
-    return [...forumItems, ...gipItems, ...snapshotItems, ...epochItems, ...issueItems, ...prItems, ...releaseItems]
+    const newsItems = fetchNewsItems();
+
+    return [...newsItems, ...forumItems, ...gipItems, ...snapshotItems, ...epochItems, ...issueItems, ...prItems, ...releaseItems]
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 60);
   });

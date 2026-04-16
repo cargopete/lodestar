@@ -74,7 +74,7 @@ export function FeedCard({ item }: FeedCardProps) {
                 {item.metadata.snapshotState}
               </span>
             )}
-            {item.metadata.snapshotVotes != null && (
+            {item.metadata.snapshotVotes != null && item.metadata.snapshotVotes > 0 && (
               <span>{item.metadata.snapshotVotes.toLocaleString()} votes</span>
             )}
             {item.metadata.winningChoice && item.metadata.snapshotState === 'closed' && (

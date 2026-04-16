@@ -1,4 +1,4 @@
-export type FeedItemType = 'governance' | 'gip' | 'vote' | 'epoch' | 'announcement' | 'issue' | 'pr' | 'release';
+export type FeedItemType = 'governance' | 'gip' | 'vote' | 'epoch' | 'announcement' | 'news' | 'issue' | 'pr' | 'release';
 
 export interface FeedItem {
   id: string;
@@ -57,6 +57,11 @@ export const FEED_TYPE_CONFIG: Record<
     borderColor: 'var(--star-base)',
     bgColor: 'rgba(123, 117, 232, 0.12)',
   },
+  news: {
+    label: 'News',
+    borderColor: '#f97316',
+    bgColor: 'rgba(249, 115, 22, 0.12)',
+  },
   issue: {
     label: 'Issue',
     borderColor: 'var(--red)',
@@ -74,11 +79,23 @@ export const FEED_TYPE_CONFIG: Record<
   },
 };
 
-/** Human-readable relative time */
+/** Human-readable relative time (handles future dates too) */
 export function timeAgo(isoDate: string): string {
   const now = Date.now();
   const then = new Date(isoDate).getTime();
   const seconds = Math.floor((now - then) / 1000);
+
+  if (seconds < 0) {
+    // Future date — show time until
+    const abs = Math.abs(seconds);
+    if (abs < 60) return 'in a moment';
+    const minutes = Math.floor(abs / 60);
+    if (minutes < 60) return `in ${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `in ${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `in ${days}d`;
+  }
 
   if (seconds < 60) return 'just now';
   const minutes = Math.floor(seconds / 60);
