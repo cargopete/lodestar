@@ -28,7 +28,13 @@ export function getPostSlugs(): string[] {
   return fs
     .readdirSync(POSTS_DIR)
     .filter((f) => f.endsWith('.md') || f.endsWith('.mdx'))
-    .map((f) => f.replace(/\.mdx?$/, ''));
+    .map((f) => f.replace(/\.mdx?$/, ''))
+    .filter((slug) => {
+      const filePath = resolvePostPath(slug);
+      if (!filePath) return false;
+      const { data } = matter(fs.readFileSync(filePath, 'utf-8'));
+      return !data.draft;
+    });
 }
 
 /**
