@@ -19,20 +19,19 @@ export function ChartSkeleton({ height = '280px' }: { height?: string }) {
   }, []);
 
   return (
-    <div style={{ height }} className="flex items-center justify-center">
-      {isSlow ? (
-        <div className="flex flex-col items-center gap-3 px-6 text-center max-w-[220px]">
+    <div style={{ height }} className="flex flex-col items-center justify-center gap-4">
+      <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+      {isSlow && (
+        <div className="flex flex-col items-center gap-2 px-6 text-center max-w-[220px]">
           <Image
             src="/lodie.png"
             alt="Lodie"
-            width={52}
-            height={52}
+            width={40}
+            height={40}
             className="rounded-full opacity-90"
           />
           <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">{msg}</p>
         </div>
-      ) : (
-        <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
       )}
     </div>
   );
