@@ -6,6 +6,7 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { HorizonParameters } from '@/components/ui/HorizonParameters';
+import { HorizonActivity } from '@/components/ui/HorizonActivity';
 import dynamic from 'next/dynamic';
 
 const StakingTrendChart = dynamic(() => import('@/components/charts/StakingTrendChart').then(m => ({ default: m.StakingTrendChart })), { ssr: false });
@@ -236,6 +237,9 @@ export default function ProtocolOverview() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Horizon Activity */}
+      <HorizonActivity />
 
       {/* Horizon Parameters */}
       <HorizonParameters />
