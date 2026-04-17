@@ -720,6 +720,7 @@ export function IndexerTable() {
                 'focus:outline-none focus:border-[var(--accent)]'
               )}
             >
+              <option value={0}>Any</option>
               <option value={100000}>100K GRT</option>
               <option value={500000}>500K GRT</option>
               <option value={1000000}>1M GRT</option>
