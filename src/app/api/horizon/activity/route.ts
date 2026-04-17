@@ -151,7 +151,8 @@ export async function GET(request: NextRequest) {
     }
     if (error instanceof Error && error.name === 'TimeoutError') {
       log.ingest.warn({ err: error }, 'Amp query timed out for horizon activity');
-      return NextResponse.json({ error: 'Amp query timed out' }, { status: 504 });
+      const stack = String((error as Error).stack).slice(0, 800);
+      return NextResponse.json({ error: 'Amp query timed out', stack }, { status: 504 });
     }
     log.ingest.error({ err: error }, 'Horizon activity error');
     const cause = error instanceof Error ? String((error as NodeJS.ErrnoException).cause) : undefined;
