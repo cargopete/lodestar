@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { subgraphQuery, ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { IndexerProvisionsResponse, ServiceProvisionsResponse } from '@/lib/queries';
 
 export async function GET(request: NextRequest) {
@@ -55,8 +55,8 @@ export async function GET(request: NextRequest) {
 
     // Service provisions
     const addr = service!.toLowerCase();
-    const data = await cached(`lodestar:provisions:service:${addr}:${first}:${skip}`, 300, () =>
-      subgraphQuery<ServiceProvisionsResponse>(`{
+    const data = await cached(`lodestar:provisions:service:${addr}:${first}:${skip}`, 300, async () => {
+      const result = await subgraphQuery<ServiceProvisionsResponse>(`{
         provisions(
           where: { dataService: "${addr}" }
           first: ${first}
@@ -85,8 +85,41 @@ export async function GET(request: NextRequest) {
             delegatedTokens
           }
         }
-      }`)
-    );
+      }`);
+
+      // ENS fallback: look up names for indexers the subgraph didn't resolve
+      const missing = result.provisions
+        .filter((p) => !p.indexer.account?.defaultDisplayName && !p.indexer.account?.metadata?.displayName)
+        .map((p) => p.indexer.id);
+
+      if (missing.length > 0) {
+        try {
+          const idList = missing.map((id) => `"${id}"`).join(', ');
+          const ensResult = await ensQuery<{ domains: Array<{ name: string; resolvedAddress: { id: string } }> }>(`{
+            domains(first: 100, where: { resolvedAddress_in: [${idList}], name_not: null }) {
+              name
+              resolvedAddress { id }
+            }
+          }`);
+          const ensMap: Record<string, string> = {};
+          for (const d of ensResult.domains) {
+            const a = d.resolvedAddress.id.toLowerCase();
+            if (!ensMap[a] || d.name.length < ensMap[a].length) ensMap[a] = d.name;
+          }
+          for (const p of result.provisions) {
+            const ens = ensMap[p.indexer.id.toLowerCase()];
+            if (ens) {
+              if (!p.indexer.account) (p.indexer as Record<string, unknown>).account = {};
+              p.indexer.account!.defaultDisplayName = ens;
+            }
+          }
+        } catch {
+          // ENS lookup failed — names just won't resolve, not fatal
+        }
+      }
+
+      return result;
+    });
 
     return NextResponse.json({ data }, {
       headers: {
