@@ -37,6 +37,7 @@ const SLOW_MESSAGES = [
 
 export function HorizonActivity() {
   const [slowMessage, setSlowMessage] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const { data, isLoading, isFetching, dataUpdatedAt, refetch } = useQuery<{ data: ActivityEvent[]; error?: string }>({
     queryKey: ['horizon-activity'],
@@ -46,7 +47,7 @@ export function HorizonActivity() {
   });
 
   useEffect(() => {
-    if (!isFetching) { setSlowMessage(null); return; }
+    if (!isFetching && !isRetrying) { setSlowMessage(null); return; }
     const t = setTimeout(() => {
       setSlowMessage(SLOW_MESSAGES[Math.floor(Math.random() * SLOW_MESSAGES.length)]);
     }, 3000);
@@ -54,7 +55,7 @@ export function HorizonActivity() {
   }, [isLoading]);
 
   const events = data?.data ?? [];
-  const isAmpDown = !isFetching && (data?.error != null || (!data?.data && data != null));
+  const isAmpDown = !isFetching && !isRetrying && (data?.error != null || (!data?.data && data != null));
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : null;
 
   return (
@@ -103,7 +104,7 @@ export function HorizonActivity() {
       </CardHeader>
 
       <CardContent>
-        {isFetching ? (
+        {(isFetching || isRetrying) ? (
           <div className="space-y-2">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-11 shimmer rounded-lg" />
@@ -120,7 +121,7 @@ export function HorizonActivity() {
             <p className="text-sm text-[var(--text-muted)]">Amp node unreachable</p>
             <p className="text-[11px] text-[var(--text-faint)]">Live data will resume when the node is back online</p>
             <button
-              onClick={() => refetch()}
+              onClick={async () => { setIsRetrying(true); await refetch(); setIsRetrying(false); }}
               className="mt-2 px-3 py-1.5 text-[11px] rounded-full border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
             >
               Retry
