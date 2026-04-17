@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { log } from '@/lib/logger';
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 import {
   ampQuery,
   hasAmpAccess,
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
         AND topic0 IN (${topic0List})
       ORDER BY block_num DESC
       LIMIT ${limit}
-    `, 20_000);
+    `, 55_000);
 
     const data = rows.map(mapRow).filter((e): e is ActivityEvent => e !== null);
 
