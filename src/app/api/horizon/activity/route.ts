@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
 
 export const maxDuration = 60;
@@ -120,24 +121,25 @@ export async function GET(request: NextRequest) {
   try {
     const topic0List = ALL_TOPICS.map((t) => hexLit(t)).join(', ');
 
-    const rows = await ampQuery<RawLog>(`
-      SELECT
-        block_num,
-        tx_hash,
-        log_index,
-        topic0,
-        topic1,
-        topic2,
-        topic3,
-        data
-      FROM ${AMP_DATASET}.logs
-      WHERE address = ${hexLit(HORIZON_STAKING)}
-        AND topic0 IN (${topic0List})
-      ORDER BY block_num DESC
-      LIMIT ${limit}
-    `, 55_000);
-
-    const data = rows.map(mapRow).filter((e): e is ActivityEvent => e !== null);
+    const data = await cached(`horizon:activity:${limit}`, 60, async () => {
+      const rows = await ampQuery<RawLog>(`
+        SELECT
+          block_num,
+          tx_hash,
+          log_index,
+          topic0,
+          topic1,
+          topic2,
+          topic3,
+          data
+        FROM ${AMP_DATASET}.logs
+        WHERE address = ${hexLit(HORIZON_STAKING)}
+          AND topic0 IN (${topic0List})
+        ORDER BY block_num DESC
+        LIMIT ${limit}
+      `, 55_000);
+      return rows.map(mapRow).filter((e): e is ActivityEvent => e !== null);
+    });
 
     return NextResponse.json({ data }, {
       headers: { 'Cache-Control': 'public, s-maxage=25, stale-while-revalidate=60' },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
-import { redis } from '@/lib/cache';
+import { getRedis, hasRedis } from '@/lib/cache';
 import { log } from '@/lib/logger';
 
 // Staleness thresholds in minutes per ingestion type
@@ -48,11 +48,15 @@ export async function GET(request: NextRequest) {
   // ── Redis probe ──
   let redisStatus: ComponentStatus;
   const redisStart = Date.now();
-  try {
-    await redis.ping();
-    redisStatus = { status: 'up', latency_ms: Date.now() - redisStart };
-  } catch (e) {
-    redisStatus = { status: 'down', latency_ms: Date.now() - redisStart, error: String(e) };
+  if (!hasRedis()) {
+    redisStatus = { status: 'down', latency_ms: 0, error: 'Redis not configured' };
+  } else {
+    try {
+      await getRedis().ping();
+      redisStatus = { status: 'up', latency_ms: Date.now() - redisStart };
+    } catch (e) {
+      redisStatus = { status: 'down', latency_ms: Date.now() - redisStart, error: String(e) };
+    }
   }
 
   // ── Ingestion freshness ──

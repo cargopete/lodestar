@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
 
 export const maxDuration = 30;
@@ -63,32 +64,34 @@ export async function GET(request: NextRequest) {
       .map((t) => hexLit(t))
       .join(', ');
 
-    const rows = await ampQuery<RawLog>(`
-      SELECT
-        block_num,
-        tx_hash,
-        topic0,
-        topic1,
-        topic2,
-        data
-      FROM ${AMP_DATASET}.logs
-      WHERE address = ${hexLit(HORIZON_STAKING)}
-        AND topic0 IN (${topic0List})
-        ${addressFilter}
-      ORDER BY block_num DESC
-      LIMIT ${limit}
-    `, 20_000);
-
-    const data = rows.map((row): SlashEvent => ({
-      type: row.topic0.toLowerCase() === strip0x(TOPIC0.ProvisionSlashed)
-        ? 'provision'
-        : 'delegation',
-      block: row.block_num,
-      txHash: row.tx_hash,
-      serviceProvider: topicToAddress(row.topic1),
-      verifier: topicToAddress(row.topic2),
-      tokensGRT: toGRT(row.data.slice(0, 66)),
-    }));
+    const cacheKey = `horizon:slashing:${limit}:${address ?? 'all'}`;
+    const data = await cached(cacheKey, 300, async () => {
+      const rows = await ampQuery<RawLog>(`
+        SELECT
+          block_num,
+          tx_hash,
+          topic0,
+          topic1,
+          topic2,
+          data
+        FROM ${AMP_DATASET}.logs
+        WHERE address = ${hexLit(HORIZON_STAKING)}
+          AND topic0 IN (${topic0List})
+          ${addressFilter}
+        ORDER BY block_num DESC
+        LIMIT ${limit}
+      `, 20_000);
+      return rows.map((row): SlashEvent => ({
+        type: row.topic0.toLowerCase() === strip0x(TOPIC0.ProvisionSlashed)
+          ? 'provision'
+          : 'delegation',
+        block: row.block_num,
+        txHash: row.tx_hash,
+        serviceProvider: topicToAddress(row.topic1),
+        verifier: topicToAddress(row.topic2),
+        tokensGRT: toGRT(row.data.slice(0, 66)),
+      }));
+    });
 
     return NextResponse.json({ data }, {
       headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
