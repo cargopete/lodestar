@@ -38,7 +38,7 @@ const SLOW_MESSAGES = [
 export function HorizonActivity() {
   const [slowMessage, setSlowMessage] = useState<string | null>(null);
 
-  const { data, isLoading, dataUpdatedAt } = useQuery<{ data: ActivityEvent[]; error?: string }>({
+  const { data, isLoading, dataUpdatedAt, refetch } = useQuery<{ data: ActivityEvent[]; error?: string }>({
     queryKey: ['horizon-activity'],
     queryFn: () => fetch('/api/horizon/activity?limit=25').then((r) => r.json()),
     refetchInterval: 30_000,
@@ -119,6 +119,12 @@ export function HorizonActivity() {
             <span className="text-2xl">⚡</span>
             <p className="text-sm text-[var(--text-muted)]">Amp node unreachable</p>
             <p className="text-[11px] text-[var(--text-faint)]">Live data will resume when the node is back online</p>
+            <button
+              onClick={() => refetch()}
+              className="mt-2 px-3 py-1.5 text-[11px] rounded-full border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
+            >
+              Retry
+            </button>
           </div>
         ) : events.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2">
