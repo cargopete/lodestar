@@ -38,7 +38,7 @@ const SLOW_MESSAGES = [
 export function HorizonActivity() {
   const [slowMessage, setSlowMessage] = useState<string | null>(null);
 
-  const { data, isLoading, dataUpdatedAt, refetch } = useQuery<{ data: ActivityEvent[]; error?: string }>({
+  const { data, isLoading, isFetching, dataUpdatedAt, refetch } = useQuery<{ data: ActivityEvent[]; error?: string }>({
     queryKey: ['horizon-activity'],
     queryFn: () => fetch('/api/horizon/activity?limit=25').then((r) => r.json()),
     refetchInterval: 30_000,
@@ -46,7 +46,7 @@ export function HorizonActivity() {
   });
 
   useEffect(() => {
-    if (!isLoading) { setSlowMessage(null); return; }
+    if (!isFetching) { setSlowMessage(null); return; }
     const t = setTimeout(() => {
       setSlowMessage(SLOW_MESSAGES[Math.floor(Math.random() * SLOW_MESSAGES.length)]);
     }, 3000);
@@ -54,7 +54,7 @@ export function HorizonActivity() {
   }, [isLoading]);
 
   const events = data?.data ?? [];
-  const isAmpDown = !isLoading && (data?.error != null || (!data?.data && data != null));
+  const isAmpDown = !isFetching && (data?.error != null || (!data?.data && data != null));
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : null;
 
   return (
@@ -103,7 +103,7 @@ export function HorizonActivity() {
       </CardHeader>
 
       <CardContent>
-        {isLoading ? (
+        {isFetching ? (
           <div className="space-y-2">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-11 shimmer rounded-lg" />
