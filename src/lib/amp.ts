@@ -10,8 +10,8 @@ import { keccak256, toHex } from 'viem';
 import * as https from 'node:https';
 import * as http from 'node:http';
 
-const AMP_ENDPOINT = process.env.AMP_ENDPOINT;
-const AMP_TOKEN = process.env.AMP_TOKEN;
+const AMP_ENDPOINT = process.env.AMP_ENDPOINT?.trim();
+const AMP_TOKEN = process.env.AMP_TOKEN?.trim();
 
 // Force HTTP/1.1 ALPN — Tailscale Funnel drops TLS connections when undici negotiates h2.
 const http1Agent = new https.Agent({ ALPNProtocols: ['http/1.1'] });
