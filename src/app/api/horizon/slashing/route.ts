@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
 
-export const maxDuration = 30;
+export const maxDuration = 90;
 import {
   ampQuery,
   hasAmpAccess,
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
           ${addressFilter}
         ORDER BY block_num DESC
         LIMIT ${limit}
-      `, 20_000);
+      `, 60_000);
       return rows.map((row): SlashEvent => ({
         type: row.topic0.toLowerCase() === strip0x(TOPIC0.ProvisionSlashed)
           ? 'provision'

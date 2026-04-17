@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
 
-export const maxDuration = 300;
+export const maxDuration = 120;
 import {
   ampQuery,
   hasAmpAccess,
@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
           AND topic0 IN (${topic0List})
         ORDER BY block_num DESC
         LIMIT ${limit}
-      `, 250_000);
+      `, 60_000);
       return rows.map(mapRow).filter((e): e is ActivityEvent => e !== null);
     });
 
@@ -151,11 +151,9 @@ export async function GET(request: NextRequest) {
     }
     if (error instanceof Error && error.name === 'TimeoutError') {
       log.ingest.warn({ err: error }, 'Amp query timed out for horizon activity');
-      const stack = String((error as Error).stack).slice(0, 800);
-      return NextResponse.json({ error: 'Amp query timed out', stack, name: error.name, v: 2 }, { status: 504 });
+      return NextResponse.json({ error: 'Amp query timed out' }, { status: 504 });
     }
     log.ingest.error({ err: error }, 'Horizon activity error');
-    const cause = error instanceof Error ? String((error as NodeJS.ErrnoException).cause) : undefined;
-    return NextResponse.json({ error: 'Failed to fetch horizon activity', detail: String(error), cause }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch horizon activity', detail: String(error) }, { status: 500 });
   }
 }
