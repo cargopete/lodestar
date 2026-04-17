@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { formatGRT, cn } from '@/lib/utils';
@@ -27,13 +28,30 @@ function shortAddr(addr: string) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+const SLOW_MESSAGES = [
+  "Amp is combing through 4 million log entries. Worth the wait.",
+  "Scanning the Horizon contract on Arbitrum. Nearly there.",
+  "Chain data takes a moment — Amp queries don't cut corners.",
+  "Querying live blockchain data. Shouldn't be long now.",
+];
+
 export function HorizonActivity() {
+  const [slowMessage, setSlowMessage] = useState<string | null>(null);
+
   const { data, isLoading, dataUpdatedAt } = useQuery<{ data: ActivityEvent[]; error?: string }>({
     queryKey: ['horizon-activity'],
-    queryFn: () => fetch('/api/horizon/activity?limit=100').then((r) => r.json()),
+    queryFn: () => fetch('/api/horizon/activity?limit=25').then((r) => r.json()),
     refetchInterval: 30_000,
     staleTime: 25_000,
   });
+
+  useEffect(() => {
+    if (!isLoading) { setSlowMessage(null); return; }
+    const t = setTimeout(() => {
+      setSlowMessage(SLOW_MESSAGES[Math.floor(Math.random() * SLOW_MESSAGES.length)]);
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   const events = data?.data ?? [];
   const isAmpDown = !isLoading && (data?.error != null || (!data?.data && data != null));
@@ -90,6 +108,11 @@ export function HorizonActivity() {
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-11 shimmer rounded-lg" />
             ))}
+            {slowMessage && (
+              <p className="text-center text-[11px] text-[var(--text-faint)] pt-3 pb-1">
+                {slowMessage}
+              </p>
+            )}
           </div>
         ) : isAmpDown ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2">

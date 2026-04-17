@@ -56,6 +56,10 @@ const PAGE_TIPS: Record<string, { basic: string; deep?: string }> = {
     basic: "What's being built and what's next. The Graph moves steadily.",
     deep: "The next major unlocks are on-chain indexing agreements (GIP-0087/0088 still in draft) and a richer rewards model tied to service quality rather than allocation size.",
   },
+  '/activity': {
+    basic: "Live on-chain events from the Horizon staking contract — delegations, self-stakes, provisions, and the occasional slashing.",
+    deep: "Powered by Amp, E&N's blockchain indexer. Events are queried directly from raw Arbitrum One logs, so what you see here is as close to the chain as you can get without running your own node.",
+  },
   '/blog': {
     basic: "Guides and notes from the network's edge.",
     deep: "Practical indexer infrastructure — archive node setup, graph-node configuration, chain lag debugging. Sourced from real conversations in The Graph's community.",
