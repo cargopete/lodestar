@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
 
-export const maxDuration = 60;
+// export const maxDuration = 60; // temporarily disabled to test compute routing
 import {
   ampQuery,
   hasAmpAccess,
