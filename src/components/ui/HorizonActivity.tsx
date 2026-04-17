@@ -28,7 +28,7 @@ function shortAddr(addr: string) {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function HorizonActivity() {
-  const { data, isLoading, dataUpdatedAt } = useQuery<{ data: ActivityEvent[] }>({
+  const { data, isLoading, dataUpdatedAt } = useQuery<{ data: ActivityEvent[]; error?: string }>({
     queryKey: ['horizon-activity'],
     queryFn: () => fetch('/api/horizon/activity?limit=100').then((r) => r.json()),
     refetchInterval: 30_000,
@@ -36,6 +36,7 @@ export function HorizonActivity() {
   });
 
   const events = data?.data ?? [];
+  const isAmpDown = !isLoading && (data?.error != null || (!data?.data && data != null));
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : null;
 
   return (
@@ -44,10 +45,10 @@ export function HorizonActivity() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2.5">
             <CardTitle>Horizon Activity</CardTitle>
-            {/* Live pulsing dot */}
+            {/* Live pulsing dot — amber when Amp is unreachable */}
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--green)] opacity-60" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--green)]" />
+              <span className={cn('animate-ping absolute inline-flex h-full w-full rounded-full opacity-60', isAmpDown ? 'bg-[var(--amber)]' : 'bg-[var(--green)]')} />
+              <span className={cn('relative inline-flex rounded-full h-2 w-2', isAmpDown ? 'bg-[var(--amber)]' : 'bg-[var(--green)]')} />
             </span>
           </div>
 
@@ -89,6 +90,12 @@ export function HorizonActivity() {
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-11 shimmer rounded-lg" />
             ))}
+          </div>
+        ) : isAmpDown ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-2">
+            <span className="text-2xl">⚡</span>
+            <p className="text-sm text-[var(--text-muted)]">Amp node unreachable</p>
+            <p className="text-[11px] text-[var(--text-faint)]">Live data will resume when the node is back online</p>
           </div>
         ) : events.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2">
