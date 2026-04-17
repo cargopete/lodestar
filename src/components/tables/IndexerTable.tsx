@@ -714,7 +714,7 @@ export function IndexerTable() {
               value={minStake}
               onChange={(e) => setMinStake(Number(e.target.value))}
               className={cn(
-                'px-3 py-2 text-sm rounded-[var(--radius-button)]',
+                'pl-3 pr-8 py-2 text-sm rounded-[var(--radius-button)]',
                 'bg-[var(--bg-elevated)] border border-[var(--border)]',
                 'text-[var(--text)]',
                 'focus:outline-none focus:border-[var(--accent)]'
