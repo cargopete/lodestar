@@ -154,6 +154,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Amp query timed out' }, { status: 504 });
     }
     log.ingest.error({ err: error }, 'Horizon activity error');
-    return NextResponse.json({ error: 'Failed to fetch horizon activity', detail: String(error) }, { status: 500 });
+    const cause = error instanceof Error ? String((error as NodeJS.ErrnoException).cause) : undefined;
+    return NextResponse.json({ error: 'Failed to fetch horizon activity', detail: String(error), cause }, { status: 500 });
   }
 }
