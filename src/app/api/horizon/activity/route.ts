@@ -6,8 +6,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
+
+export const maxDuration = 30;
 import {
   ampQuery,
   hasAmpAccess,
@@ -114,42 +115,43 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Amp not configured' }, { status: 503 });
   }
 
-  const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') ?? '100', 10), 200);
-  const cacheKey = `lodestar:horizon:activity:${limit}`;
+  const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') ?? '25', 10), 200);
 
   try {
-    const data = await cached(cacheKey, 30, async () => {
-      const topic0List = ALL_TOPICS.map((t) => hexLit(t)).join(', ');
+    const topic0List = ALL_TOPICS.map((t) => hexLit(t)).join(', ');
 
-      const rows = await ampQuery<RawLog>(`
-        SELECT
-          block_num,
-          tx_hash,
-          log_index,
-          topic0,
-          topic1,
-          topic2,
-          topic3,
-          data
-        FROM ${AMP_DATASET}.logs
-        WHERE address = ${hexLit(HORIZON_STAKING)}
-          AND topic0 IN (${topic0List})
-        ORDER BY block_num DESC
-        LIMIT ${limit}
-      `);
+    const rows = await ampQuery<RawLog>(`
+      SELECT
+        block_num,
+        tx_hash,
+        log_index,
+        topic0,
+        topic1,
+        topic2,
+        topic3,
+        data
+      FROM ${AMP_DATASET}.logs
+      WHERE address = ${hexLit(HORIZON_STAKING)}
+        AND topic0 IN (${topic0List})
+      ORDER BY block_num DESC
+      LIMIT ${limit}
+    `, 20_000);
 
-      return rows.map(mapRow).filter((e): e is ActivityEvent => e !== null);
-    });
+    const data = rows.map(mapRow).filter((e): e is ActivityEvent => e !== null);
 
     return NextResponse.json({ data }, {
-      headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' },
+      headers: { 'Cache-Control': 'public, s-maxage=25, stale-while-revalidate=60' },
     });
   } catch (error) {
     if (error instanceof AmpError) {
       log.ingest.warn({ err: error }, 'Amp query failed for horizon activity');
       return NextResponse.json({ error: 'Amp query failed', detail: error.message }, { status: 502 });
     }
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      log.ingest.warn({ err: error }, 'Amp query timed out for horizon activity');
+      return NextResponse.json({ error: 'Amp query timed out' }, { status: 504 });
+    }
     log.ingest.error({ err: error }, 'Horizon activity error');
-    return NextResponse.json({ error: 'Failed to fetch horizon activity' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch horizon activity', detail: String(error) }, { status: 500 });
   }
 }

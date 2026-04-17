@@ -6,8 +6,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
+
+export const maxDuration = 30;
 import {
   ampQuery,
   hasAmpAccess,
@@ -57,41 +58,37 @@ export async function GET(request: NextRequest) {
     ? `AND topic1 = ${hexLit('0'.repeat(24) + address.slice(2))}`
     : '';
 
-  const cacheKey = `lodestar:horizon:slashing:${address ?? 'all'}:${limit}`;
-
   try {
-    const data = await cached(cacheKey, 300, async () => {
-      const topic0List = [TOPIC0.ProvisionSlashed, TOPIC0.DelegationSlashed]
-        .map((t) => hexLit(t))
-        .join(', ');
+    const topic0List = [TOPIC0.ProvisionSlashed, TOPIC0.DelegationSlashed]
+      .map((t) => hexLit(t))
+      .join(', ');
 
-      const rows = await ampQuery<RawLog>(`
-        SELECT
-          block_num,
-          tx_hash,
-          topic0,
-          topic1,
-          topic2,
-          data
-        FROM ${AMP_DATASET}.logs
-        WHERE address = ${hexLit(HORIZON_STAKING)}
-          AND topic0  IN (${topic0List})
-          ${addressFilter}
-        ORDER BY block_num DESC
-        LIMIT ${limit}
-      `);
+    const rows = await ampQuery<RawLog>(`
+      SELECT
+        block_num,
+        tx_hash,
+        topic0,
+        topic1,
+        topic2,
+        data
+      FROM ${AMP_DATASET}.logs
+      WHERE address = ${hexLit(HORIZON_STAKING)}
+        AND topic0 IN (${topic0List})
+        ${addressFilter}
+      ORDER BY block_num DESC
+      LIMIT ${limit}
+    `, 20_000);
 
-      return rows.map((row): SlashEvent => ({
-        type: row.topic0.toLowerCase() === strip0x(TOPIC0.ProvisionSlashed)
-          ? 'provision'
-          : 'delegation',
-        block: row.block_num,
-        txHash: row.tx_hash,
-        serviceProvider: topicToAddress(row.topic1),
-        verifier: topicToAddress(row.topic2),
-        tokensGRT: toGRT(row.data.slice(0, 66)),
-      }));
-    });
+    const data = rows.map((row): SlashEvent => ({
+      type: row.topic0.toLowerCase() === strip0x(TOPIC0.ProvisionSlashed)
+        ? 'provision'
+        : 'delegation',
+      block: row.block_num,
+      txHash: row.tx_hash,
+      serviceProvider: topicToAddress(row.topic1),
+      verifier: topicToAddress(row.topic2),
+      tokensGRT: toGRT(row.data.slice(0, 66)),
+    }));
 
     return NextResponse.json({ data }, {
       headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
@@ -101,7 +98,11 @@ export async function GET(request: NextRequest) {
       log.ingest.warn({ err: error }, 'Amp query failed for slashing');
       return NextResponse.json({ error: 'Amp query failed', detail: error.message }, { status: 502 });
     }
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      log.ingest.warn({ err: error }, 'Amp query timed out for slashing');
+      return NextResponse.json({ error: 'Amp query timed out' }, { status: 504 });
+    }
     log.ingest.error({ err: error }, 'Slashing events error');
-    return NextResponse.json({ error: 'Failed to fetch slashing events' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch slashing events', detail: String(error) }, { status: 500 });
   }
 }
