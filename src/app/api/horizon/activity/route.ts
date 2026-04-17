@@ -76,7 +76,7 @@ function decodeTokens(data: string, chunkIndex = 0): number {
 }
 
 function mapRow(row: RawLog): ActivityEvent | null {
-  const t0 = row.topic0.toLowerCase();
+  const t0 = strip0x(row.topic0).toLowerCase();
   const base = { block: row.block_num, txHash: row.tx_hash, id: `${row.tx_hash}-${row.log_index}` };
 
   if (t0 === strip0x(TOPIC0.TokensDelegated)) {

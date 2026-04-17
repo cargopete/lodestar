@@ -60,9 +60,9 @@ interface StakeEvent {
 }
 
 function parseDelegationEvent(row: RawLog): DelegationEvent | null {
-  const t0 = row.topic0.toLowerCase();
+  const t0 = strip0x(row.topic0).toLowerCase();
 
-  if (t0 === TOPIC0.TokensDelegated.toLowerCase()) {
+  if (t0 === strip0x(TOPIC0.TokensDelegated)) {
     const [tokensBigInt] = parseData(row.data, 2);
     return {
       type: 'delegated',
@@ -75,7 +75,7 @@ function parseDelegationEvent(row: RawLog): DelegationEvent | null {
     };
   }
 
-  if (t0 === TOPIC0.TokensUndelegated.toLowerCase()) {
+  if (t0 === strip0x(TOPIC0.TokensUndelegated)) {
     const [tokensBigInt] = parseData(row.data, 2);
     return {
       type: 'undelegated',
@@ -88,7 +88,7 @@ function parseDelegationEvent(row: RawLog): DelegationEvent | null {
     };
   }
 
-  if (t0 === TOPIC0.DelegatedTokensWithdrawn.toLowerCase()) {
+  if (t0 === strip0x(TOPIC0.DelegatedTokensWithdrawn)) {
     const [tokensBigInt] = parseData(row.data, 1);
     return {
       type: 'withdrawn',
@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
       `);
 
       return rows.map((row): StakeEvent => {
-        const t0 = row.topic0.toLowerCase();
+        const t0 = strip0x(row.topic0).toLowerCase();
         const [tokens] = parseData(row.data, 1);
         return {
           type:

@@ -448,16 +448,19 @@ function SubgraphDirectory() {
             <option value="all">All Networks</option>
             {(() => {
               // Build deduplicated network list: discovered networks + all registry networks
-              const seen = new Set<string>();
+              const seen = new Set<string>();       // by canonical ID
+              const seenLabels = new Set<string>(); // by display label to avoid visual duplicates
               const options: { value: string; label: string }[] = [];
 
               // Discovered networks first (these have subgraphs on the current page)
               for (const n of [...knownNetworks].sort()) {
                 const info = networkMap.get(n);
                 const canonicalId = info?.id ?? n;
-                if (!seen.has(canonicalId)) {
+                const label = info?.shortName ?? n;
+                if (!seen.has(canonicalId) && !seenLabels.has(label)) {
                   seen.add(canonicalId);
-                  options.push({ value: n, label: info?.shortName ?? n });
+                  seenLabels.add(label);
+                  options.push({ value: n, label });
                 }
               }
 
@@ -468,8 +471,9 @@ function SubgraphDirectory() {
 
               const registryOptions: { value: string; label: string }[] = [];
               for (const n of registryNets) {
-                if (!seen.has(n.id)) {
+                if (!seen.has(n.id) && !seenLabels.has(n.shortName)) {
                   seen.add(n.id);
+                  seenLabels.add(n.shortName);
                   registryOptions.push({ value: n.id, label: n.shortName });
                 }
               }

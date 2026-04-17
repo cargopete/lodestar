@@ -87,7 +87,7 @@ export function BottomNav() {
       {/* More drawer */}
       {showMore && (
         <div className="fixed bottom-[calc(var(--bottom-nav-height)+var(--safe-bottom))] left-0 right-0 z-50 md:hidden px-3 pb-2">
-          <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl overflow-hidden shadow-[var(--shadow-float)]">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl shadow-[var(--shadow-float)] overflow-y-auto max-h-[calc(100svh-var(--bottom-nav-height)-var(--safe-bottom)-3rem)]">
             {moreItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
               return (
