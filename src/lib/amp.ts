@@ -7,9 +7,14 @@
  */
 
 import { keccak256, toHex } from 'viem';
+import { Agent } from 'undici';
 
 const AMP_ENDPOINT = process.env.AMP_ENDPOINT;
 const AMP_TOKEN = process.env.AMP_TOKEN;
+
+// Force HTTP/1.1 — Tailscale Funnel doesn't support HTTP/2 ALPN negotiation.
+// Without this, undici attempts h2 on long-lived AbortSignals and the TLS handshake fails.
+const http1Agent = new Agent({ allowH2: false });
 
 export function hasAmpAccess(): boolean {
   return Boolean(AMP_ENDPOINT && AMP_TOKEN);
@@ -42,10 +47,11 @@ export async function ampQuery<T = Record<string, unknown>>(
     headers: {
       'Content-Type': 'text/plain',
       'X-Amp-Token': AMP_TOKEN,
-      'Connection': 'close',
     },
     body: sql,
     signal: AbortSignal.timeout(timeoutMs),
+    // @ts-ignore — undici dispatcher, not in standard fetch types
+    dispatcher: http1Agent,
   });
 
   if (!res.ok) {

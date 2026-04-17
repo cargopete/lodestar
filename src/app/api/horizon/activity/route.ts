@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
           AND topic0 IN (${topic0List})
         ORDER BY block_num DESC
         LIMIT ${limit}
-      `, 8_000); // debug: test short timeout
+      `, 55_000);
       return rows.map(mapRow).filter((e): e is ActivityEvent => e !== null);
     });
 
