@@ -64,7 +64,7 @@ const navigation: NavSection[] = [
       },
       {
         label: 'Activity',
-        href: '/horizon',
+        href: '/activity',
         icon: (
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
