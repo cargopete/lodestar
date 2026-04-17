@@ -17,7 +17,11 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Delegator Portfolio** — Position tracking, rebalancing insights, underperforming position detection, CSV export
 - **Curator Portfolio** — Signal positions and query-fee-to-signal ratio analysis
 - **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting and IPFS manifest complexity scoring (Light→Extreme)
-- **Data Services & Provisions** — Horizon-era service providers, provisioned stake, thawing status, verifier cuts
+- **Horizon Activity Feed** — Live on-chain events from the Horizon staking contract — delegations, self-stakes, provisions, slashing, and withdrawals. Refreshes every 30 seconds. Powered by a self-hosted Amp node querying raw Arbitrum One logs. Gracefully degrades if the node is unreachable.
+- **Data Services & Provisions** — Horizon-era service providers (Subgraph Service, Dispatch JSON-RPC) with provisioned stake, thawing status, verifier cuts, and ENS-resolved indexer names
+- **QoS Performance Charts** — Query count, success rate, latency, and blocks-behind timeseries on indexer profiles, sourced from the E&N QoS oracle subgraph
+- **Stake History Charts** — Self-stake and delegation history with cumulative rewards tab
+- **Push Protocol Notifications** — Opt-in delegator alerts for reward cut changes and inactive indexer detection. EIP-191 signed subscription; notifications sent via Push Protocol channel
 - **One-Click Delegation** — Algorithmically selected indexer with optional preference tuning; smart default with override. See [below](#one-click-delegation).
 - **Delegation Calculator** — Model redelegation scenarios with thawing period cost analysis and net gain projections
 - **Compare Indexers** — Side-by-side comparison of up to 3 indexers
@@ -25,26 +29,28 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Governance Tracker** — Live status and impact summaries for active GIPs (0079, 0086, 0087, 0088, 0070) with live protocol metrics
 - **GraphTally / TAP Payments** — Escrow balances, RAV redemptions, top collectors, and per-indexer payment detail
 - **Indexing Health** — Chain-by-chain indexing lag monitoring, sync progress, and subgraph health across the network
+- **AI / MCP Directory** — Curated directory of Graph-ecosystem MCP servers and AI tools at `/ai`
 - **Lodie AI Assistant** — Conversational AI assistant with live protocol context, multi-turn memory, and page-aware suggestions. Runs qwen3:8b via self-hosted Ollama; degrades gracefully if unavailable
 - **Monthly Leaderboard** — Community favourites leaderboard scored on network service, community votes, trust, and protocol health, with expandable score breakdowns and EIP-712 gasless voting
-- **Blog** — Technical writeups on indexer infrastructure, Graph Node architecture, and Horizon tooling
+- **Blog** — Technical writeups on indexer infrastructure, Graph Node architecture, Amp self-hosting, and Horizon tooling
 - **Wallet Connection** — Connect via MetaMask, WalletConnect, or Coinbase Wallet (Arbitrum only)
 - **Mobile-First Layout** — Bottom tab navigation, table-to-card patterns, responsive grids, touch-friendly targets
 
 ## Roadmap
 
-### In Progress
-
-- [ ] Historical Trend Charts — query fee distribution, staking/signal trends, epoch sparklines, reward cut history (1,200+ epochs of data available)
-
 ### Planned
 
 - [ ] PWA support — installable to home screen for daily portfolio checking
-- [ ] Lodie: stable tunnel — replace ephemeral Cloudflare `trycloudflare.com` URL with a named ngrok/Cloudflare tunnel so the Ollama endpoint survives restarts without requiring a Vercel env var update and redeploy
-- [ ] Lodie: re-enable streaming — currently disabled as a workaround for Cloudflare tunnel buffering; restore token-by-token output once the tunnel is stable
+- [ ] Retention controls for Amp parquet data
+- [ ] Lodie: re-enable streaming — currently disabled as a workaround for tunnel buffering
 
 ### Shipped
 
+- [x] Horizon Activity feed — live Amp-powered on-chain event stream (v2.6.0)
+- [x] Push Protocol delegator notifications — opt-in alerts for cut changes and inactive indexers (v2.6.0)
+- [x] QoS performance charts — query count, success rate, latency, blocks-behind (v2.6.0)
+- [x] Stake history charts + cumulative rewards tab (v2.6.0)
+- [x] AI / MCP directory at `/ai` (v2.6.0)
 - [x] One-click delegation — algorithmic indexer selection with preference tuning, smart default with override
 - [x] Lodie AI assistant — local Ollama inference with live protocol context
 - [x] GraphTally / TAP payment pipeline — escrow balances, redemptions, per-indexer detail
@@ -189,8 +195,9 @@ Code: [`src/lib/scoring/`](src/lib/scoring/)
 - Self-hosted Postgres (postgres.js) + Upstash Redis
 - CoinGecko + DefiLlama (price/TVL data)
 - The Graph Network subgraph (Arbitrum, inline fetch)
-- Amp (`ampd`) — self-hosted on-chain event indexer for Horizon event history
-- Ollama (qwen3:8b) — self-hosted inference for the Lodie AI assistant, exposed via Cloudflare tunnel
+- Amp (`ampd`) — self-hosted on-chain event indexer for Horizon event history, exposed via Tailscale Funnel
+- Ollama (qwen3:8b) — self-hosted inference for the Lodie AI assistant
+- Push Protocol — opt-in delegator notifications via on-chain channel
 
 ## Getting Started
 
@@ -215,16 +222,21 @@ Open [http://localhost:3000](http://localhost:3000).
 | `AMP_TOKEN` | Auth token for the `ampd` nginx proxy | No |
 | `OLLAMA_URL` | Ollama server URL for Lodie AI assistant | No |
 | `OLLAMA_SECRET` | Bearer token for Ollama server (if auth enabled) | No |
+| `PUSH_CHANNEL_ADDRESS` | Push Protocol channel wallet address | No |
+| `PUSH_CHANNEL_PRIVATE_KEY` | Push Protocol channel private key (for sending notifications) | No |
+| `PUSH_ENV` | Push Protocol environment — `staging` or `prod` | No |
 
-Horizon event history (`/api/horizon/*`) and Lodie (`/api/lodie/*`) degrade gracefully when their env vars are absent.
+Horizon event history (`/api/horizon/*`), Lodie (`/api/lodie/*`), and Push notifications degrade gracefully when their env vars are absent.
 
 ## Project Structure
 
 ```
 src/
   app/           # Next.js pages and API routes
-    api/         # Price, subgraph proxy, TVL, feed, cron, Amp, Lodie endpoints
-    blog/        # Technical blog (MDX posts)
+    api/         # Price, subgraph proxy, TVL, feed, cron, Amp, Lodie, Push endpoints
+    activity/    # Live Horizon on-chain event feed (Amp-powered)
+    ai/          # AI / MCP tool directory
+    blog/        # Technical blog (Markdown posts)
     calculator/  # Redelegation calculator
     compare/     # Indexer comparison tool
     curators/    # Curator portfolio
