@@ -42,6 +42,7 @@ export async function ampQuery<T = Record<string, unknown>>(
     headers: {
       'Content-Type': 'text/plain',
       'X-Amp-Token': AMP_TOKEN,
+      'Connection': 'close',
     },
     body: sql,
     signal: AbortSignal.timeout(timeoutMs),
