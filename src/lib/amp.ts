@@ -7,14 +7,15 @@
  */
 
 import { keccak256, toHex } from 'viem';
-import { Agent } from 'undici';
+import * as https from 'node:https';
+import * as http from 'node:http';
 
 const AMP_ENDPOINT = process.env.AMP_ENDPOINT;
 const AMP_TOKEN = process.env.AMP_TOKEN;
 
-// Force HTTP/1.1 — Tailscale Funnel doesn't support HTTP/2 ALPN negotiation.
-// Without this, undici attempts h2 on long-lived AbortSignals and the TLS handshake fails.
-const http1Agent = new Agent({ allowH2: false });
+// Force HTTP/1.1 ALPN — Tailscale Funnel drops TLS connections when undici negotiates h2.
+const http1Agent = new https.Agent({ ALPNProtocols: ['http/1.1'] });
+const http1AgentHttp = new http.Agent();
 
 export function hasAmpAccess(): boolean {
   return Boolean(AMP_ENDPOINT && AMP_TOKEN);
@@ -33,8 +34,9 @@ export class AmpError extends Error {
 /**
  * Run a SQL query against ampd and return rows as typed objects.
  * ampd returns JSON Lines — one JSON object per line.
+ * Uses node:https directly to force HTTP/1.1 ALPN (Tailscale Funnel h2 incompatibility).
  */
-export async function ampQuery<T = Record<string, unknown>>(
+export function ampQuery<T = Record<string, unknown>>(
   sql: string,
   timeoutMs = 8000,
 ): Promise<T[]> {
@@ -42,31 +44,60 @@ export async function ampQuery<T = Record<string, unknown>>(
     throw new AmpError('AMP_ENDPOINT or AMP_TOKEN not configured');
   }
 
-  const res = await fetch(`${AMP_ENDPOINT}/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain',
-      'X-Amp-Token': AMP_TOKEN,
-    },
-    body: sql,
-    signal: AbortSignal.timeout(timeoutMs),
-    // @ts-ignore — undici dispatcher, not in standard fetch types
-    dispatcher: http1Agent,
+  const url = new URL(`${AMP_ENDPOINT}/`);
+  const isHttps = url.protocol === 'https:';
+  const body = Buffer.from(sql, 'utf8');
+
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      req.destroy();
+      const err = new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+      reject(err);
+    }, timeoutMs);
+
+    const options = {
+      hostname: url.hostname,
+      port: url.port || (isHttps ? 443 : 80),
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain',
+        'X-Amp-Token': AMP_TOKEN!,
+        'Content-Length': body.length,
+      },
+      agent: isHttps ? http1Agent : http1AgentHttp,
+    };
+
+    const req = (isHttps ? https : http).request(options, (res) => {
+      if (res.statusCode && res.statusCode >= 400) {
+        let errBody = '';
+        res.on('data', (c: Buffer) => { errBody += c.toString(); });
+        res.on('end', () => {
+          clearTimeout(timer);
+          reject(new AmpError(`ampd returned ${res.statusCode}: ${errBody}`, res.statusCode));
+        });
+        return;
+      }
+
+      let text = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk: string) => { text += chunk; });
+      res.on('end', () => {
+        clearTimeout(timer);
+        if (!text.trim()) { resolve([]); return; }
+        try {
+          const rows = text.trim().split('\n').filter(Boolean).map((line) => JSON.parse(line) as T);
+          resolve(rows);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+
+    req.on('error', (e) => { clearTimeout(timer); reject(e); });
+    req.write(body);
+    req.end();
   });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new AmpError(`ampd returned ${res.status}: ${body}`, res.status);
-  }
-
-  const text = await res.text();
-  if (!text.trim()) return [];
-
-  return text
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as T);
 }
 
 // ── Contract addresses ─────────────────────────────────────────────────────────
