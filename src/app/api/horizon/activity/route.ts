@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 import {
   ampQuery,
   hasAmpAccess,
@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
           AND topic0 IN (${topic0List})
         ORDER BY block_num DESC
         LIMIT ${limit}
-      `, 100_000);
+      `, 250_000);
       return rows.map(mapRow).filter((e): e is ActivityEvent => e !== null);
     });
 
