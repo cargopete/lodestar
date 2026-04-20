@@ -19,6 +19,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting and IPFS manifest complexity scoring (Light→Extreme)
 - **Horizon Activity Feed** — Live on-chain events from the Horizon staking contract — delegations, self-stakes, provisions, slashing, and withdrawals. Refreshes every 30 seconds. Powered by a self-hosted Amp node querying raw Arbitrum One logs. Gracefully degrades if the node is unreachable.
 - **Data Services & Provisions** — Horizon-era service providers (Subgraph Service, Dispatch JSON-RPC) with provisioned stake, thawing status, verifier cuts, and ENS-resolved indexer names
+- **Dispatch JSON-RPC** — Live decentralised JSON-RPC service on The Graph Horizon framework. Interactive RPC playground with EIP-712 TAP receipt signing, per-request GRT micropayments via GraphTally, provider attestations, and a full consumer escrow management UI (deposit, thaw, withdraw)
 - **QoS Performance Charts** — Query count, success rate, latency, and blocks-behind timeseries on indexer profiles, sourced from the E&N QoS oracle subgraph
 - **Stake History Charts** — Self-stake and delegation history with cumulative rewards tab
 - **Push Protocol Notifications** — Opt-in delegator alerts for reward cut changes and inactive indexer detection. EIP-191 signed subscription; notifications sent via Push Protocol channel
@@ -46,6 +47,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 
 ### Shipped
 
+- [x] Dispatch JSON-RPC — decentralised RPC playground with TAP receipt signing, escrow management, and provider attestations (v2.7.0)
 - [x] Horizon Activity feed — live Amp-powered on-chain event stream (v2.6.0)
 - [x] Push Protocol delegator notifications — opt-in alerts for cut changes and inactive indexers (v2.6.0)
 - [x] QoS performance charts — query count, success rate, latency, blocks-behind (v2.6.0)
@@ -249,6 +251,7 @@ src/
     poi/         # POI consensus dashboard
     profile/     # Connected wallet portfolio
     roadmap/     # Public roadmap
+    dispatch/    # Dispatch JSON-RPC playground and consumer escrow tools
     services/    # Data services (Horizon)
     subgraphs/   # Subgraph directory
   components/    # UI components, layout, charts, tables, feed

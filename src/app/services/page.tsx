@@ -87,6 +87,7 @@ export default function ServicesPage() {
             onSelect={() =>
               setSelectedService(selectedService === service.id ? null : service.id)
             }
+            ctaHref={service.id.toLowerCase() === '0x73846272813065c3e4efdb3fb82e0d128c8c2364' ? '/dispatch' : undefined}
           />
         ))}
       </div>
@@ -133,9 +134,12 @@ interface ServiceCardProps {
   grtPrice: number;
   isSelected: boolean;
   onSelect: () => void;
+  ctaHref?: string;
 }
 
-function ServiceCard({ service, grtPrice, isSelected, onSelect }: ServiceCardProps) {
+const DISPATCH_ID = '0x73846272813065c3e4efdb3fb82e0d128c8c2364';
+
+function ServiceCard({ service, grtPrice, isSelected, onSelect, ctaHref }: ServiceCardProps) {
   const provisioned = weiToGRT(service.totalTokensProvisioned);
   const allocated = weiToGRT(service.totalTokensAllocated);
   const thawing = weiToGRT(service.totalTokensThawing);
@@ -143,6 +147,7 @@ function ServiceCard({ service, grtPrice, isSelected, onSelect }: ServiceCardPro
   const minThawDays = Math.round(Number(service.minimumThawingPeriod) / 86400);
   const maxVerifierCutPct = (Number(service.maximumVerifierCut) / 10000).toFixed(0);
   const minProvision = weiToGRT(service.minimumProvisionTokens);
+  const isDispatch = service.id.toLowerCase() === DISPATCH_ID;
 
   const serviceName = resolveServiceName(service.id);
 
@@ -168,7 +173,7 @@ function ServiceCard({ service, grtPrice, isSelected, onSelect }: ServiceCardPro
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className={`grid gap-4 mb-4 ${isDispatch ? 'grid-cols-1' : 'grid-cols-2'}`}>
           <div>
             <p className="text-xs text-[var(--text-faint)]">Total Provisioned</p>
             <p className="text-lg font-mono font-semibold text-[var(--text)]">
@@ -178,30 +183,34 @@ function ServiceCard({ service, grtPrice, isSelected, onSelect }: ServiceCardPro
               {formatUSD(provisioned * grtPrice)}
             </p>
           </div>
-          <div>
-            <p className="text-xs text-[var(--text-faint)]">Allocated</p>
-            <p className="text-lg font-mono font-semibold text-[var(--green)]">
-              {formatGRT(allocated)}
-            </p>
-            <p className="text-xs text-[var(--text-faint)]">
-              {formatUSD(allocated * grtPrice)}
-            </p>
-          </div>
+          {!isDispatch && (
+            <div>
+              <p className="text-xs text-[var(--text-faint)]">Allocated</p>
+              <p className="text-lg font-mono font-semibold text-[var(--green)]">
+                {formatGRT(allocated)}
+              </p>
+              <p className="text-xs text-[var(--text-faint)]">
+                {formatUSD(allocated * grtPrice)}
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Utilization bar */}
-        <div className="mb-4">
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-[var(--text-faint)]">Utilization</span>
-            <span className="text-[var(--text-muted)]">{utilization.toFixed(1)}%</span>
+        {/* Utilization bar — only for services with allocation logic */}
+        {!isDispatch && (
+          <div className="mb-4">
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-[var(--text-faint)]">Utilization</span>
+              <span className="text-[var(--text-muted)]">{utilization.toFixed(1)}%</span>
+            </div>
+            <ProgressBar
+              value={utilization}
+              max={100}
+              variant={utilization > 80 ? 'orange' : 'teal'}
+              size="sm"
+            />
           </div>
-          <ProgressBar
-            value={utilization}
-            max={100}
-            variant={utilization > 80 ? 'orange' : 'teal'}
-            size="sm"
-          />
-        </div>
+        )}
 
         {/* Parameters */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
@@ -224,10 +233,19 @@ function ServiceCard({ service, grtPrice, isSelected, onSelect }: ServiceCardPro
         </div>
 
         {/* Expand indicator */}
-        <div className="mt-4 text-center">
+        <div className="mt-4 flex items-center justify-between">
           <span className="text-xs text-[var(--accent)]">
             {isSelected ? 'Click to collapse' : 'Click to view indexers'}
           </span>
+          {ctaHref && (
+            <Link
+              href={ctaHref}
+              onClick={(e) => e.stopPropagation()}
+              className="px-4 py-2 rounded-[var(--radius-button)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-medium transition-colors"
+            >
+              Try it →
+            </Link>
+          )}
         </div>
       </CardContent>
     </Card>

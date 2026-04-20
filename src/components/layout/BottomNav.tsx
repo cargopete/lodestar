@@ -63,6 +63,7 @@ const moreItems = [
   { label: 'Governance', href: '/governance' },
   { label: 'Roadmap', href: '/roadmap' },
   { label: 'AI / MCPs', href: '/ai' },
+  { label: 'Dispatch', href: '/dispatch' },
 ];
 
 export function BottomNav() {
