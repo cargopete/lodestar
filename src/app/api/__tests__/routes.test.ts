@@ -352,13 +352,13 @@ describe('/api/epochs', () => {
     expect(json.data).toHaveProperty('epoches');
   });
 
-  it('caps count at 100', async () => {
+  it('caps count at 400', async () => {
     mockSubgraphQuery.mockResolvedValueOnce({ epoches: [] });
     const req = makeRequest('/api/epochs?count=999');
     await GET(req);
 
     const query = mockSubgraphQuery.mock.calls[0][0] as string;
-    expect(query).toContain('first: 100');
+    expect(query).toContain('first: 400');
   });
 
   it('returns 503 when no API key', async () => {
@@ -386,7 +386,7 @@ describe('/api/ens', () => {
       domains: [{ name: 'vitalik.eth' }],
     });
 
-    const req = makeRequest('/api/ens?address=0x1234');
+    const req = makeRequest('/api/ens?address=0xd8da6bf26964af9d7eed9e03e53415d37aa96045');
     const res = await GET(req);
     const json = await getJson(res);
 
@@ -401,10 +401,19 @@ describe('/api/ens', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns null ensName for invalid address format', async () => {
+    const req = makeRequest('/api/ens?address=0x1234');
+    const res = await GET(req);
+    const json = await getJson(res);
+
+    expect(res.status).toBe(200);
+    expect(json.ensName).toBeNull();
+  });
+
   it('returns null ensName when no domains found', async () => {
     mockEnsQuery.mockResolvedValueOnce({ domains: [] });
 
-    const req = makeRequest('/api/ens?address=0x1234');
+    const req = makeRequest('/api/ens?address=0xd8da6bf26964af9d7eed9e03e53415d37aa96045');
     const res = await GET(req);
     const json = await getJson(res);
 
@@ -414,7 +423,7 @@ describe('/api/ens', () => {
   it('returns null ensName when subgraph errors', async () => {
     mockEnsQuery.mockRejectedValueOnce(new Error('subgraph down'));
 
-    const req = makeRequest('/api/ens?address=0x1234');
+    const req = makeRequest('/api/ens?address=0xd8da6bf26964af9d7eed9e03e53415d37aa96045');
     const res = await GET(req);
     const json = await getJson(res);
 
@@ -934,5 +943,190 @@ describe('/api/subgraph', () => {
 
     expect(res.status).toBe(200);
     expect(json.data).toHaveProperty('epoches');
+  });
+});
+
+// ============================================================
+// /api/dispatch/rpc — chainId validation
+// ============================================================
+
+describe('/api/dispatch/rpc', () => {
+  let POST: (req: Request) => Promise<Response>;
+
+  beforeEach(async () => {
+    const mod = await import('@/app/api/dispatch/rpc/route');
+    POST = mod.POST as (req: Request) => Promise<Response>;
+  });
+
+  it('rejects non-numeric chainId', async () => {
+    const req = makeRequest('/api/dispatch/rpc', {
+      method: 'POST',
+      body: JSON.stringify({ chainId: '42161/../../../admin', body: {} }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const json = await getJson(res);
+    expect(json).toHaveProperty('error');
+  });
+
+  it('rejects negative chainId', async () => {
+    const req = makeRequest('/api/dispatch/rpc', {
+      method: 'POST',
+      body: JSON.stringify({ chainId: -1, body: {} }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects fractional chainId', async () => {
+    const req = makeRequest('/api/dispatch/rpc', {
+      method: 'POST',
+      body: JSON.stringify({ chainId: 42.5, body: {} }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
+  it('forwards valid request to gateway and returns result', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result: '0x1' }), {
+        status: 200,
+        headers: { 'x-drpc-attestation': 'sig123' },
+      }),
+    );
+
+    const req = makeRequest('/api/dispatch/rpc', {
+      method: 'POST',
+      body: JSON.stringify({ chainId: 42161, body: { jsonrpc: '2.0', id: 1, method: 'eth_blockNumber' } }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const res = await POST(req);
+    const json = await getJson(res);
+
+    expect(res.status).toBe(200);
+    expect(json).toHaveProperty('data');
+    expect(json).toHaveProperty('attestation', 'sig123');
+  });
+
+  it('returns 502 when gateway is unreachable', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('connect EREFUSED'));
+
+    const req = makeRequest('/api/dispatch/rpc', {
+      method: 'POST',
+      body: JSON.stringify({ chainId: 42161, body: {} }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(502);
+  });
+
+  it('defaults chainId to 42161 when omitted', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({}), { status: 200 }),
+    );
+
+    const req = makeRequest('/api/dispatch/rpc', {
+      method: 'POST',
+      body: JSON.stringify({ body: { method: 'eth_blockNumber' } }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    await POST(req);
+
+    const fetchedUrl = (mockFetch.mock.calls[0] as [string])[0];
+    expect(fetchedUrl).toContain('/rpc/42161');
+  });
+});
+
+// ============================================================
+// /api/dispatch/provider — chainId validation
+// ============================================================
+
+describe('/api/dispatch/provider', () => {
+  let POST: (req: Request) => Promise<Response>;
+
+  beforeEach(async () => {
+    const mod = await import('@/app/api/dispatch/provider/route');
+    POST = mod.POST as (req: Request) => Promise<Response>;
+  });
+
+  it('rejects non-numeric chainId', async () => {
+    const req = makeRequest('/api/dispatch/provider', {
+      method: 'POST',
+      body: JSON.stringify({ chainId: 'evil/path', body: {}, receipt: '' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
+  it('forwards valid request and returns result', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ result: '0x1' }), { status: 200 }),
+    );
+
+    const req = makeRequest('/api/dispatch/provider', {
+      method: 'POST',
+      body: JSON.stringify({ chainId: 42161, body: { method: 'eth_blockNumber' }, receipt: 'tap-receipt' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+  });
+});
+
+// ============================================================
+// Security: input validation across routes
+// ============================================================
+
+describe('Security: address validation', () => {
+  it('/api/ens rejects GraphQL-injectable address (no format check)', async () => {
+    const mod = await import('@/app/api/ens/route');
+    const GET = mod.GET as (req: Request) => Promise<Response>;
+
+    // Attempt to inject GraphQL syntax via address param
+    const req = makeRequest('/api/ens?address=0x0000%22%7D%7B%20id%20%7D');
+    const res = await GET(req);
+    const json = await getJson(res);
+
+    // Invalid format — should not reach ENS query; returns null
+    expect(res.status).toBe(200);
+    expect(json.ensName).toBeNull();
+    expect(mockEnsQuery).not.toHaveBeenCalled();
+  });
+
+  it('/api/payments rejects non-address receiver', async () => {
+    const mod = await import('@/app/api/payments/route');
+    const GET = mod.GET as (req: Request) => Promise<Response>;
+
+    const req = makeRequest('/api/payments?receiver=0xnot-an-address');
+    const res = await GET(req);
+
+    expect(res.status).toBe(400);
+    expect(mockSubgraphQuery).not.toHaveBeenCalled();
+  });
+
+  it('/api/portfolio rejects invalid address', async () => {
+    const mod = await import('@/app/api/portfolio/route');
+    const GET = mod.GET as (req: Request) => Promise<Response>;
+
+    const req = makeRequest('/api/portfolio?address=notanaddress&type=delegator');
+    const res = await GET(req);
+    expect(res.status).toBe(400);
+  });
+
+  it('/api/subgraph-search rejects query with GraphQL special chars', async () => {
+    const mod = await import('@/app/api/subgraph-search/route');
+    const GET = mod.GET as (req: Request) => Promise<Response>;
+
+    const req = makeRequest('/api/subgraph-search?q=uniswap%22%7D%7Badmin');
+    const res = await GET(req);
+    const json = await getJson(res);
+
+    expect(res.status).toBe(200);
+    expect(json.data).toEqual([]); // allowlist blocks special chars
+    expect(mockSubgraphQuery).not.toHaveBeenCalled();
   });
 });

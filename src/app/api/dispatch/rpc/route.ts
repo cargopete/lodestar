@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 const GATEWAY = 'http://167.235.29.213:8080';
 
 export async function POST(request: NextRequest) {
-  const { chainId = 42161, body } = await request.json();
+  const { chainId: rawChainId = 42161, body } = await request.json();
+  const chainId = Number(rawChainId);
+  if (!Number.isFinite(chainId) || chainId <= 0 || !Number.isInteger(chainId)) {
+    return NextResponse.json({ error: 'Invalid chainId' }, { status: 400 });
+  }
 
   let resp: Response;
   try {

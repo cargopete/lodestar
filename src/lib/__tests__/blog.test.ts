@@ -56,6 +56,8 @@ describe('getPostSlugs', () => {
   it('returns slugs from .md and .mdx files', () => {
     mockExistsSync.mockReturnValue(true);
     mockReaddirSync.mockReturnValue(['alpha.md', 'beta.mdx', 'image.png']);
+    mockReadFileSync.mockReturnValue('raw');
+    mockMatter.mockReturnValue(defaultMatterResult());
     const slugs = getPostSlugs();
     expect(slugs).toContain('alpha');
     expect(slugs).toContain('beta');
@@ -137,9 +139,12 @@ describe('getAllPosts', () => {
     mockExistsSync.mockReturnValue(true);
     mockReaddirSync.mockReturnValue(['old.md', 'new.md']);
     mockReadFileSync.mockReturnValue('raw');
+    // getPostSlugs() calls matter once per slug (draft check), then getAllPosts() calls it again
     mockMatter
-      .mockReturnValueOnce(defaultMatterResult({ title: 'Old', date: '2024-01-01' }))
-      .mockReturnValueOnce(defaultMatterResult({ title: 'New', date: '2026-01-01' }));
+      .mockReturnValueOnce(defaultMatterResult({ title: 'Old', date: '2024-01-01' })) // getPostSlugs: old
+      .mockReturnValueOnce(defaultMatterResult({ title: 'New', date: '2026-01-01' })) // getPostSlugs: new
+      .mockReturnValueOnce(defaultMatterResult({ title: 'Old', date: '2024-01-01' })) // getAllPosts: old
+      .mockReturnValueOnce(defaultMatterResult({ title: 'New', date: '2026-01-01' })); // getAllPosts: new
 
     const posts = getAllPosts();
     expect(posts[0].date).toBe('2026-01-01');

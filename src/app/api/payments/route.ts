@@ -150,6 +150,10 @@ export async function GET(request: NextRequest) {
 
   const receiver = request.nextUrl.searchParams.get('receiver');
 
+  if (receiver && !/^0x[0-9a-f]{40}$/.test(receiver.toLowerCase())) {
+    return NextResponse.json({ error: 'Invalid receiver address format' }, { status: 400 });
+  }
+
   try {
     if (receiver) {
       const queries = receiverQuery(receiver);

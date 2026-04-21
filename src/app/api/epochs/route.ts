@@ -6,7 +6,7 @@ import type { EpochHistoryResponse } from '@/lib/queries';
 export async function GET(request: NextRequest) {
   const count = Math.min(
     Number(request.nextUrl.searchParams.get('count') ?? 30),
-    100
+    400
   );
 
   if (!hasSubgraphAccess()) {

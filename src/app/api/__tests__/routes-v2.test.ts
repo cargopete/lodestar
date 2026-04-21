@@ -18,6 +18,8 @@ vi.mock('@/lib/cache', () => ({
   cacheGet: (...args: unknown[]) => mockCacheGet(...args),
   cacheSet: vi.fn(),
   redis: { get: vi.fn(), set: vi.fn(), ping: vi.fn().mockResolvedValue('PONG') },
+  hasRedis: vi.fn(() => true),
+  getRedis: vi.fn(() => ({ ping: vi.fn().mockResolvedValue('PONG') })),
 }));
 
 // @/lib/subgraph
@@ -402,12 +404,18 @@ describe('/api/payments', () => {
       .mockResolvedValueOnce({ paymentsEscrowTransactions: [] })
       .mockResolvedValueOnce({ graphTallyTokensCollecteds: [] });
 
-    const req = makeRequest('/api/payments?receiver=0xindexer');
+    const req = makeRequest('/api/payments?receiver=0x1234000000000000000000000000000000001234');
     const res = await GET(req);
     const json = await getJson(res);
 
     expect(res.status).toBe(200);
     expect(json).toHaveProperty('data');
+  });
+
+  it('returns 400 for invalid receiver address format', async () => {
+    const req = makeRequest('/api/payments?receiver=0xindexer');
+    const res = await GET(req);
+    expect(res.status).toBe(400);
   });
 });
 
@@ -1059,6 +1067,9 @@ describe('/api/health', () => {
   let GET: (req: Request) => Promise<Response>;
 
   beforeEach(async () => {
+    // Reset mockDb queue — vi.clearAllMocks() does not flush onceImplementations
+    mockDb.mockReset();
+    mockDb.mockResolvedValue([]);
     const mod = await import('@/app/api/health/route');
     GET = mod.GET as (req: Request) => Promise<Response>;
   });

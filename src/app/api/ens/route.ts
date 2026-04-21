@@ -7,6 +7,9 @@ export async function GET(request: NextRequest) {
   if (!address) {
     return NextResponse.json({ error: 'address required' }, { status: 400 });
   }
+  if (!/^0x[0-9a-f]{40}$/.test(address)) {
+    return NextResponse.json({ ensName: null });
+  }
 
   if (!hasSubgraphAccess()) {
     return NextResponse.json({ ensName: null });
