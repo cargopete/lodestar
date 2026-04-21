@@ -36,6 +36,7 @@ interface EpochFee {
 interface QuarterFee {
   label: string;
   fees: number;
+  epochCount: number;
   isCurrent: boolean;
 }
 
@@ -86,7 +87,7 @@ export function QueryFeesChart() {
   const quarterData: QuarterFee[] = useMemo(() => {
     if (!isYearly || !epochDuration) return [];
     const now = Date.now();
-    const byQuarter = new Map<string, { fees: number; year: number; q: number }>();
+    const byQuarter = new Map<string, { fees: number; year: number; q: number; epochCount: number }>();
 
     for (const ep of epochs) {
       const epochsAgo = latestEpochId - Number(ep.id);
@@ -95,8 +96,9 @@ export function QueryFeesChart() {
       const year = date.getFullYear();
       const q = Math.floor(date.getMonth() / 3) + 1; // 1–4
       const key = `${year}-Q${q}`;
-      const entry = byQuarter.get(key) ?? { fees: 0, year, q };
+      const entry = byQuarter.get(key) ?? { fees: 0, year, q, epochCount: 0 };
       entry.fees += weiToGRT(ep.totalQueryFees);
+      entry.epochCount += 1;
       byQuarter.set(key, entry);
     }
 
@@ -104,6 +106,7 @@ export function QueryFeesChart() {
     return sorted.map(([, v], i) => ({
       label: `Q${v.q} ${v.year}`,
       fees: v.fees,
+      epochCount: v.epochCount,
       isCurrent: i === sorted.length - 1,
     }));
   }, [epochs, latestEpochId, epochDuration, isYearly]);
@@ -116,7 +119,17 @@ export function QueryFeesChart() {
 
   const currentQ = quarterData[quarterData.length - 1]?.fees ?? 0;
   const prevQ = quarterData[quarterData.length - 2]?.fees ?? 0;
-  const quarterDelta = prevQ > 0 ? ((currentQ - prevQ) / prevQ) * 100 : 0;
+  // Compare daily averages so a partial current quarter isn't penalised vs a full previous one
+  const epochDays = epochDuration / 86400;
+  const currentQDailyAvg =
+    (quarterData[quarterData.length - 1]?.epochCount ?? 0) > 0
+      ? currentQ / ((quarterData[quarterData.length - 1]!.epochCount) * epochDays)
+      : 0;
+  const prevQDailyAvg =
+    (quarterData[quarterData.length - 2]?.epochCount ?? 0) > 0
+      ? prevQ / ((quarterData[quarterData.length - 2]!.epochCount) * epochDays)
+      : 0;
+  const quarterDelta = prevQDailyAvg > 0 ? ((currentQDailyAvg - prevQDailyAvg) / prevQDailyAvg) * 100 : 0;
   const quarterDeltaPositive = quarterDelta >= 0;
 
   const isLoading = epochsLoading || !epochLength;
@@ -165,7 +178,7 @@ export function QueryFeesChart() {
                 <p className="text-[10px] text-[var(--text-faint)] font-mono">{formatGRTFull(prevQ)} GRT</p>
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)] flex flex-col justify-center items-center">
-                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">QoQ Change</p>
+                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">QoQ Change (So Far)</p>
                 <p className={`text-lg font-mono font-semibold ${quarterDeltaPositive ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
                   {quarterDeltaPositive ? '+' : ''}{quarterDelta.toFixed(1)}%
                 </p>

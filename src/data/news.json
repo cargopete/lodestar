@@ -1,5 +1,18 @@
 [
   {
+    "id": "discord-2026-04-21-council-marc-andre",
+    "type": "news",
+    "title": "Marc-André Dumas joins The Graph Council",
+    "summary": "The Graph Foundation welcomes Marc-André Dumas to the Council, bringing deep technical experience from oracle systems at MakerDAO and Chronicle Labs, and founding his own infrastructure company.",
+    "body": "The Graph Foundation welcomes Marc-André Dumas to the Council, bringing a deeply technical perspective shaped by years of building critical infrastructure across both web2 and web3.\n\nFrom working on oracle systems at MakerDAO and Chronicle Labs to founding his own infrastructure company, his experience sits right at the intersection of reliability, scalability, and decentralization.\n\nAs the network grows, governance decisions require both strategic vision and real technical understanding. This is exactly the kind of perspective being added.",
+    "url": "https://forum.thegraph.com/t/introducing-new-council-member-marc-andre-dumas/6919",
+    "timestamp": "2026-04-21T15:28:00Z",
+    "tags": ["governance", "council"],
+    "metadata": {
+      "author": "GhostymRole | Official Mod"
+    }
+  },
+  {
     "id": "discord-2026-04-15-gateway-upgrade",
     "type": "news",
     "title": "Gateway upgrade will penalize old graph-node / indexer-service versions",

@@ -60,8 +60,8 @@ export const FEED_TYPE_CONFIG: Record<
   },
   news: {
     label: 'News',
-    borderColor: '#f97316',
-    bgColor: 'rgba(249, 115, 22, 0.12)',
+    borderColor: '#d4a76a',
+    bgColor: 'rgba(212, 167, 106, 0.12)',
   },
   issue: {
     label: 'Issue',
