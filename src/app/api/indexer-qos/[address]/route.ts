@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { qosOracleQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { log } from '@/lib/logger';
 
 const ETH_ADDRESS_RE = /^0x[0-9a-f]{40}$/i;
 
@@ -125,7 +126,7 @@ export async function GET(
       headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200' },
     });
   } catch (error) {
-    console.error('Indexer QoS error (non-critical):', error);
+    log.api.error({ err: error }, 'Indexer QoS error (non-critical)');
     return NextResponse.json({ data: { qos: [] } }, {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
     });

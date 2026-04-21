@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { IndexersResponse } from '@/lib/queries';
+import { log } from '@/lib/logger';
 
 const VALID_ORDER_BY = new Set([
   'stakedTokens', 'delegatedTokens', 'allocatedTokens',
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Indexers error:', error);
+    log.api.error({ err: error }, 'Indexers error');
     return NextResponse.json({ error: 'Failed to fetch indexers' }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { db, hasDbAccess } from '@/lib/db';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT } from '@/lib/utils';
 import { cached } from '@/lib/cache';
+import { log } from '@/lib/logger';
 
 interface DelegatorStake {
   stakedTokens: string;
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Rewards history error:', error);
+    log.api.error({ err: error }, 'Rewards history error');
     return NextResponse.json({ error: 'Failed to fetch rewards history' }, { status: 500 });
   }
 }

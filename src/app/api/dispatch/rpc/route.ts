@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const GATEWAY = 'http://167.235.29.213:8080';
+const GATEWAY = process.env.DISPATCH_GATEWAY_URL ?? 'http://167.235.29.213:8080';
 
 export async function POST(request: NextRequest) {
   const { chainId: rawChainId = 42161, body } = await request.json();

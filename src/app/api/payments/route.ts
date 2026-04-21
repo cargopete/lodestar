@@ -7,6 +7,7 @@ import type {
   GraphTallyTokensCollectedResponse,
   PaymentsOverview,
 } from '@/lib/queries';
+import { log } from '@/lib/logger';
 
 const ESCROW_ACCOUNTS_QUERY = `{
   paymentsEscrowAccounts(
@@ -187,7 +188,7 @@ export async function GET(request: NextRequest) {
       headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
     });
   } catch (error) {
-    console.error('Payments API error:', error);
+    log.api.error({ err: error }, 'Payments API error');
     return NextResponse.json({ error: 'Failed to fetch payment data' }, { status: 500 });
   }
 }

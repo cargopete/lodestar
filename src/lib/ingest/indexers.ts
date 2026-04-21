@@ -1,5 +1,6 @@
 import type { DbClient } from '../db';
 import type { EnrichedIndexer } from '../enriched';
+import { log } from '../logger';
 
 /**
  * Write enriched indexers to Postgres (upsert current state)
@@ -62,7 +63,7 @@ export async function writeIndexers(
         INSERT INTO parameter_changes ${sql(paramChanges)}
       `;
     } catch (e) {
-      console.warn('Parameter changes insert failed:', e);
+      log.ingest.warn({ err: e }, 'Parameter changes insert failed');
     }
   }
 
@@ -136,7 +137,7 @@ export async function writeIndexers(
       await sql`INSERT INTO indexer_snapshots ${sql(batch)}`;
       snapshotCount += batch.length;
     } catch (e) {
-      console.warn('Indexer snapshot insert failed:', e);
+      log.ingest.warn({ err: e }, 'Indexer snapshot insert failed');
     }
   }
 

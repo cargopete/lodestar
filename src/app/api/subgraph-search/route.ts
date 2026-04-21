@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { log } from '@/lib/logger';
 
 interface SubgraphResult {
   id: string;
@@ -121,7 +122,7 @@ export async function GET(request: NextRequest) {
       },
     );
   } catch (error) {
-    console.error('Subgraph search error:', error);
+    log.api.error({ err: error }, 'Subgraph search error');
     return NextResponse.json({ error: 'Search failed' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT } from '@/lib/utils';
+import { log } from '@/lib/logger';
 
 const ETH_ADDRESS_RE = /^0x[0-9a-f]{40}$/i;
 // Arbitrum avg block time ~0.25s → 4 blocks/sec
@@ -69,7 +70,7 @@ export async function GET(
       headers: { 'Cache-Control': 'public, s-maxage=21600, stale-while-revalidate=43200' },
     });
   } catch (error) {
-    console.error('Indexer stake history error:', error);
+    log.api.error({ err: error }, 'Indexer stake history error');
     return NextResponse.json({ error: 'Failed to fetch stake history' }, { status: 500 });
   }
 }

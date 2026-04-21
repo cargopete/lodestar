@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { log } from '@/lib/logger';
 
 interface RawSignal {
   id: string;
@@ -67,7 +68,7 @@ export async function GET(
       headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
     });
   } catch (error) {
-    console.error('Subgraph curation error:', error);
+    log.api.error({ err: error }, 'Subgraph curation error');
     return NextResponse.json({ error: 'Failed to fetch curation data' }, { status: 500 });
   }
 }

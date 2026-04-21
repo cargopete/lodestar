@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { checkOracleEligibility, type OracleEligibility } from '@/lib/reo-contract';
+import { log } from '@/lib/logger';
 
 // Rewards Eligibility Oracle — Direct Contract Read
 //
@@ -139,7 +140,7 @@ async function assessEligibility(address: string): Promise<REOResponse> {
   try {
     return await assessFromOracle(address);
   } catch (err) {
-    console.warn(`REO oracle call failed for ${address}, falling back to heuristics:`, err);
+    log.api.warn({ err, address }, 'REO oracle call failed, falling back to heuristics');
     return assessFromHeuristics(address);
   }
 }

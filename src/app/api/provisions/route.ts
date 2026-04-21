@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { IndexerProvisionsResponse, ServiceProvisionsResponse } from '@/lib/queries';
+import { log } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   if (!hasSubgraphAccess()) {
@@ -127,7 +128,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Provisions error:', error);
+    log.api.error({ err: error }, 'Provisions error');
     return NextResponse.json({ error: 'Failed to fetch provisions' }, { status: 500 });
   }
 }

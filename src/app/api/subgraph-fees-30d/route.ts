@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { log } from '@/lib/logger';
 
 interface AllocationSlim {
   id: string;
@@ -165,7 +166,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('30-day fees aggregation error:', error);
+    log.api.error({ err: error }, '30-day fees aggregation error');
     return NextResponse.json({ error: 'Failed to compute 30-day fees' }, { status: 500 });
   }
 }

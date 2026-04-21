@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { cached } from '@/lib/cache';
+import { log } from '@/lib/logger';
 
 export interface DelegationFlowPoint {
   date: string;
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
       },
     );
   } catch (error) {
-    console.error('Delegation flows error:', error);
+    log.api.error({ err: error }, 'Delegation flows error');
     return NextResponse.json({ data: [] });
   }
 }

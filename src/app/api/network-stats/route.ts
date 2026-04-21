@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { NetworkStatsResponse } from '@/lib/queries';
+import { log } from '@/lib/logger';
 
 const QUERY = `{
   graphNetwork(id: "1") {
@@ -54,7 +55,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Network stats error:', error);
+    log.api.error({ err: error }, 'Network stats error');
     return NextResponse.json({ error: 'Failed to fetch network stats' }, { status: 500 });
   }
 }

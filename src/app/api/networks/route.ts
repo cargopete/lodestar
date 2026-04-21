@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { NetworksRegistry } from '@pinax/graph-networks-registry';
 import { cached } from '@/lib/cache';
+import { log } from '@/lib/logger';
 
 export interface NetworkInfo {
   id: string;
@@ -37,7 +38,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Networks registry error:', error);
+    log.api.error({ err: error }, 'Networks registry error');
     return NextResponse.json({ error: 'Failed to fetch networks registry' }, { status: 500 });
   }
 }

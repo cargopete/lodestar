@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { log } from '@/lib/logger';
 
 export async function GET(
   _request: NextRequest,
@@ -118,7 +119,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Indexer detail error:', error);
+    log.api.error({ err: error }, 'Indexer detail error');
     return NextResponse.json({ error: 'Failed to fetch indexer' }, { status: 500 });
   }
 }

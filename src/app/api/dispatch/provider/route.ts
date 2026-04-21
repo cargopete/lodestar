@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const PROVIDER = 'http://167.235.29.213:7700';
+const PROVIDER = process.env.DISPATCH_PROVIDER_URL ?? 'http://167.235.29.213:7700';
 
 export async function POST(request: NextRequest) {
   const { chainId: rawChainId = 42161, body, receipt } = await request.json();

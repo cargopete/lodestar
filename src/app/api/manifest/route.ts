@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { parseManifest } from '@/lib/manifest';
+import { log } from '@/lib/logger';
 
 const IPFS_HASH_RE = /^Qm[1-9A-HJ-NP-Za-km-z]{44}$/;
 const IPFS_GATEWAY = 'https://ipfs.network.thegraph.com/api/v0/cat';
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error(`Manifest analysis error for ${hash}:`, error);
+    log.api.error({ err: error, hash }, 'Manifest analysis error');
     return NextResponse.json(
       { error: 'Failed to fetch or parse manifest' },
       { status: 500 },

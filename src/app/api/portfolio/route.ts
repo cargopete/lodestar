@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { DelegatorPortfolioResponse, CuratorPortfolioResponse } from '@/lib/queries';
+import { log } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get('address')?.toLowerCase();
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Portfolio error:', error);
+    log.api.error({ err: error }, 'Portfolio error');
     return NextResponse.json({ error: 'Failed to fetch portfolio' }, { status: 500 });
   }
 }

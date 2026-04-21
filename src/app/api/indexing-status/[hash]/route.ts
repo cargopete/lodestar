@@ -7,6 +7,7 @@ import {
   type DeploymentIndexingStatus,
   type IndexerStatusResult,
 } from '@/lib/indexing-status';
+import { log } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Subgraph types for allocation + deployment resolution
@@ -205,7 +206,7 @@ export async function GET(
     if (message === 'Deployment not found') {
       return NextResponse.json({ error: 'Deployment not found' }, { status: 404 });
     }
-    console.error('Indexing status error:', error);
+    log.api.error({ err: error }, 'Indexing status error');
     return NextResponse.json(
       { error: 'Failed to fetch indexing status' },
       { status: 500 },

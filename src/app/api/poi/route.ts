@@ -3,6 +3,7 @@ import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { computeOverview, computeDeploymentDetail } from '@/lib/poi';
 import type { ClosedAllocation } from '@/lib/poi';
+import { log } from '@/lib/logger';
 
 interface AllocationsResponse {
   allocations: ClosedAllocation[];
@@ -131,7 +132,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('POI query error:', error);
+    log.api.error({ err: error }, 'POI query error');
     return NextResponse.json({ error: 'Failed to fetch POI data' }, { status: 500 });
   }
 }

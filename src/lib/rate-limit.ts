@@ -6,6 +6,7 @@ const redis = Redis.fromEnv();
 // [path pattern, requests per minute]
 const LIMITS: Array<[RegExp, number]> = [
   [/^\/api\/cron\//, 20],
+  [/^\/api\/lodie\/chat/, 10],
   [/^\/api\/indexer-status\//, 20],
   [/^\/api\/portfolio/, 30],
   [/^\/api\/feed/, 20],

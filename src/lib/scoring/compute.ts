@@ -8,6 +8,7 @@
  */
 
 import type { DbClient } from '../db';
+import { log } from '../logger';
 import { computeBounds } from './normalize';
 import {
   scoreAllocationBreadth,
@@ -89,7 +90,7 @@ export async function computeMonthlyScores(
   const nextYear = month === 12 ? year + 1 : year;
   const periodEnd = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
 
-  console.log(`Computing monthly scores for ${periodStart} to ${periodEnd}`);
+  log.cron.info(`Computing monthly scores for ${periodStart} to ${periodEnd}`);
 
   // ── Gather raw metrics from Postgres ──────────────────
 
@@ -106,7 +107,7 @@ export async function computeMonthlyScores(
   );
 
   if (indexers.length === 0) {
-    console.log('No indexers found — skipping score computation');
+    log.cron.warn('No indexers found — skipping score computation');
     return { scored: 0, entries: [] };
   }
 
@@ -364,7 +365,7 @@ export async function computeMonthlyScores(
     await sql`INSERT INTO indexer_scores ${sql(batch)}`;
   }
 
-  console.log(`Scored ${scored.length} indexers for ${periodStart}. Top: ${scored[0]?.indexer_address} (${scored[0]?.final_score})`);
+  log.cron.info({ count: scored.length, top: scored[0]?.indexer_address, score: scored[0]?.final_score, period: periodStart }, 'Monthly scores computed');
 
   return { scored: scored.length, entries: scored as LeaderboardEntry[] };
 }

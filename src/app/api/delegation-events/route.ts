@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { delegationEventsQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { log } from '@/lib/logger';
 
 interface DelegationEvent {
   id: string;
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Delegation events error:', error);
+    log.api.error({ err: error }, 'Delegation events error');
     return NextResponse.json({ data: { delegationEvents: [] } });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { hasSubgraphAccess, horizonPerfQuery } from '@/lib/subgraph';
 import type { IndexerTrendsResponse, RewardDailyAgg, QueryFeeDailyAgg } from '@/lib/queries';
+import { log } from '@/lib/logger';
 
 /**
  * GET /api/indexer-trends?indexer=0x...&days=30
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     // Supplementary source — degrade gracefully
-    console.error('Indexer trends error (non-critical):', error);
+    log.api.error({ err: error }, 'Indexer trends error (non-critical)');
     return NextResponse.json({
       data: { rewards: [], queryFees: [] } as IndexerTrendsResponse,
     }, {

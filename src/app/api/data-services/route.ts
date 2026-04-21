@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { DataServicesResponse } from '@/lib/queries';
+import { log } from '@/lib/logger';
 
 const QUERY = `{
   dataServices(first: 20, orderBy: totalTokensProvisioned, orderDirection: desc) {
@@ -36,7 +37,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Data services error:', error);
+    log.api.error({ err: error }, 'Data services error');
     return NextResponse.json({ error: 'Failed to fetch data services' }, { status: 500 });
   }
 }

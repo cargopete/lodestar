@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
+import { log } from '@/lib/logger';
 
 const DEFILLAMA_URL = 'https://api.llama.fi/protocol/the-graph';
 
@@ -50,7 +51,7 @@ export async function GET() {
       }
     );
   } catch (error) {
-    console.error('TVL proxy error:', error);
+    log.api.error({ err: error }, 'TVL proxy error');
     return NextResponse.json({ error: 'Failed to fetch TVL', tvl: 0 }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { cached } from '@/lib/cache';
+import { log } from '@/lib/logger';
 
 export interface TokenMetricPoint {
   epoch: number;
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
       },
     );
   } catch (error) {
-    console.error('Token metrics error:', error);
+    log.api.error({ err: error }, 'Token metrics error');
     return NextResponse.json({ data: [] });
   }
 }

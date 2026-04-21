@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { log } from '@/lib/logger';
 
 // Block requests to private/loopback/link-local ranges (SSRF prevention)
 function isSafeIndexerUrl(urlStr: string): boolean {
@@ -297,7 +298,7 @@ export async function GET(
       { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } },
     );
   } catch (error) {
-    console.error('Indexer status error:', error);
+    log.api.error({ err: error }, 'Indexer status error');
     return NextResponse.json({ error: 'Failed to fetch indexer status' }, { status: 500 });
   }
 }

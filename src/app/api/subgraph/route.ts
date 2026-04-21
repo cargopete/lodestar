@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { log } from '@/lib/logger';
 
 // The Graph Network subgraph on Arbitrum One
 // Requires a Graph API key from https://thegraph.com/studio/apikeys/
@@ -289,7 +290,7 @@ export async function POST(request: NextRequest) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Subgraph error response:', response.status, errorText);
+        log.api.error({ status: response.status, body: errorText }, 'Subgraph error response');
         throw new Error(`Subgraph request failed: ${response.status}`);
       }
 
@@ -297,7 +298,7 @@ export async function POST(request: NextRequest) {
 
       // Check for GraphQL errors - fall through to mock data if errors
       if (data.errors) {
-        console.error('GraphQL errors:', JSON.stringify(data.errors, null, 2));
+        log.api.error({ errors: data.errors }, 'GraphQL errors');
       } else {
         return NextResponse.json(data, {
           headers: {
@@ -308,7 +309,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return mock data for development
-    console.log('No GRAPH_API_KEY found, using mock data');
+    log.api.info({}, 'No GRAPH_API_KEY found, using mock data');
 
     // Determine which mock data to return based on the query
     if (query.includes('graphNetwork')) {
@@ -578,7 +579,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Subgraph proxy error:', error);
+    log.api.error({ err: error }, 'Subgraph proxy error');
     return NextResponse.json(
       { error: 'Failed to fetch from subgraph' },
       { status: 500 }

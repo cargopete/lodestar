@@ -31,6 +31,7 @@ const logger = pino({
 
 // Pre-built child loggers for common modules
 export const log = {
+  api: logger.child({ module: 'api' }),
   cron: logger.child({ module: 'cron' }),
   ingest: logger.child({ module: 'ingest' }),
   cache: logger.child({ module: 'cache' }),

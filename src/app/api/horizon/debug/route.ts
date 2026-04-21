@@ -5,7 +5,7 @@
  * Reports exactly where the connection fails (TCP / TLS / HTTP).
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 120;
 import * as net from 'node:net';
@@ -55,7 +55,12 @@ function tlsProbe(host: string, port: number, timeoutMs = 5000): Promise<{ ok: b
   });
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const url = AMP_ENDPOINT ? new URL(`${AMP_ENDPOINT}/`) : null;
   const host = url?.hostname ?? '(not set)';
   const port = url ? (parseInt(url.port || '443', 10)) : 443;

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT } from '@/lib/utils';
+import { log } from '@/lib/logger';
 
 interface RawSignalTx {
   timestamp: number;
@@ -109,7 +110,7 @@ export async function GET(
       headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200' },
     });
   } catch (error) {
-    console.error('Subgraph history error:', error);
+    log.api.error({ err: error }, 'Subgraph history error');
     return NextResponse.json({ error: 'Failed to fetch subgraph history' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { EpochHistoryResponse } from '@/lib/queries';
+import { log } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const count = Math.min(
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Epochs error:', error);
+    log.api.error({ err: error }, 'Epochs error');
     return NextResponse.json({ error: 'Failed to fetch epochs' }, { status: 500 });
   }
 }
