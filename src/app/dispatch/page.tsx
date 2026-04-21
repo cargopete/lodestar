@@ -65,14 +65,31 @@ function decodeResult(method: string, result: unknown): string | null {
 // ── RPC method config ────────────────────────────────────────────────────────
 
 const METHODS = [
-  { label: 'eth_blockNumber', params: '[]' },
-  { label: 'eth_chainId', params: '[]' },
-  { label: 'eth_getBalance', params: '["0x1234567890123456789012345678901234567890", "latest"]' },
-  { label: 'eth_getLogs', params: '[{"fromBlock":"latest","toBlock":"latest","address":"0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"}]' },
-  { label: 'eth_gasPrice', params: '[]' },
+  { label: 'eth_blockNumber',          params: '[]' },
+  { label: 'eth_chainId',              params: '[]' },
+  { label: 'eth_getBalance',           params: '["0x1234567890123456789012345678901234567890", "latest"]' },
+  { label: 'eth_getLogs',              params: '[{"fromBlock":"latest","toBlock":"latest","address":"0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"}]' },
+  { label: 'eth_gasPrice',             params: '[]' },
+  { label: 'eth_call',                 params: '[{"to":"0x82aF49447D8a07e3bd95BD0d56f35241523fBab1","data":"0x70a08231000000000000000000000000f977814e90da44bfa03b6295a0616a897441acec"}, "latest"]' },
+  { label: 'eth_getStorageAt',         params: '["0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", "0x0", "latest"]' },
+  { label: 'eth_getTransactionByHash', params: '["0x0000000000000000000000000000000000000000000000000000000000000000"]' },
+  { label: 'eth_getTransactionReceipt',params: '["0x0000000000000000000000000000000000000000000000000000000000000000"]' },
+  { label: 'eth_getBlockByHash',       params: '["0x0000000000000000000000000000000000000000000000000000000000000000", false]' },
+  { label: 'eth_getBlockByNumber',     params: '["latest", false]' },
+  { label: 'eth_getCode',              params: '["0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", "latest"]' },
+  { label: 'eth_estimateGas',          params: '[{"to":"0x82aF49447D8a07e3bd95BD0d56f35241523fBab1","data":"0x"}]' },
+  { label: 'eth_getTransactionCount',  params: '["0x1234567890123456789012345678901234567890", "latest"]' },
+  { label: 'eth_sendRawTransaction',   params: '["0x"]' },
+  { label: 'eth_syncing',              params: '[]' },
+  { label: 'eth_feeHistory',           params: '[4, "latest", [25, 75]]' },
+  { label: 'eth_maxPriorityFeePerGas', params: '[]' },
+  { label: 'net_version',              params: '[]' },
+  { label: 'web3_clientVersion',       params: '[]' },
 ];
 
-// ── RPC Playground ────────────────────────────────────────────────────────────
+const METHODS_INITIAL_COUNT = 5;
+
+// ── RPC Portal ───────────────────────────────────────────────────────────────
 
 const PRICE_PER_CU = 4_000_000_000_000n; // GRT wei per compute unit
 
@@ -103,6 +120,9 @@ function Playground() {
   const [result, setResult] = useState<{ data: unknown; attestation: string | null; feePaid: bigint } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rawOpen, setRawOpen] = useState(false);
+  const [methodsExpanded, setMethodsExpanded] = useState(false);
+
+  const visibleMethods = methodsExpanded ? METHODS : METHODS.slice(0, METHODS_INITIAL_COUNT);
 
   const handleMethodChange = (idx: number) => {
     setMethodIdx(idx);
@@ -176,7 +196,7 @@ function Playground() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>RPC Playground</CardTitle>
+        <CardTitle>RPC Portal</CardTitle>
         <p className="text-[12px] text-[var(--text-muted)] mt-0.5">
           Connect your wallet · sign a TAP receipt · pay the provider directly
         </p>
@@ -185,7 +205,7 @@ function Playground() {
         <div className="space-y-3">
           {/* Method selector */}
           <div className="flex flex-wrap gap-2">
-            {METHODS.map((m, i) => (
+            {visibleMethods.map((m, i) => (
               <button
                 key={m.label}
                 onClick={() => handleMethodChange(i)}
@@ -199,6 +219,12 @@ function Playground() {
                 {m.label}
               </button>
             ))}
+            <button
+              onClick={() => setMethodsExpanded(e => !e)}
+              className="px-2.5 py-1 rounded-[var(--radius-badge)] text-[11px] font-mono bg-[var(--bg-elevated)] text-[var(--accent)] hover:opacity-80 transition-opacity"
+            >
+              {methodsExpanded ? '− show less' : `+${METHODS.length - METHODS_INITIAL_COUNT} more`}
+            </button>
           </div>
 
           {/* Params */}
@@ -595,17 +621,10 @@ function ConsumerStatus() {
 
 // ── Provider Methods ─────────────────────────────────────────────────────────
 
-const ALL_METHODS = [
-  'eth_blockNumber', 'eth_chainId', 'eth_getBalance', 'eth_call', 'eth_getLogs',
-  'eth_getStorageAt', 'eth_gasPrice', 'eth_getTransactionByHash', 'eth_getTransactionReceipt',
-  'eth_getBlockByHash', 'eth_getBlockByNumber', 'eth_getCode', 'eth_estimateGas',
-  'eth_getTransactionCount', 'eth_sendRawTransaction', 'eth_syncing', 'eth_feeHistory',
-  'eth_maxPriorityFeePerGas', 'net_version', 'web3_clientVersion',
-];
-
 function ProviderMethods() {
   const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? ALL_METHODS : ALL_METHODS.slice(0, 5);
+  const allLabels = METHODS.map(m => m.label);
+  const visible = expanded ? allLabels : allLabels.slice(0, 5);
   return (
     <div className="flex flex-wrap gap-1.5">
       {visible.map((m) => (
@@ -615,7 +634,7 @@ function ProviderMethods() {
         onClick={() => setExpanded(!expanded)}
         className="px-1.5 py-0.5 rounded-[var(--radius-badge)] bg-[var(--bg-elevated)] text-[10px] font-mono text-[var(--accent)] hover:opacity-80 transition-opacity"
       >
-        {expanded ? '− show less' : `+${ALL_METHODS.length - 5} more`}
+        {expanded ? '− show less' : `+${allLabels.length - 5} more`}
       </button>
     </div>
   );
