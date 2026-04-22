@@ -107,6 +107,7 @@ export function shortenAddress(address: string, chars = 4): string {
 export const GATEWAY_ALIASES: Record<string, string> = {
   '0xdde4cffd3d9052a9cb618fc05a1cd02be1f2f467': 'E&N Gateway',
   '0xf6fcc27aaf1fcd8b254498c9794451d82afc673e': 'Dispatch Gateway',
+  '0x7d14ae5f20cc2f6421317386aa8e79e8728353d9': 'Lodestar Gateway',
 };
 
 /**
