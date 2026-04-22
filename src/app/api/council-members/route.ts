@@ -3,10 +3,12 @@ import { cached } from '@/lib/cache';
 import { ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
 
 const SNAPSHOT_GRAPHQL = 'https://hub.snapshot.org/graphql';
+const SCORE_API = 'https://score.snapshot.org/api/scores';
 const SNAPSHOT_SPACE = 'council.graphprotocol.eth';
 const PROPOSALS_FOR_STATS = 100;
+const ELIGIBILITY_BATCH = 10; // concurrent calls to score API per batch
 
-// Canonical council seats — multisig owners as of April 2026
+// Canonical council seats — current multisig owners
 // Multisig: 0x48301Fe520f72994d32eAd72E2B6A8447873CF50
 const COUNCIL_SEATS = [
   '0xDc524F119a00CaB2BE368388f55Edb9Cb7071397',
@@ -22,6 +24,11 @@ const COUNCIL_SEATS = [
   '0x68AfAbC57e048b29E0741816167777c148a02b57',
 ].map((a) => a.toLowerCase());
 
+interface SpaceStrategy {
+  name: string;
+  params: Record<string, unknown>;
+}
+
 async function snapshotPost<T>(query: string): Promise<T> {
   const res = await fetch(SNAPSHOT_GRAPHQL, {
     method: 'POST',
@@ -31,6 +38,49 @@ async function snapshotPost<T>(query: string): Promise<T> {
   if (!res.ok) throw new Error(`Snapshot error ${res.status}`);
   const json = await res.json();
   return json.data as T;
+}
+
+async function fetchSpaceInfo(): Promise<{ strategies: SpaceStrategy[]; network: string }> {
+  const data = await snapshotPost<{
+    space: { strategies: SpaceStrategy[]; network: string };
+  }>(`{ space(id: "${SNAPSHOT_SPACE}") { strategies { name params } network } }`);
+  return { strategies: data.space.strategies, network: data.space.network };
+}
+
+// Returns the set of council addresses that had voting power at the given block.
+// Falls back to all addresses on error so participation isn't artificially penalised.
+async function getEligibleAtBlock(
+  addresses: string[],
+  snapshotBlock: number,
+  strategies: SpaceStrategy[],
+  network: string,
+): Promise<Set<string>> {
+  try {
+    const res = await fetch(SCORE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        params: { space: SNAPSHOT_SPACE, network, snapshot: snapshotBlock, strategies, addresses },
+      }),
+    });
+    if (!res.ok) return new Set(addresses);
+    const json = await res.json();
+    const scores: Array<Record<string, number>> = json.result?.scores ?? [];
+    // Normalise score keys to lowercase once
+    const normalised = scores.map((s) => {
+      const n: Record<string, number> = {};
+      for (const [k, v] of Object.entries(s)) n[k.toLowerCase()] = v;
+      return n;
+    });
+    const eligible = new Set<string>();
+    for (const addr of addresses) {
+      const total = normalised.reduce((sum, s) => sum + (s[addr] ?? 0), 0);
+      if (total > 0) eligible.add(addr);
+    }
+    return eligible;
+  } catch {
+    return new Set(addresses);
+  }
 }
 
 async function resolveEns(address: string): Promise<string | null> {
@@ -52,49 +102,80 @@ async function resolveEns(address: string): Promise<string | null> {
 }
 
 async function fetchCouncilMembers() {
-  const canonicalSeats = COUNCIL_SEATS;
-
-  // 1. Fetch recent proposals for participation stats
-  const proposalsData = await snapshotPost<{
-    proposals: Array<{ id: string; title: string; choices: string[]; state: string; end: number }>;
-  }>(`{
-    proposals(
-      first: ${PROPOSALS_FOR_STATS},
-      where: { space: "${SNAPSHOT_SPACE}" },
-      orderBy: "created",
-      orderDirection: desc
-    ) { id title choices state end }
-  }`);
+  // Fetch space strategies and proposals concurrently
+  const [{ strategies, network }, proposalsData] = await Promise.all([
+    fetchSpaceInfo(),
+    snapshotPost<{
+      proposals: Array<{
+        id: string;
+        title: string;
+        choices: string[];
+        state: string;
+        end: number;
+        snapshot: string; // block number as string
+      }>;
+    }>(`{
+      proposals(
+        first: ${PROPOSALS_FOR_STATS},
+        where: { space: "${SNAPSHOT_SPACE}" },
+        orderBy: "created",
+        orderDirection: desc
+      ) { id title choices state end snapshot }
+    }`),
+  ]);
 
   const proposals = proposalsData.proposals;
+  const addresses = COUNCIL_SEATS; // already lowercase
 
-  // 3. Batch fetch votes for every proposal
-  const votesByProposal = await Promise.all(
-    proposals.map(async (p) => {
-      const data = await snapshotPost<{
-        votes: Array<{ voter: string; choice: number; created: number }>;
-      }>(`{
-        votes(
-          first: 100,
-          where: { space: "${SNAPSHOT_SPACE}", proposal: "${p.id}" }
-          orderBy: "created"
-          orderDirection: asc
-        ) { voter choice created }
-      }`);
-      return { proposal: p, votes: data.votes };
-    })
-  );
+  // Fetch all votes and eligibility concurrently.
+  // Eligibility is batched to avoid hammering the scores API.
+  const [votesByProposal, eligibilityByProposal] = await Promise.all([
+    Promise.all(
+      proposals.map(async (p) => {
+        const data = await snapshotPost<{
+          votes: Array<{ voter: string; choice: number; created: number }>;
+        }>(`{
+          votes(
+            first: 100,
+            where: { space: "${SNAPSHOT_SPACE}", proposal: "${p.id}" }
+            orderBy: "created"
+            orderDirection: asc
+          ) { voter choice created }
+        }`);
+        return { proposal: p, votes: data.votes };
+      }),
+    ),
+    (async () => {
+      const results: Set<string>[] = [];
+      for (let i = 0; i < proposals.length; i += ELIGIBILITY_BATCH) {
+        const batch = proposals.slice(i, i + ELIGIBILITY_BATCH);
+        const batchResults = await Promise.all(
+          batch.map((p) =>
+            getEligibleAtBlock(addresses, parseInt(p.snapshot, 10), strategies, network),
+          ),
+        );
+        results.push(...batchResults);
+      }
+      return results;
+    })(),
+  ]);
 
-  // 4. Use multisig seats as the canonical set
-  const allAddresses = new Set<string>(canonicalSeats);
+  // Per-member eligible proposal count (denominator for participation %)
+  const eligibleCount = new Map<string, number>();
+  for (const addr of addresses) eligibleCount.set(addr, 0);
+  for (const eligible of eligibilityByProposal) {
+    for (const addr of eligible) {
+      if (eligibleCount.has(addr)) eligibleCount.set(addr, (eligibleCount.get(addr) ?? 0) + 1);
+    }
+  }
 
-  // 5. Compute per-address participation stats
+  // Per-member vote stats
   type Stats = {
     proposalsVoted: number;
     lastVote: { proposalTitle: string; choice: string; timestamp: number } | null;
   };
   const statsMap = new Map<string, Stats>();
-  for (const addr of allAddresses) statsMap.set(addr, { proposalsVoted: 0, lastVote: null });
+  for (const addr of addresses) statsMap.set(addr, { proposalsVoted: 0, lastVote: null });
 
   for (const { proposal, votes } of votesByProposal) {
     for (const vote of votes) {
@@ -109,29 +190,26 @@ async function fetchCouncilMembers() {
     }
   }
 
-  // 6. Resolve ENS names in parallel
-  const addresses = [...allAddresses];
+  // Resolve ENS names
   const ensResults = await Promise.all(addresses.map((addr) => resolveEns(addr)));
   const ensMap = new Map(addresses.map((addr, i) => [addr, ensResults[i]]));
 
-  // 7. Assemble final list — all multisig seats, sorted by participation desc
   const members = addresses
     .map((address) => {
       const s = statsMap.get(address)!;
+      const eligible = eligibleCount.get(address) ?? proposals.length;
       return {
         address,
         ensName: ensMap.get(address) ?? null,
         proposalsVoted: s.proposalsVoted,
-        proposalsTotal: proposals.length,
-        participationRate: proposals.length > 0
-          ? Math.round((s.proposalsVoted / proposals.length) * 100)
-          : 0,
+        proposalsTotal: eligible,
+        participationRate: eligible > 0 ? Math.round((s.proposalsVoted / eligible) * 100) : 0,
         lastVote: s.lastVote,
       };
     })
     .sort((a, b) => b.proposalsVoted - a.proposalsVoted);
 
-  return { members, totalProposals: proposals.length, seatCount: canonicalSeats.length };
+  return { members, totalProposals: proposals.length, seatCount: COUNCIL_SEATS.length };
 }
 
 export async function GET() {

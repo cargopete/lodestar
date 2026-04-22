@@ -361,7 +361,7 @@ export default function CouncilPage() {
       </div>
 
       <p className="text-[11px] text-[var(--text-faint)] text-center px-4">
-        Proposals and votes sourced live from Snapshot. Participation stats cover the last {totalProposals || '—'} proposals.
+        Proposals and votes sourced live from Snapshot. Participation stats cover up to the last {totalProposals || '—'} proposals, counted only from when each member joined the multisig.
       </p>
     </div>
   );
