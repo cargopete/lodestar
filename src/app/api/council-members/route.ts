@@ -4,7 +4,7 @@ import { ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
 
 const SNAPSHOT_GRAPHQL = 'https://hub.snapshot.org/graphql';
 const SNAPSHOT_SPACE = 'council.graphprotocol.eth';
-const PROPOSALS_FOR_STATS = 10;
+const PROPOSALS_FOR_STATS = 100;
 
 // Canonical council seats — multisig owners as of April 2026
 // Multisig: 0x48301Fe520f72994d32eAd72E2B6A8447873CF50
