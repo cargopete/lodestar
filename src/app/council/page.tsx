@@ -17,6 +17,19 @@ interface SnapshotProposal {
   votes: number;
 }
 
+interface CouncilMember {
+  address: string;
+  ensName: string | null;
+  proposalsVoted: number;
+  proposalsTotal: number;
+  participationRate: number;
+  lastVote: {
+    proposalTitle: string;
+    choice: string;
+    timestamp: number;
+  } | null;
+}
+
 function useCouncilProposals() {
   const [proposals, setProposals] = useState<SnapshotProposal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,20 +45,56 @@ function useCouncilProposals() {
   return { proposals, loading };
 }
 
+function useCouncilMembers() {
+  const [members, setMembers] = useState<CouncilMember[]>([]);
+  const [totalProposals, setTotalProposals] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/council-members')
+      .then(r => r.json())
+      .then(data => {
+        setMembers(data?.members ?? []);
+        setTotalProposals(data?.totalProposals ?? 0);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { members, totalProposals, loading };
+}
+
+function shortAddress(addr: string) {
+  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
+
+function choiceColor(choice: string): string {
+  if (choice === 'For') return 'var(--green)';
+  if (choice === 'Against') return 'var(--error, #ef4444)';
+  return 'var(--text-faint)';
+}
+
+function participationColor(rate: number): string {
+  if (rate >= 70) return 'var(--green)';
+  if (rate >= 40) return 'var(--amber)';
+  return 'var(--error, #ef4444)';
+}
+
 export default function CouncilPage() {
-  const { proposals, loading } = useCouncilProposals();
+  const { proposals, loading: proposalsLoading } = useCouncilProposals();
+  const { members, totalProposals, loading: membersLoading } = useCouncilMembers();
 
   const active = proposals.filter(p => p.state === 'active').length;
   const closed = proposals.filter(p => p.state === 'closed').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-[var(--text)]">Council Votes</h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            Live governance proposals from{' '}
+            Governance votes by The Graph Council on{' '}
             <span className="font-mono text-[var(--text-faint)]">{SNAPSHOT_SPACE}</span>
           </p>
         </div>
@@ -55,94 +104,189 @@ export default function CouncilPage() {
           rel="noopener noreferrer"
           className="text-xs text-[var(--accent)] hover:underline flex-shrink-0 mt-1"
         >
-          All proposals →
+          View on Snapshot →
         </a>
       </div>
 
-      {/* Summary */}
+      {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
         <div className="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] text-center">
           <p className="text-2xl font-mono font-bold text-[var(--cyan)]">
-            {loading ? '—' : active}
+            {proposalsLoading ? '—' : active}
           </p>
           <p className="text-xs text-[var(--text-faint)] mt-1">Voting Now</p>
         </div>
         <div className="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] text-center">
           <p className="text-2xl font-mono font-bold text-[var(--text-muted)]">
-            {loading ? '—' : closed}
+            {proposalsLoading ? '—' : closed}
           </p>
           <p className="text-xs text-[var(--text-faint)] mt-1">Closed</p>
         </div>
         <div className="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] text-center">
-          <p className="text-2xl font-mono font-bold text-[var(--text)]">
-            {loading ? '—' : proposals.length}
+          <p className="text-2xl font-mono font-bold text-[var(--accent)]">
+            {membersLoading ? '—' : members.length}
           </p>
-          <p className="text-xs text-[var(--text-faint)] mt-1">Total Shown</p>
+          <p className="text-xs text-[var(--text-faint)] mt-1">Voters Tracked</p>
         </div>
       </div>
 
-      {/* Proposals */}
-      {loading ? (
-        <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-16 rounded-lg bg-[var(--bg-elevated)] animate-pulse" />
+      {/* How voting works */}
+      <div className="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)]">
+        <h2 className="text-sm font-semibold text-[var(--text)] mb-3">How It Works</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Voting window', value: '15 days' },
+            { label: 'Voting power', value: '1 per seat' },
+            { label: 'Choices', value: 'For / Against / Abstain' },
+            { label: 'Strategy', value: 'multisig-owners' },
+          ].map((item) => (
+            <div key={item.label}>
+              <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wide">{item.label}</p>
+              <p className="text-xs font-medium text-[var(--text)] mt-0.5">{item.value}</p>
+            </div>
           ))}
         </div>
-      ) : proposals.length === 0 ? (
-        <p className="text-sm text-[var(--text-faint)] text-center py-10">No proposals found</p>
-      ) : (
-        <div className="space-y-2">
-          {proposals.map((p) => {
-            const isActive = p.state === 'active';
-            const winningIdx = p.scores.length > 0 ? p.scores.indexOf(Math.max(...p.scores)) : -1;
-            const winningChoice = winningIdx >= 0 ? p.choices[winningIdx] : null;
-            const winningPct = p.scores_total > 0 && winningIdx >= 0
-              ? ((p.scores[winningIdx] / p.scores_total) * 100).toFixed(0)
-              : null;
+      </div>
 
-            return (
+      {/* Council members */}
+      <div>
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="text-base font-semibold text-[var(--text)]">Council Members</h2>
+          {!membersLoading && totalProposals > 0 && (
+            <p className="text-xs text-[var(--text-faint)]">
+              participation over last {totalProposals} proposals
+            </p>
+          )}
+        </div>
+
+        {membersLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div key={i} className="h-20 rounded-lg bg-[var(--bg-elevated)] animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {members.map((member) => (
               <a
-                key={p.id}
-                href={`https://snapshot.org/#/${SNAPSHOT_SPACE}/proposal/${p.id}`}
+                key={member.address}
+                href={`https://etherscan.io/address/${member.address}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block p-3 rounded-lg border-l-[3px] bg-[var(--bg-elevated)] hover:bg-[color-mix(in_srgb,var(--bg-elevated)_90%,var(--cyan)_10%)] transition-colors"
-                style={{ borderLeftColor: isActive ? 'var(--cyan)' : 'var(--border)' }}
+                className="block p-3 rounded-lg bg-[var(--bg-elevated)] hover:bg-[var(--bg-surface)] border border-[var(--border)] transition-colors"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-[13px] font-medium text-[var(--text)] leading-snug line-clamp-2 flex-1">
-                    {p.title}
+                {/* Name / address */}
+                <p className="text-xs font-medium text-[var(--text)] truncate">
+                  {member.ensName ?? shortAddress(member.address)}
+                </p>
+                {member.ensName && (
+                  <p className="text-[10px] text-[var(--text-faint)] font-mono truncate mt-0.5">
+                    {shortAddress(member.address)}
                   </p>
-                  <span
-                    className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0"
-                    style={{
-                      color: isActive ? 'var(--cyan)' : 'var(--text-faint)',
-                      backgroundColor: isActive ? 'var(--cyan-dim)' : 'var(--bg-surface)',
-                    }}
-                  >
-                    {p.state}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-faint)]">
-                  <span>{p.votes.toLocaleString()} votes</span>
-                  {winningChoice && winningPct && (
-                    <span>
-                      {p.state === 'closed' ? '→ ' : ''}{winningChoice} {winningPct}%
+                )}
+
+                {/* Participation bar */}
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-[var(--text-faint)]">
+                      {member.proposalsVoted}/{member.proposalsTotal} voted
                     </span>
-                  )}
-                  {isActive
-                    ? <span>ends {timeAgo(new Date(p.end * 1000).toISOString())}</span>
-                    : <span>{timeAgo(new Date(p.start * 1000).toISOString())}</span>
-                  }
+                    <span
+                      className="text-[10px] font-mono font-medium"
+                      style={{ color: participationColor(member.participationRate) }}
+                    >
+                      {member.participationRate}%
+                    </span>
+                  </div>
+                  <div className="h-1 rounded-full bg-[var(--bg-surface)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${member.participationRate}%`,
+                        backgroundColor: participationColor(member.participationRate),
+                      }}
+                    />
+                  </div>
                 </div>
+
+                {/* Last vote */}
+                {member.lastVote && (
+                  <p className="text-[10px] mt-1.5 truncate" style={{ color: choiceColor(member.lastVote.choice) }}>
+                    Last: {member.lastVote.choice}
+                  </p>
+                )}
               </a>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Active proposals first, then all */}
+      <div>
+        <h2 className="text-base font-semibold text-[var(--text)] mb-3">Proposals</h2>
+
+        {proposalsLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-16 rounded-lg bg-[var(--bg-elevated)] animate-pulse" />
+            ))}
+          </div>
+        ) : proposals.length === 0 ? (
+          <p className="text-sm text-[var(--text-faint)] text-center py-10">No proposals found</p>
+        ) : (
+          <div className="space-y-2">
+            {proposals.map((p) => {
+              const isActive = p.state === 'active';
+              const winningIdx = p.scores.length > 0 ? p.scores.indexOf(Math.max(...p.scores)) : -1;
+              const winningChoice = winningIdx >= 0 ? p.choices[winningIdx] : null;
+              const winningPct = p.scores_total > 0 && winningIdx >= 0
+                ? ((p.scores[winningIdx] / p.scores_total) * 100).toFixed(0)
+                : null;
+
+              return (
+                <a
+                  key={p.id}
+                  href={`https://snapshot.org/#/${SNAPSHOT_SPACE}/proposal/${p.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block p-3 rounded-lg border-l-[3px] bg-[var(--bg-elevated)] hover:bg-[color-mix(in_srgb,var(--bg-elevated)_90%,var(--cyan)_10%)] transition-colors"
+                  style={{ borderLeftColor: isActive ? 'var(--cyan)' : 'var(--border)' }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-[13px] font-medium text-[var(--text)] leading-snug line-clamp-2 flex-1">
+                      {p.title}
+                    </p>
+                    <span
+                      className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0"
+                      style={{
+                        color: isActive ? 'var(--cyan)' : 'var(--text-faint)',
+                        backgroundColor: isActive ? 'var(--cyan-dim)' : 'var(--bg-surface)',
+                      }}
+                    >
+                      {p.state}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-faint)]">
+                    <span>{p.votes.toLocaleString()} votes</span>
+                    {winningChoice && winningPct && (
+                      <span>
+                        {p.state === 'closed' ? '→ ' : ''}{winningChoice} {winningPct}%
+                      </span>
+                    )}
+                    {isActive
+                      ? <span>ends {timeAgo(new Date(p.end * 1000).toISOString())}</span>
+                      : <span>{timeAgo(new Date(p.start * 1000).toISOString())}</span>
+                    }
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <p className="text-[11px] text-[var(--text-faint)] text-center px-4">
-        Proposals sourced live from Snapshot. Vote results are indicative until voting closes.
+        Proposals and votes sourced live from Snapshot. Participation stats cover the last {totalProposals || '—'} proposals.
       </p>
     </div>
   );
