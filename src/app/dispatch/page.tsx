@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useSignTypedData, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseAbi, formatUnits, parseUnits } from 'viem';
+import { parseAbi, formatUnits, parseUnits, isAddress } from 'viem';
 import { arbitrum } from 'wagmi/chains';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
@@ -23,6 +23,7 @@ const DISPATCH = {
 const ESCROW_ABI = parseAbi([
   'function getBalance(address payer, address collector, address receiver) view returns (uint256)',
   'function deposit(address collector, address receiver, uint256 tokens)',
+  'function depositTo(address payer, address collector, address receiver, uint256 tokens)',
   'function thaw(address collector, address receiver, uint256 tokens)',
   'function cancelThaw(address collector, address receiver)',
   'function withdraw(address collector, address receiver)',
@@ -620,6 +621,166 @@ function ConsumerStatus() {
   );
 }
 
+// ── Fund Consumer ────────────────────────────────────────────────────────────
+
+function FundConsumer() {
+  const { address, isConnected } = useAccount();
+  const [consumerAddr, setConsumerAddr] = useState('');
+  const [amount, setAmount] = useState('10');
+  const [approveTxHash, setApproveTxHash] = useState<`0x${string}` | undefined>();
+  const [depositTxHash, setDepositTxHash] = useState<`0x${string}` | undefined>();
+  const [txError, setTxError] = useState<string | null>(null);
+
+  const validAddr = isAddress(consumerAddr);
+  const amountWei = (() => { try { return parseUnits(amount || '0', 18); } catch { return 0n; } })();
+
+  const { data: escrowBalance, refetch: refetchEscrow } = useReadContract({
+    address: DISPATCH.paymentsEscrow, abi: ESCROW_ABI, functionName: 'getBalance',
+    args: [consumerAddr as `0x${string}`, DISPATCH.graphTallyCollector, DISPATCH.provider],
+    chainId: arbitrum.id, query: { enabled: isConnected && validAddr },
+  });
+
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: DISPATCH.grt, abi: ERC20_ABI, functionName: 'allowance',
+    args: [address!, DISPATCH.paymentsEscrow],
+    chainId: arbitrum.id, query: { enabled: isConnected && !!address },
+  });
+
+  const { writeContractAsync } = useWriteContract();
+  const { isLoading: approveConfirming, isSuccess: approveConfirmed } = useWaitForTransactionReceipt({ hash: approveTxHash });
+  const { isLoading: depositConfirming, isSuccess: depositConfirmed } = useWaitForTransactionReceipt({ hash: depositTxHash });
+
+  useEffect(() => { if (approveConfirmed) refetchAllowance(); }, [approveConfirmed, refetchAllowance]);
+  useEffect(() => { if (depositConfirmed) refetchEscrow(); }, [depositConfirmed, refetchEscrow]);
+
+  const isApproved = allowance != null && (allowance as bigint) >= amountWei && amountWei > 0n;
+  const escrow = escrowBalance != null ? Number(formatUnits(escrowBalance as bigint, 18)).toFixed(4) : null;
+
+  const handleApprove = async () => {
+    setTxError(null);
+    try {
+      const hash = await writeContractAsync({
+        address: DISPATCH.grt, abi: ERC20_ABI, functionName: 'approve',
+        args: [DISPATCH.paymentsEscrow, amountWei], chainId: arbitrum.id,
+      });
+      setApproveTxHash(hash);
+    } catch (e) { setTxError(String(e).split('(')[0].trim()); }
+  };
+
+  const handleDepositTo = async () => {
+    setTxError(null);
+    try {
+      const hash = await writeContractAsync({
+        address: DISPATCH.paymentsEscrow, abi: ESCROW_ABI, functionName: 'depositTo',
+        args: [consumerAddr as `0x${string}`, DISPATCH.graphTallyCollector, DISPATCH.provider, amountWei],
+        chainId: arbitrum.id,
+      });
+      setDepositTxHash(hash);
+    } catch (e) { setTxError(String(e).split('(')[0].trim()); }
+  };
+
+  if (!isConnected) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Fund a Proxy Consumer</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-[13px] text-[var(--text-muted)]">Connect your wallet to fund a dispatch-proxy consumer address with GRT.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Fund a Proxy Consumer</CardTitle>
+        <p className="text-[12px] text-[var(--text-muted)] mt-0.5">
+          Fund any consumer address from your wallet — no ETH needed on the proxy itself.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+
+        {/* Steps */}
+        <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] space-y-1.5">
+          <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em]">Setup</p>
+          <div className="space-y-1 text-[12px] text-[var(--text-muted)]">
+            <p><span className="font-mono text-[var(--accent)] mr-1.5">1.</span>Run <code className="text-[11px] bg-[var(--bg)] px-1 py-0.5 rounded text-[var(--text)]">npm start</code> in <code className="text-[11px]">dispatch-proxy/</code> — it prints a consumer address.</p>
+            <p><span className="font-mono text-[var(--accent)] mr-1.5">2.</span>Paste that address below and deposit GRT.</p>
+            <p><span className="font-mono text-[var(--accent)] mr-1.5">3.</span>The proxy signs requests; providers settle via your escrow automatically.</p>
+          </div>
+        </div>
+
+        {/* Address input */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">Proxy Consumer Address</label>
+          <input
+            type="text"
+            placeholder="0x…"
+            value={consumerAddr}
+            onChange={(e) => setConsumerAddr(e.target.value.trim())}
+            className={cn(
+              'w-full px-3 py-2 text-[12px] font-mono bg-[var(--bg)] border rounded-[var(--radius-button)] text-[var(--text)] outline-none focus:ring-1 focus:ring-[var(--accent)]',
+              consumerAddr && !validAddr ? 'border-[var(--red)]' : 'border-[var(--border)]'
+            )}
+          />
+          {consumerAddr && !validAddr && (
+            <p className="text-[11px] text-[var(--red)]">Not a valid Ethereum address</p>
+          )}
+          {validAddr && escrow !== null && (
+            <p className="text-[11px] text-[var(--text-muted)]">
+              Current escrow:{' '}
+              <span className={cn('font-mono', parseFloat(escrow) > 0 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
+                {escrow} GRT
+              </span>
+            </p>
+          )}
+        </div>
+
+        {/* Amount + buttons */}
+        <div className="space-y-3 p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]">
+          <div className="flex items-center gap-2">
+            <input
+              type="number" min="0" step="1" value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-28 px-3 py-1.5 text-[13px] font-mono bg-[var(--bg)] border border-[var(--border)] rounded-[var(--radius-button)] text-[var(--text)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            />
+            <span className="text-[12px] text-[var(--text-muted)]">GRT</span>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleApprove}
+              disabled={amountWei === 0n || isApproved || approveConfirming}
+              className={cn(
+                'flex-1 px-3 py-2 text-[12px] font-medium rounded-[var(--radius-button)] transition-colors',
+                isApproved
+                  ? 'bg-[var(--green-dim)] text-[var(--green)] cursor-default'
+                  : 'bg-[var(--accent)] text-white hover:opacity-90 disabled:opacity-40'
+              )}
+            >
+              {approveConfirming ? 'Confirming…' : isApproved ? '✓ Approved' : '1. Approve GRT'}
+            </button>
+            <button
+              onClick={handleDepositTo}
+              disabled={!isApproved || amountWei === 0n || !validAddr || depositConfirming}
+              className="flex-1 px-3 py-2 text-[12px] font-medium bg-[var(--accent)] text-white rounded-[var(--radius-button)] hover:opacity-90 disabled:opacity-40 transition-opacity"
+            >
+              {depositConfirming ? 'Confirming…' : depositConfirmed ? '✓ Funded!' : '2. Fund Proxy'}
+            </button>
+          </div>
+
+          {txError && <p className="text-[11px] text-[var(--red)] font-mono">{txError}</p>}
+          {depositConfirmed && (
+            <p className="text-[11px] text-[var(--green)]">
+              Proxy escrow funded — the proxy will start routing requests immediately.
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Provider Methods ─────────────────────────────────────────────────────────
 
 function ProviderMethods() {
@@ -750,7 +911,10 @@ export default function DispatchPage() {
 
       {/* Consumer + Provider in a 2-col grid on large screens */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ConsumerStatus />
+        <div className="space-y-6">
+          <ConsumerStatus />
+          <FundConsumer />
+        </div>
 
         {/* Active Providers */}
         <Card>
