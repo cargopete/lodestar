@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { timeAgo } from '@/lib/feed';
+import {
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ResponsiveContainer,
+  Tooltip,
+} from 'recharts';
 
 const SNAPSHOT_SPACE = 'council.graphprotocol.eth';
 
@@ -228,6 +237,62 @@ export default function CouncilPage() {
           </div>
         )}
       </div>
+
+      {/* Participation radar */}
+      {!membersLoading && members.length > 0 && (() => {
+        const overallParticipation = members.reduce((s, m) => s + m.participationRate, 0) / members.length;
+        const radarData = members.map(m => ({
+          name: m.ensName
+            ? m.ensName.replace(/\.(eth|xyz|io)$/, '')
+            : m.address.slice(0, 6),
+          participation: m.participationRate,
+          address: m.address,
+        }));
+        return (
+          <div>
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-base font-semibold text-[var(--text)]">Participation Overview</h2>
+              <p className="text-xs text-[var(--text-faint)]">
+                avg{' '}
+                <span className="font-mono font-bold" style={{ color: 'var(--accent)' }}>
+                  {overallParticipation.toFixed(1)}%
+                </span>
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)]">
+              <ResponsiveContainer width="100%" height={320}>
+                <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+                  <PolarGrid stroke="var(--border)" strokeOpacity={0.6} />
+                  <PolarAngleAxis
+                    dataKey="name"
+                    tick={{ fill: 'var(--text-faint)', fontSize: 10, fontFamily: 'monospace' }}
+                  />
+                  <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+                  <Radar
+                    dataKey="participation"
+                    stroke="var(--accent)"
+                    fill="var(--accent)"
+                    fillOpacity={0.15}
+                    strokeWidth={1.5}
+                    dot={{ fill: 'var(--accent)', r: 3, strokeWidth: 0 }}
+                    activeDot={{ r: 5, fill: 'var(--accent)' }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      color: 'var(--text)',
+                    }}
+                    formatter={(value) => [`${value}%`, 'Participation']}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Active proposals first, then all */}
       <div>
