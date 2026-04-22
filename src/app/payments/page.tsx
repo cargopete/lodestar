@@ -11,7 +11,27 @@ import type { PaymentsEscrowAccount, PaymentsEscrowTransaction, GraphTallyTokens
 
 const ARBISCAN = 'https://arbiscan.io/address/';
 
+/** Consistent accent color per gateway address (lowercase). */
+const GATEWAY_COLORS: Record<string, string> = {
+  '0xdde4cffd3d9052a9cb618fc05a1cd02be1f2f467': 'var(--accent)',
+  '0xf6fcc27aaf1fcd8b254498c9794451d82afc673e': 'var(--green)',
+  '0x7d14ae5f20cc2f6421317386aa8e79e8728353d9': 'var(--amber)',
+  '0xdd6a6f76eb36b873c1c184e8b9b9e762fe216490': '#a78bfa',
+};
+
+function gatewayColor(address: string): string {
+  return GATEWAY_COLORS[address.toLowerCase()] ?? 'var(--text-faint)';
+}
+
 type Tab = 'escrow' | 'activity' | 'collectors';
+
+interface GatewayStats {
+  payerId: string;
+  name: string;
+  receivers: number;
+  totalEscrow: number;
+  totalCollected: number;
+}
 
 function PageHeader() {
   return (
@@ -83,13 +103,240 @@ function PayerLink({ address }: { address: string }) {
   );
 }
 
+// ─── Gateway Breakdown Card ──────────────────────────────────────────────────
+
+function GatewayBreakdownCard({
+  breakdown,
+  selectedGateway,
+  onSelect,
+  grtPrice,
+}: {
+  breakdown: GatewayStats[];
+  selectedGateway: string | null;
+  onSelect: (id: string | null) => void;
+  grtPrice: number;
+}) {
+  const maxEscrow = Math.max(...breakdown.map(g => g.totalEscrow), 1);
+  const maxCollected = Math.max(...breakdown.map(g => g.totalCollected), 1);
+  const totalEscrow = breakdown.reduce((s, g) => s + g.totalEscrow, 0);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Gateway Breakdown</CardTitle>
+          <div className="flex items-center gap-2">
+            {selectedGateway && (
+              <button
+                onClick={() => onSelect(null)}
+                className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+              >
+                Clear filter ×
+              </button>
+            )}
+            <Badge variant="default">{breakdown.length} gateways</Badge>
+          </div>
+        </div>
+        <p className="text-xs text-[var(--text-muted)] mt-1">
+          Click a row to filter the panels below by that gateway.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {/* Mobile */}
+        <div className="block md:hidden space-y-3">
+          {breakdown.map((gw) => {
+            const color = gatewayColor(gw.payerId);
+            const isSelected = selectedGateway === gw.payerId;
+            const escrowPct = totalEscrow > 0 ? (gw.totalEscrow / totalEscrow) * 100 : 0;
+            return (
+              <button
+                key={gw.payerId}
+                onClick={() => onSelect(isSelected ? null : gw.payerId)}
+                className={cn(
+                  'w-full text-left p-4 rounded-lg border transition-colors',
+                  isSelected
+                    ? 'border-[var(--accent)] bg-[var(--accent-dim)]'
+                    : 'border-[var(--border)] hover:border-[var(--accent-hover)]'
+                )}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                    <span className="font-medium text-sm text-[var(--text)]">{gw.name}</span>
+                    {gw.payerId === '0xdd6a6f76eb36b873c1c184e8b9b9e762fe216490' && (
+                      <Badge variant="default" className="text-[10px] px-1 py-0">NEW</Badge>
+                    )}
+                  </div>
+                  <span className="text-xs text-[var(--text-faint)]">{gw.receivers} indexers</span>
+                </div>
+                <div className="space-y-1.5">
+                  <div>
+                    <div className="flex justify-between text-xs text-[var(--text-faint)] mb-1">
+                      <span>Escrow</span>
+                      <span>{formatGRT(gw.totalEscrow)} GRT · {escrowPct.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(gw.totalEscrow / maxEscrow) * 100}%`, backgroundColor: color }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-xs text-[var(--text-faint)] mb-1">
+                      <span>Collected</span>
+                      <span>{formatGRT(gw.totalCollected)} GRT</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(gw.totalCollected / maxCollected) * 100}%`, backgroundColor: color, opacity: 0.6 }} />
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Desktop */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[var(--border)]">
+                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Gateway</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase w-8">Indexers</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Escrow Balance</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Fees Collected</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              {breakdown.map((gw) => {
+                const color = gatewayColor(gw.payerId);
+                const isSelected = selectedGateway === gw.payerId;
+                const escrowPct = totalEscrow > 0 ? (gw.totalEscrow / totalEscrow) * 100 : 0;
+                const collectedPct = maxCollected > 0 ? (gw.totalCollected / maxCollected) * 100 : 0;
+                return (
+                  <tr
+                    key={gw.payerId}
+                    onClick={() => onSelect(isSelected ? null : gw.payerId)}
+                    className={cn(
+                      'cursor-pointer transition-colors',
+                      isSelected
+                        ? 'bg-[var(--accent-dim)]'
+                        : 'hover:bg-[var(--bg-elevated)]'
+                    )}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                        <span className="font-medium text-sm text-[var(--text)]">{gw.name}</span>
+                        {gw.payerId === '0xdd6a6f76eb36b873c1c184e8b9b9e762fe216490' && (
+                          <Badge variant="default" className="text-[10px] px-1 py-0">NEW</Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="font-mono text-sm text-[var(--text-muted)]">{gw.receivers}</span>
+                    </td>
+                    <td className="px-4 py-3 w-56">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden min-w-[60px]">
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(gw.totalEscrow / maxEscrow) * 100}%`, backgroundColor: color }} />
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-mono text-xs text-[var(--text)]">{formatGRT(gw.totalEscrow)} GRT</p>
+                          <p className="text-[10px] text-[var(--text-faint)]">{escrowPct.toFixed(0)}% share · {formatUSD(gw.totalEscrow * grtPrice)}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 w-48">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden min-w-[60px]">
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${collectedPct}%`, backgroundColor: color, opacity: 0.6 }} />
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-mono text-xs text-[var(--text)]">{formatGRT(gw.totalCollected)} GRT</p>
+                          <p className="text-[10px] text-[var(--text-faint)]">{formatUSD(gw.totalCollected * grtPrice)}</p>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
+
 export default function PaymentsPage() {
   const { data, isLoading, isError } = usePayments();
   const { data: priceData } = useGRTPrice();
   const names = useIndexerNames();
   const [activeTab, setActiveTab] = useState<Tab>('escrow');
+  const [selectedGateway, setSelectedGateway] = useState<string | null>(null);
 
   const grtPrice = priceData?.price ?? 0;
+
+  // Per-gateway breakdown (computed from raw data)
+  const gatewayBreakdown = useMemo<GatewayStats[]>(() => {
+    if (!data) return [];
+    const allPayers = new Set([
+      ...data.escrowAccounts.map(a => a.payer.id.toLowerCase()),
+      ...data.topCollectors.map(c => c.payer.id.toLowerCase()),
+    ]);
+    return Array.from(allPayers).map((payerId) => {
+      const accounts = data.escrowAccounts.filter(a => a.payer.id.toLowerCase() === payerId);
+      const collected = data.topCollectors.filter(c => c.payer.id.toLowerCase() === payerId);
+      const totalEscrow = accounts.reduce((s, a) => s + BigInt(a.balance), BigInt(0));
+      const totalCollected = collected.reduce((s, c) => s + BigInt(c.tokens), BigInt(0));
+      return {
+        payerId,
+        name: GATEWAY_ALIASES[payerId] ?? shortenAddress(payerId),
+        receivers: new Set(accounts.map(a => a.receiver.id)).size,
+        totalEscrow: weiToGRT(totalEscrow.toString()),
+        totalCollected: weiToGRT(totalCollected.toString()),
+      };
+    }).sort((a, b) => b.totalEscrow - a.totalEscrow);
+  }, [data]);
+
+  // Filtered slices (applied to all three panels)
+  const filteredAccounts = useMemo(() =>
+    selectedGateway
+      ? (data?.escrowAccounts ?? []).filter(a => a.payer.id.toLowerCase() === selectedGateway)
+      : (data?.escrowAccounts ?? []),
+    [data, selectedGateway]
+  );
+  const filteredTransactions = useMemo(() =>
+    selectedGateway
+      ? (data?.recentTransactions ?? []).filter(tx => tx.payer.id.toLowerCase() === selectedGateway)
+      : (data?.recentTransactions ?? []),
+    [data, selectedGateway]
+  );
+  const filteredCollectors = useMemo(() =>
+    selectedGateway
+      ? (data?.topCollectors ?? []).filter(c => c.payer.id.toLowerCase() === selectedGateway)
+      : (data?.topCollectors ?? []),
+    [data, selectedGateway]
+  );
+
+  // Stat card totals — reflect current filter
+  const filteredEscrowTotal = useMemo(
+    () => weiToGRT(filteredAccounts.reduce((s, a) => s + BigInt(a.balance), BigInt(0)).toString()),
+    [filteredAccounts]
+  );
+  const filteredThawingTotal = useMemo(
+    () => weiToGRT(filteredAccounts.reduce((s, a) => s + BigInt(a.totalAmountThawing), BigInt(0)).toString()),
+    [filteredAccounts]
+  );
+  const filteredCollectedTotal = useMemo(
+    () => weiToGRT(filteredCollectors.reduce((s, c) => s + BigInt(c.tokens), BigInt(0)).toString()),
+    [filteredCollectors]
+  );
+  const filteredReceiverCount = useMemo(
+    () => new Set(filteredAccounts.map(a => a.receiver.id)).size,
+    [filteredAccounts]
+  );
 
   if (isLoading) {
     return (
@@ -114,51 +361,59 @@ export default function PaymentsPage() {
     );
   }
 
-  const totalEscrow = weiToGRT(data.totalEscrowBalance);
-  const totalThawing = weiToGRT(data.totalThawing);
-  const totalCollected = weiToGRT(data.totalCollected);
+  const selectedName = selectedGateway ? (GATEWAY_ALIASES[selectedGateway] ?? shortenAddress(selectedGateway)) : null;
 
   return (
     <div className="space-y-6">
       <PageHeader />
 
-      {/* Overview stats */}
+      {/* Overview stats — update with filter */}
       <StatGrid>
         <StatCard
-          label="Total Escrow Balance"
-          value={`${formatGRT(totalEscrow)} GRT`}
-          subtitle={formatUSD(totalEscrow * grtPrice)}
+          label={selectedName ? `${selectedName} Escrow` : 'Total Escrow Balance'}
+          value={`${formatGRT(filteredEscrowTotal)} GRT`}
+          subtitle={formatUSD(filteredEscrowTotal * grtPrice)}
         />
         <StatCard
-          label="Total Collected"
-          value={`${formatGRT(totalCollected)} GRT`}
-          subtitle={formatUSD(totalCollected * grtPrice)}
+          label={selectedName ? `${selectedName} Collected` : 'Total Collected'}
+          value={`${formatGRT(filteredCollectedTotal)} GRT`}
+          subtitle={formatUSD(filteredCollectedTotal * grtPrice)}
         />
         <StatCard
-          label="Active Gateways"
-          value={String(data.activePayers)}
-          delta={{ value: 'funding escrow', positive: true }}
+          label={selectedName ? 'Gateway' : 'Active Gateways'}
+          value={selectedName ?? String(data.activePayers)}
+          delta={selectedName ? undefined : { value: 'funding escrow', positive: true }}
         />
         <StatCard
           label="Active Receivers"
-          value={String(data.activeReceivers)}
+          value={String(selectedName ? filteredReceiverCount : data.activeReceivers)}
           delta={{ value: 'collecting fees', positive: true }}
         />
-        {totalThawing > 0 && (
+        {filteredThawingTotal > 0 && (
           <StatCard
             label="Escrow Thawing"
-            value={`${formatGRT(totalThawing)} GRT`}
-            subtitle={formatUSD(totalThawing * grtPrice)}
+            value={`${formatGRT(filteredThawingTotal)} GRT`}
+            subtitle={formatUSD(filteredThawingTotal * grtPrice)}
           />
         )}
       </StatGrid>
 
+      {/* Gateway breakdown / filter */}
+      {gatewayBreakdown.length > 0 && (
+        <GatewayBreakdownCard
+          breakdown={gatewayBreakdown}
+          selectedGateway={selectedGateway}
+          onSelect={setSelectedGateway}
+          grtPrice={grtPrice}
+        />
+      )}
+
       {/* Tab selector */}
       <div className="flex gap-1 p-1 rounded-lg bg-[var(--bg-elevated)] w-fit">
         {([
-          { key: 'escrow' as Tab, label: 'Escrow Accounts', count: data.escrowAccounts.length },
-          { key: 'activity' as Tab, label: 'Recent Activity', count: data.recentTransactions.length },
-          { key: 'collectors' as Tab, label: 'Top Collectors', count: data.topCollectors.length },
+          { key: 'escrow' as Tab, label: 'Escrow Accounts', count: filteredAccounts.length },
+          { key: 'activity' as Tab, label: 'Recent Activity', count: filteredTransactions.length },
+          { key: 'collectors' as Tab, label: 'Top Collectors', count: filteredCollectors.length },
         ]).map((tab) => (
           <button
             key={tab.key}
@@ -177,13 +432,13 @@ export default function PaymentsPage() {
 
       {/* Active tab content */}
       {activeTab === 'escrow' && (
-        <EscrowAccountsPanel accounts={data.escrowAccounts} grtPrice={grtPrice} names={names} />
+        <EscrowAccountsPanel accounts={filteredAccounts} grtPrice={grtPrice} names={names} />
       )}
       {activeTab === 'activity' && (
-        <TransactionsPanel transactions={data.recentTransactions} grtPrice={grtPrice} names={names} />
+        <TransactionsPanel transactions={filteredTransactions} grtPrice={grtPrice} names={names} />
       )}
       {activeTab === 'collectors' && (
-        <TopCollectorsPanel collectors={data.topCollectors} grtPrice={grtPrice} names={names} />
+        <TopCollectorsPanel collectors={filteredCollectors} grtPrice={grtPrice} names={names} />
       )}
 
       {/* Info panel */}
@@ -218,6 +473,8 @@ export default function PaymentsPage() {
     </div>
   );
 }
+
+// ─── Panels ──────────────────────────────────────────────────────────────────
 
 function EscrowAccountsPanel({
   accounts,
@@ -449,7 +706,7 @@ function TopCollectorsPanel({
     );
   }
 
-  // Aggregate by receiver for a leaderboard view
+  // Aggregate by receiver
   const byReceiver = new Map<string, bigint>();
   for (const c of collectors) {
     const prev = byReceiver.get(c.receiver.id) ?? BigInt(0);

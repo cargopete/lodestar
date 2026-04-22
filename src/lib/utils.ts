@@ -108,6 +108,7 @@ export const GATEWAY_ALIASES: Record<string, string> = {
   '0xdde4cffd3d9052a9cb618fc05a1cd02be1f2f467': 'E&N Gateway',
   '0xf6fcc27aaf1fcd8b254498c9794451d82afc673e': 'Dispatch Gateway',
   '0x7d14ae5f20cc2f6421317386aa8e79e8728353d9': 'Lodestar Gateway',
+  '0xdd6a6f76eb36b873c1c184e8b9b9e762fe216490': 'x402 Gateway',
 };
 
 /**
