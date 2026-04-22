@@ -403,7 +403,7 @@ export default function RoadmapPage() {
           {FILTER_OPTIONS.map((opt) => (
             <button
               key={opt.value ?? 'all'}
-              onClick={() => setActiveFilter(opt.value)}
+              onClick={() => setActiveFilter(activeFilter === opt.value ? null : opt.value)}
               className={cn(
                 'px-3 py-1.5 text-[12px] font-medium rounded-full border transition-all',
                 activeFilter === opt.value
@@ -420,7 +420,7 @@ export default function RoadmapPage() {
           {LODESTAR_FILTER_OPTIONS.map((opt) => (
             <button
               key={opt.value ?? 'all'}
-              onClick={() => setLodestarFilter(opt.value)}
+              onClick={() => setLodestarFilter(lodestarFilter === opt.value ? null : opt.value)}
               className={cn(
                 'px-3 py-1.5 text-[12px] font-medium rounded-full border transition-all',
                 lodestarFilter === opt.value

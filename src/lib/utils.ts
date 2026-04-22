@@ -101,6 +101,14 @@ export function shortenAddress(address: string, chars = 4): string {
 }
 
 /**
+ * Known gateway (payer) addresses → friendly display names.
+ * Keys must be lowercase. Shown on the Payments page instead of raw addresses.
+ */
+export const GATEWAY_ALIASES: Record<string, string> = {
+  // '0xabc123...': 'E&N Gateway',
+};
+
+/**
  * Resolve indexer display name from account data
  * Priority: defaultDisplayName > metadata.displayName > first line of metadata.description > shortened address
  */

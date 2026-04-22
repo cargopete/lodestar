@@ -6,7 +6,7 @@ import { usePayments, useGRTPrice, useEnrichedIndexers } from '@/hooks/useNetwor
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
-import { weiToGRT, formatGRT, formatUSD, shortenAddress, formatRelativeTime, cn } from '@/lib/utils';
+import { weiToGRT, formatGRT, formatUSD, shortenAddress, formatRelativeTime, cn, GATEWAY_ALIASES } from '@/lib/utils';
 import type { PaymentsEscrowAccount, PaymentsEscrowTransaction, GraphTallyTokensCollected } from '@/lib/queries';
 
 const ARBISCAN = 'https://arbiscan.io/address/';
@@ -63,14 +63,19 @@ function ReceiverLink({ address, names }: { address: string; names: Map<string, 
 }
 
 function PayerLink({ address }: { address: string }) {
+  const alias = GATEWAY_ALIASES[address.toLowerCase()];
   return (
     <a
       href={`${ARBISCAN}${address}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+      title={address}
+      className={cn(
+        'text-sm hover:text-[var(--accent)] transition-colors',
+        alias ? 'font-medium text-[var(--text)]' : 'font-mono text-[var(--text)]'
+      )}
     >
-      {shortenAddress(address, 6)}
+      {alias ?? shortenAddress(address, 6)}
       <svg className="w-3 h-3 inline-block ml-1 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
       </svg>
@@ -394,9 +399,13 @@ function TransactionsPanel({
                         href={`${ARBISCAN}${tx.payer.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-mono text-[var(--text-faint)] hover:text-[var(--accent)]"
+                        title={tx.payer.id}
+                        className={cn(
+                          'hover:text-[var(--accent)] text-[var(--text-faint)]',
+                          GATEWAY_ALIASES[tx.payer.id.toLowerCase()] ? 'text-sm font-medium' : 'font-mono'
+                        )}
                       >
-                        {shortenAddress(tx.payer.id, 6)}
+                        {GATEWAY_ALIASES[tx.payer.id.toLowerCase()] ?? shortenAddress(tx.payer.id, 6)}
                       </a>
                       <span className="text-[var(--text-faint)] shrink-0">&rarr;</span>
                       <ReceiverLink address={tx.receiver.id} names={names} />
