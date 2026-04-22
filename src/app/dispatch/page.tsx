@@ -726,7 +726,7 @@ export default function DispatchPage() {
         />
         <StatCard
           label="Provider Stake"
-          value="25K GRT"
+          value="10K GRT"
           subtitle="on HorizonStaking"
           icon={
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -772,8 +772,8 @@ export default function DispatchPage() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
-                    { label: 'Stake', value: '25,000 GRT' },
-                    { label: 'Thawing', value: '25,000 GRT' },
+                    { label: 'Stake', value: '10,000 GRT' },
+                    { label: 'Thawing', value: '0' },
                     { label: 'Chain', value: 'Arb One' },
                     { label: 'Tiers', value: 'Std + Archive' },
                   ].map(({ label, value }) => (
