@@ -29,6 +29,8 @@ export interface RoadmapItem {
   tags?: string[];
 }
 
+export const ROADMAP_LAST_UPDATED = 'April 22, 2026';
+
 export const ROADMAP_ITEMS: RoadmapItem[] = [
 
   // ─── PRODUCT LAYER ────────────────────────────────────────────────────────
@@ -62,10 +64,11 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterStart: 'Q2 2026',
     officialStatus: 'in_progress',
     lodestarStatus: 'on_track',
-    lodestarNote: 'Live off-protocol today. GraphOps running full stack per Feb 2026 forum update. On-network Horizon service still Q3 2026.',
+    lodestarNote: 'Live off-protocol today. March 2026: GraphOps advancing GTM with PropellerHeads, private beta imminent. Indexer Office Hours on Tycho held April 14. On-network Horizon service still Q3 2026.',
     links: [
       { label: 'Lodestar: Intro to Tycho', url: 'https://dev.lodestar-dashboard.com/blog/intro-to-tycho-data-service' },
       { label: 'The Graph Technical Roadmap', url: 'https://thegraph.com/blog/technical-roadmap/' },
+      { label: 'GraphOps Mar 2026 Update', url: 'https://forum.thegraph.com/t/graphops-update-march-2026/6897' },
       { label: 'GraphOps Feb 2026 Update', url: 'https://forum.thegraph.com/t/graphops-update-february-2026/6855' },
     ],
     tags: ['Tycho'],
@@ -122,7 +125,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterStart: 'Q2 2026',
     officialStatus: 'in_progress',
     lodestarStatus: 'uncertain',
-    lodestarNote: "Revenue growing fast (Messari Q4 2025) but on-chain billing status is not confirmed in any public update. Marking uncertain until StreamingFast confirms.",
+    lodestarNote: "On-chain billing being built as part of the SDS MVP by GraphOps — incremental payments working end-to-end in a local runtime as of March 2026 (GraphOps forum update). StreamingFast still using centralised billing in production. No shipped confirmation; marking uncertain until production deployment.",
     links: [
       { label: 'StreamingFast Jan 2026 Forum Update', url: 'https://forum.thegraph.com/t/streamingfast-update-january-2026/6838' },
       { label: 'GraphTally Blog', url: 'https://thegraph.com/blog/graph-tally-indexer-micropayments/' },
@@ -155,7 +158,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterEnd: 'Q1 2026',
     officialStatus: 'in_progress',
     lodestarStatus: 'delayed',
-    lodestarNote: "Horizon live Dec 2025 (confirmed). GIP-0086 (final Rewards Manager upgrade) still in forum as of March 2026 — reward gating not yet active.",
+    lodestarNote: "Horizon live Dec 2025 (confirmed). GIP-0086 (Rewards Manager upgrade) in active Council Snapshot vote closing April 30, 2026. Reward gating activation requires a further separate governance vote after GIP-0086 passes.",
     links: [
       { label: 'Horizon Upgrade Live Blog', url: 'https://thegraph.com/blog/horizon-upgrade-live/' },
       { label: 'GIP-0086 Forum Thread', url: 'https://forum.thegraph.com/t/gip-0086-rewards-manager-and-subgraph-service-upgrade/6868' },
@@ -190,7 +193,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterEnd: 'Q2 2026',
     officialStatus: 'in_progress',
     lodestarStatus: 'on_track',
-    lodestarNote: 'x402 and ERC-8004 formally backed in Feb 2026 blog post. Implementation details not yet public beyond that.',
+    lodestarNote: 'MCP querying is live — AI agents can query The Graph via natural language as of April 2026 (confirmed official). Full x402 Subgraph Gateway compatibility in development, targeting Q2 2026. A2A referenced in roadmap but no confirmed ship date.',
     links: [
       { label: 'x402 & ERC-8004 Blog (Feb 2026)', url: 'https://thegraph.com/blog/understanding-x402-erc8004/' },
       { label: 'The Graph Technical Roadmap', url: 'https://thegraph.com/blog/technical-roadmap/' },
@@ -224,8 +227,9 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterStart: 'Q2 2026',
     officialStatus: 'in_progress',
     lodestarStatus: 'on_track',
-    lodestarNote: 'GraphOps confirmed basic handshake and payment session stream implemented in Feb 2026 forum update. Demo-ready MVP close.',
+    lodestarNote: 'March 2026 (GraphOps): full end-to-end SDS flow achieved for the first time — Consumer↔Indexer via gRPC with trust-minimised incremental payments, validated in local runtime. Provider-side fee collection and transaction state still outstanding. Q2 2026 MVP target on track.',
     links: [
+      { label: 'GraphOps Mar 2026 Forum Update', url: 'https://forum.thegraph.com/t/graphops-update-march-2026/6897' },
       { label: 'GraphOps Feb 2026 Forum Update', url: 'https://forum.thegraph.com/t/graphops-update-february-2026/6855' },
       { label: 'GraphTally Blog', url: 'https://thegraph.com/blog/graph-tally-indexer-micropayments/' },
     ],
@@ -283,7 +287,10 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterStart: 'Q3 2026',
     officialStatus: 'experimental',
     lodestarStatus: 'uncertain',
-    lodestarNote: "Research only. The official roadmap itself flags multiple open implementation paths. No spec, no GIP.",
+    lodestarNote: "GRC-005 'Dispatch' filed April 2026 (community, cargopete) — contract live on Arbitrum One, npm packages published, one provider serving real traffic via GraphTally. Community RFC, not an official GIP. Official protocol research still Q3 2026.",
+    links: [
+      { label: 'GRC-005: Dispatch (Forum)', url: 'https://forum.thegraph.com/t/grc-005-dispatch-an-experimental-json-rpc-data-service-on-horizon/6913' },
+    ],
     tags: ['JSON-RPC'],
   },
 
@@ -316,8 +323,8 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     delegatorImpact: "Native delegation from Base or Ethereum mainnet without bridging would lower the UX barrier significantly. Still contingent on Phase 1 bridging — no confirmed timeline.",
     quarterStart: 'Q2 2025',
     officialStatus: 'in_progress',
-    lodestarStatus: 'uncertain',
-    lodestarNote: "CCIP adoption announced (blog confirmed). Cross-chain delegation explicitly contingent on Phase 1 — no confirmed timeline for the meaningful part.",
+    lodestarStatus: 'on_track',
+    lodestarNote: "Phase 1 complete — GRT is now a Cross-Chain Token on Arbitrum, Base, and Avalanche via CCIP (confirmed). Cross-chain staking and delegation (Phase 2) described as 'future enhancements' with no committed date. Solana extension targeted for 2026.",
     links: [
       { label: 'GRT Cross-Chain via CCIP Blog', url: 'https://thegraph.com/blog/grt-cross-chain-access-via-chainlink-ccip/' },
     ],
@@ -354,7 +361,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterStart: 'Q2 2026',
     officialStatus: 'in_progress',
     lodestarStatus: 'on_track',
-    lodestarNote: "GIPs filed March 2026, in forum discussion. No vote yet. The most consequential new economic primitive in Horizon for indexers.",
+    lodestarNote: "GIP-0087 and GIP-0088 in active Council Snapshot vote closing April 30, 2026 — bundled with GIP-0076 (Issuance Allocator) and GIP-0086 (Rewards Manager). The most consequential new economic primitive in Horizon for indexers.",
     gipId: 'GIP-0087',
     links: [
       { label: 'GIP-0087 & 0088 Forum Thread', url: 'https://forum.thegraph.com/t/on-chain-indexing-agreements-and-issuance-allocation-gip-0087-gip-0088/6869' },
@@ -373,11 +380,12 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterStart: 'Q1 2026',
     officialStatus: 'in_progress',
     lodestarStatus: 'delayed',
-    lodestarNote: "GIP-0086 (Rewards Manager hooks) still in forum discussion as of March 2026. Reward gating activation requires a separate governance vote after 0086 passes. Q1 target missed.",
+    lodestarNote: "REO contract deployed to Arbitrum One mainnet, off-chain oracle node live in observation mode (Edge & Node Mar/Apr 2026 update). Reward gating activation pending: (1) audit completion, (2) GIP-0086 passing Snapshot vote (closes April 30), (3) separate governance vote to flip the switch. Q1 target missed.",
     gipId: 'GIP-0079',
     links: [
       { label: 'GIP-0079 Forum Thread', url: 'https://forum.thegraph.com/t/gip-0079-indexer-rewards-eligibility-oracle/6734' },
       { label: 'GIP-0086 Forum Thread', url: 'https://forum.thegraph.com/t/gip-0086-rewards-manager-and-subgraph-service-upgrade/6868' },
+      { label: 'Edge & Node Mar/Apr 2026 Update', url: 'https://forum.thegraph.com/t/edge-node-march-april-2026-update/6894' },
       { label: 'REO Contract (GitHub)', url: 'https://github.com/graphprotocol/rewards-eligibility-oracle' },
     ],
     tags: ['REO', 'Economics'],
@@ -428,7 +436,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterStart: 'Q3 2025',
     officialStatus: 'planned',
     lodestarStatus: 'uncertain',
-    lodestarNote: "Explicitly contingent on CCIP Phase 1 per official announcement. No committed timeline.",
+    lodestarNote: "CCIP Phase 1 bridging is now complete (GRT is a CCT on Arbitrum, Base, Avalanche). Cross-chain staking/delegation still described as 'future enhancements' — no committed date despite Phase 1 being done.",
     links: [
       { label: 'GRT Cross-Chain via CCIP Blog', url: 'https://thegraph.com/blog/grt-cross-chain-access-via-chainlink-ccip/' },
     ],

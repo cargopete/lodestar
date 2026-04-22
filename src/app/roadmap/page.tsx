@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
-import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
 import {
+  ROADMAP_ITEMS,
+  ROADMAP_LAST_UPDATED,
   LAYER_LABELS,
   LAYER_DESCRIPTIONS,
   OFFICIAL_STATUS_LABEL,
@@ -221,7 +221,7 @@ function ItemCard({ item, onClick }: { item: RoadmapItem; onClick: () => void })
 
   return (
     <button
-      onClick={onClick}
+      onClick={hasDetail ? onClick : undefined}
       className={cn(
         'w-full text-left p-4 rounded-lg border bg-[var(--bg-surface)] flex flex-col gap-3 transition-all',
         hasDetail
@@ -290,14 +290,19 @@ function ItemCard({ item, onClick }: { item: RoadmapItem; onClick: () => void })
 // ─── Layer section ────────────────────────────────────────────────────────
 
 function LayerSection({
-  layer, items, activeFilter, onSelect,
+  layer, items, activeFilter, lodestarFilter, onSelect,
 }: {
   layer: RoadmapLayer;
   items: RoadmapItem[];
   activeFilter: OfficialStatus | null;
+  lodestarFilter: LodestarStatus | null;
   onSelect: (item: RoadmapItem) => void;
 }) {
-  const filtered = activeFilter ? items.filter((i) => i.officialStatus === activeFilter) : items;
+  const filtered = items.filter((i) => {
+    if (activeFilter && i.officialStatus !== activeFilter) return false;
+    if (lodestarFilter && i.lodestarStatus !== lodestarFilter) return false;
+    return true;
+  });
   const sorted = [...filtered].sort(
     (a, b) => (QUARTER_ORDER[a.quarterStart] ?? 99) - (QUARTER_ORDER[b.quarterStart] ?? 99)
   );
@@ -333,19 +338,18 @@ const FILTER_OPTIONS: { value: OfficialStatus | null; label: string }[] = [
   { value: 'experimental', label: 'Experimental' },
 ];
 
+const LODESTAR_FILTER_OPTIONS: { value: LodestarStatus | null; label: string }[] = [
+  { value: null, label: 'All' },
+  { value: 'shipped', label: 'Shipped' },
+  { value: 'on_track', label: 'On Track' },
+  { value: 'delayed', label: 'Delayed' },
+  { value: 'uncertain', label: 'Uncertain' },
+];
+
 export default function RoadmapPage() {
   const [activeFilter, setActiveFilter] = useState<OfficialStatus | null>(null);
+  const [lodestarFilter, setLodestarFilter] = useState<LodestarStatus | null>(null);
   const [selected, setSelected] = useState<RoadmapItem | null>(null);
-
-  const { data, isLoading } = useQuery<{ items: RoadmapItem[] }>({
-    queryKey: ['roadmap'],
-    queryFn: async () => {
-      const res = await fetch('/api/roadmap');
-      if (!res.ok) throw new Error('Failed to load roadmap');
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000,
-  });
 
   // Close drawer on Escape
   useEffect(() => {
@@ -356,18 +360,12 @@ export default function RoadmapPage() {
 
   const byLayer = useMemo(() => {
     const map: Record<RoadmapLayer, RoadmapItem[]> = { product: [], protocol: [], economics: [] };
-    for (const item of data?.items ?? []) map[item.layer].push(item);
+    for (const item of ROADMAP_ITEMS) map[item.layer].push(item);
     return map;
-  }, [data]);
+  }, []);
 
-  const shippedCount = useMemo(
-    () => (data?.items ?? []).filter((i) => i.officialStatus === 'shipped').length,
-    [data]
-  );
-  const delayedCount = useMemo(
-    () => (data?.items ?? []).filter((i) => i.lodestarStatus === 'delayed').length,
-    [data]
-  );
+  const shippedCount = ROADMAP_ITEMS.filter((i) => i.officialStatus === 'shipped').length;
+  const delayedCount = ROADMAP_ITEMS.filter((i) => i.lodestarStatus === 'delayed').length;
 
   return (
     <div className="space-y-10">
@@ -384,7 +382,7 @@ export default function RoadmapPage() {
           {' '}with Lodestar&apos;s independent assessment. Click any item for detail.
         </p>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-[12px] text-[var(--text-faint)]">
-          <span>{data?.items.length ?? '—'} items tracked</span>
+          <span>{ROADMAP_ITEMS.length} items tracked</span>
           <span>·</span>
           <span className="text-[var(--green)]">{shippedCount} shipped</span>
           {delayedCount > 0 && (
@@ -394,52 +392,68 @@ export default function RoadmapPage() {
             </>
           )}
           <span>·</span>
-          <span>Last updated April 2026</span>
+          <span>Last updated {ROADMAP_LAST_UPDATED}</span>
         </div>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap gap-2">
-        {FILTER_OPTIONS.map((opt) => (
-          <button
-            key={opt.value ?? 'all'}
-            onClick={() => setActiveFilter(opt.value)}
-            className={cn(
-              'px-3 py-1.5 text-[12px] font-medium rounded-full border transition-all',
-              activeFilter === opt.value
-                ? 'bg-[var(--accent)] border-[var(--accent)] text-white'
-                : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
-            )}
-          >
-            {opt.label}
-          </button>
-        ))}
+      {/* Filter bars */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--text-faint)] w-14 flex-shrink-0">Official</span>
+          {FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value ?? 'all'}
+              onClick={() => setActiveFilter(opt.value)}
+              className={cn(
+                'px-3 py-1.5 text-[12px] font-medium rounded-full border transition-all',
+                activeFilter === opt.value
+                  ? 'bg-[var(--accent)] border-[var(--accent)] text-white'
+                  : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--text-faint)] w-14 flex-shrink-0">Lodestar</span>
+          {LODESTAR_FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value ?? 'all'}
+              onClick={() => setLodestarFilter(opt.value)}
+              className={cn(
+                'px-3 py-1.5 text-[12px] font-medium rounded-full border transition-all',
+                lodestarFilter === opt.value
+                  ? 'bg-[var(--accent)] border-[var(--accent)] text-white'
+                  : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Loading */}
-      {isLoading && <ChartSkeleton height="200px" />}
-
       {/* Layers */}
-      {!isLoading && LAYERS.map((layer) => (
+      {LAYERS.map((layer) => (
         <LayerSection
           key={layer}
           layer={layer}
           items={byLayer[layer]}
           activeFilter={activeFilter}
+          lodestarFilter={lodestarFilter}
           onSelect={setSelected}
         />
       ))}
 
       {/* Disclaimer */}
-      {!isLoading && (
-        <p className="text-[11px] text-[var(--text-faint)]">
-          Roadmap data sourced from{' '}
-          <a href="https://thegraph.com/roadmap/" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
-            thegraph.com/roadmap
-          </a>
-          . Lodestar assessments are independent views — not official positions of The Graph Foundation.
-        </p>
-      )}
+      <p className="text-[11px] text-[var(--text-faint)]">
+        Roadmap data sourced from{' '}
+        <a href="https://thegraph.com/roadmap/" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
+          thegraph.com/roadmap
+        </a>
+        . Lodestar assessments are independent views — not official positions of The Graph Foundation.
+      </p>
 
       {/* Detail drawer */}
       {selected && (
