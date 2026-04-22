@@ -138,7 +138,7 @@ export default function CouncilPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Voting window', value: '15 days' },
-            { label: 'Seats', value: membersLoading ? '—' : `${seatCount || 10} members` },
+            { label: 'Seats', value: `${seatCount || 11} members` },
             { label: 'Choices', value: 'For / Against / Abstain' },
             { label: 'Strategy', value: 'multisig-owners' },
           ].map((item) => (

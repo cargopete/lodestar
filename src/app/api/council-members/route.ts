@@ -4,9 +4,23 @@ import { ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
 
 const SNAPSHOT_GRAPHQL = 'https://hub.snapshot.org/graphql';
 const SNAPSHOT_SPACE = 'council.graphprotocol.eth';
-const MULTISIG_ADDRESS = '0x48301Fe520f72994d32eAd72E2B6A8447873CF50';
-const SAFE_API = `https://safe-transaction-mainnet.safe.global/api/v1/safes/${MULTISIG_ADDRESS}/`;
 const PROPOSALS_FOR_STATS = 10;
+
+// Canonical council seats — multisig owners as of April 2026
+// Multisig: 0x48301Fe520f72994d32eAd72E2B6A8447873CF50
+const COUNCIL_SEATS = [
+  '0xDc524F119a00CaB2BE368388f55Edb9Cb7071397',
+  '0x4c5f34ab5833D2C8099FB64e28FaFCE5e446649a',
+  '0x3252567A834c05B756f5562b13158e398e14ad8e',
+  '0xeDE524607B9722Fac121F20ef433fF978C2A0334',
+  '0xCCd92AC3B11Bd39C1B0fB92639ba24BD80efA8a5',
+  '0x97DD367671b77a47AC9867C3203dC7829020C789',
+  '0xF53F07d48b08483330b57F029a9f1369158D4011',
+  '0x7EAbE4F636B937628A7Fe503bD7F06772C047FEe',
+  '0xB02ce52E8B7344d306b60CB1E0d4Db1EF86b80b0',
+  '0x17118dB8DdD04eFA661ce81ff181cf2807Ee2C21',
+  '0x68AfAbC57e048b29E0741816167777c148a02b57',
+].map((a) => a.toLowerCase());
 
 async function snapshotPost<T>(query: string): Promise<T> {
   const res = await fetch(SNAPSHOT_GRAPHQL, {
@@ -37,34 +51,10 @@ async function resolveEns(address: string): Promise<string | null> {
   }
 }
 
-async function fetchMultisigOwners(): Promise<string[]> {
-  try {
-    const res = await fetch(SAFE_API, { headers: { Accept: 'application/json' } });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.owners as string[] ?? []).map((a) => a.toLowerCase());
-  } catch {
-    return [];
-  }
-}
-
 async function fetchCouncilMembers() {
-  // 1. Fetch canonical seat holders from the multisig, fall back to Snapshot space members
-  const [multisigOwners, spaceData] = await Promise.all([
-    fetchMultisigOwners(),
-    snapshotPost<{ space: { admins: string[]; members: string[] } }>(`{
-      space(id: "${SNAPSHOT_SPACE}") { admins members }
-    }`),
-  ]);
+  const canonicalSeats = COUNCIL_SEATS;
 
-  const canonicalSeats: string[] = multisigOwners.length > 0
-    ? multisigOwners
-    : [
-        ...spaceData.space.admins.map((a) => a.toLowerCase()),
-        ...spaceData.space.members.map((m) => m.toLowerCase()),
-      ];
-
-  // 2. Fetch recent proposals for participation stats
+  // 1. Fetch recent proposals for participation stats
   const proposalsData = await snapshotPost<{
     proposals: Array<{ id: string; title: string; choices: string[]; state: string; end: number }>;
   }>(`{
