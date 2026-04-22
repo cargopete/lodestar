@@ -4,6 +4,8 @@ import { ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
 
 const SNAPSHOT_GRAPHQL = 'https://hub.snapshot.org/graphql';
 const SNAPSHOT_SPACE = 'council.graphprotocol.eth';
+const MULTISIG_ADDRESS = '0x48301Fe520f72994d32eAd72E2B6A8447873CF50';
+const SAFE_API = `https://safe-transaction-mainnet.safe.global/api/v1/safes/${MULTISIG_ADDRESS}/`;
 const PROPOSALS_FOR_STATS = 10;
 
 async function snapshotPost<T>(query: string): Promise<T> {
@@ -35,13 +37,32 @@ async function resolveEns(address: string): Promise<string | null> {
   }
 }
 
+async function fetchMultisigOwners(): Promise<string[]> {
+  try {
+    const res = await fetch(SAFE_API, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.owners as string[] ?? []).map((a) => a.toLowerCase());
+  } catch {
+    return [];
+  }
+}
+
 async function fetchCouncilMembers() {
-  // 1. Fetch space config
-  const spaceData = await snapshotPost<{
-    space: { admins: string[]; members: string[] };
-  }>(`{
-    space(id: "${SNAPSHOT_SPACE}") { admins members }
-  }`);
+  // 1. Fetch canonical seat holders from the multisig, fall back to Snapshot space members
+  const [multisigOwners, spaceData] = await Promise.all([
+    fetchMultisigOwners(),
+    snapshotPost<{ space: { admins: string[]; members: string[] } }>(`{
+      space(id: "${SNAPSHOT_SPACE}") { admins members }
+    }`),
+  ]);
+
+  const canonicalSeats: string[] = multisigOwners.length > 0
+    ? multisigOwners
+    : [
+        ...spaceData.space.admins.map((a) => a.toLowerCase()),
+        ...spaceData.space.members.map((m) => m.toLowerCase()),
+      ];
 
   // 2. Fetch recent proposals for participation stats
   const proposalsData = await snapshotPost<{
@@ -74,14 +95,8 @@ async function fetchCouncilMembers() {
     })
   );
 
-  // 4. Build canonical voter universe
-  const allAddresses = new Set<string>([
-    ...spaceData.space.admins.map((a) => a.toLowerCase()),
-    ...spaceData.space.members.map((m) => m.toLowerCase()),
-  ]);
-  for (const { votes } of votesByProposal) {
-    for (const v of votes) allAddresses.add(v.voter.toLowerCase());
-  }
+  // 4. Use multisig seats as the canonical set
+  const allAddresses = new Set<string>(canonicalSeats);
 
   // 5. Compute per-address participation stats
   type Stats = {
@@ -109,9 +124,8 @@ async function fetchCouncilMembers() {
   const ensResults = await Promise.all(addresses.map((addr) => resolveEns(addr)));
   const ensMap = new Map(addresses.map((addr, i) => [addr, ensResults[i]]));
 
-  // 7. Assemble final list — only addresses that have actually voted, sorted by participation desc
+  // 7. Assemble final list — all multisig seats, sorted by participation desc
   const members = addresses
-    .filter((address) => (statsMap.get(address)?.proposalsVoted ?? 0) > 0)
     .map((address) => {
       const s = statsMap.get(address)!;
       return {
@@ -127,7 +141,7 @@ async function fetchCouncilMembers() {
     })
     .sort((a, b) => b.proposalsVoted - a.proposalsVoted);
 
-  return { members, totalProposals: proposals.length };
+  return { members, totalProposals: proposals.length, seatCount: canonicalSeats.length };
 }
 
 export async function GET() {

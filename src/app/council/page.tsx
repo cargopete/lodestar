@@ -30,6 +30,12 @@ interface CouncilMember {
   } | null;
 }
 
+interface CouncilMembersData {
+  members: CouncilMember[];
+  totalProposals: number;
+  seatCount: number;
+}
+
 function useCouncilProposals() {
   const [proposals, setProposals] = useState<SnapshotProposal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,22 +52,18 @@ function useCouncilProposals() {
 }
 
 function useCouncilMembers() {
-  const [members, setMembers] = useState<CouncilMember[]>([]);
-  const [totalProposals, setTotalProposals] = useState(0);
+  const [data, setData] = useState<CouncilMembersData>({ members: [], totalProposals: 0, seatCount: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/council-members')
       .then(r => r.json())
-      .then(data => {
-        setMembers(data?.members ?? []);
-        setTotalProposals(data?.totalProposals ?? 0);
-      })
+      .then(d => setData({ members: d?.members ?? [], totalProposals: d?.totalProposals ?? 0, seatCount: d?.seatCount ?? 0 }))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  return { members, totalProposals, loading };
+  return { ...data, loading };
 }
 
 function shortAddress(addr: string) {
@@ -82,7 +84,7 @@ function participationColor(rate: number): string {
 
 export default function CouncilPage() {
   const { proposals, loading: proposalsLoading } = useCouncilProposals();
-  const { members, totalProposals, loading: membersLoading } = useCouncilMembers();
+  const { members, totalProposals, seatCount, loading: membersLoading } = useCouncilMembers();
 
   const active = proposals.filter(p => p.state === 'active').length;
   const closed = proposals.filter(p => p.state === 'closed').length;
@@ -124,9 +126,9 @@ export default function CouncilPage() {
         </div>
         <div className="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] text-center">
           <p className="text-2xl font-mono font-bold text-[var(--accent)]">
-            {membersLoading ? '—' : members.length}
+            {membersLoading ? '—' : seatCount || members.length}
           </p>
-          <p className="text-xs text-[var(--text-faint)] mt-1">Voters Tracked</p>
+          <p className="text-xs text-[var(--text-faint)] mt-1">Council Seats</p>
         </div>
       </div>
 
@@ -136,7 +138,7 @@ export default function CouncilPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Voting window', value: '15 days' },
-            { label: 'Voting power', value: '1 per seat' },
+            { label: 'Seats', value: membersLoading ? '—' : `${seatCount || 10} members` },
             { label: 'Choices', value: 'For / Against / Abstain' },
             { label: 'Strategy', value: 'multisig-owners' },
           ].map((item) => (
@@ -154,7 +156,7 @@ export default function CouncilPage() {
           <h2 className="text-base font-semibold text-[var(--text)]">Council Members</h2>
           {!membersLoading && totalProposals > 0 && (
             <p className="text-xs text-[var(--text-faint)]">
-              participation over last {totalProposals} proposals
+              last {totalProposals} proposals
             </p>
           )}
         </div>
@@ -167,13 +169,16 @@ export default function CouncilPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {members.map((member) => (
+            {members.map((member) => {
+              const inactive = member.proposalsVoted === 0;
+              return (
               <a
                 key={member.address}
                 href={`https://etherscan.io/address/${member.address}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block p-3 rounded-lg bg-[var(--bg-elevated)] hover:bg-[var(--bg-surface)] border border-[var(--border)] transition-colors"
+                style={{ opacity: inactive ? 0.45 : 1 }}
               >
                 {/* Name / address */}
                 <p className="text-xs font-medium text-[var(--text)] truncate">
@@ -210,13 +215,16 @@ export default function CouncilPage() {
                 </div>
 
                 {/* Last vote */}
-                {member.lastVote && (
+                {inactive ? (
+                  <p className="text-[10px] mt-1.5 text-[var(--text-faint)]">No votes on record</p>
+                ) : member.lastVote ? (
                   <p className="text-[10px] mt-1.5 truncate" style={{ color: choiceColor(member.lastVote.choice) }}>
                     Last: {member.lastVote.choice}
                   </p>
-                )}
+                ) : null}
               </a>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
