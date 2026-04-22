@@ -7,7 +7,8 @@ import { arbitrum } from 'wagmi/chains';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/Badge';
-import { cn } from '@/lib/utils';
+import { cn, weiToGRT, formatGRT } from '@/lib/utils';
+import { useServiceProvisions } from '@/hooks/useNetworkStats';
 
 // ── Dispatch contract addresses ──────────────────────────────────────────────
 
@@ -643,6 +644,14 @@ function ProviderMethods() {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DispatchPage() {
+  const { data: provisionsData } = useServiceProvisions(DISPATCH.rpcDataService);
+  const provisions = provisionsData?.provisions ?? [];
+  const providerProvision = provisions.find(
+    (p) => p.indexer.id.toLowerCase() === DISPATCH.provider.toLowerCase()
+  );
+  const provisionedGRT = providerProvision ? weiToGRT(providerProvision.tokensProvisioned) : null;
+  const thawingGRT = providerProvision ? weiToGRT(providerProvision.tokensThawing) : null;
+
   return (
     <div className="space-y-6">
 
@@ -726,7 +735,7 @@ export default function DispatchPage() {
         />
         <StatCard
           label="Provider Stake"
-          value="10K GRT"
+          value={provisionedGRT !== null ? `${formatGRT(provisionedGRT)} GRT` : '--'}
           subtitle="on HorizonStaking"
           icon={
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -772,8 +781,8 @@ export default function DispatchPage() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
-                    { label: 'Stake', value: '10,000 GRT' },
-                    { label: 'Thawing', value: '0' },
+                    { label: 'Stake', value: provisionedGRT !== null ? `${formatGRT(provisionedGRT)} GRT` : '--' },
+                    { label: 'Thawing', value: thawingGRT ? `${formatGRT(thawingGRT)} GRT` : '0' },
                     { label: 'Chain', value: 'Arb One' },
                     { label: 'Tiers', value: 'Std + Archive' },
                   ].map(({ label, value }) => (
