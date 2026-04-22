@@ -96,7 +96,9 @@ export default function CouncilPage() {
   const { members, totalProposals, seatCount, loading: membersLoading } = useCouncilMembers();
 
   const active = proposals.filter(p => p.state === 'active').length;
-  const closed = proposals.filter(p => p.state === 'closed').length;
+  // totalProposals comes from council-members which fetches full history (up to 100)
+  // closed = everything that isn't active or pending
+  const closed = totalProposals > 0 ? totalProposals - active : proposals.filter(p => p.state === 'closed').length;
 
   return (
     <div className="space-y-8">
