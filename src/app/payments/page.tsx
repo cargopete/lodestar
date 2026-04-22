@@ -173,7 +173,7 @@ function GatewayBreakdownCard({
                   <div>
                     <div className="flex justify-between text-xs text-[var(--text-faint)] mb-1">
                       <span>Escrow</span>
-                      <span>{formatGRT(gw.totalEscrow)} GRT · {escrowPct.toFixed(0)}%</span>
+                      <span>{formatGRT(gw.totalEscrow)} GRT · {escrowPct < 1 && escrowPct > 0 ? '<1' : escrowPct.toFixed(0)}%</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
                       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(gw.totalEscrow / maxEscrow) * 100}%`, backgroundColor: color }} />
@@ -241,7 +241,7 @@ function GatewayBreakdownCard({
                         </div>
                         <div className="text-right shrink-0">
                           <p className="font-mono text-xs text-[var(--text)]">{formatGRT(gw.totalEscrow)} GRT</p>
-                          <p className="text-[10px] text-[var(--text-faint)]">{escrowPct.toFixed(0)}% share · {formatUSD(gw.totalEscrow * grtPrice)}</p>
+                          <p className="text-[10px] text-[var(--text-faint)]">{escrowPct < 1 && escrowPct > 0 ? '<1' : escrowPct.toFixed(0)}% share · {formatUSD(gw.totalEscrow * grtPrice)}</p>
                         </div>
                       </div>
                     </td>
