@@ -13,7 +13,7 @@ import type { DataService, ProvisionWithIndexer } from '@/lib/queries';
 // Known data service addresses → friendly names
 const SERVICE_NAMES: Record<string, string> = {
   '0xb2bb92d0de618878e438b55d5846cfecd9301105': 'Subgraph Service',
-  '0x73846272813065c3e4efdb3fb82e0d128c8c2364': 'Dispatch (JSON-RPC)',
+  '0xa983b18b8291f0c317ba4fe0dc0f7cc9373af078': 'Dispatch (JSON-RPC)',
 };
 
 function resolveServiceName(id: string): string {
@@ -87,7 +87,7 @@ export default function ServicesPage() {
             onSelect={() =>
               setSelectedService(selectedService === service.id ? null : service.id)
             }
-            ctaHref={service.id.toLowerCase() === '0x73846272813065c3e4efdb3fb82e0d128c8c2364' ? '/dispatch' : undefined}
+            ctaHref={service.id.toLowerCase() === '0xa983b18b8291f0c317ba4fe0dc0f7cc9373af078' ? '/dispatch' : undefined}
           />
         ))}
       </div>
@@ -137,7 +137,7 @@ interface ServiceCardProps {
   ctaHref?: string;
 }
 
-const DISPATCH_ID = '0x73846272813065c3e4efdb3fb82e0d128c8c2364';
+const DISPATCH_ID = '0xa983b18b8291f0c317ba4fe0dc0f7cc9373af078';
 
 function ServiceCard({ service, grtPrice, isSelected, onSelect, ctaHref }: ServiceCardProps) {
   const provisioned = weiToGRT(service.totalTokensProvisioned);
@@ -165,9 +165,16 @@ function ServiceCard({ service, grtPrice, isSelected, onSelect, ctaHref }: Servi
             <h3 className="text-lg font-semibold text-[var(--text)]">
               {serviceName}
             </h3>
-            <p className="text-xs text-[var(--text-faint)] font-mono mt-1">
+            <a
+              href={`https://arbiscan.io/address/${service.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={service.id}
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs text-[var(--text-faint)] font-mono mt-1 hover:text-[var(--accent)] transition-colors"
+            >
               {shortenAddress(service.id)}
-            </p>
+            </a>
           </div>
           <Badge variant="success">Active</Badge>
         </div>

@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 // ── Dispatch contract addresses ──────────────────────────────────────────────
 
 const DISPATCH = {
-  rpcDataService: '0x73846272813065c3e4efdb3fb82e0d128c8c2364' as const,
+  rpcDataService: '0xA983b18B8291F0c317Ba4Fe0dc0f7cc9373AF078' as const,
   graphTallyCollector: '0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e' as const,
   paymentsEscrow: '0xf6Fcc27aAf1fcD8B254498c9794451d82afC673E' as const,
   grt: '0x9623063377AD1B27544C965cCd7342f7EA7e88C7' as const,
