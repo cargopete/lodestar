@@ -26,7 +26,10 @@ export default function ServicesPage() {
   const [selectedService, setSelectedService] = useState<string | null>(null);
 
   const grtPrice = priceData?.price ?? 0;
-  const services = servicesData?.dataServices ?? [];
+  const RETIRED = new Set(['0x73846272813065c3e4efdb3fb82e0d128c8c2364']);
+  const services = (servicesData?.dataServices ?? []).filter(
+    (s) => !RETIRED.has(s.id.toLowerCase())
+  );
 
   const totalProvisioned = services.reduce(
     (sum, s) => sum + weiToGRT(s.totalTokensProvisioned),

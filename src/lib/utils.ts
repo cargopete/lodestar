@@ -105,7 +105,8 @@ export function shortenAddress(address: string, chars = 4): string {
  * Keys must be lowercase. Shown on the Payments page instead of raw addresses.
  */
 export const GATEWAY_ALIASES: Record<string, string> = {
-  // '0xabc123...': 'E&N Gateway',
+  '0xdde4cffd3d9052a9cb618fc05a1cd02be1f2f467': 'E&N Gateway',
+  '0xf6fcc27aaf1fcd8b254498c9794451d82afc673e': 'Dispatch Gateway',
 };
 
 /**
