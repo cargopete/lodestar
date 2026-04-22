@@ -109,8 +109,9 @@ async function fetchCouncilMembers() {
   const ensResults = await Promise.all(addresses.map((addr) => resolveEns(addr)));
   const ensMap = new Map(addresses.map((addr, i) => [addr, ensResults[i]]));
 
-  // 7. Assemble final list sorted by participation desc
+  // 7. Assemble final list — only addresses that have actually voted, sorted by participation desc
   const members = addresses
+    .filter((address) => (statsMap.get(address)?.proposalsVoted ?? 0) > 0)
     .map((address) => {
       const s = statsMap.get(address)!;
       return {
