@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useReadContract, useSignTypedData, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseAbi, formatUnits, parseUnits, isAddress } from 'viem';
 import { arbitrum } from 'wagmi/chains';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -95,30 +95,21 @@ const METHODS_INITIAL_COUNT = 5;
 
 const PRICE_PER_CU = 4_000_000_000_000n; // GRT wei per compute unit
 
-const TAP_DOMAIN = {
-  name: 'GraphTallyCollector',
-  version: '1',
-  chainId: 42161,
-  verifyingContract: '0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e' as const,
-} as const;
-
-const TAP_TYPES = {
-  Receipt: [
-    { name: 'data_service',     type: 'address' },
-    { name: 'service_provider', type: 'address' },
-    { name: 'timestamp_ns',     type: 'uint64'  },
-    { name: 'nonce',            type: 'uint64'  },
-    { name: 'value',            type: 'uint128' },
-    { name: 'metadata',         type: 'bytes'   },
-  ],
-} as const;
+const CU_WEIGHTS: Record<string, number> = {
+  eth_chainId: 1, net_version: 1, eth_blockNumber: 1,
+  eth_getBalance: 5, eth_getTransactionCount: 5, eth_getCode: 5,
+  eth_getStorageAt: 5, eth_sendRawTransaction: 5,
+  eth_getBlockByHash: 5, eth_getBlockByNumber: 5,
+  eth_call: 10, eth_estimateGas: 10,
+  eth_getTransactionReceipt: 10, eth_getTransactionByHash: 10,
+  eth_getLogs: 20,
+};
 
 function Playground() {
-  const { isConnected } = useAccount();
-  const { signTypedDataAsync } = useSignTypedData();
+  const { address, isConnected } = useAccount();
   const [methodIdx, setMethodIdx] = useState(0);
   const [params, setParams] = useState(METHODS[0].params);
-  const [status, setStatus] = useState<'idle' | 'signing' | 'sending'>('idle');
+  const [status, setStatus] = useState<'idle' | 'sending'>('idle');
   const [result, setResult] = useState<{ data: unknown; attestation: string | null; feePaid: bigint } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rawOpen, setRawOpen] = useState(false);
@@ -134,57 +125,31 @@ function Playground() {
   };
 
   const send = async () => {
-    if (!isConnected) return;
-    setStatus('signing');
+    if (!isConnected || !address) return;
+    setStatus('sending');
     setResult(null);
     setError(null);
     try {
       let parsedParams: unknown;
       try { parsedParams = JSON.parse(params); }
-      catch { setError('Invalid JSON in params'); return; }
+      catch { setError('Invalid JSON in params'); setStatus('idle'); return; }
 
-      // Build receipt
-      const timestampNs = BigInt(Math.floor(Date.now() / 1000)) * 1_000_000_000n;
-      const nonce = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
+      const cu = CU_WEIGHTS[METHODS[methodIdx].label] ?? 10;
+      const feePaid = PRICE_PER_CU * BigInt(cu);
 
-      // Sign in wallet (MetaMask popup)
-      let signature: `0x${string}`;
-      try {
-        signature = await signTypedDataAsync({
-          domain: TAP_DOMAIN,
-          types: TAP_TYPES,
-          primaryType: 'Receipt',
-          message: {
-            data_service:     DISPATCH.rpcDataService,
-            service_provider: DISPATCH.provider,
-            timestamp_ns:     timestampNs,
-            nonce,
-            value:            PRICE_PER_CU,
-            metadata:         '0x' as `0x${string}`,
-          },
-        });
-      } catch {
-        setError('Signing cancelled');
-        return;
-      }
-
-      // Serialize receipt (template literal — avoids BigInt JSON.stringify issues)
-      const receipt = `{"receipt":{"data_service":"${DISPATCH.rpcDataService}","service_provider":"${DISPATCH.provider}","timestamp_ns":${timestampNs},"nonce":${nonce},"value":${PRICE_PER_CU},"metadata":"0x"},"signature":"${signature}"}`;
-
-      setStatus('sending');
-      const resp = await fetch('/api/dispatch/provider', {
+      const resp = await fetch('/api/dispatch/rpc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chainId: 42161,
-          receipt,
+          consumerAddress: address,
           body: { jsonrpc: '2.0', method: METHODS[methodIdx].label, params: parsedParams, id: 1 },
         }),
       });
 
       const json = await resp.json();
       if (json.error) setError(json.error);
-      else setResult({ ...json, feePaid: PRICE_PER_CU });
+      else setResult({ ...json, feePaid });
     } catch (e) {
       setError(String(e));
     } finally {
@@ -249,7 +214,7 @@ function Playground() {
               disabled={status !== 'idle'}
               className="px-4 py-2 text-[12px] font-medium bg-[var(--accent)] text-white rounded-[var(--radius-button)] hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              {status === 'signing' ? 'Sign in wallet…' : status === 'sending' ? 'Sending…' : 'Send Request →'}
+              {status === 'sending' ? 'Sending…' : 'Send Request →'}
             </button>
           ) : (
             <div className="px-4 py-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] text-center space-y-1">
@@ -275,7 +240,7 @@ function Playground() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                   <span className="text-[12px] font-medium text-[var(--green)]">
-                    Paid {Number(result.feePaid) / 1e18} GRT to lodestar-indexer.eth
+                    ~{Number(result.feePaid) / 1e18} GRT charged to your escrow
                   </span>
                 </div>
               )}

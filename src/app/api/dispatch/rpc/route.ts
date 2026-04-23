@@ -3,17 +3,20 @@ import { NextRequest, NextResponse } from 'next/server';
 const GATEWAY = process.env.DISPATCH_GATEWAY_URL ?? 'http://167.235.29.213:8080';
 
 export async function POST(request: NextRequest) {
-  const { chainId: rawChainId = 42161, body } = await request.json();
+  const { chainId: rawChainId = 42161, body, consumerAddress } = await request.json();
   const chainId = Number(rawChainId);
   if (!Number.isFinite(chainId) || chainId <= 0 || !Number.isInteger(chainId)) {
     return NextResponse.json({ error: 'Invalid chainId' }, { status: 400 });
   }
 
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (consumerAddress) headers['X-Consumer-Address'] = consumerAddress;
+
   let resp: Response;
   try {
     resp = await fetch(`${GATEWAY}/rpc/${chainId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(10_000),
     });
