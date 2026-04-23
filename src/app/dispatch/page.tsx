@@ -898,6 +898,13 @@ function ConsumerHistory() {
   const [items, setItems] = useState<ReceiptItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [grtPrice, setGrtPrice] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch('/api/price').then(r => r.json()).then(d => {
+      if (typeof d.price === 'number') setGrtPrice(d.price);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!address) return;
@@ -926,15 +933,24 @@ function ConsumerHistory() {
 
   // Total GRT spent (sum of all receipt values)
   const totalWei = items.reduce((sum, i) => sum + Number(i.value), 0);
-  const totalGRT = (totalWei / 1e18).toFixed(6);
+  const totalGRT = grtFromWei(String(Math.round(totalWei)));
+  const totalUsd = grtPrice ? (totalWei / 1e18) * grtPrice : null;
 
-  // Breakdown by method
+  const fmtUsd = (wei: number) => {
+    if (!grtPrice) return null;
+    const usd = (wei / 1e18) * grtPrice;
+    if (usd === 0) return '$0.00';
+    if (usd >= 0.01) return `$${usd.toFixed(4)}`;
+    return `$${usd.toFixed(10).replace(/0+$/, '').replace(/\.$/, '')}`;
+  };
+
+  // Breakdown by method — skip null/unknown entries
   const byMethod: Record<string, { count: number; totalWei: number }> = {};
   for (const item of items) {
-    const m = item.method ?? 'unknown';
-    if (!byMethod[m]) byMethod[m] = { count: 0, totalWei: 0 };
-    byMethod[m].count++;
-    byMethod[m].totalWei += Number(item.value);
+    if (!item.method) continue;
+    if (!byMethod[item.method]) byMethod[item.method] = { count: 0, totalWei: 0 };
+    byMethod[item.method].count++;
+    byMethod[item.method].totalWei += Number(item.value);
   }
   const methodRows = Object.entries(byMethod).sort((a, b) => b[1].count - a[1].count);
 
@@ -963,7 +979,12 @@ function ConsumerHistory() {
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]">
                 <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">Total GRT Spent</p>
-                <p className="text-[20px] font-mono font-medium text-[var(--green)]">{totalGRT}</p>
+                <p className="text-[20px] font-mono font-medium text-[var(--green)]">{totalGRT} <span className="text-[12px]">GRT</span></p>
+                {totalUsd !== null && (
+                  <p className="text-[11px] font-mono text-[var(--text-faint)] mt-0.5">
+                    ≈ {fmtUsd(totalWei)}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -982,9 +1003,14 @@ function ConsumerHistory() {
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <span className="text-[11px] font-mono text-[var(--text-muted)]">{stats.count.toLocaleString()}×</span>
-                          <span className="text-[11px] font-mono text-[var(--green)]">
-                            {(stats.totalWei / 1e18).toFixed(4)} GRT
-                          </span>
+                          <div className="text-right">
+                            <span className="text-[11px] font-mono text-[var(--green)]">
+                              {grtFromWei(String(Math.round(stats.totalWei)))} GRT
+                            </span>
+                            {fmtUsd(stats.totalWei) && (
+                              <p className="text-[10px] font-mono text-[var(--text-faint)]">{fmtUsd(stats.totalWei)}</p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
