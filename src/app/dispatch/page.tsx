@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useReadContract, useSignTypedData, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseAbi, formatUnits, parseUnits, isAddress } from 'viem';
 import { arbitrum } from 'wagmi/chains';
@@ -781,6 +781,359 @@ function FundConsumer() {
   );
 }
 
+// ── Shared receipt types ──────────────────────────────────────────────────────
+
+interface ReceiptItem {
+  id: number;
+  payer: string;
+  chain_id: number;
+  timestamp_ns: number; // nanoseconds; JS precision fine for display (seconds-level)
+  value: string;        // GRT wei as decimal string
+  method: string | null;
+}
+
+function grtFromWei(weiStr: string): string {
+  // Avoid BigInt for display — precision to 6 decimal places is plenty
+  const grt = Number(weiStr) / 1e18;
+  return grt < 0.0001 ? grt.toExponential(2) : grt.toFixed(6);
+}
+
+function relativeTime(timestampNs: number): string {
+  const diffMs = Date.now() - Math.floor(timestampNs / 1_000_000);
+  if (diffMs < 0) return 'just now';
+  if (diffMs < 60_000) return `${Math.floor(diffMs / 1000)}s ago`;
+  if (diffMs < 3_600_000) return `${Math.floor(diffMs / 60_000)}m ago`;
+  return `${Math.floor(diffMs / 3_600_000)}h ago`;
+}
+
+function shortAddr(addr: string): string {
+  if (addr.length < 10) return addr;
+  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
+
+// ── Live Feed ─────────────────────────────────────────────────────────────────
+
+function LiveFeed() {
+  const [items, setItems] = useState<ReceiptItem[]>([]);
+  const [newIds, setNewIds] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [unavailable, setUnavailable] = useState(false);
+
+  const poll = useCallback(async () => {
+    try {
+      const resp = await fetch('/api/dispatch/feed?limit=20');
+      if (!resp.ok) { setUnavailable(true); return; }
+      const data: ReceiptItem[] = await resp.json();
+      if (!Array.isArray(data)) { setUnavailable(true); return; }
+      setUnavailable(false);
+      setItems(prev => {
+        const prevMaxId = prev[0]?.id ?? 0;
+        const fresh = new Set(data.filter(i => i.id > prevMaxId).map(i => i.id));
+        if (fresh.size > 0) {
+          setNewIds(fresh);
+          setTimeout(() => setNewIds(new Set()), 800);
+        }
+        return data;
+      });
+    } catch {
+      setUnavailable(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    poll();
+    const t = setInterval(poll, 5_000);
+    return () => clearInterval(t);
+  }, [poll]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Live Request Feed</CardTitle>
+            <p className="text-[12px] text-[var(--text-muted)] mt-0.5">
+              Recent requests through the gateway · refreshes every 5s
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-badge)] bg-[var(--green-dim)] text-[var(--green)] text-[10px] font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse" />
+            Live
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-8 shimmer rounded" />
+            ))}
+          </div>
+        ) : unavailable ? (
+          <div className="py-6 text-center">
+            <p className="text-[13px] text-[var(--text-muted)]">Feed unavailable — no requests recorded yet or service unreachable.</p>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="py-6 text-center">
+            <p className="text-[13px] text-[var(--text-muted)]">No requests yet. Send one from the RPC Portal above.</p>
+          </div>
+        ) : (
+          <div className="rounded-[var(--radius-button)] border border-[var(--border)] overflow-hidden">
+            {/* Header */}
+            <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-3 px-4 py-2 bg-[var(--bg-elevated)] border-b border-[var(--border)]">
+              {['Method', 'Consumer', 'GRT', 'When'].map(h => (
+                <span key={h} className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">{h}</span>
+              ))}
+            </div>
+            {/* Rows */}
+            <div className="divide-y divide-[var(--border)]">
+              {items.map(item => (
+                <div
+                  key={item.id}
+                  className={cn(
+                    'grid grid-cols-[1fr_1fr_auto_auto] gap-3 px-4 py-2.5 transition-colors',
+                    newIds.has(item.id) ? 'bg-[var(--accent-dim)]' : 'hover:bg-[var(--bg-elevated)]'
+                  )}
+                >
+                  <span className="text-[11px] font-mono text-[var(--text)] truncate">
+                    {item.method ?? <span className="text-[var(--text-faint)] italic">unknown</span>}
+                  </span>
+                  <span className="text-[11px] font-mono text-[var(--text-muted)]">
+                    {shortAddr(item.payer)}
+                  </span>
+                  <span className="text-[11px] font-mono text-[var(--green)] whitespace-nowrap">
+                    {grtFromWei(item.value)}
+                  </span>
+                  <span className="text-[11px] text-[var(--text-faint)] whitespace-nowrap text-right">
+                    {relativeTime(item.timestamp_ns)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Consumer History ──────────────────────────────────────────────────────────
+
+function ConsumerHistory() {
+  const { address, isConnected } = useAccount();
+  const [items, setItems] = useState<ReceiptItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!address) return;
+    setLoading(true);
+    setError(null);
+    fetch(`/api/dispatch/history?payer=${address}&limit=100`)
+      .then(r => r.json())
+      .then((data: unknown) => {
+        if (!Array.isArray(data)) throw new Error((data as { error?: string })?.error ?? 'unexpected response');
+        setItems(data as ReceiptItem[]);
+      })
+      .catch(e => setError(String(e)))
+      .finally(() => setLoading(false));
+  }, [address]);
+
+  if (!isConnected) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Your Request History</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-[13px] text-[var(--text-muted)]">Connect wallet to view your history and GRT spend.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Total GRT spent (sum of all receipt values)
+  const totalWei = items.reduce((sum, i) => sum + Number(i.value), 0);
+  const totalGRT = (totalWei / 1e18).toFixed(6);
+
+  // Breakdown by method
+  const byMethod: Record<string, { count: number; totalWei: number }> = {};
+  for (const item of items) {
+    const m = item.method ?? 'unknown';
+    if (!byMethod[m]) byMethod[m] = { count: 0, totalWei: 0 };
+    byMethod[m].count++;
+    byMethod[m].totalWei += Number(item.value);
+  }
+  const methodRows = Object.entries(byMethod).sort((a, b) => b[1].count - a[1].count);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Your Request History</CardTitle>
+        <p className="text-[11px] font-mono text-[var(--text-faint)] mt-0.5 truncate">{address}</p>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-8 shimmer rounded" />)}</div>
+        ) : error ? (
+          <p className="text-[12px] text-[var(--text-muted)]">
+            {error.includes('unavailable') || error.includes('502') ? 'History service unavailable.' : error}
+          </p>
+        ) : items.length === 0 ? (
+          <p className="text-[13px] text-[var(--text-muted)]">No requests found for this address.</p>
+        ) : (
+          <div className="space-y-3">
+            {/* Summary */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]">
+                <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">Total Requests</p>
+                <p className="text-[20px] font-mono font-medium text-[var(--text)]">{items.length.toLocaleString()}</p>
+              </div>
+              <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]">
+                <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">Total GRT Spent</p>
+                <p className="text-[20px] font-mono font-medium text-[var(--green)]">{totalGRT}</p>
+              </div>
+            </div>
+
+            {/* Method breakdown */}
+            {methodRows.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-2">By Method</p>
+                <div className="rounded-[var(--radius-button)] border border-[var(--border)] overflow-hidden divide-y divide-[var(--border)]">
+                  {methodRows.slice(0, 8).map(([method, stats]) => {
+                    const pct = Math.round((stats.count / items.length) * 100);
+                    return (
+                      <div key={method} className="flex items-center justify-between px-3 py-2 hover:bg-[var(--bg-elevated)] transition-colors">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[11px] font-mono text-[var(--text)] truncate">{method}</span>
+                          <span className="text-[10px] text-[var(--text-faint)] shrink-0">{pct}%</span>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-[11px] font-mono text-[var(--text-muted)]">{stats.count.toLocaleString()}×</span>
+                          <span className="text-[11px] font-mono text-[var(--green)]">
+                            {(stats.totalWei / 1e18).toFixed(4)} GRT
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Chainlist Widget ──────────────────────────────────────────────────────────
+
+const DISPATCH_RPC_URL = 'https://gateway.lodestar-dashboard.com/rpc/42161';
+
+function ChainlistWidget() {
+  const [added, setAdded] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const addToMetaMask = async () => {
+    setAddError(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const eth = (window as any).ethereum;
+    if (!eth) { setAddError('MetaMask not detected'); return; }
+    try {
+      await eth.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0xA4B1', // 42161
+          chainName: 'Arbitrum One',
+          nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+          rpcUrls: [DISPATCH_RPC_URL],
+          blockExplorerUrls: ['https://arbiscan.io'],
+        }],
+      });
+      setAdded(true);
+    } catch (e) {
+      setAddError(String(e).split('(')[0].trim());
+    }
+  };
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(DISPATCH_RPC_URL).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Add to Wallet</CardTitle>
+        <p className="text-[12px] text-[var(--text-muted)] mt-0.5">
+          Point any wallet or app at the Dispatch gateway
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+
+        {/* Network card */}
+        <div className="rounded-[var(--radius-button)] border border-[var(--border)] overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[#1b4add] flex items-center justify-center text-white text-[11px] font-bold shrink-0">A</div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-medium text-[var(--text)]">Arbitrum One</p>
+                <p className="text-[11px] text-[var(--text-muted)]">Chain ID 42161 · Standard + Archive</p>
+              </div>
+            </div>
+            <button
+              onClick={addToMetaMask}
+              disabled={added}
+              className={cn(
+                'shrink-0 px-3 py-1.5 text-[12px] font-medium rounded-[var(--radius-button)] transition-colors',
+                added
+                  ? 'bg-[var(--green-dim)] text-[var(--green)] cursor-default'
+                  : 'bg-[var(--accent)] text-white hover:opacity-90',
+              )}
+            >
+              {added ? '✓ Added' : 'Add to MetaMask'}
+            </button>
+          </div>
+          <div className="border-t border-[var(--border)] px-4 py-2.5 flex items-center justify-between gap-3 bg-[var(--bg-elevated)]">
+            <code className="text-[11px] font-mono text-[var(--text-faint)] truncate">{DISPATCH_RPC_URL}</code>
+            <button
+              onClick={copyUrl}
+              className="shrink-0 text-[11px] text-[var(--accent)] hover:opacity-80 transition-opacity font-medium"
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        {addError && <p className="text-[11px] text-[var(--red)] font-mono">{addError}</p>}
+
+        {/* Note about X-Consumer-Address */}
+        <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]">
+          <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+            Every request needs an <code className="font-mono text-[var(--text)]">X-Consumer-Address</code> header.
+            Use <strong className="text-[var(--text)]">dispatch-proxy</strong> locally to add it automatically —
+            or the consumer SDK for programmatic access.
+          </p>
+        </div>
+
+        {/* Quick curl */}
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1.5">Quick test</p>
+          <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] overflow-x-auto">
+            <pre className="text-[11px] font-mono text-[var(--text-muted)] whitespace-pre">{`curl ${DISPATCH_RPC_URL} \\
+  -H "X-Consumer-Address: 0xYOUR_ADDRESS" \\
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'`}</pre>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Provider Methods ─────────────────────────────────────────────────────────
 
 function ProviderMethods() {
@@ -909,13 +1262,18 @@ export default function DispatchPage() {
       {/* Playground */}
       <Playground />
 
+      {/* Live Feed */}
+      <LiveFeed />
+
       {/* Consumer + Provider in a 2-col grid on large screens */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
           <ConsumerStatus />
           <FundConsumer />
+          <ConsumerHistory />
         </div>
 
+        <div className="space-y-6">
         {/* Active Providers */}
         <Card>
           <CardHeader>
@@ -961,6 +1319,8 @@ export default function DispatchPage() {
             </div>
           </CardContent>
         </Card>
+          <ChainlistWidget />
+        </div>
       </div>
 
       {/* How it works */}
