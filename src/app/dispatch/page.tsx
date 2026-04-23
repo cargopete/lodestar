@@ -758,9 +758,10 @@ interface ReceiptItem {
 }
 
 function grtFromWei(weiStr: string): string {
-  // Avoid BigInt for display — precision to 6 decimal places is plenty
   const grt = Number(weiStr) / 1e18;
-  return grt < 0.0001 ? grt.toExponential(2) : grt.toFixed(6);
+  if (grt === 0) return '0';
+  if (grt >= 0.0001) return grt.toFixed(6);
+  return grt.toFixed(10).replace(/0+$/, '').replace(/\.$/, '');
 }
 
 function relativeTime(timestampNs: number): string {
@@ -788,8 +789,9 @@ function LiveFeed() {
     try {
       const resp = await fetch('/api/dispatch/feed?limit=20');
       if (!resp.ok) { setUnavailable(true); return; }
-      const data: ReceiptItem[] = await resp.json();
-      if (!Array.isArray(data)) { setUnavailable(true); return; }
+      const raw: ReceiptItem[] = await resp.json();
+      if (!Array.isArray(raw)) { setUnavailable(true); return; }
+      const data = raw.filter(i => i.method);
       setUnavailable(false);
       setItems(prev => {
         const prevMaxId = prev[0]?.id ?? 0;
@@ -865,9 +867,14 @@ function LiveFeed() {
                   <span className="text-[11px] font-mono text-[var(--text)] truncate">
                     {item.method ?? <span className="text-[var(--text-faint)] italic">unknown</span>}
                   </span>
-                  <span className="text-[11px] font-mono text-[var(--text-muted)]">
+                  <a
+                    href={`https://arbiscan.io/address/${item.payer}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                  >
                     {shortAddr(item.payer)}
-                  </span>
+                  </a>
                   <span className="text-[11px] font-mono text-[var(--green)] whitespace-nowrap">
                     {grtFromWei(item.value)}
                   </span>

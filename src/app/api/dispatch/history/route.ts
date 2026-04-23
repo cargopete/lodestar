@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const GATEWAY = process.env.DISPATCH_GATEWAY_URL ?? 'http://167.235.29.213:8080';
 
 export async function GET(request: NextRequest) {
-  const payer = request.nextUrl.searchParams.get('payer');
+  const payer = request.nextUrl.searchParams.get('payer')?.toLowerCase();
   if (!payer) {
     return NextResponse.json({ error: 'payer query param required' }, { status: 400 });
   }
