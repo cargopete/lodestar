@@ -165,7 +165,7 @@ function Playground() {
       <CardHeader>
         <CardTitle>RPC Portal</CardTitle>
         <p className="text-[12px] text-[var(--text-muted)] mt-0.5">
-          Connect your wallet · sign a TAP receipt · pay the provider directly
+          Connect your wallet · send a request · GRT drawn from your escrow automatically
         </p>
       </CardHeader>
       <CardContent>
