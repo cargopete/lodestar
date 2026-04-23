@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const revalidate = 2;
+
 const GATEWAY = process.env.DISPATCH_GATEWAY_URL ?? 'http://167.235.29.213:8080';
 
 export async function GET(request: NextRequest) {
@@ -9,7 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     resp = await fetch(`${GATEWAY}/receipts/recent?limit=${limit}`, {
       signal: AbortSignal.timeout(5_000),
-      cache: 'no-store',
+      next: { revalidate: 2 },
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 502 });
