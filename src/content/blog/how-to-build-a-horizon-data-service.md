@@ -8,7 +8,7 @@ excerpt: "A complete technical walkthrough of building a production Horizon data
 
 The Graph's Horizon upgrade (GIP-0066, live December 2025) turned the protocol into a permissionless data marketplace. Before Horizon, The Graph had one type of data service: subgraphs. After Horizon, anyone can build a new type of data service — JSON-RPC endpoints, streaming data pipelines, oracle feeds, ZK proofs — and plug directly into the existing economic infrastructure. Same staking layer. Same payment layer. Brand new service.
 
-We've spent the last several weeks building **Dispatch**, an experimental JSON-RPC data service on Horizon. Along the way we also studied **SubstreamsDataService**, the second data service on the network, which is about to launch. Between the two implementations we now have a fairly complete picture of what it actually takes to ship a Horizon data service end-to-end. This post is that picture.
+We've spent the last several weeks building **Dispatch**, a JSON-RPC data service on Horizon, live on Arbitrum One. Along the way we also studied **SubstreamsDataService**, the second data service being built on the network — the core payment loop is working end-to-end in development, though the collection CLI and production operator tooling are still in progress. Between the two implementations we now have a fairly complete picture of what it actually takes to ship a Horizon data service end-to-end. This post is that picture.
 
 It's long. That's the point. There's a lot to get right.
 
@@ -40,6 +40,8 @@ Every Horizon data service has three independent layers:
 
 Horizon provides the bottom two layers for free. You build the top one. The economic machinery — staking, escrow, payment distribution, delegation — is already there. Your job is to define what providers are registering to do, what they charge for, and whether you can slash them if they misbehave.
 
+One thing this diagram doesn't show: when fees flow through `GraphPayments`, a slice goes to **your contract** as the data service creator — the `dataServiceCut`. Every query served by every provider on your network earns you a percentage. More on this in the [dataServiceCut section](#the-dataservicecut--creator-revenue) below.
+
 The off-chain architecture mirrors this:
 
 ```
@@ -62,7 +64,20 @@ Your Solidity contract must implement `IDataService`. The interface is simple �
 
 ### Inheriting the base contracts
 
-The `@graphprotocol/horizon` package ships base contracts that handle the boilerplate:
+First, install the Horizon contracts package into your Forge project:
+
+```bash
+forge install graphprotocol/contracts
+```
+
+Add the remapping to `remappings.txt`:
+
+```
+@graphprotocol/horizon/=lib/contracts/packages/horizon/contracts/
+@graphprotocol/interfaces/=lib/contracts/packages/horizon/
+```
+
+The package ships base contracts that handle the boilerplate:
 
 ```solidity
 import {DataService} from "@graphprotocol/horizon/data-service/DataService.sol";
@@ -122,9 +137,35 @@ function register(address serviceProvider, bytes calldata data)
 }
 ```
 
-`startService()` / `stopService()` activate and deactivate specific service instances. For Dispatch, an instance is a `(chainId, tier)` pair — serving Ethereum mainnet at Standard tier, for example. For SubstreamsDataService, activation is implicit (any provisioned provider can serve). Use explicit `startService` when providers can serve multiple distinct configurations that gateways need to discover individually.
+`startService()` / `stopService()` activate and deactivate specific service instances. For Dispatch, an instance is a `(chainId, tier)` pair — serving Ethereum mainnet at Standard tier, for example. For SubstreamsDataService, both functions are no-ops — activation is implicit on registration, deactivation is implicit on deregistration. Use explicit `startService` when providers can serve multiple distinct configurations that gateways need to discover individually.
 
 One implementation detail worth noting: **reuse existing stopped entries rather than pushing new ones** when a provider restarts a service. Otherwise the internal array grows without bound across many start/stop cycles and `activeRegistrationCount()` becomes increasingly expensive to call.
+
+`deregister()` is the mirror of `register()`. All active service instances must be stopped first, then the provider is removed:
+
+```solidity
+function deregister(address serviceProvider, bytes calldata)
+    external onlyAuthorizedForProvision(serviceProvider)
+{
+    if (!registeredProviders[serviceProvider]) revert ProviderNotRegistered(serviceProvider);
+    if (activeRegistrationCount(serviceProvider) > 0) revert ActiveRegistrationsExist(serviceProvider);
+
+    registeredProviders[serviceProvider] = false;
+    emit ProviderDeregistered(serviceProvider);
+}
+```
+
+`acceptProvisionPendingParameters()` is a required function that completes the two-step process when a provider wants to change their thawing period or verifier cut. The provider first calls `HorizonStaking.setProvisionParameters`, which queues the change, then your contract must accept it:
+
+```solidity
+function acceptProvisionPendingParameters(address serviceProvider, bytes calldata)
+    external onlyAuthorizedForProvision(serviceProvider)
+{
+    _acceptProvisionParameters(serviceProvider);
+}
+```
+
+Without this, providers cannot update their provision parameters after the initial setup. Both `deregister` and `acceptProvisionPendingParameters` are required by `IDataService` — omitting either causes a compile error.
 
 ### collect() — where GRT actually moves
 
@@ -141,6 +182,10 @@ function collect(
     if (paymentType != IGraphPayments.PaymentTypes.QueryFee) revert InvalidPaymentType();
     if (!registeredProviders[serviceProvider]) revert ProviderNotRegistered(serviceProvider);
 
+    // Dispatch encodes (SignedRAV, tokensToCollect) — tokensToCollect=0 means collect the full delta.
+    // SubstreamsDataService encodes (SignedRAV, dataServiceCut) instead — it lets the caller
+    // pass the cut dynamically rather than hardcoding it in the contract. Either approach works;
+    // what matters is that your off-chain service and your contract agree on the encoding.
     (IGraphTallyCollector.SignedRAV memory signedRav, uint256 tokensToCollect) =
         abi.decode(data, (IGraphTallyCollector.SignedRAV, uint256));
 
@@ -167,9 +212,73 @@ function collect(
 }
 ```
 
-The payment distribution chain from `collect()` inward: **GraphTallyCollector** verifies the EIP-712 RAV signature and authorisation; **PaymentsEscrow** transfers `delta = valueAggregate - previouslyCollected` from the payer's deposit; **GraphPayments** routes the GRT — protocol tax, data service cut (zero for simple services), delegator cut, then remainder to `paymentsDestination`.
+The payment distribution chain from `collect()` inward: **GraphTallyCollector** verifies the EIP-712 RAV signature and authorisation; **PaymentsEscrow** transfers `delta = valueAggregate - previouslyCollected` from the payer's deposit; **GraphPayments** routes the GRT in this exact order:
+
+```
+Total fees collected
+  └─ Protocol tax            → DAO treasury       (fixed %)
+  └─ Data service cut        → your contract      (you set this)
+  └─ Delegator cut           → delegators         (set by provider)
+  └─ Remainder               → paymentsDestination
+```
 
 Explicitly reject payment types other than `QueryFee`. SubstreamsDataService does this — it's a good pattern that prevents subtle misuse of your contract.
+
+### The dataServiceCut — creator revenue
+
+This is the most underappreciated part of Horizon. That `uint256(0)` in the `collect()` call above is the `dataServiceCut`, expressed in PPM (parts per million, where `1_000_000` = 100%). Set it to anything other than zero and every provider on your service pays you a cut of their fees — automatically, on-chain, in perpetuity.
+
+```solidity
+// Example: take a 2% creator cut on all fees
+uint256 public constant DATA_SERVICE_CUT_PPM = 20_000; // 2% in PPM
+
+fees = GRAPH_TALLY_COLLECTOR.collect(
+    paymentType,
+    abi.encode(
+        signedRav,
+        DATA_SERVICE_CUT_PPM,   // 2% of fees → your contract
+        paymentsDestination[serviceProvider]
+    ),
+    tokensToCollect
+);
+```
+
+The GRT arrives at your **contract address** — not a wallet. You need a withdrawal function to claim it:
+
+```solidity
+// In your data service contract
+function withdrawCreatorFees(address to) external onlyOwner {
+    uint256 balance = IERC20(GRT).balanceOf(address(this));
+    require(balance > 0, "nothing to withdraw");
+    IERC20(GRT).transfer(to, balance);
+    emit CreatorFeesWithdrawn(to, balance);
+}
+```
+
+The economic implication is significant: building a data service is not just a contribution to the protocol — it is a revenue-generating business in itself. Every provider who uses your service, every query they serve, every RAV they collect: you take a cut. You build it once. Providers run it. Gateways route to it. You earn.
+
+This creates a direct alignment between the data service creator and the growth of the network around their service. A creator who sets a 1% cut and then actively grows their provider set from 5 to 50 operators has increased their passive income tenfold without touching the contract. The incentive to market your service, write good documentation, support integrations, and make your service easy to run is baked into the economics.
+
+**Setting the right cut.** There is no canonical answer, but some practical considerations:
+
+- Too high and you disincentivise providers from running your service — they'll look for alternatives
+- Too low and you leave revenue on the table that could fund ongoing development
+- SubgraphService uses a governance-controlled parameter; for a new service, starting at 1–3% and adjusting via an upgradeable parameter is reasonable
+- The cut compounds: a 2% cut on a service doing 10,000 GRT/day in fees is 200 GRT/day to the creator
+
+You can also make `dataServiceCut` a governance parameter rather than a constant:
+
+```solidity
+uint256 public dataServiceCutPPM;  // owner-adjustable
+
+function setDataServiceCut(uint256 cutPPM) external onlyOwner {
+    require(cutPPM <= 100_000, "max 10%");  // sensible cap
+    dataServiceCutPPM = cutPPM;
+    emit DataServiceCutUpdated(cutPPM);
+}
+```
+
+This lets you adjust the cut as the service matures without redeploying the contract.
 
 ### The paymentsDestination pattern
 
@@ -198,7 +307,9 @@ function slash(address, bytes calldata) external pure override {
 }
 ```
 
-This is what Dispatch does. SubgraphService has slashing because allocation-based dispute proofs are possible. If your service's outputs aren't verifiable on-chain with high confidence, omit slashing entirely. A broken slashing mechanism is worse than none — you either never slash (useless) or slash incorrectly (catastrophic).
+Dispatch does this. SubstreamsDataService takes the alternative approach of a silent no-op — the function compiles, succeeds, and does nothing. Both patterns work for "no slashing supported." The revert is preferable: it fails loudly if something accidentally calls `slash()`, rather than silently succeeding and giving the caller false confidence.
+
+SubgraphService has real slashing because allocation-based dispute proofs are possible. If your service's outputs aren't verifiable on-chain with high confidence, omit slashing entirely. A broken slashing mechanism is worse than none — you either never slash (useless) or slash incorrectly (catastrophic).
 
 ## TAP / GraphTally — the payment protocol
 
@@ -228,9 +339,9 @@ The `valueAggregate` is the monotonically-increasing cumulative total — it nev
 
 **Phase 3 — Settlement (~every 60 minutes).** The provider calls `DataService.collect()` with the signed RAV. GRT moves from the consumer's escrow to the provider's wallet. The provider's stake is locked for the dispute window proportional to the fees.
 
-### tap-agent — don't roll your own
+### tap-agent — consider it before rolling your own
 
-Before writing your own receipt storage, aggregation request loop, and collection scheduler: check **[tap-agent](https://github.com/graphprotocol/indexer/tree/main/packages/tap-agent)**, part of The Graph's open-source indexer stack.
+Before writing your own receipt storage, aggregation request loop, and collection scheduler: check **[tap-agent](https://github.com/graphprotocol/indexer-rs/tree/main/crates/tap-agent)**, part of The Graph's open-source indexer stack.
 
 `tap-agent` is a standalone Rust service that handles:
 - Receipt ingestion and PostgreSQL storage
@@ -238,9 +349,11 @@ Before writing your own receipt storage, aggregation request loop, and collectio
 - The ~60-minute on-chain collection loop (`DataService.collect()`)
 - Retry logic, RAV backup, and operator monitoring
 
-If your data service follows the HTTP receipt model, integrating `tap-agent` rather than reimplementing it saves several weeks of work. It is already used in production by indexers running SubgraphService.
+It is already used in production by indexers running SubgraphService.
 
-If your service has unusual metering requirements (per-byte streaming payments, session-level accounting), you may need to adapt or fork parts of it. But start by reading its source — many of the tricky invariants described in this post (monotonic RAVs, `min_collect_value`, operator ETH monitoring) are already handled there.
+**Dispatch ships its own built-in aggregation and collection loop** rather than using `tap-agent` — the custom loop is tightly integrated with the service's per-consumer credit tracking and the JSON-RPC proxy, making the separation impractical. If your service is similarly tightly coupled, you may find the same. If your service is cleanly separable from its payment handling, `tap-agent` can save several weeks of work.
+
+Either way: read its source before you start. The tricky invariants around monotonic RAVs, `min_collect_value`, and operator ETH monitoring are all handled there, and understanding them is worthwhile regardless of whether you use the library.
 
 ### EIP-712 receipts
 
@@ -251,16 +364,33 @@ Every TAP Receipt is an EIP-712 signed struct. The domain must match the deploye
 name:              "GraphTallyCollector"
 version:           "1"
 chainId:           42161
-verifyingContract: 0x8f69F5C07477Ac46FBc491B1E6D91E2be0111A9e
+verifyingContract: 0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e
 ```
 
-Compute the domain separator **once at startup** and cache it. The type string is:
+Compute the domain separator **once at startup** and cache it. There are two EIP-712 type strings you need — one for per-request Receipts, one for the RAVs the gateway signs.
 
+**Important caveat on Receipt types:** The RAV type string is fixed by the on-chain `GraphTallyCollector` — every data service must use it verbatim. The Receipt type string is **not fixed by the protocol**. It is a convention between your gateway and your provider, validated entirely off-chain. You can define it however suits your service. Our two reference implementations make different choices:
+
+**Receipt — Dispatch (HTTP receipt model):**
 ```
 Receipt(address data_service,address service_provider,uint64 timestamp_ns,uint64 nonce,uint128 value,bytes metadata)
 ```
+The `metadata` bytes field carries service-specific data — Dispatch encodes `consumer_address (20 bytes) || method_name (UTF-8)`, enabling per-consumer credit tracking and per-method billing analytics without changing the type string.
 
-The `metadata` bytes field is where you embed service-specific data without changing the EIP-712 struct. Dispatch encodes `consumer_address (20 bytes) || method_name (UTF-8)` — so every receipt carries who paid and for what, enabling per-consumer credit tracking and per-method billing analytics.
+**Receipt — SubstreamsDataService (sidecar/session model):**
+```
+Receipt(bytes32 collection_id,address payer,address data_service,address service_provider,uint64 timestamp_ns,uint64 nonce,uint128 value)
+```
+The payer and collection context are explicit top-level fields rather than packed into metadata. There is no `metadata` field. This is a cleaner design for services where those fields are always known at receipt creation time.
+
+Pick one approach and be consistent across your gateway and provider. The only hard constraint is that whatever you define here, the on-chain contract never sees it — so mismatches manifest as receipt validation failures on the provider side, not on-chain reverts.
+
+**ReceiptAggregateVoucher** (signed by the gateway during aggregation, submitted on-chain by the provider — this one IS fixed by the protocol):
+```
+ReceiptAggregateVoucher(bytes32 collectionId,address payer,address serviceProvider,address dataService,uint64 timestampNs,uint128 valueAggregate,bytes metadata)
+```
+
+Note the field name convention in the RAV: `camelCase` throughout. A single off-by-one in field order or type causes silent signer mismatch — the recovered address will be wrong rather than the verification throwing.
 
 ### The monotonic invariant
 
@@ -369,11 +499,12 @@ If you need to stand up your own aggregator quickly:
 
 ```rust
 use axum::{routing::post, Json, Router};
-use ethers::signers::{LocalWallet, Signer};
+use alloy::signers::local::PrivateKeySigner;
+use alloy::signers::Signer;  // provides sign_typed_data
 
 #[tokio::main]
 async fn main() {
-    let wallet: LocalWallet = std::env::var("GATEWAY_PRIVATE_KEY")
+    let wallet: PrivateKeySigner = std::env::var("GATEWAY_PRIVATE_KEY")
         .unwrap().parse().unwrap();
 
     let app = Router::new().route("/aggregate", post(|Json(req): Json<AggregateRequest>| async move {
@@ -384,23 +515,34 @@ async fn main() {
             .sum();
 
         // 2. Build RAV (valueAggregate is cumulative — load previous from DB and add total)
-        let prev = load_previous_aggregate(&req.sender, &req.receipts[0].receipt.service_provider).await;
+        //
+        // collectionId is the stable key for this (payer, serviceProvider, dataService) stream.
+        // Formula: keccak256(abi.encode(payer, serviceProvider, dataService))
+        // This is identical every aggregation cycle for the same triplet, linking off-chain
+        // receipts to the on-chain tokensCollected[dataService][collectionId][receiver][payer] slot.
+        let payer    = req.sender.parse::<Address>().unwrap();
+        let provider = req.receipts[0].receipt.service_provider.parse::<Address>().unwrap();
+        let ds       = req.receipts[0].receipt.data_service.parse::<Address>().unwrap();
+        let collection_id = keccak256((payer, provider, ds).abi_encode());
+
+        let prev = load_previous_aggregate(collection_id).await;
         let rav = Rav {
-            collection_id:    compute_collection_id(&req),
+            collection_id,
             data_service:     req.receipts[0].receipt.data_service.clone(),
             service_provider: req.receipts[0].receipt.service_provider.clone(),
             timestamp_ns:     latest_timestamp(&req.receipts),
             value_aggregate:  prev + total,
         };
 
-        // 3. Sign with gateway key
+        // 3. Sign with gateway key — Rav must implement SolStruct (define it via alloy::sol!)
         let sig = wallet.sign_typed_data(&rav).await.unwrap();
 
         Json(AggregateResponse { signed_rav: SignedRav { rav, signature: sig.into() } })
     }));
 
-    axum::Server::bind(&"0.0.0.0:3001".parse().unwrap())
-        .serve(app.into_make_service()).await.unwrap();
+    // axum 0.7+: use TcpListener + axum::serve, not the removed axum::Server
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3001").await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 ```
 
@@ -477,7 +619,7 @@ Return **HTTP 402 Payment Required** for any failure. Do not serve the data — 
 
 A note on `collection_id` before reading the schema: it identifies a **payment stream** — a unique `(payer, provider, dataService)` triplet for a given service instance. Every receipt and every RAV belongs to exactly one collection. The on-chain `GraphTallyCollector` tracks `tokensCollected[dataService][collectionId][receiver][payer]`; the `collectionId` links your off-chain receipt records to their on-chain settlement slot. In practice, `collection_id` is `keccak256(abi.encode(payer_address, provider_address, data_service_address))` — a stable 32-byte key that is identical across every aggregation cycle for the same payer/provider pair.
 
-Two tables in PostgreSQL:
+Two tables in PostgreSQL. The schema below is a canonical starting point — the key invariants are that receipts are append-only and RAVs are upserted (replaced with the latest value on each aggregation cycle):
 
 ```sql
 -- One row per validated receipt
@@ -503,6 +645,8 @@ CREATE TABLE tap_ravs (
     redeemed         BOOLEAN NOT NULL DEFAULT FALSE
 );
 ```
+
+Note: Dispatch's actual migration uses `signer_address` and `chain_id` as the primary receipt keys (deriving `collection_id` at aggregation time rather than storing it per-receipt), and tracks `method` per receipt for billing analytics. Both layouts satisfy the invariants — `collection_id`-per-receipt is a cleaner normalised design; `signer_address + chain_id` is a valid alternative if your service keys payment streams on gateway signer rather than collection identity. Pick whichever suits your service's query patterns.
 
 The database is your safety net. If the service restarts, receipts are not lost. If a RAV collection fails, the RAV is still there for the next cycle.
 
@@ -857,11 +1001,11 @@ At this point you have a fully functional local Horizon environment with funded 
 
 Before deploying to Arbitrum Sepolia, you need testnet GRT:
 
-1. **Testnet ETH first** — get Arbitrum Sepolia ETH from the [Alchemy](https://www.alchemy.com/faucets/arbitrum-sepolia) or [Infura](https://www.infura.io/faucet/arbitrum) faucets. You'll need a small mainnet balance to qualify.
-2. **Testnet GRT** — The Graph's testnet GRT contract on Arbitrum Sepolia has a public `mint()` function (unlike mainnet GRT). Call it directly:
+1. **Testnet ETH first** — get Arbitrum Sepolia ETH from the [Alchemy faucet](https://www.alchemy.com/faucets/arbitrum-sepolia). You'll need a small mainnet balance to qualify.
+2. **Testnet GRT** — The Graph's testnet GRT contract on Arbitrum Sepolia (`0x1A1af8B44fD59dd2bbEb456D1b7604c7bd340702`) has a public `mint()` function (unlike mainnet GRT). Call it directly:
 
 ```bash
-cast send $SEPOLIA_GRT_TOKEN "mint(address,uint256)" \
+cast send 0x1A1af8B44fD59dd2bbEb456D1b7604c7bd340702 "mint(address,uint256)" \
   $YOUR_ADDRESS 10000000000000000000000 \
   --rpc-url https://sepolia-rollup.arbitrum.io/rpc \
   --private-key $YOUR_KEY
@@ -871,7 +1015,7 @@ Alternatively, ask in The Graph's Discord (`#developers` channel) — the commun
 
 ### Deployment checklist
 
-1. Deploy your contract to Arbitrum Sepolia first, using testnet Horizon addresses
+1. Deploy your contract to Arbitrum Sepolia first, using testnet Horizon addresses. If your local testing (Anvil + full payment loop) is thorough, deploying directly to mainnet is viable — Dispatch did exactly this. Sepolia is the safer default if you have any uncertainty.
 2. Verify on Arbiscan:
 ```bash
 forge verify-contract $CONTRACT_ADDRESS src/MyDataService.sol:MyDataService \
@@ -880,31 +1024,32 @@ forge verify-contract $CONTRACT_ADDRESS src/MyDataService.sol:MyDataService \
   --constructor-args $(cast abi-encode "constructor(address,address,address,address)" \
       $OWNER $CONTROLLER $GRAPH_TALLY_COLLECTOR $PAUSE_GUARDIAN)
 ```
-3. Call `addChain()` for each supported configuration
+3. Call any service-specific initialisation functions your contract requires (e.g. `addChain()` for a multi-chain RPC service, or equivalent setup for your service type)
 4. Transfer ownership to a multisig
 5. Have a provider call `HorizonStaking.provision()` then `register()` then `startService()`
 6. Deploy your subgraph pointing to the contract's deployment block
 7. Run the full payment loop on testnet: send receipts → aggregate → collect → verify GRT moved
 8. Repeat on Arbitrum One mainnet
 
-**Key Horizon addresses — Arbitrum One:**
+**Key Horizon addresses — Arbitrum One (42161):**
 
 | Contract | Address |
 |---|---|
-| Controller | see `addresses.json` in [graphprotocol/contracts](https://github.com/graphprotocol/contracts) |
+| Controller | `0x0a8491544221dd212964fbb96487467291b2C97e` |
 | HorizonStaking | `0x00669A4CF01450B64E8A2A20E9b1FCB71E61eF03` |
-| GraphTallyCollector | `0x8f69F5C07477Ac46FBc491B1E6D91E2be0111A9e` |
+| GraphTallyCollector | `0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e` |
 | PaymentsEscrow | `0xf6Fcc27aAf1fcD8B254498c9794451d82afC673E` |
 | GRT Token | `0x9623063377AD1B27544C965cCd7342f7EA7e88C7` |
 
-**Arbitrum Sepolia testnet:**
+**Arbitrum Sepolia (421614) testnet:**
 
 | Contract | Address |
 |---|---|
-| Controller | see `addresses.json` in [graphprotocol/contracts](https://github.com/graphprotocol/contracts) |
-| HorizonStaking | `0xFf2Ee30de92F276018642A59Fb7Be95b3F9088Af` |
+| Controller | `0x9DB3ee191681f092607035d9BDA6e59FbEaCa695` |
 | GraphTallyCollector | `0xacC71844EF6beEF70106ABe6E51013189A1f3738` |
-| PaymentsEscrow | `0x09B985a2042848A08bA59060EaF0f07c6F5D4d54` |
+| GRT Token | `0x1A1af8B44fD59dd2bbEb456D1b7604c7bd340702` |
+
+HorizonStaking and PaymentsEscrow are resolved from the Controller at runtime via `GraphDirectory` — you don't need to hardcode them. To find them manually: `cast call $CONTROLLER "getContractProxy(bytes32)(address)" $(cast keccak "HorizonStaking")`.
 
 ## Production checklist
 
@@ -930,5 +1075,4 @@ The Horizon framework genuinely delivers on the promise of "70% for free." You p
 - [The Graph Horizon documentation](https://thegraph.com/docs/horizon)
 - [SubgraphService reference implementation](https://github.com/graphprotocol/contracts/tree/main/packages/subgraph-service)
 - [SubstreamsDataService](https://github.com/graphprotocol/substreams-data-service) — the second data service on the network, reference for the sidecar pattern and `paymentsDestination`
-- [GIP-0066: Horizon](https://forum.thegraph.com/t/gip-0066-the-graph-horizon/5924)
-- [Full developer reference guide](https://github.com/lodestar-dispatch/drpc-service/blob/main/HORIZON_DATA_SERVICE_GUIDE.md) — the complete version of everything above, with full code examples for every function
+- [GIP-0066: Horizon](https://forum.thegraph.com/t/gip-0066-introducing-graph-horizon-a-data-services-protocol/5989)

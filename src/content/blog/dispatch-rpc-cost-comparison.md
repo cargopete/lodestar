@@ -271,5 +271,5 @@ The network is also one VPS and one provider. The economic model works on paper;
 
 - [Dispatch GitHub](https://github.com/cargopete/dispatch)
 - [Original Dispatch post — architecture deep dive](/blog/dispatch-json-rpc-horizon)
-- [GraphTally / TAP v2 GIP](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-graphtally.md)
+- [GraphTally / TAP v2 GIP](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-timeline-aggregation-protocol.md)
 - [The Graph Horizon documentation](https://thegraph.com/docs/en/horizon/)

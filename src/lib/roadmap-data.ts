@@ -66,7 +66,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     lodestarStatus: 'on_track',
     lodestarNote: 'Live off-protocol today. March 2026: GraphOps advancing GTM with PropellerHeads, private beta imminent. Indexer Office Hours on Tycho held April 14. On-network Horizon service still Q3 2026.',
     links: [
-      { label: 'Lodestar: Intro to Tycho', url: 'https://dev.lodestar-dashboard.com/blog/intro-to-tycho-data-service' },
+      { label: 'Lodestar: Intro to Tycho', url: 'https://lodestar-dashboard.com/blog/intro-to-tycho-data-service' },
       { label: 'The Graph Technical Roadmap', url: 'https://thegraph.com/blog/technical-roadmap/' },
       { label: 'GraphOps Mar 2026 Update', url: 'https://forum.thegraph.com/t/graphops-update-march-2026/6897' },
       { label: 'GraphOps Feb 2026 Update', url: 'https://forum.thegraph.com/t/graphops-update-february-2026/6855' },

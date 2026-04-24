@@ -8,7 +8,7 @@ excerpt: "Edge & Node's Amp is available as a hosted service — but you can run
 
 *This post is unaffiliated with Edge & Node or The Graph Foundation — just a hobby project documenting what worked.*
 
-Edge & Node's [Amp](https://github.com/edgeandnode/amp) is positioned as a hosted enterprise service, but the daemon — `ampd` — is available as a standalone binary. You can run it yourself, point it at any RPC endpoint, and index whatever on-chain data you need. No waitlist, no E&N account, no hosted service dependency.
+Edge & Node's [Amp](https://thegraph.com/amp/) is positioned as a hosted enterprise service, but the daemon — `ampd` — is available as a standalone binary. You can run it yourself, point it at any RPC endpoint, and index whatever on-chain data you need. No waitlist, no E&N account, no hosted service dependency.
 
 ## Why self-host?
 

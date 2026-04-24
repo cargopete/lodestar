@@ -95,7 +95,7 @@ GraphOps has a fascinating dual role in this picture: they'd be both a **consume
 Tycho is live today. If you're a solver or searcher looking to integrate more DEXs:
 
 - **Docs & quickstart:** check the [Tycho documentation](https://docs.propellerheads.xyz/tycho/) to set up your stream
-- **DEX integrations:** submit a PR to [Tycho Protocol Integrations](https://github.com/propellerheads/tycho-protocol-sdk) on GitHub to get your protocol supported
+- **DEX integrations:** submit a PR to [Tycho Protocol Integrations](https://github.com/propeller-heads/tycho-protocol-sdk) on GitHub to get your protocol supported
 - **Follow development:** [@PropellerSwap](https://x.com/PropellerSwap) on X
 
 ## FAQ

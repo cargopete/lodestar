@@ -20,7 +20,7 @@ The Graph Protocol's entire thesis is that blockchain data infrastructure should
 
 ## What is Dispatch?
 
-Dispatch is an experimental, community-built JSON-RPC data service on [The Graph's Horizon framework](https://thegraph.com/docs/en/horizon/). The idea: indexers stake GRT, register to serve specific chains, and get paid per request via [GraphTally](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-graphtally.md) (TAP v2) micropayments — the same payment primitive that powers Subgraph queries on the network today.
+Dispatch is an experimental, community-built JSON-RPC data service on [The Graph's Horizon framework](https://thegraph.com/docs/en/horizon/). The idea: indexers stake GRT, register to serve specific chains, and get paid per request via [GraphTally](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-timeline-aggregation-protocol.md) (TAP v2) micropayments — the same payment primitive that powers Subgraph queries on the network today.
 
 From a consumer's perspective it's just an HTTP endpoint. Under the hood, every request carries a signed EIP-712 receipt. Providers validate receipts, forward requests to their Ethereum client, sign the response, and accumulate receipts for on-chain settlement.
 
@@ -200,5 +200,5 @@ This is a community experiment. If you're curious about what decentralised RPC o
 
 - [Dispatch GitHub repository](https://github.com/cargopete/dispatch)
 - [The Graph Horizon documentation](https://thegraph.com/docs/en/horizon/)
-- [GraphTally / TAP v2 GIP](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-graphtally.md)
+- [GraphTally / TAP v2 GIP](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-timeline-aggregation-protocol.md)
 - [RPCDataService on Arbiscan](https://arbiscan.io/address/0x73846272813065c3e4efdb3fb82e0d128c8c2364)
