@@ -98,13 +98,13 @@ npm packages: `@graph-dispatch/consumer-sdk` and `@graph-dispatch/indexer-agent`
 
 ## The first provider
 
-The first provider is live at `https://rpc.cargopete.com` serving Arbitrum One (chain ID 42161) with Standard and Archive tiers.
+The first provider is serving Arbitrum One (chain ID 42161) with Standard and Archive tiers.
 
 To validate the full consumer → provider → backend flow, the repo includes `dispatch-smoke` — a Rust binary that signs real EIP-712 TAP receipts and fires JSON-RPC requests at a live endpoint:
 
 ```
 dispatch-smoke
-  endpoint   : http://rpc.cargopete.com
+  endpoint   : <provider-endpoint>
   chain_id   : 42161
 
   [PASS] GET /health → 200 OK

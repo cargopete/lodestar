@@ -128,7 +128,7 @@ graphite codegen
 cargo test
 graphite build
 graphite deploy --node https://api.studio.thegraph.com/deploy/ \
-  --ipfs https://api.studio.thegraph.com/ipfs/ \
+  --ipfs https://api.thegraph.com/ipfs/ \
   --deploy-key YOUR_KEY \
   --version-label v1.0.0 \
   my-subgraph-slug

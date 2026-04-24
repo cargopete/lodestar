@@ -349,7 +349,7 @@ Before writing your own receipt storage, aggregation request loop, and collectio
 - The ~60-minute on-chain collection loop (`DataService.collect()`)
 - Retry logic, RAV backup, and operator monitoring
 
-It is already used in production by indexers running SubgraphService.
+It is already used in production by indexers running SubgraphService. Note that `tap-agent` is a Rust binary — Go-based services cannot embed it and must implement the aggregation and collection loops independently.
 
 **Dispatch ships its own built-in aggregation and collection loop** rather than using `tap-agent` — the custom loop is tightly integrated with the service's per-consumer credit tracking and the JSON-RPC proxy, making the separation impractical. If your service is similarly tightly coupled, you may find the same. If your service is cleanly separable from its payment handling, `tap-agent` can save several weeks of work.
 
@@ -548,6 +548,8 @@ async fn main() {
 
 The critical detail: **`value_aggregate` must be loaded from a persistent store and incremented**, never recomputed from scratch. If you lose your aggregator's state, you lose the ability to produce valid RAVs (the on-chain contract would see a lower `valueAggregate` and the delta would be zero or cause a revert).
 
+One thing to note on `collectionId`: the computation above (`keccak256(abi.encode(payer, provider, dataService))`) is what you use when the receipt does **not** carry the collection ID — i.e., the HTTP receipt model where only signer and chain are known at receipt time. In the sidecar/session model (SubstreamsDataService), `collection_id` is an explicit field in every receipt, so the aggregator simply reads it directly from the receipt struct rather than deriving it. Make sure your receipt type and aggregator agree on which approach you're using.
+
 ## The gateway / consumer side
 
 Building a data service means understanding what consumers must do to pay you. Here is the complete consumer setup sequence — useful both for writing your own gateway integration and for explaining the setup to third-party gateways.
@@ -609,9 +611,10 @@ Every incoming request must include a valid TAP receipt. Validate in this order 
 2. **Check `data_service`** matches your contract address
 3. **Check `service_provider`** matches this provider's address
 4. **Check staleness** — reject receipts older than 30 seconds (prevents replay across restarts)
-5. **Recover signer** from EIP-712 signature
-6. **Check authorization** — signer must be in the `authorized_senders` list (the gateway's signing key)
-7. **Extract metadata** — consumer address (first 20 bytes), method name (bytes 20+)
+5. **Check nonce uniqueness** — reject if this (signer, nonce) pair has been seen before. Nonces are single-use; the 30-second staleness window bounds the deduplication set. Track in a bounded in-memory LRU or a DB table keyed on `(signer_address, nonce)`.
+6. **Recover signer** from EIP-712 signature
+7. **Check authorization** — signer must be in the `authorized_senders` list (the gateway's signing key)
+8. **Extract metadata** — consumer address (first 20 bytes), method name (bytes 20+) — Dispatch-specific; adapt to your receipt format
 
 Return **HTTP 402 Payment Required** for any failure. Do not serve the data — you'd be working for free.
 
