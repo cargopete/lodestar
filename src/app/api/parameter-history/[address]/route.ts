@@ -22,9 +22,13 @@ export async function GET(
   const addr = address.toLowerCase();
 
   const rows = await db`
-    SELECT param_name, old_value, new_value, epoch, detected_at
-    FROM parameter_changes
-    WHERE indexer_address = ${addr}
+    SELECT * FROM (
+      SELECT DISTINCT ON (param_name, old_value, new_value, epoch)
+        param_name, old_value, new_value, epoch, detected_at
+      FROM parameter_changes
+      WHERE indexer_address = ${addr}
+      ORDER BY param_name, old_value, new_value, epoch, detected_at DESC
+    ) deduped
     ORDER BY detected_at DESC
     LIMIT 100
   `;
