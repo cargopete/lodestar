@@ -208,20 +208,18 @@ function Playground() {
           </div>
 
           {/* Send */}
-          {isConnected ? (
+          <div className="flex items-center gap-3">
             <button
               onClick={send}
-              disabled={status !== 'idle'}
-              className="px-4 py-2 text-[12px] font-medium bg-[var(--accent)] text-white rounded-[var(--radius-button)] hover:opacity-90 disabled:opacity-50 transition-opacity"
+              disabled={!isConnected || status !== 'idle'}
+              className="px-4 py-2 text-[12px] font-medium bg-[var(--accent)] text-white rounded-[var(--radius-button)] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
             >
               {status === 'sending' ? 'Sending…' : 'Send Request →'}
             </button>
-          ) : (
-            <div className="px-4 py-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] text-center space-y-1">
-              <p className="text-[12px] text-[var(--text-muted)]">Connect your wallet to send paid requests</p>
-              <p className="text-[11px] text-[var(--text-faint)]">Each request costs {Number(PRICE_PER_CU) / 1e18} GRT · paid directly to the provider via TAP receipt</p>
-            </div>
-          )}
+            {!isConnected && (
+              <p className="text-[12px] text-[var(--text-faint)]">Connect your wallet to send a request</p>
+            )}
+          </div>
 
           {/* Error */}
           {error && (
