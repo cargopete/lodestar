@@ -307,28 +307,31 @@ function LeaderboardContent() {
           </p>
         </div>
         {periodsData && periodsData.periods.length > 1 && (
-          <select
-            value={selectedPeriod ?? ''}
-            onChange={(e) => {
-              setSelectedPeriod(e.target.value || undefined);
-              setPage(0);
-            }}
-            className={cn(
-              'px-3 pr-7 py-2 text-sm rounded-[var(--radius-button)] shrink-0',
-              'bg-[var(--bg-surface)] border border-[var(--border)]',
-              'text-[var(--text)]',
-              'focus:outline-none focus:border-[var(--accent)]'
-            )}
-          >
-            {periodsData.periods.map((p, i) => {
-              const ym = periodToYYYYMM(p.start);
-              return (
-                <option key={ym} value={i === 0 ? '' : ym}>
-                  {formatPeriod(p.start)}
-                </option>
-              );
-            })}
-          </select>
+          <div className="relative shrink-0">
+            <select
+              value={selectedPeriod ?? ''}
+              onChange={(e) => {
+                setSelectedPeriod(e.target.value || undefined);
+                setPage(0);
+              }}
+              className={cn(
+                'appearance-none pl-3 pr-8 py-2 text-sm rounded-[var(--radius-button)]',
+                'bg-[var(--bg-surface)] border border-[var(--border)]',
+                'text-[var(--text)]',
+                'focus:outline-none focus:border-[var(--accent)]'
+              )}
+            >
+              {periodsData.periods.map((p, i) => {
+                const ym = periodToYYYYMM(p.start);
+                return (
+                  <option key={ym} value={i === 0 ? '' : ym}>
+                    {formatPeriod(p.start)}
+                  </option>
+                );
+              })}
+            </select>
+            <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-faint)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+          </div>
         )}
       </div>
 

@@ -710,23 +710,26 @@ export function IndexerTable() {
           </div>
           <div className="flex items-center gap-2">
             <label className="text-sm text-[var(--text-muted)]">Min stake:</label>
-            <select
-              value={minStake}
-              onChange={(e) => setMinStake(Number(e.target.value))}
-              className={cn(
-                'pl-3 pr-8 py-2 text-sm rounded-[var(--radius-button)]',
-                'bg-[var(--bg-elevated)] border border-[var(--border)]',
-                'text-[var(--text)]',
-                'focus:outline-none focus:border-[var(--accent)]'
-              )}
-            >
-              <option value={0}>Any</option>
-              <option value={100000}>100K GRT</option>
-              <option value={500000}>500K GRT</option>
-              <option value={1000000}>1M GRT</option>
-              <option value={5000000}>5M GRT</option>
-              <option value={10000000}>10M GRT</option>
-            </select>
+            <div className="relative">
+              <select
+                value={minStake}
+                onChange={(e) => setMinStake(Number(e.target.value))}
+                className={cn(
+                  'appearance-none pl-3 pr-8 py-2 text-sm rounded-[var(--radius-button)]',
+                  'bg-[var(--bg-elevated)] border border-[var(--border)]',
+                  'text-[var(--text)]',
+                  'focus:outline-none focus:border-[var(--accent)]'
+                )}
+              >
+                <option value={0}>Any</option>
+                <option value={100000}>100K GRT</option>
+                <option value={500000}>500K GRT</option>
+                <option value={1000000}>1M GRT</option>
+                <option value={5000000}>5M GRT</option>
+                <option value={10000000}>10M GRT</option>
+              </select>
+              <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-faint)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </div>
           </div>
         </div>
 
