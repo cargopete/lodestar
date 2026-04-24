@@ -77,10 +77,12 @@ Add the remappings to `remappings.txt`. The Horizon package splits interfaces in
 @graphprotocol/horizon/payments/=lib/contracts/packages/horizon/contracts/payments/
 @graphprotocol/horizon/libraries/=lib/contracts/packages/horizon/contracts/libraries/
 @graphprotocol/horizon/utilities/=lib/contracts/packages/horizon/contracts/utilities/
+@graphprotocol/horizon/mocks/=lib/contracts/packages/horizon/contracts/mocks/
 @graphprotocol/horizon/interfaces/=lib/contracts/packages/interfaces/contracts/horizon/
 @graphprotocol/interfaces/=lib/contracts/packages/interfaces/
 @graphprotocol/contracts/=lib/contracts/packages/contracts/
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
 forge-std/=lib/forge-std/src/
 ```
 
