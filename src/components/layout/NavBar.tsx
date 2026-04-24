@@ -63,7 +63,7 @@ const navigation: NavItem[] = [
     children: [
       { label: 'Blog', href: '/blog', description: 'Technical articles & updates' },
       { label: 'AI / MCPs', href: '/ai', description: 'AI tools & MCP integrations' },
-      { label: 'Dispatch', href: '/dispatch', description: 'JSON-RPC dispatch tool' },
+      { label: 'Dispatch', href: '/dispatch', description: 'JSON-RPC data service on Horizon' },
     ],
   },
 ];
