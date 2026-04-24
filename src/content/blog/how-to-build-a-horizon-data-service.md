@@ -70,11 +70,31 @@ First, install the Horizon contracts package into your Forge project:
 forge install graphprotocol/contracts
 ```
 
-Add the remapping to `remappings.txt`:
+Add the remappings to `remappings.txt`. The Horizon package splits interfaces into a separate `packages/interfaces` tree, so you need granular entries — a single wildcard won't cover everything:
 
 ```
-@graphprotocol/horizon/=lib/contracts/packages/horizon/contracts/
-@graphprotocol/interfaces/=lib/contracts/packages/horizon/
+@graphprotocol/horizon/data-service/=lib/contracts/packages/horizon/contracts/data-service/
+@graphprotocol/horizon/payments/=lib/contracts/packages/horizon/contracts/payments/
+@graphprotocol/horizon/libraries/=lib/contracts/packages/horizon/contracts/libraries/
+@graphprotocol/horizon/utilities/=lib/contracts/packages/horizon/contracts/utilities/
+@graphprotocol/horizon/interfaces/=lib/contracts/packages/interfaces/contracts/horizon/
+@graphprotocol/interfaces/=lib/contracts/packages/interfaces/
+@graphprotocol/contracts/=lib/contracts/packages/contracts/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+forge-std/=lib/forge-std/src/
+```
+
+Also add `via_ir = true` to `foundry.toml` — deploy scripts that instantiate several contracts in one function will hit "stack too deep" without it:
+
+```toml
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.27"
+via_ir = true
+optimizer = true
+optimizer_runs = 200
 ```
 
 The package ships base contracts that handle the boilerplate:
@@ -83,6 +103,9 @@ The package ships base contracts that handle the boilerplate:
 import {DataService} from "@graphprotocol/horizon/data-service/DataService.sol";
 import {DataServiceFees} from "@graphprotocol/horizon/data-service/extensions/DataServiceFees.sol";
 import {DataServicePausable} from "@graphprotocol/horizon/data-service/extensions/DataServicePausable.sol";
+// Payment interfaces live in the interfaces package, not horizon/payments/
+import {IGraphTallyCollector} from "@graphprotocol/horizon/interfaces/IGraphTallyCollector.sol";
+import {IGraphPayments} from "@graphprotocol/horizon/interfaces/IGraphPayments.sol";
 
 contract MyDataService is Ownable, DataService, DataServiceFees, DataServicePausable, IMyDataService {
     // ...
@@ -165,7 +188,7 @@ function acceptProvisionPendingParameters(address serviceProvider, bytes calldat
 }
 ```
 
-Without this, providers cannot update their provision parameters after the initial setup. Both `deregister` and `acceptProvisionPendingParameters` are required by `IDataService` — omitting either causes a compile error.
+Without this, providers cannot update their provision parameters after the initial setup. `acceptProvisionPendingParameters` IS required by `IDataService` — omitting it causes a compile error. `deregister` is **not** in `IDataService` (it's a custom addition); implement it without the `override` keyword or the compiler will reject it.
 
 ### collect() — where GRT actually moves
 
