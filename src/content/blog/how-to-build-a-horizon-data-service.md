@@ -1100,6 +1100,7 @@ The Horizon framework genuinely delivers on the promise of "70% for free." You p
 
 ## Further reading
 
+- [hello-data-service](https://github.com/cargopete/hello-data-service) — minimal working Horizon data service built alongside this guide; use it as a starting point
 - [The Graph Horizon documentation](https://thegraph.com/docs/horizon)
 - [SubgraphService reference implementation](https://github.com/graphprotocol/contracts/tree/main/packages/subgraph-service)
 - [SubstreamsDataService](https://github.com/graphprotocol/substreams-data-service) — the second data service on the network, reference for the sidecar pattern and `paymentsDestination`
