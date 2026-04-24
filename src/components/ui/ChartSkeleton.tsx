@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 
 const MESSAGES = [
   "Apologies for the wait — this one's taking the scenic route. On a total infrastructure budget of $0 we're honestly doing our best. Sit back, it'll come.",
@@ -22,16 +21,7 @@ export function ChartSkeleton({ height = '280px' }: { height?: string }) {
     <div style={{ minHeight: height }} className="flex flex-col items-center justify-center gap-4 py-6">
       <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin flex-shrink-0" />
       {isSlow && (
-        <div className="flex flex-col items-center gap-2 px-6 text-center max-w-[220px]">
-          <Image
-            src="/lodie.png"
-            alt="Lodie"
-            width={44}
-            height={44}
-            className="rounded-full opacity-90 flex-shrink-0"
-          />
-          <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">{msg}</p>
-        </div>
+        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed text-center max-w-[220px] px-6">{msg}</p>
       )}
     </div>
   );

@@ -228,9 +228,9 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="hidden md:flex fixed left-0 top-0 h-screen w-[var(--sidebar-width)] bg-[var(--bg-surface)] border-r-[0.5px] border-[var(--border)] flex-col z-30">
+    <aside className="hidden md:flex fixed left-0 top-0 h-screen w-[var(--sidebar-width)] bg-[var(--bg-surface)] border-r border-[var(--border)] flex-col z-30" style={{ backgroundImage: 'radial-gradient(ellipse 200% 30% at 50% 0%, rgba(111, 76, 255, 0.08) 0%, transparent 70%)' }}>
       {/* Logo */}
-      <div className="h-[var(--topbar-height)] flex items-center px-5 border-b-[0.5px] border-[var(--border)]">
+      <div className="h-[var(--topbar-height)] flex items-center px-5 border-b border-[var(--border)]">
         <Link href="/" className="flex items-center gap-2.5 group">
           <Image src="/lodestar.png" alt="Lodestar" width={22} height={22} className="w-[22px] h-[22px]" />
           <span className="text-[15px] font-medium text-[var(--text)] tracking-tight">lodestar</span>
@@ -252,13 +252,16 @@ export function Sidebar() {
                     <Link
                       href={item.href}
                       className={cn(
-                        'flex items-center gap-2.5 px-2.5 py-[7px] rounded-[var(--radius-button)] text-[13px] transition-colors',
+                        'flex items-center gap-2.5 px-2.5 py-[7px] rounded-[var(--radius-button)] text-[13px] transition-colors relative',
                         isActive
-                          ? 'bg-[var(--accent-dim)] text-[var(--accent)] font-medium'
-                          : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-elevated)]'
+                          ? 'text-white font-medium bg-[rgba(111,76,255,0.14)]'
+                          : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[rgba(255,255,255,0.04)]'
                       )}
                     >
-                      <span className={cn('opacity-50', isActive && 'opacity-100')}>
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r bg-[var(--accent)]" />
+                      )}
+                      <span className={cn('opacity-50', isActive && 'opacity-90')}>
                         {item.icon}
                       </span>
                       <span>{item.label}</span>
@@ -272,7 +275,7 @@ export function Sidebar() {
       </nav>
 
       {/* Address search */}
-      <div className="p-3 border-t-[0.5px] border-[var(--border)]">
+      <div className="p-3 border-t border-[var(--border)]">
         <form onSubmit={handleSearch}>
           <input
             type="text"

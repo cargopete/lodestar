@@ -1,20 +1,19 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { DM_Sans, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
-import { Sidebar } from '@/components/layout/Sidebar';
-import { Topbar } from '@/components/layout/Topbar';
+import { NavBar } from '@/components/layout/NavBar';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { IntelFeed } from '@/components/layout/IntelFeed';
 import { Footer } from '@/components/layout/Footer';
 import { StarPrompt } from '@/components/StarPrompt';
-import { LodieWidget } from '@/components/LodieWidget';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const dmSans = DM_Sans({
+  variable: '--font-dm-sans',
   subsets: ['latin'],
+  weight: ['400', '500', '600'],
 });
 
 const geistMono = Geist_Mono({
@@ -53,20 +52,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${dmSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          <div className="min-h-screen bg-[var(--bg)]">
-            <Sidebar />
-            <Topbar />
+          <div className="min-h-screen">
+            <NavBar />
             <BottomNav />
             <IntelFeed />
-            <main className="md:pl-[var(--sidebar-width)] lg:pr-[var(--feed-active-width)] pt-[var(--topbar-height)] pb-[calc(var(--bottom-nav-height)+var(--safe-bottom))] md:pb-0 transition-[padding] duration-200">
-              <div className="p-4 md:p-6 max-w-[1440px]">{children}</div>
+            <main className="lg:pr-[var(--feed-active-width)] pt-[var(--navbar-height)] pb-[calc(var(--bottom-nav-height)+var(--safe-bottom))] md:pb-0 transition-[padding] duration-200">
+              <div className="p-4 md:p-8 max-w-[1400px]">{children}</div>
             </main>
             <Footer />
             <StarPrompt />
-            <LodieWidget />
           </div>
         </Providers>
         <Analytics />

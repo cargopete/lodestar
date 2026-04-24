@@ -28,7 +28,15 @@ export default function ProtocolOverview() {
   const { epoch: actualEpoch, progress: epochProgress, epochLength } = useEpochInfo();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Page header */}
+      <div>
+        <h1 className="text-[28px] font-semibold text-white tracking-tight">Protocol Overview</h1>
+        <p className="text-[var(--text-muted)] mt-1">
+          Live network metrics for The Graph Protocol on Arbitrum One.
+        </p>
+      </div>
+
       {/* Stat cards row */}
       <StatGrid>
         <StatCard

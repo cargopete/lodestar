@@ -31,11 +31,11 @@ export function StatCard({
       <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent-dim)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
       <div className="relative flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.06em] mb-1.5">{label}</p>
+          <p className="text-[11px] text-[var(--text-faint)] uppercase tracking-[0.09em] mb-2.5">{label}</p>
           {loading ? (
-            <div className="h-8 w-24 shimmer rounded" />
+            <div className="h-9 w-28 shimmer rounded" />
           ) : (
-            <p className="text-[22px] font-medium font-mono text-[var(--text)] tracking-tight">
+            <p className="text-[26px] font-semibold font-mono text-[var(--text)] tracking-tight leading-none">
               {value}
             </p>
           )}

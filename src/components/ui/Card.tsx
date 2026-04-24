@@ -14,7 +14,7 @@ export function Card({ children, className, hover = false, onClick }: CardProps)
   return (
     <div
       className={cn(
-        'rounded-[var(--radius-card)] border-[0.5px] border-[var(--border)] bg-[var(--bg-surface)] p-4',
+        'rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--bg-surface)] p-5',
         'shadow-[var(--shadow-card)]',
         'transition-all duration-200',
         hover && 'card-hover',

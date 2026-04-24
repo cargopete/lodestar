@@ -13,7 +13,7 @@ export default function IndexerDirectory() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-[var(--text)]">Indexer Directory</h1>
+        <h1 className="text-[28px] font-semibold text-white tracking-tight">Indexer Directory</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
           Performance and economic metrics for all indexers — APR, effective cut, stake, and more.
           For community rankings based on network contribution, see the{' '}
