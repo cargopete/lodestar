@@ -483,7 +483,7 @@ function ConsumerStatus() {
         </div>
 
         {/* Deposit form */}
-        <div className="space-y-3 p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]">
+        <div className="space-y-3 p-3 rounded-[var(--radius-button)] bg-[rgba(255,255,255,0.04)] border border-[var(--border)]">
           <p className="text-[11px] text-[var(--text-muted)]">Fund your escrow to pay providers directly:</p>
 
           <div className="flex items-center gap-2">
@@ -493,7 +493,7 @@ function ConsumerStatus() {
               step="1"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-28 px-3 py-1.5 text-[13px] font-mono bg-[var(--bg)] border border-[var(--border)] rounded-[var(--radius-button)] text-[var(--text)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              className="w-28 px-3 py-1.5 text-[13px] font-mono bg-[rgba(255,255,255,0.07)] border border-[var(--border-mid)] rounded-[var(--radius-button)] text-[var(--text)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
             <span className="text-[12px] text-[var(--text-muted)]">GRT</span>
           </div>
@@ -533,7 +533,7 @@ function ConsumerStatus() {
 
         {/* Withdraw section — only show if there's a balance or thaw in progress */}
         {((escrowBalance != null && (escrowBalance as bigint) > 0n) || isThawing) && (
-          <div className="mt-3 space-y-2 p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]">
+          <div className="mt-3 space-y-2 p-3 rounded-[var(--radius-button)] bg-[rgba(255,255,255,0.04)] border border-[var(--border)]">
             <p className="text-[11px] text-[var(--text-muted)]">Withdraw from escrow:</p>
 
             {isThawing ? (
@@ -561,7 +561,7 @@ function ConsumerStatus() {
                     <button
                       onClick={handleCancelThaw}
                       disabled={cancelThawConfirming}
-                      className="flex-1 px-3 py-2 text-[12px] font-medium bg-[var(--bg)] border border-[var(--border)] text-[var(--text-muted)] rounded-[var(--radius-button)] hover:text-[var(--text)] disabled:opacity-40 transition-colors"
+                      className="flex-1 px-3 py-2 text-[12px] font-medium bg-[rgba(255,255,255,0.05)] border border-[var(--border-mid)] text-[var(--text)] rounded-[var(--radius-button)] hover:bg-[rgba(255,255,255,0.08)] disabled:opacity-40 transition-colors"
                     >
                       {cancelThawConfirming ? 'Confirming…' : cancelThawConfirmed ? '✓ Cancelled' : 'Cancel Thaw'}
                     </button>
@@ -572,7 +572,7 @@ function ConsumerStatus() {
               <button
                 onClick={handleThaw}
                 disabled={!escrowBalance || (escrowBalance as bigint) === 0n || thawConfirming}
-                className="w-full px-3 py-2 text-[12px] font-medium bg-[var(--bg)] border border-[var(--border)] text-[var(--text-muted)] rounded-[var(--radius-button)] hover:text-[var(--text)] disabled:opacity-40 transition-colors"
+                className="w-full px-3 py-2 text-[12px] font-medium bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-[var(--radius-button)] hover:bg-amber-500/20 disabled:opacity-40 transition-colors"
               >
                 {thawConfirming ? 'Confirming…' : thawConfirmed ? '✓ Thaw started (30 days)' : 'Start Thaw (30-day period)'}
               </button>
@@ -682,7 +682,7 @@ function FundConsumer() {
             value={consumerAddr}
             onChange={(e) => setConsumerAddr(e.target.value.trim())}
             className={cn(
-              'w-full px-3 py-2 text-[12px] font-mono bg-[var(--bg)] border rounded-[var(--radius-button)] text-[var(--text)] outline-none focus:ring-1 focus:ring-[var(--accent)]',
+              'w-full px-3 py-2 text-[12px] font-mono bg-[rgba(255,255,255,0.07)] border border-[var(--border-mid)] rounded-[var(--radius-button)] text-[var(--text)] outline-none focus:ring-1 focus:ring-[var(--accent)]',
               consumerAddr && !validAddr ? 'border-[var(--red)]' : 'border-[var(--border)]'
             )}
           />
@@ -705,7 +705,7 @@ function FundConsumer() {
             <input
               type="number" min="0" step="1" value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-28 px-3 py-1.5 text-[13px] font-mono bg-[var(--bg)] border border-[var(--border)] rounded-[var(--radius-button)] text-[var(--text)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              className="w-28 px-3 py-1.5 text-[13px] font-mono bg-[rgba(255,255,255,0.07)] border border-[var(--border-mid)] rounded-[var(--radius-button)] text-[var(--text)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
             <span className="text-[12px] text-[var(--text-muted)]">GRT</span>
           </div>
