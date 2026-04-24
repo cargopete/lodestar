@@ -756,9 +756,9 @@ export function IndexerTable() {
                         : 'border-[var(--border)] hover:border-[var(--accent-hover)]'
                     )}
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="min-w-0 mr-2 flex items-start gap-1.5">
-                        <div>
+                    <div className="mb-2">
+                      <div className="flex items-start gap-1.5">
+                        <div className="min-w-0 flex-1">
                           <p className="font-medium text-[var(--text)] truncate">{d.name}</p>
                           <p className="text-xs text-[var(--text-faint)] font-mono">{shortenAddress(d.address)}</p>
                         </div>
@@ -776,16 +776,17 @@ export function IndexerTable() {
                           <DroppedChainDot address={d.address} />
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <div className="flex items-center gap-2 mt-1.5">
                         {d.score !== null && (
                           <span className={cn(
-                            'text-sm font-mono font-semibold',
+                            'text-xs font-mono font-semibold',
                             d.score >= 80 ? 'text-[var(--green)]' : d.score >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
                           )}>
                             {d.score}{d.scoreGrade && <span className="text-[10px] ml-0.5 opacity-70">{d.scoreGrade}</span>}
                           </span>
                         )}
-                        <p className="text-sm font-mono text-[var(--text)]">{formatGRT(d.selfStake)}</p>
+                        <span className="text-[var(--text-faint)] text-xs">·</span>
+                        <p className="text-xs font-mono text-[var(--text-muted)]">{formatGRT(d.selfStake)} GRT</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-4 gap-2 text-center">
