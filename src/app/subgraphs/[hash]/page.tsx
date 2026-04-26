@@ -200,12 +200,12 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-[var(--border)]">
-                      <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Indexer</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Status</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Sync Progress</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Blocks Behind</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Entities</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Stake</th>
+                      <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Indexer</th>
+                      <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Status</th>
+                      <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Sync Progress</th>
+                      <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Blocks Behind</th>
+                      <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Entities</th>
+                      <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Stake</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
@@ -296,7 +296,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
               {/* Error & warning log */}
               {data.indexers.some((i) => i.fatalError || (i.nonFatalErrors?.length ?? 0) > 0) && (
                 <div className="mt-4 space-y-3">
-                  <h4 className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">
+                  <h4 className="text-[11px] font-medium text-[var(--text-muted)] tracking-wide">
                     Errors &amp; Warnings
                   </h4>
                   {data.indexers
@@ -329,7 +329,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                         {indexer.fatalError && (
                           <div className="mb-2">
                             <div className="flex items-center gap-1.5 mb-1">
-                              <span className="text-[10px] font-semibold text-[var(--red)] uppercase">Fatal</span>
+                              <span className="text-[10px] font-semibold text-[var(--red)]">Fatal</span>
                               {indexer.fatalError.handler && (
                                 <Badge variant="error">{indexer.fatalError.handler}</Badge>
                               )}
@@ -351,12 +351,12 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                         {indexer.nonFatalErrors && indexer.nonFatalErrors.length > 0 && (
                           <div className="space-y-1.5">
                             {!indexer.fatalError && (
-                              <span className="text-[10px] font-semibold text-[var(--amber)] uppercase">
+                              <span className="text-[10px] font-semibold text-[var(--amber)]">
                                 Non-fatal{indexer.nonFatalErrors.length > 1 ? ` (latest ${indexer.nonFatalErrors.length})` : ''}
                               </span>
                             )}
                             {indexer.fatalError && indexer.nonFatalErrors.length > 0 && (
-                              <span className="text-[10px] font-semibold text-[var(--amber)] uppercase">
+                              <span className="text-[10px] font-semibold text-[var(--amber)]">
                                 Non-fatal ({indexer.nonFatalErrors.length})
                               </span>
                             )}
@@ -543,11 +543,11 @@ function CurationSection({ hash }: { hash: string }) {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[var(--border)]">
-                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Curator</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Signalled</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Withdrawn</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Realized</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Last Changed</th>
+                    <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Curator</th>
+                    <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Signalled</th>
+                    <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Withdrawn</th>
+                    <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Realized</th>
+                    <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Last Changed</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">

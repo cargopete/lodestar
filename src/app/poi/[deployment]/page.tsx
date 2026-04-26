@@ -200,10 +200,10 @@ export default function POIDeploymentPage({
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[var(--border)]">
-                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Indexer</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">POI</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Stake</th>
-                    <th className="px-4 py-2 text-center text-xs font-medium text-[var(--text-muted)] uppercase">Status</th>
+                    <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Indexer</th>
+                    <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">POI</th>
+                    <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Stake</th>
+                    <th className="px-4 py-2 text-center text-[11px] font-medium text-[var(--text-muted)]">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">

@@ -48,7 +48,7 @@ interface CardTitleProps {
 
 export function CardTitle({ children, className }: CardTitleProps) {
   return (
-    <h3 className={cn('text-[15px] font-semibold text-[var(--text)]', className)}>
+    <h3 className={cn('text-[15px] font-semibold text-[var(--text)] tracking-tight', className)} style={{ fontFamily: 'var(--font-display)' }}>
       {children}
     </h3>
   );

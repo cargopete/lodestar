@@ -199,10 +199,10 @@ function GatewayBreakdownCard({
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border)]">
-                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Gateway</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase w-8">Indexers</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Escrow Balance</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Fees Collected</th>
+                <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Gateway</th>
+                <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)] w-8">Indexers</th>
+                <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Escrow Balance</th>
+                <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Fees Collected</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
@@ -540,16 +540,16 @@ function EscrowAccountsPanel({
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border)]">
-                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">
+                <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">
                   Gateway (Payer)
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">
+                <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">
                   Receiver (Indexer)
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">
+                <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">
                   Balance
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">
+                <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">
                   Thawing
                 </th>
               </tr>

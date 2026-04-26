@@ -97,7 +97,7 @@ export default function McpsPage() {
 function Section({ title, entries }: { title: string; entries: McpEntry[] }) {
   return (
     <div className="mb-10">
-      <h2 className="text-[11px] font-medium text-[var(--text-faint)] uppercase tracking-[0.08em] mb-4">{title}</h2>
+      <h2 className="text-[11px] font-medium text-[var(--text-faint)] mb-4">{title}</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {entries.map((mcp) => (
           <McpCard key={mcp.name} mcp={mcp} />

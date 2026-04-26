@@ -39,6 +39,7 @@
 
   /* Typography */
   --font-sans: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
+  --font-display: var(--font-geist), 'Geist', system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), 'JetBrains Mono', monospace;
 
   /* Layout */
@@ -97,12 +98,14 @@ body {
 
 /* Card hover */
 .card-hover {
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
 }
 
 .card-hover:hover {
   border-color: var(--border-mid);
   background: color-mix(in srgb, var(--bg-surface) 95%, var(--accent) 5%);
+  box-shadow: 0 4px 16px rgba(5, 3, 20, 0.6), 0 0 0 0.5px rgba(111, 76, 255, 0.12);
+  transform: translateY(-1px);
 }
 
 /* Shimmer loading */

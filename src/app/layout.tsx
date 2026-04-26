@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { DM_Sans, Geist_Mono } from 'next/font/google';
+import { DM_Sans, Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -13,6 +13,12 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const dmSans = DM_Sans({
   variable: '--font-dm-sans',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+});
+
+const geist = Geist({
+  variable: '--font-geist',
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
 });
@@ -53,7 +59,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${dmSans.variable} ${geistMono.variable} antialiased`}
+        className={`${dmSans.variable} ${geist.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
           <div className="min-h-screen bg-[var(--bg)]">

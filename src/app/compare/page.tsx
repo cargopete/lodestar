@@ -321,7 +321,7 @@ function CompareContent() {
         {selections.map((sel, idx) => (
           <div key={idx} className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.06em]">
+              <label className="text-[11px] text-[var(--text-muted)]">
                 Indexer {String.fromCharCode(65 + idx)}
               </label>
               {selections.length > 2 && (
@@ -371,13 +371,13 @@ function CompareContent() {
             <table className="w-full">
               <thead>
                 <tr className="bg-[var(--bg-elevated)]">
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em] sticky left-0 bg-[var(--bg-elevated)] z-10">
+                  <th className="px-4 py-3 text-left text-[11px] font-medium text-[var(--text-muted)] sticky left-0 bg-[var(--bg-elevated)] z-10">
                     Metric
                   </th>
                   {processed.map((p, idx) => (
                     <th
                       key={idx}
-                      className="px-4 py-3 text-center text-[11px] font-medium text-[var(--text)] uppercase tracking-[0.06em] min-w-[180px]"
+                      className="px-4 py-3 text-center text-[11px] font-medium text-[var(--text)] min-w-[180px]"
                     >
                       {p ? (
                         <div className="flex flex-col items-center gap-0.5">

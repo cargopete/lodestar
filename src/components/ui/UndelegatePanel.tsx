@@ -125,12 +125,12 @@ export function UndelegatePanel({ position, className, onClose }: UndelegatePane
       {/* Position summary */}
       <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-[var(--bg-elevated)]">
         <div>
-          <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">Delegated</p>
+          <p className="text-[10px] text-[var(--text-faint)]">Delegated</p>
           <p className="text-sm font-mono text-[var(--text)]">{formatGRTFull(stakedGRT)} GRT</p>
         </div>
         {isThawing && (
           <div>
-            <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">Thawing</p>
+            <p className="text-[10px] text-[var(--text-faint)]">Thawing</p>
             <p className="text-sm font-mono text-[var(--amber)]">{formatGRTFull(lockedGRT)} GRT</p>
           </div>
         )}

@@ -839,7 +839,7 @@ export function IndexerTable() {
                     <th
                       key={header.id}
                       className={cn(
-                        'px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider',
+                        'px-4 py-3 text-left text-[11px] font-medium text-[var(--text-muted)]',
                         'border-r border-[var(--border)]/20 last:border-r-0',
                         header.column.getCanSort() && 'cursor-pointer select-none hover:text-[var(--text)]'
                       )}

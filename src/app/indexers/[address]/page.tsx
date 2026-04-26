@@ -319,7 +319,7 @@ export default function IndexerDetailPage({
           {enrichedIndexer.rollingAPY90d !== null && (
             <Card>
               <CardContent className="py-4">
-                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">APY 90d</p>
+                <p className="text-[10px] text-[var(--text-faint)] mb-1">APY 90d</p>
                 <p className={cn(
                   'text-xl font-semibold font-mono',
                   enrichedIndexer.rollingAPY90d >= 5 ? 'text-[var(--green)]' : 'text-[var(--text)]'
@@ -333,7 +333,7 @@ export default function IndexerDetailPage({
           {enrichedIndexer.rollingAPY30d !== null && (
             <Card>
               <CardContent className="py-4">
-                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">APY 30d</p>
+                <p className="text-[10px] text-[var(--text-faint)] mb-1">APY 30d</p>
                 <p className={cn(
                   'text-xl font-semibold font-mono',
                   enrichedIndexer.rollingAPY30d >= 5 ? 'text-[var(--green)]' : 'text-[var(--text)]'
@@ -346,7 +346,7 @@ export default function IndexerDetailPage({
           )}
           <Card>
             <CardContent className="py-4">
-              <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">Instantaneous APR</p>
+              <p className="text-[10px] text-[var(--text-faint)] mb-1">Instantaneous APR</p>
               <p className="text-xl font-semibold font-mono text-[var(--text)]">
                 {enrichedIndexer.delegatorAPR.toFixed(2)}%
               </p>
@@ -796,11 +796,11 @@ export default function IndexerDetailPage({
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[var(--border)]">
-                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Deployment</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Status</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase hidden sm:table-cell">Blocks Behind</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">Allocated</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase hidden lg:table-cell">Signalled</th>
+                    <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Deployment</th>
+                    <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Status</th>
+                    <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)] hidden sm:table-cell">Blocks Behind</th>
+                    <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Allocated</th>
+                    <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)] hidden lg:table-cell">Signalled</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">

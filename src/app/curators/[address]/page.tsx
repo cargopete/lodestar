@@ -176,12 +176,12 @@ export default function CuratorProfilePage({
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  <th className="text-left text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 pr-4">Subgraph</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Signalled</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Realized Rewards</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Query Fees</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Active Indexers</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 pl-4">Signal/Stake</th>
+                  <th className="text-left text-[11px] text-[var(--text-muted)] pb-3 pr-4">Subgraph</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 px-4">Signalled</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 px-4">Realized Rewards</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 px-4">Query Fees</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 px-4">Active Indexers</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 pl-4">Signal/Stake</th>
                 </tr>
               </thead>
               <tbody>

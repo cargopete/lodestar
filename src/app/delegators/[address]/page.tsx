@@ -331,7 +331,7 @@ export default function DelegatorPortfolioPage({
             />
           )}
           <div className="text-right">
-            <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.06em]">Portfolio Value</p>
+            <p className="text-[11px] text-[var(--text-muted)]">Portfolio Value</p>
             <p className="text-[22px] font-mono font-medium text-[var(--text)]">{formatGRT(portfolioValue)} GRT</p>
             <p className="text-[11px] font-mono text-[var(--text-faint)]">{formatUSD(portfolioValue * grtPrice)}</p>
           </div>
@@ -388,7 +388,7 @@ export default function DelegatorPortfolioPage({
               ? 'bg-[rgba(255,140,66,0.06)] border-[var(--amber)]'
               : 'bg-[rgba(255,80,80,0.06)] border-[var(--red)]'
           )}>
-            <p className="text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">REO Coverage</p>
+            <p className="text-[11px] text-[var(--text-muted)] mb-1">REO Coverage</p>
             <p className={cn(
               'text-xl font-mono font-semibold',
               portfolioHealth.reoEligiblePercent >= 80 ? 'text-[var(--green)]'
@@ -400,7 +400,7 @@ export default function DelegatorPortfolioPage({
             <p className="text-[11px] text-[var(--text-faint)] mt-1">of delegation with REO-eligible indexers</p>
           </div>
           <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]">
-            <p className="text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">Diversification</p>
+            <p className="text-[11px] text-[var(--text-muted)] mb-1">Diversification</p>
             <p className="text-xl font-mono font-semibold text-[var(--text)]">
               {portfolioHealth.activeIndexerCount} indexer{portfolioHealth.activeIndexerCount !== 1 ? 's' : ''}
             </p>
@@ -412,7 +412,7 @@ export default function DelegatorPortfolioPage({
               ? 'bg-[rgba(255,140,66,0.06)] border-[var(--amber)]'
               : 'border-[var(--border)] bg-[var(--bg-surface)]'
           )}>
-            <p className="text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">Top Concentration</p>
+            <p className="text-[11px] text-[var(--text-muted)] mb-1">Top Concentration</p>
             <p className={cn(
               'text-xl font-mono font-semibold',
               portfolioHealth.topConcentration > 80 ? 'text-[var(--amber)]' : 'text-[var(--text)]'
@@ -456,16 +456,16 @@ export default function DelegatorPortfolioPage({
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  <th className="text-left text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 pr-4">Indexer</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Staked</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Current Value</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Unrealized P&amp;L</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Realized</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">APY (30d)</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Reward Cut</th>
-                  <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 px-4">Status</th>
+                  <th className="text-left text-[11px] text-[var(--text-muted)] pb-3 pr-4">Indexer</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 px-4">Staked</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 px-4">Current Value</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 px-4">Unrealized P&amp;L</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 px-4">Realized</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 px-4">APY (30d)</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 px-4">Reward Cut</th>
+                  <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 px-4">Status</th>
                   {isOwnPortfolio && (
-                    <th className="text-right text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] pb-3 pl-4">Actions</th>
+                    <th className="text-right text-[11px] text-[var(--text-muted)] pb-3 pl-4">Actions</th>
                   )}
                 </tr>
               </thead>

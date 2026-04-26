@@ -154,7 +154,7 @@ export default function CouncilPage() {
             { label: 'Strategy', value: 'multisig-owners' },
           ].map((item) => (
             <div key={item.label}>
-              <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wide">{item.label}</p>
+              <p className="text-[10px] text-[var(--text-faint)]">{item.label}</p>
               <p className="text-xs font-medium text-[var(--text)] mt-0.5">{item.value}</p>
             </div>
           ))}

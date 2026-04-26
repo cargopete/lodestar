@@ -125,7 +125,7 @@ export function BottomNav() {
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-full px-2 transition-colors',
+                  'flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-full px-2 transition-colors active:scale-[0.92]',
                   isActive
                     ? 'text-[var(--accent)]'
                     : 'text-[var(--text-faint)]'
@@ -141,7 +141,7 @@ export function BottomNav() {
           <button
             onClick={() => setShowMore(!showMore)}
             className={cn(
-              'flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-full px-2 transition-colors',
+              'flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-full px-2 transition-colors active:scale-[0.92]',
               isMoreActive || showMore
                 ? 'text-[var(--accent)]'
                 : 'text-[var(--text-faint)]'

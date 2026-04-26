@@ -109,7 +109,7 @@ export default async function BlogPostPage({
             {/* Tags */}
             {post.tags.length > 0 && (
               <div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-faint)] mb-2.5">
+                <p className="text-[11px] font-medium text-[var(--text-faint)] mb-2.5">
                   Tags
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -128,7 +128,7 @@ export default async function BlogPostPage({
             {/* Author */}
             {post.author && (
               <div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-faint)] mb-2.5">
+                <p className="text-[11px] font-medium text-[var(--text-faint)] mb-2.5">
                   Author
                 </p>
                 <a
@@ -144,7 +144,7 @@ export default async function BlogPostPage({
 
             {/* Published */}
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-faint)] mb-2.5">
+              <p className="text-[11px] font-medium text-[var(--text-faint)] mb-2.5">
                 Published
               </p>
               <p className="text-sm text-[var(--text)]">{formattedDate}</p>

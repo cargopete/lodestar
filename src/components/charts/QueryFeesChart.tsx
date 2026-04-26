@@ -164,21 +164,21 @@ export function QueryFeesChart() {
             {/* Quarterly summary stats */}
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
-                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">
+                <p className="text-[10px] text-[var(--text-faint)] mb-1">
                   {quarterData[quarterData.length - 1]?.label ?? 'Current Q'}
                 </p>
                 <p className="text-lg font-mono font-semibold text-[var(--accent)]">{formatGRT(currentQ)}</p>
                 <p className="text-[10px] text-[var(--text-faint)] font-mono">{formatGRTFull(currentQ)} GRT</p>
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
-                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">
+                <p className="text-[10px] text-[var(--text-faint)] mb-1">
                   {quarterData[quarterData.length - 2]?.label ?? 'Prev Q'}
                 </p>
                 <p className="text-lg font-mono font-semibold text-[var(--text-muted)]">{formatGRT(prevQ)}</p>
                 <p className="text-[10px] text-[var(--text-faint)] font-mono">{formatGRTFull(prevQ)} GRT</p>
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)] flex flex-col justify-center items-center">
-                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">QoQ Change (So Far)</p>
+                <p className="text-[10px] text-[var(--text-faint)] mb-1">QoQ Change (So Far)</p>
                 <p className={`text-lg font-mono font-semibold ${quarterDeltaPositive ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
                   {quarterDeltaPositive ? '+' : ''}{quarterDelta.toFixed(1)}%
                 </p>
@@ -234,17 +234,17 @@ export function QueryFeesChart() {
             {/* Comparison summary stats */}
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
-                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">Current {timeWindow}</p>
+                <p className="text-[10px] text-[var(--text-faint)] mb-1">Current {timeWindow}</p>
                 <p className="text-lg font-mono font-semibold text-[var(--accent)]">{formatGRT(currentTotal)}</p>
                 <p className="text-[10px] text-[var(--text-faint)] font-mono">{formatGRTFull(currentTotal)} GRT</p>
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
-                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">Previous {timeWindow}</p>
+                <p className="text-[10px] text-[var(--text-faint)] mb-1">Previous {timeWindow}</p>
                 <p className="text-lg font-mono font-semibold text-[var(--text-muted)]">{formatGRT(previousTotal)}</p>
                 <p className="text-[10px] text-[var(--text-faint)] font-mono">{formatGRTFull(previousTotal)} GRT</p>
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)] flex flex-col justify-center items-center">
-                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider mb-1">Change</p>
+                <p className="text-[10px] text-[var(--text-faint)] mb-1">Change</p>
                 <p className={`text-lg font-mono font-semibold ${deltaPositive ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
                   {deltaPositive ? '+' : ''}{delta.toFixed(1)}%
                 </p>

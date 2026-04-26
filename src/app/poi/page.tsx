@@ -67,7 +67,7 @@ export default function POIDashboard() {
   const { summary, deployments } = overview;
 
   const thClass =
-    'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em] select-none';
+    'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] select-none';
 
   return (
     <div className="space-y-6">
@@ -103,7 +103,7 @@ export default function POIDashboard() {
 
       {/* Sort toggle */}
       <div className="flex items-center gap-2">
-        <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.06em]">Sort</span>
+        <span className="text-[11px] text-[var(--text-muted)]">Sort</span>
         {([
           { mode: 'divergent' as const, label: 'Divergent first' },
           { mode: 'consensus' as const, label: 'Consensus first' },

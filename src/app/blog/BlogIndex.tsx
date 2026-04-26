@@ -191,14 +191,14 @@ export default function BlogIndex({ posts }: { posts: PostMeta[] }) {
                   <PostCard post={groupPosts[0]} featured />
                   {groupPosts.length > 1 && (
                     <>
-                      <h2 className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)] font-medium pt-2">{label}</h2>
+                      <h2 className="text-[11px] text-[var(--text-muted)] font-medium pt-2">{label}</h2>
                       <PostGrid posts={groupPosts.slice(1)} />
                     </>
                   )}
                 </div>
               ) : (
                 <>
-                  <h2 className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)] font-medium mb-5">{label}</h2>
+                  <h2 className="text-[11px] text-[var(--text-muted)] font-medium mb-5">{label}</h2>
                   <PostGrid posts={groupPosts} />
                 </>
               )}

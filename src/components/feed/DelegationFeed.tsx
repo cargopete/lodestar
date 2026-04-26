@@ -80,7 +80,7 @@ export function DelegationFeed({ indexerAddress: initialFilter }: DelegationFeed
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Delegation Activity</CardTitle>
-          <span className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">
+          <span className="text-[10px] text-[var(--text-faint)]">
             {activeFilter ? 'Filtered' : 'Live'} — last 50
           </span>
         </div>

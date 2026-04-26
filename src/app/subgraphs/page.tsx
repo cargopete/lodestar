@@ -333,7 +333,7 @@ function SubgraphDirectory() {
   };
 
   const thBase =
-    'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em] select-none border-r border-[var(--border)]/20 last:border-r-0';
+    'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] select-none border-r border-[var(--border)]/20 last:border-r-0';
   const thSortable = cn(thBase, 'cursor-pointer hover:text-[var(--text)] transition-colors');
   const tdBorder = 'border-r border-[var(--border)]/20 last:border-r-0';
 

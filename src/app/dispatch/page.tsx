@@ -196,7 +196,7 @@ function Playground() {
 
           {/* Params */}
           <div>
-            <label className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1 block">
+            <label className="text-[10px] text-[var(--text-muted)] mb-1 block">
               Params (JSON array)
             </label>
             <textarea
@@ -247,7 +247,7 @@ function Playground() {
                 const decoded = decodeResult(METHODS[methodIdx].label, responseData?.result);
                 return decoded ? (
                   <div className="px-4 py-5 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] text-center">
-                    <p className="text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">{METHODS[methodIdx].label}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mb-1">{METHODS[methodIdx].label}</p>
                     <p className="text-[28px] font-semibold text-[var(--text)] leading-tight">{decoded}</p>
                   </div>
                 ) : (
@@ -283,7 +283,7 @@ function Playground() {
               {/* Attestation */}
               <div className="flex items-start gap-2 p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">
+                  <p className="text-[10px] text-[var(--text-muted)] mb-1">
                     x-drpc-attestation
                   </p>
                   {result?.attestation ? (
@@ -465,7 +465,7 @@ function ConsumerStatus() {
         {/* Balances */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">GRT Balance</p>
+            <p className="text-[10px] text-[var(--text-muted)] mb-1">GRT Balance</p>
             {grtLoading ? <div className="h-6 w-20 shimmer rounded" /> : (
               <p className="text-[18px] font-mono font-medium text-[var(--text)]">
                 {grt ?? '—'} <span className="text-[12px] text-[var(--text-muted)]">GRT</span>
@@ -473,7 +473,7 @@ function ConsumerStatus() {
             )}
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">Escrow (lodestar-indexer)</p>
+            <p className="text-[10px] text-[var(--text-muted)] mb-1">Escrow (lodestar-indexer)</p>
             {escrowLoading ? <div className="h-6 w-20 shimmer rounded" /> : (
               <p className={cn('text-[18px] font-mono font-medium', escrow && parseFloat(escrow) > 0 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
                 {escrow ?? '—'} <span className="text-[12px] text-[var(--text-muted)]">GRT</span>
@@ -665,7 +665,7 @@ function FundConsumer() {
 
         {/* Steps */}
         <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] space-y-1.5">
-          <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em]">Setup</p>
+          <p className="text-[10px] font-medium text-[var(--text-muted)]">Setup</p>
           <div className="space-y-1 text-[12px] text-[var(--text-muted)]">
             <p><span className="font-mono text-[var(--accent)] mr-1.5">1.</span>Run <code className="text-[11px] bg-[var(--bg)] px-1 py-0.5 rounded text-[var(--text)]">npm start</code> in <code className="text-[11px]">dispatch-proxy/</code> — it prints a consumer address.</p>
             <p><span className="font-mono text-[var(--accent)] mr-1.5">2.</span>Paste that address below and deposit GRT.</p>
@@ -675,7 +675,7 @@ function FundConsumer() {
 
         {/* Address input */}
         <div className="space-y-1.5">
-          <label className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">Proxy Consumer Address</label>
+          <label className="text-[10px] text-[var(--text-muted)]">Proxy Consumer Address</label>
           <input
             type="text"
             placeholder="0x…"
@@ -849,7 +849,7 @@ function LiveFeed() {
             {/* Header */}
             <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-3 px-4 py-2 bg-[var(--bg-elevated)] border-b border-[var(--border)]">
               {['Method', 'Consumer', 'GRT', 'When'].map(h => (
-                <span key={h} className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">{h}</span>
+                <span key={h} className="text-[10px] text-[var(--text-muted)]">{h}</span>
               ))}
             </div>
             {/* Rows */}
@@ -972,11 +972,11 @@ function ConsumerHistory() {
             {/* Summary */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]">
-                <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">Total Requests</p>
+                <p className="text-[10px] text-[var(--text-muted)] mb-1">Total Requests</p>
                 <p className="text-[20px] font-mono font-medium text-[var(--text)]">{items.length.toLocaleString()}</p>
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]">
-                <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1">Total GRT Spent</p>
+                <p className="text-[10px] text-[var(--text-muted)] mb-1">Total GRT Spent</p>
                 <p className="text-[20px] font-mono font-medium text-[var(--green)]">{totalGRT} <span className="text-[12px]">GRT</span></p>
                 {totalUsd !== null && (
                   <p className="text-[11px] font-mono text-[var(--text-faint)] mt-0.5">
@@ -989,7 +989,7 @@ function ConsumerHistory() {
             {/* Method breakdown */}
             {methodRows.length > 0 && (
               <div>
-                <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-2">By Method</p>
+                <p className="text-[10px] text-[var(--text-muted)] mb-2">By Method</p>
                 <div className="rounded-[var(--radius-button)] border border-[var(--border)] overflow-hidden divide-y divide-[var(--border)]">
                   {methodRows.slice(0, 8).map(([method, stats]) => {
                     const pct = Math.round((stats.count / items.length) * 100);
@@ -1118,7 +1118,7 @@ function ChainlistWidget() {
 
         {/* Quick curl */}
         <div>
-          <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1.5">Quick test</p>
+          <p className="text-[10px] text-[var(--text-muted)] mb-1.5">Quick test</p>
           <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] overflow-x-auto">
             <pre className="text-[11px] font-mono text-[var(--text-muted)] whitespace-pre">{`curl ${DISPATCH_RPC_URL} \\
   -H "X-Consumer-Address: 0xYOUR_ADDRESS" \\
@@ -1282,8 +1282,8 @@ export default function DispatchPage() {
             <div className="rounded-[var(--radius-button)] border border-[var(--border)] overflow-hidden">
               {/* Table header */}
               <div className="grid grid-cols-[1fr_auto] gap-4 px-4 py-2 bg-[var(--bg-elevated)] border-b border-[var(--border)]">
-                <span className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">Indexer</span>
-                <span className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">Status</span>
+                <span className="text-[10px] text-[var(--text-muted)]">Indexer</span>
+                <span className="text-[10px] text-[var(--text-muted)]">Status</span>
               </div>
               {provisions.map((p, i) => {
                 const name = p.indexer.account.defaultDisplayName ?? shortAddr(p.indexer.id);
@@ -1309,7 +1309,7 @@ export default function DispatchPage() {
                         { label: 'Tiers', value: 'Std + Archive' },
                       ].map(({ label, value }) => (
                         <div key={label} className="p-2 rounded bg-[var(--bg-elevated)]">
-                          <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">{label}</p>
+                          <p className="text-[10px] text-[var(--text-muted)]">{label}</p>
                           <p className="text-[12px] font-mono text-[var(--text)] mt-0.5">{value}</p>
                         </div>
                       ))}
@@ -1375,7 +1375,7 @@ export default function DispatchPage() {
 
           {/* QoS score breakdown */}
           <div>
-            <p className="text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-2">QoS score breakdown</p>
+            <p className="text-[11px] text-[var(--text-muted)] mb-2">QoS score breakdown</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {[
                 {

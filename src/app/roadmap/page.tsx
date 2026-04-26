@@ -111,14 +111,14 @@ function DetailDrawer({ item, onClose }: { item: RoadmapItem; onClose: () => voi
           {/* Status row */}
           <div className="flex flex-wrap gap-3">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-faint)] mb-1">Official</p>
+              <p className="text-[10px] text-[var(--text-faint)] mb-1">Official</p>
               <Badge variant={officialStatusVariant(item.officialStatus)}>
                 {OFFICIAL_STATUS_LABEL[item.officialStatus]}
               </Badge>
             </div>
             {item.lodestarStatus && (
               <div>
-                <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-faint)] mb-1">Lodestar</p>
+                <p className="text-[10px] text-[var(--text-faint)] mb-1">Lodestar</p>
                 <Badge variant={lodestarStatusVariant(item.lodestarStatus)}>
                   {LODESTAR_STATUS_LABEL[item.lodestarStatus]}
                 </Badge>
@@ -126,7 +126,7 @@ function DetailDrawer({ item, onClose }: { item: RoadmapItem; onClose: () => voi
             )}
             {item.gipId && (
               <div>
-                <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-faint)] mb-1">GIP</p>
+                <p className="text-[10px] text-[var(--text-faint)] mb-1">GIP</p>
                 <span className="text-[12px] font-mono font-semibold text-[var(--accent)]">{item.gipId}</span>
               </div>
             )}
@@ -135,14 +135,14 @@ function DetailDrawer({ item, onClose }: { item: RoadmapItem; onClose: () => voi
           {/* Lodestar note */}
           {item.lodestarNote && (
             <div className="p-3 rounded-lg bg-[var(--bg-elevated)] border-l-2 border-[var(--accent)]">
-              <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--accent)] mb-1">Lodestar Assessment</p>
+              <p className="text-[10px] text-[var(--accent)] mb-1">Lodestar Assessment</p>
               <p className="text-[12px] text-[var(--text-muted)] leading-relaxed">{item.lodestarNote}</p>
             </div>
           )}
 
           {/* Description */}
           <div>
-            <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-faint)] mb-2">Overview</p>
+            <p className="text-[10px] text-[var(--text-faint)] mb-2">Overview</p>
             <p className="text-sm text-[var(--text-muted)] leading-relaxed">
               {item.detail || item.description}
             </p>
@@ -151,7 +151,7 @@ function DetailDrawer({ item, onClose }: { item: RoadmapItem; onClose: () => voi
           {/* Indexer impact */}
           {item.indexerImpact && (
             <div className="p-4 rounded-lg bg-[rgba(0,200,150,0.06)] border border-[var(--green)]/30">
-              <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--green)] mb-2 flex items-center gap-1.5">
+              <p className="text-[10px] text-[var(--green)] mb-2 flex items-center gap-1.5">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
@@ -164,7 +164,7 @@ function DetailDrawer({ item, onClose }: { item: RoadmapItem; onClose: () => voi
           {/* Delegator impact */}
           {item.delegatorImpact && (
             <div className="p-4 rounded-lg bg-[var(--accent)]/6 border border-[var(--accent)]/30">
-              <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--accent)] mb-2 flex items-center gap-1.5">
+              <p className="text-[10px] text-[var(--accent)] mb-2 flex items-center gap-1.5">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
@@ -188,7 +188,7 @@ function DetailDrawer({ item, onClose }: { item: RoadmapItem; onClose: () => voi
           {/* Links */}
           {item.links && item.links.length > 0 && (
             <div>
-              <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-faint)] mb-2">Links</p>
+              <p className="text-[10px] text-[var(--text-faint)] mb-2">Links</p>
               <div className="space-y-1.5">
                 {item.links.map((link) => (
                   <a
@@ -268,7 +268,7 @@ function ItemCard({ item, onClick }: { item: RoadmapItem; onClick: () => void })
         <div>
           {item.lodestarStatus ? (
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-faint)]">Lodestar:</span>
+              <span className="text-[10px] text-[var(--text-faint)]">Lodestar:</span>
               <Badge variant={lodestarStatusVariant(item.lodestarStatus)}>
                 {LODESTAR_STATUS_LABEL[item.lodestarStatus]}
               </Badge>
@@ -399,7 +399,7 @@ export default function RoadmapPage() {
       {/* Filter bars */}
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] uppercase tracking-wider text-[var(--text-faint)] w-14 flex-shrink-0">Official</span>
+          <span className="text-[10px] text-[var(--text-faint)] w-14 flex-shrink-0">Official</span>
           {FILTER_OPTIONS.map((opt) => (
             <button
               key={opt.value ?? 'all'}
@@ -416,7 +416,7 @@ export default function RoadmapPage() {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] uppercase tracking-wider text-[var(--text-faint)] w-14 flex-shrink-0">Lodestar</span>
+          <span className="text-[10px] text-[var(--text-faint)] w-14 flex-shrink-0">Lodestar</span>
           {LODESTAR_FILTER_OPTIONS.map((opt) => (
             <button
               key={opt.value ?? 'all'}

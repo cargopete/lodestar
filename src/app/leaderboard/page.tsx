@@ -278,7 +278,7 @@ function LeaderboardContent() {
               </svg>
             </div>
             <div>
-              <p className="text-xs font-medium text-amber-400/80 uppercase tracking-wider">
+              <p className="text-xs font-medium text-amber-400/80">
                 Indexer of the Month{bannerPeriod ? ` (for ${formatPeriodFull(bannerPeriod)})` : ''}
               </p>
               <Link
@@ -451,7 +451,7 @@ function LeaderboardContent() {
 // ── Shared styles ─────────────────────────────────────────
 
 const TH_BASE =
-  'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-[0.06em] select-none border-r border-[var(--border)]/20 last:border-r-0';
+  'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] select-none border-r border-[var(--border)]/20 last:border-r-0';
 
 const TH_CLASS = `${TH_BASE} text-right`;
 const TH_CLASS_LEFT = `${TH_BASE} text-left`;

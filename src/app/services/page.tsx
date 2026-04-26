@@ -350,19 +350,19 @@ function ServiceProvisionsPanel({ serviceId, grtPrice }: ServiceProvisionsPanelP
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border)]">
-                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)] uppercase">
+                <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">
                   Indexer
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">
+                <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">
                   Provisioned
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">
+                <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">
                   Thawing
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">
+                <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">
                   Verifier Cut
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-[var(--text-muted)] uppercase">
+                <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">
                   Total Stake
                 </th>
               </tr>

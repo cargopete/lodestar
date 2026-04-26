@@ -142,7 +142,7 @@ export function IndexerComparison({
           <table className="w-full">
             <thead>
               <tr className="bg-[var(--bg-elevated)]">
-                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider sticky left-0 bg-[var(--bg-elevated)] z-10">
+                <th className="px-4 py-3 text-left text-[11px] font-medium text-[var(--text-muted)] sticky left-0 bg-[var(--bg-elevated)] z-10">
                   Metric
                 </th>
                 {processedIndexers.map((indexer) => (

@@ -185,7 +185,7 @@ export default function DelegatePage({
       {/* Indexer summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3 rounded-lg bg-[var(--bg-elevated)]">
-          <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">Reward Cut</p>
+          <p className="text-[10px] text-[var(--text-faint)]">Reward Cut</p>
           <p className={cn(
             'text-lg font-mono font-semibold mt-0.5',
             isGreedyCut(indexer.indexingRewardCut) ? 'text-[var(--red)]' : 'text-[var(--text)]'
@@ -194,7 +194,7 @@ export default function DelegatePage({
           </p>
         </div>
         <div className="p-3 rounded-lg bg-[var(--bg-elevated)]">
-          <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">APR</p>
+          <p className="text-[10px] text-[var(--text-faint)]">APR</p>
           <p className={cn(
             'text-lg font-mono font-semibold mt-0.5',
             (enrichedIndexer?.delegatorAPR ?? 0) >= 3 ? 'text-[var(--green)]' : 'text-[var(--text)]'
@@ -203,7 +203,7 @@ export default function DelegatePage({
           </p>
         </div>
         <div className="p-3 rounded-lg bg-[var(--bg-elevated)]">
-          <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">Score</p>
+          <p className="text-[10px] text-[var(--text-faint)]">Score</p>
           <div className="flex items-center gap-1.5 mt-0.5">
             <p className={cn(
               'text-lg font-mono font-semibold',
@@ -226,7 +226,7 @@ export default function DelegatePage({
           </div>
         </div>
         <div className="p-3 rounded-lg bg-[var(--bg-elevated)]">
-          <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">REO</p>
+          <p className="text-[10px] text-[var(--text-faint)]">REO</p>
           <div className="mt-0.5">
             {reoData?.status?.status === 'eligible' ? (
               <Badge variant="success">Eligible</Badge>
@@ -322,7 +322,7 @@ export default function DelegatePage({
 
       {/* What happens next */}
       <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]">
-        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">How delegation works</p>
+        <p className="text-xs font-semibold text-[var(--text-muted)] mb-3">How delegation works</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="flex gap-3">
             <span className="w-6 h-6 rounded-full bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--accent)]">1</span>

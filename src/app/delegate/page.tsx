@@ -199,7 +199,7 @@ function CandidatePicker({
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-faint)]">
+        <p className="text-xs font-semibold text-[var(--text-faint)]">
           Top eligible indexers
         </p>
         <button
@@ -340,7 +340,7 @@ export default function DelegatePage() {
         <>
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
+              <p className="text-[11px] font-semibold text-[var(--text-faint)]">
                 {override ? 'Selected indexer' : 'Recommended indexer'}
               </p>
               {isFetching && !override && (
@@ -432,7 +432,7 @@ export default function DelegatePage() {
 
       {/* How it works */}
       <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]">
-        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">How delegation works</p>
+        <p className="text-xs font-semibold text-[var(--text-muted)] mb-3">How delegation works</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             {
