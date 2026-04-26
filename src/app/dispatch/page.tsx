@@ -1327,6 +1327,91 @@ export default function DispatchPage() {
         </div>
       </div>
 
+      {/* How the gateway routes requests */}
+      <Card>
+        <CardHeader>
+          <CardTitle>How the Gateway Routes Requests</CardTitle>
+          <p className="text-[12px] text-[var(--text-muted)] mt-0.5">
+            Routing logic sourced directly from{' '}
+            <a href="https://github.com/cargopete/dispatch/blob/main/crates/dispatch-gateway/src" target="_blank" rel="noreferrer" className="text-[var(--accent)] hover:underline">
+              dispatch-gateway
+            </a>
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Step flow */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              {
+                step: '01',
+                title: 'Tier filter',
+                body: 'The request method determines the minimum tier required — Standard, Archive (historical block tag), or Debug (trace_*/debug_*). Only providers advertising that capability are eligible.',
+              },
+              {
+                step: '02',
+                title: 'QoS score',
+                body: 'Each eligible provider is scored 0–1: 35% latency EMA + 35% availability (success rate) + 30% block freshness. New providers start at 1.0 until measured.',
+              },
+              {
+                step: '03',
+                title: 'Weighted selection',
+                body: 'Providers are sampled proportionally to their score — not round-robin. A 5% floor weight keeps even degraded providers in the pool so they can recover. Same-region providers get a bonus.',
+              },
+              {
+                step: '04',
+                title: 'Concurrent or quorum',
+                body: 'Most methods: k providers race, first valid response wins. Deterministic state calls (eth_call, eth_getLogs, eth_getBalance, etc.): all k respond, majority result wins — disagreements are logged.',
+              },
+            ].map(({ step, title, body }) => (
+              <div key={step} className="flex gap-3 p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
+                <span className="text-[11px] font-mono text-[var(--accent)] opacity-60 pt-0.5 shrink-0">{step}</span>
+                <div>
+                  <p className="text-[13px] font-medium text-[var(--text)] mb-1">{title}</p>
+                  <p className="text-[12px] text-[var(--text-muted)] leading-relaxed">{body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* QoS score breakdown */}
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-2">QoS score breakdown</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {[
+                {
+                  label: 'Latency',
+                  weight: '35%',
+                  desc: 'EMA of response time. 0ms → 1.0, 500ms → 0.0 (linear). Failures inject a 5 000ms penalty sample.',
+                },
+                {
+                  label: 'Availability',
+                  weight: '35%',
+                  desc: 'Successful responses ÷ total requests. Zero history → optimistic 1.0.',
+                },
+                {
+                  label: 'Freshness',
+                  weight: '30%',
+                  desc: 'Exponential decay on block lag. 0 blocks behind → 1.0, ~5 behind → 0.37, ~20 behind → 0.02.',
+                },
+              ].map(({ label, weight, desc }) => (
+                <div key={label} className="p-3 rounded-[var(--radius-button)] border border-[var(--border)]">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[12px] font-medium text-[var(--text)]">{label}</span>
+                    <span className="text-[11px] font-mono text-[var(--accent)]">{weight}</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Feedback loop note */}
+          <p className="text-[12px] text-[var(--text-muted)] pt-1 border-t border-[var(--border)]">
+            After each response, the winning provider&apos;s latency EMA and success counter update immediately — feeding back into the next selection cycle.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* How it works */}
       <Card>
         <CardHeader>
