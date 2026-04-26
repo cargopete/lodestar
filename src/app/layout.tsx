@@ -8,7 +8,6 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { IntelFeed } from '@/components/layout/IntelFeed';
 import { Footer } from '@/components/layout/Footer';
 import { StarPrompt } from '@/components/StarPrompt';
-import { LodieWidget } from '@/components/LodieWidget';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
@@ -67,7 +66,6 @@ export default function RootLayout({
             </main>
             <Footer />
             <StarPrompt />
-            <LodieWidget />
           </div>
         </Providers>
         <Analytics />
