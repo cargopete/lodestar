@@ -2,41 +2,43 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  /* Backgrounds */
-  --bg: #111114;
-  --bg-surface: #1A1A1F;
-  --bg-elevated: #22222A;
+  /* Backgrounds — Graph Midnight */
+  --bg: rgb(12, 10, 29);
+  --bg-surface: rgb(25, 22, 58);
+  --bg-elevated: rgb(36, 32, 76);
 
-  /* Accent — Lodestar violet */
-  --accent: #8B85FF;
-  --accent-dim: rgba(139, 133, 255, 0.12);
-  --accent-hover: rgba(139, 133, 255, 0.20);
+  /* Accent — The Graph purple */
+  --accent: rgb(111, 76, 255);
+  --accent-dim: rgba(111, 76, 255, 0.12);
+  --accent-hover: rgba(111, 76, 255, 0.20);
 
-  /* Text */
-  --text: #EEEEF2;
-  --text-muted: #9494A8;
-  --text-faint: #9590BD;
+  /* Text — white opacity ladder */
+  --text: rgba(255, 255, 255, 0.92);
+  --text-muted: rgba(255, 255, 255, 0.55);
+  --text-faint: rgba(255, 255, 255, 0.35);
 
   /* Borders */
-  --border: rgba(255, 255, 255, 0.07);
-  --border-mid: rgba(255, 255, 255, 0.12);
+  --border: rgba(255, 255, 255, 0.10);
+  --border-mid: rgba(255, 255, 255, 0.18);
 
-  /* Semantic */
-  --green: #34D399;
-  --green-dim: rgba(52, 211, 153, 0.12);
-  --red: #F87171;
-  --red-dim: rgba(248, 113, 113, 0.12);
-  --amber: #FBBF24;
-  --amber-dim: rgba(251, 191, 36, 0.12);
-  --cyan: #38BDF8;
-  --cyan-dim: rgba(56, 189, 248, 0.12);
+  /* Semantic — Graph palette */
+  --green: rgb(75, 202, 129);
+  --green-dim: rgba(75, 202, 129, 0.12);
+  --red: rgb(237, 74, 109);
+  --red-dim: rgba(237, 74, 109, 0.12);
+  --amber: rgb(255, 168, 1);
+  --amber-dim: rgba(255, 168, 1, 0.12);
+  --cyan: rgb(102, 216, 255);
+  --cyan-dim: rgba(102, 216, 255, 0.12);
+  --blue: rgb(76, 102, 255);
+  --blue-dim: rgba(76, 102, 255, 0.12);
 
-  /* Star gradient */
-  --star-top: #C4C0FF;
-  --star-base: #7B75E8;
+  /* Brand gradient */
+  --star-top: #b09aff;
+  --star-base: rgb(111, 76, 255);
 
   /* Typography */
-  --font-sans: var(--font-geist-sans), 'Inter', system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), 'JetBrains Mono', monospace;
 
   /* Layout */
@@ -49,19 +51,19 @@
   --feed-active-width: var(--feed-width);
 
   /* Radii */
-  --radius-card: 10px;
-  --radius-button: 8px;
-  --radius-badge: 4px;
+  --radius-card: 8px;
+  --radius-button: 6px;
+  --radius-badge: 9999px;
 
   /* Shadows */
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 0.5px rgba(255, 255, 255, 0.07);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 0.5px rgba(255, 255, 255, 0.08);
 }
 
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--text);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-dm-sans);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -75,6 +77,10 @@ html {
 
 body {
   background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 140% 60% at 50% 0%, rgba(111, 76, 255, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 40% at 10% 70%, rgba(76, 102, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 35% at 90% 30%, rgba(111, 76, 255, 0.04) 0%, transparent 50%);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 14px;
@@ -109,7 +115,7 @@ body {
   background: linear-gradient(
     90deg,
     var(--bg-elevated) 25%,
-    color-mix(in srgb, var(--bg-elevated) 80%, var(--text-faint) 20%) 50%,
+    color-mix(in srgb, var(--bg-elevated) 80%, rgba(255,255,255,0.15) 20%) 50%,
     var(--bg-elevated) 75%
   );
   background-size: 200% 100%;
@@ -127,12 +133,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--text-faint);
+  background: rgba(255, 255, 255, 0.16);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: rgba(255, 255, 255, 0.24);
 }
 
 /* Focus */
