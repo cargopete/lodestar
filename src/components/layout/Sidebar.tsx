@@ -233,7 +233,7 @@ export function Sidebar() {
       <div className="h-[var(--topbar-height)] flex items-center px-5 border-b-[0.5px] border-[var(--border)]">
         <Link href="/" className="flex items-center gap-2.5 group">
           <Image src="/lodestar.png" alt="Lodestar" width={22} height={22} className="w-[22px] h-[22px]" />
-          <span className="text-[15px] font-medium text-[var(--text)] tracking-tight">lodestar</span>
+          <span className="text-[15px] font-semibold text-[var(--text)] tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>lodestar</span>
         </Link>
       </div>
 

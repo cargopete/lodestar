@@ -13,7 +13,7 @@ interface ProgressBarProps {
 }
 
 const variantColors: Record<string, string> = {
-  accent: 'bg-gradient-to-r from-[var(--accent)] to-[var(--accent)]',
+  accent: 'bg-gradient-to-r from-[var(--blue)] to-[var(--accent)]',
   teal: 'bg-gradient-to-r from-[var(--green)] to-[#6ee7b7]',
   orange: 'bg-gradient-to-r from-[var(--amber)] to-[#fbbf24]',
 };

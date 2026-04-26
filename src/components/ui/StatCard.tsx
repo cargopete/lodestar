@@ -35,7 +35,7 @@ export function StatCard({
           {loading ? (
             <div className="h-8 w-24 shimmer rounded" />
           ) : (
-            <p className="text-[22px] font-medium font-mono text-[var(--text)] tracking-tight">
+            <p className="text-[24px] font-semibold font-mono text-[var(--text)] tracking-tight">
               {value}
             </p>
           )}
@@ -70,7 +70,7 @@ interface StatGridProps {
 
 export function StatGrid({ children, className }: StatGridProps) {
   return (
-    <div className={cn('grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5', className)}>
+    <div className={cn('grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 stat-grid-stagger', className)}>
       {children}
     </div>
   );
