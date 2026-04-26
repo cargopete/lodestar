@@ -241,7 +241,7 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-4 px-3">
         {navigation.map((section) => (
           <div key={section.title} className="mb-5">
-            <h4 className="text-[10px] font-medium text-[var(--text-faint)] uppercase tracking-[0.08em] px-2.5 mb-1.5">
+            <h4 className="text-[11px] font-medium text-[var(--text-faint)] px-2.5 mb-1.5">
               {section.title}
             </h4>
             <ul className="space-y-px">
@@ -252,7 +252,7 @@ export function Sidebar() {
                     <Link
                       href={item.href}
                       className={cn(
-                        'relative flex items-center gap-2.5 px-2.5 py-[7px] rounded-[var(--radius-button)] text-[13px] transition-colors',
+                        'relative flex items-center gap-2.5 px-2.5 py-[7px] rounded-[var(--radius-button)] text-[13px] transition-colors active:scale-[0.97]',
                         isActive
                           ? 'bg-[rgba(111,76,255,0.14)] text-white font-medium'
                           : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[rgba(255,255,255,0.04)]'
@@ -276,13 +276,16 @@ export function Sidebar() {
 
       {/* Address search */}
       <div className="p-3 border-t-[0.5px] border-[var(--border)]">
-        <form onSubmit={handleSearch}>
+        <form onSubmit={handleSearch} className="relative">
+          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[var(--text-faint)] pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
           <input
             type="text"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder="Search address..."
-            className="w-full px-3 py-2 text-[12px] text-[var(--text)] placeholder-[var(--text-faint)] bg-[var(--bg-elevated)] border-none rounded-[var(--radius-button)] outline-none focus:ring-1 focus:ring-[var(--accent)] transition-shadow"
+            className="w-full pl-7 pr-3 py-2 text-[12px] text-[var(--text)] placeholder-[var(--text-faint)] bg-[var(--bg-elevated)] border-none rounded-[var(--radius-button)] outline-none focus:ring-1 focus:ring-[var(--accent)] transition-shadow"
           />
         </form>
       </div>

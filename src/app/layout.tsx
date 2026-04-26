@@ -14,7 +14,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 const dmSans = DM_Sans({
   variable: '--font-dm-sans',
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
+  weight: ['400', '500', '600', '700'],
 });
 
 const geistMono = Geist_Mono({
@@ -62,7 +62,7 @@ export default function RootLayout({
             <BottomNav />
             <IntelFeed />
             <main className="md:pl-[var(--sidebar-width)] lg:pr-[var(--feed-active-width)] pt-[var(--topbar-height)] pb-[calc(var(--bottom-nav-height)+var(--safe-bottom))] md:pb-0 transition-[padding] duration-200">
-              <div className="p-4 md:p-6 max-w-[1440px]">{children}</div>
+              <div className="p-4 md:p-6 max-w-[1440px] mx-auto">{children}</div>
             </main>
             <Footer />
             <StarPrompt />

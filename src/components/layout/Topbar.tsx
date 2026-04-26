@@ -117,7 +117,7 @@ export function Topbar() {
                 className={cn(
                   'flex items-center gap-2 px-3 py-1 text-[13px] rounded-[var(--radius-button)]',
                   'bg-[var(--bg-surface)] border-[0.5px] border-[var(--border)]',
-                  'hover:border-[var(--border-mid)] transition-colors'
+                  'hover:border-[var(--border-mid)] transition-colors active:scale-[0.97]'
                 )}
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-[var(--green)]" />
@@ -161,7 +161,7 @@ export function Topbar() {
                 className={cn(
                   'px-3.5 py-1 text-[13px] font-medium rounded-[var(--radius-button)]',
                   'bg-[var(--accent)] text-white',
-                  'hover:bg-[var(--accent-hover)] transition-colors',
+                  'hover:opacity-90 transition-all active:scale-[0.97]',
                   isPending && 'opacity-60 cursor-not-allowed'
                 )}
               >
