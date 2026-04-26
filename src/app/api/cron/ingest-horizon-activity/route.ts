@@ -85,14 +85,16 @@ export async function GET(request: NextRequest) {
   const t0 = Date.now();
   const topic0List = ALL_TOPICS.map((t) => hexLit(t)).join(', ');
 
+  // ~500k blocks ≈ 5 days on Arbitrum — keeps the scan small and fast
   const rows = await ampQuery<RawLog>(`
     SELECT block_num, tx_hash, log_index, topic0, topic1, topic2, topic3, data
     FROM ${AMP_DATASET}.logs
     WHERE address = ${hexLit(HORIZON_STAKING)}
       AND topic0 IN (${topic0List})
+      AND block_num > (SELECT MAX(block_num) - 500000 FROM ${AMP_DATASET}.logs)
     ORDER BY block_num DESC
     LIMIT 25
-  `, 110_000);
+  `, 30_000);
 
   const events = rows.map(mapRow).filter((e): e is ActivityEvent => e !== null);
   await cacheSet(CACHE_KEY, events, CACHE_TTL);
