@@ -1215,8 +1215,8 @@ export default function DispatchPage() {
       <StatGrid className="lg:grid-cols-4">
         <StatCard
           label="Active Providers"
-          value="1"
-          subtitle="lodestar-indexer.eth"
+          value={String(provisions.length || '-')}
+          subtitle={provisions.length === 1 ? (provisions[0].indexer.account.defaultDisplayName ?? shortAddr(provisions[0].indexer.id)) : `${provisions.length} indexers`}
           icon={
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
@@ -1275,7 +1275,7 @@ export default function DispatchPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Active Providers</CardTitle>
-              <Badge variant="default">1 online</Badge>
+              <Badge variant="default">{provisions.length} online</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -1285,31 +1285,39 @@ export default function DispatchPage() {
                 <span className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">Indexer</span>
                 <span className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">Status</span>
               </div>
-              {/* Row */}
-              <div className="px-4 py-3 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[13px] font-medium text-[var(--text)]">lodestar-indexer.eth</p>
-                    <p className="text-[11px] font-mono text-[var(--text-faint)]">0xb43B2CCC…09Bb · EU Central</p>
-                  </div>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-badge)] bg-[var(--green-dim)] text-[var(--green)] text-[10px]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse" />
-                    Online
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { label: 'Stake', value: provisionedGRT !== null ? `${formatGRT(provisionedGRT)} GRT` : '--' },
-                    { label: 'Thawing', value: thawingGRT ? `${formatGRT(thawingGRT)} GRT` : '0' },
-                    { label: 'Chain', value: 'Arb One' },
-                    { label: 'Tiers', value: 'Std + Archive' },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="p-2 rounded bg-[var(--bg-elevated)]">
-                      <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">{label}</p>
-                      <p className="text-[12px] font-mono text-[var(--text)] mt-0.5">{value}</p>
+              {provisions.map((p, i) => {
+                const name = p.indexer.account.defaultDisplayName ?? shortAddr(p.indexer.id);
+                const pGRT = weiToGRT(p.tokensProvisioned);
+                const tGRT = weiToGRT(p.tokensThawing);
+                return (
+                  <div key={p.indexer.id} className={cn('px-4 py-3 space-y-3', i > 0 && 'border-t border-[var(--border)]')}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[13px] font-medium text-[var(--text)]">{name}</p>
+                        <p className="text-[11px] font-mono text-[var(--text-faint)]">{shortAddr(p.indexer.id)}</p>
+                      </div>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-badge)] bg-[var(--green-dim)] text-[var(--green)] text-[10px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse" />
+                        Online
+                      </span>
                     </div>
-                  ))}
-                </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { label: 'Stake', value: `${formatGRT(pGRT)} GRT` },
+                        { label: 'Thawing', value: tGRT > 0 ? `${formatGRT(tGRT)} GRT` : '0' },
+                        { label: 'Chain', value: 'Arb One' },
+                        { label: 'Tiers', value: 'Std + Archive' },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="p-2 rounded bg-[var(--bg-elevated)]">
+                          <p className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">{label}</p>
+                          <p className="text-[12px] font-mono text-[var(--text)] mt-0.5">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="px-4 py-3 border-t border-[var(--border)]">
                 <ProviderMethods />
               </div>
             </div>
