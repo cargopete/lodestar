@@ -22,6 +22,7 @@ export interface ActivityEvent {
     | 'provision_slash';
   block: number;
   txHash: string;
+  timestamp?: number;
   serviceProvider: string;
   verifier?: string;
   delegator?: string;
@@ -34,7 +35,7 @@ export async function GET() {
   const data = await cacheGet<ActivityEvent[]>(CACHE_KEY);
 
   if (!data) {
-    return NextResponse.json({ error: 'Amp node unreachable' }, { status: 503 });
+    return NextResponse.json({ data: [] });
   }
 
   return NextResponse.json({ data }, {

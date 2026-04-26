@@ -29,17 +29,16 @@ function shortAddr(addr: string) {
 // ── Component ────────────────────────────────────────────────────────────────
 
 const SLOW_MESSAGES = [
-  "Amp is combing through 4 million log entries. Worth the wait.",
-  "Scanning the Horizon contract on Arbitrum. Nearly there.",
-  "Chain data takes a moment — Amp queries don't cut corners.",
-  "Querying live blockchain data. Shouldn't be long now.",
+  "Fetching the latest Horizon events from the subgraph.",
+  "Querying delegation and provision activity. Nearly there.",
+  "Loading recent on-chain activity from Arbitrum One.",
+  "Assembling your live feed. Won't be long.",
 ];
 
 export function HorizonActivity() {
   const [slowMessage, setSlowMessage] = useState<string | null>(null);
-  const [isRetrying, setIsRetrying] = useState(false);
 
-  const { data, isLoading, isFetching, dataUpdatedAt, refetch } = useQuery<{ data: ActivityEvent[]; error?: string }>({
+  const { data, isLoading, isFetching, dataUpdatedAt } = useQuery<{ data: ActivityEvent[] }>({
     queryKey: ['horizon-activity'],
     queryFn: () => fetch('/api/horizon/activity?limit=25').then((r) => r.json()),
     refetchInterval: 30_000,
@@ -47,7 +46,7 @@ export function HorizonActivity() {
   });
 
   useEffect(() => {
-    if (!isFetching && !isRetrying) { setSlowMessage(null); return; }
+    if (!isFetching) { setSlowMessage(null); return; }
     const t = setTimeout(() => {
       setSlowMessage(SLOW_MESSAGES[Math.floor(Math.random() * SLOW_MESSAGES.length)]);
     }, 3000);
@@ -55,7 +54,6 @@ export function HorizonActivity() {
   }, [isLoading]);
 
   const events = data?.data ?? [];
-  const isAmpDown = !isFetching && !isRetrying && (data?.error != null || (!data?.data && data != null));
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : null;
 
   return (
@@ -64,36 +62,28 @@ export function HorizonActivity() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2.5">
             <CardTitle>Horizon Activity</CardTitle>
-            {/* Live pulsing dot — amber when Amp is unreachable */}
+            {/* Live pulsing dot */}
             <span className="relative flex h-2 w-2">
-              <span className={cn('animate-ping absolute inline-flex h-full w-full rounded-full opacity-60', isAmpDown ? 'bg-[var(--amber)]' : 'bg-[var(--green)]')} />
-              <span className={cn('relative inline-flex rounded-full h-2 w-2', isAmpDown ? 'bg-[var(--amber)]' : 'bg-[var(--green)]')} />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60 bg-[var(--green)]" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--green)]" />
             </span>
           </div>
 
-          {/* Powered by Amp badge */}
-          <a
-            href="https://www.edgeandnode.com/amp-dev"
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* Powered by The Graph badge */}
+          <span
             className={cn(
               'flex items-center gap-1.5 px-2.5 py-1 rounded-full',
               'border border-[var(--border)] bg-[var(--bg-elevated)]',
               'text-[10px] font-medium text-[var(--text-faint)]',
-              'hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors'
             )}
-            title="Live on-chain data powered by Amp"
           >
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
-            Powered by Amp
-          </a>
+            Powered by The Graph
+          </span>
         </div>
 
         <div className="flex items-center justify-between mt-1">
           <p className="text-[11px] text-[var(--text-faint)]">
-            Live stake deposits, delegations &amp; slashing on Arbitrum One
+            Recent delegations &amp; provisions on Horizon
           </p>
           {lastUpdated && (
             <span className="text-[10px] text-[var(--text-faint)]">
@@ -104,7 +94,7 @@ export function HorizonActivity() {
       </CardHeader>
 
       <CardContent>
-        {(isFetching || isRetrying) ? (
+        {isFetching ? (
           <div className="space-y-2">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-11 shimmer rounded-lg" />
@@ -114,18 +104,6 @@ export function HorizonActivity() {
                 {slowMessage}
               </p>
             )}
-          </div>
-        ) : isAmpDown ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-2">
-            <span className="text-2xl">⚡</span>
-            <p className="text-sm text-[var(--text-muted)]">Amp node unreachable</p>
-            <p className="text-[11px] text-[var(--text-faint)]">Live data will resume when the node is back online</p>
-            <button
-              onClick={async () => { setIsRetrying(true); await refetch(); setIsRetrying(false); }}
-              className="mt-2 px-3 py-1.5 text-[11px] rounded-full border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
-            >
-              Retry
-            </button>
           </div>
         ) : events.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2">
@@ -186,20 +164,28 @@ export function HorizonActivity() {
                     )}
                   </span>
 
-                  {/* Block + arbiscan link */}
+                  {/* Timestamp + arbiscan link */}
                   <span className="ml-auto text-[10px] text-[var(--text-faint)] shrink-0 flex items-center gap-1.5">
-                    <span className="font-mono hidden md:inline">#{event.block.toLocaleString()}</span>
-                    <a
-                      href={`https://arbiscan.io/tx/${event.txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-[var(--accent)] transition-colors"
-                      title="View on Arbiscan"
-                    >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                      </svg>
-                    </a>
+                    {event.timestamp ? (
+                      <span className="hidden md:inline">
+                        {new Date(event.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    ) : event.block > 0 ? (
+                      <span className="font-mono hidden md:inline">#{event.block.toLocaleString()}</span>
+                    ) : null}
+                    {event.txHash?.startsWith('0x') && event.txHash.length === 66 && (
+                      <a
+                        href={`https://arbiscan.io/tx/${event.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-[var(--accent)] transition-colors"
+                        title="View on Arbiscan"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                        </svg>
+                      </a>
+                    )}
                   </span>
                 </div>
               );
