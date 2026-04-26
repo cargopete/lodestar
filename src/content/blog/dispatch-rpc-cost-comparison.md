@@ -3,6 +3,7 @@ title: "Dispatch vs Alchemy vs Infura: Real RPC Pricing Numbers"
 date: "2026-04-22"
 author: "cargopete"
 tags: ["dispatch", "rpc", "alchemy", "infura", "pricing", "infrastructure"]
+category: "Analysis"
 excerpt: "Concrete, code-derived cost comparisons between Dispatch and the major centralised RPC providers — plus a step-by-step guide to getting an RPC URL from the Dispatch network today."
 ---
 

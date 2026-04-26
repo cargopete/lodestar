@@ -3,6 +3,7 @@ title: "How to Run a Local Amp Node, Part 2: What You'll See After a Day"
 date: "2026-04-17"
 author: "cargopete"
 tags: ["amp", "self-hosted", "infrastructure", "arbitrum", "parquet"]
+category: "Guides"
 excerpt: "Part 1 covered installing ampd and deploying a dataset. This post is about what happens next — what Amp actually writes to disk, what it costs in RAM, and the operational details the setup docs don't mention."
 ---
 

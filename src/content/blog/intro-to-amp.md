@@ -3,6 +3,7 @@ title: "Intro to Amp: The Graph's Blockchain-Native Database"
 date: "2026-03-28"
 author: "cargopete"
 tags: ["amp", "edge-and-node", "data-services", "enterprise", "horizon"]
+category: "Ecosystem"
 excerpt: "Edge & Node built a blockchain-native database that turns smart contract events into SQL tables automatically. Here's what Amp is, how it works, and what it means for The Graph ecosystem."
 ---
 

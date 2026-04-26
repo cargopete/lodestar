@@ -3,6 +3,7 @@ title: "Arbitrum Indexer Infrastructure: Smaller Archives & Fixing Sync Lag"
 date: "2026-04-06"
 author: "cargopete"
 tags: ["infrastructure", "arbitrum", "graph-node", "indexers", "guide"]
+category: "Guides"
 excerpt: "Two problems, one post: the new PathDB/PebbleDB archive node that cuts disk from 38TB to 4TB, and the two graph-node settings that stop your subgraphs sitting 10–30 blocks behind chain head forever."
 ---
 

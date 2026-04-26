@@ -3,6 +3,7 @@ title: "How to Run a Local Amp Node"
 date: "2026-04-07"
 author: "cargopete"
 tags: ["amp", "self-hosted", "infrastructure", "arbitrum"]
+category: "Guides"
 excerpt: "Edge & Node's Amp is available as a hosted service — but you can run it yourself. Here's how to self-host a local ampd node, with no waitlists and no dependency on E&N infrastructure."
 ---
 

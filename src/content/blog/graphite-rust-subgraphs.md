@@ -3,6 +3,7 @@ title: "Graphite: Write The Graph Subgraphs in Rust"
 date: "2026-04-16"
 author: "cargopete"
 tags: ["graphite", "rust", "subgraphs", "developer-tools", "wasm", "assemblyscript"]
+category: "Ecosystem"
 excerpt: "AssemblyScript is the only language graph-node accepts — or so everyone assumed. Graphite compiles Rust to WASM that graph-node cannot tell apart from AssemblyScript. No patches. No forks. Already live on Arbitrum One."
 ---
 

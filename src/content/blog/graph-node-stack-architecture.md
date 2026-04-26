@@ -3,6 +3,7 @@ title: "The 3 Rules of Graph-Node Stack Architecture"
 date: "2026-03-25"
 author: "cargopete"
 tags: ["infrastructure", "graph-node", "indexers", "guide"]
+category: "Guides"
 excerpt: "There are many ways to set up your graph-node stack, but the constraints boil down to 3 rules. A practical guide to node roles, sharding, tiered indexing, and the pitfalls that catch everyone."
 ---
 

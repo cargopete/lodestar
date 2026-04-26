@@ -3,6 +3,7 @@ title: "How to Build and Deploy a Data Service on The Graph's Horizon Framework"
 date: "2026-04-23"
 author: "cargopete"
 tags: ["horizon", "data-services", "solidity", "rust", "tap", "payments", "indexers"]
+category: "Guides"
 excerpt: "A complete technical walkthrough of building a production Horizon data service — from Solidity contract to off-chain payment collection — drawn from two real implementations: Dispatch and SubstreamsDataService."
 ---
 

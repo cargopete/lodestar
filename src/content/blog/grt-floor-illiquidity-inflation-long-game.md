@@ -3,6 +3,7 @@ title: "GRT at the Floor: Illiquidity, Inflation, and the Long Game"
 date: "2026-04-08"
 author: "cargopete"
 tags: ["grt", "tokenomics", "market-structure", "horizon", "analysis"]
+category: "Analysis"
 excerpt: "The Graph's token is near historical lows. Here's the honest story of how it got there — and what, if anything, changes next."
 ---
 

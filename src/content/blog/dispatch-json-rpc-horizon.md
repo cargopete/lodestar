@@ -3,6 +3,7 @@ title: "Dispatch: An Experimental Community JSON-RPC Service on Horizon"
 date: "2026-04-16"
 author: "cargopete"
 tags: ["dispatch", "rpc", "data-services", "horizon", "infrastructure", "indexers"]
+category: "News"
 excerpt: "Every dApp on Earth relies on Alchemy or Infura for JSON-RPC. Dispatch is a community-built experiment exploring what a decentralised JSON-RPC data service on The Graph's Horizon protocol might look like — the first provider is live and serving real traffic on Arbitrum One."
 ---
 
