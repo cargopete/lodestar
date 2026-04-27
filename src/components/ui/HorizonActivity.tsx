@@ -69,16 +69,6 @@ export function HorizonActivity() {
             </span>
           </div>
 
-          {/* Powered by The Graph badge */}
-          <span
-            className={cn(
-              'flex items-center gap-1.5 px-2.5 py-1 rounded-full',
-              'border border-[var(--border)] bg-[var(--bg-elevated)]',
-              'text-[10px] font-medium text-[var(--text-faint)]',
-            )}
-          >
-            Powered by The Graph
-          </span>
         </div>
 
         <div className="flex items-center justify-between mt-1">
