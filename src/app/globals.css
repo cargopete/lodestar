@@ -3,9 +3,9 @@
 
 :root {
   /* Backgrounds — Graph Midnight */
-  --bg: rgb(17, 13, 45);
-  --bg-surface: rgb(28, 23, 64);
-  --bg-elevated: rgb(40, 34, 86);
+  --bg: rgb(20, 16, 52);
+  --bg-surface: rgb(36, 29, 80);
+  --bg-elevated: rgb(52, 44, 108);
 
   /* Accent — The Graph purple */
   --accent: rgb(111, 76, 255);
@@ -18,8 +18,8 @@
   --text-faint: rgba(255, 255, 255, 0.35);
 
   /* Borders */
-  --border: rgba(255, 255, 255, 0.10);
-  --border-mid: rgba(255, 255, 255, 0.18);
+  --border: rgba(255, 255, 255, 0.13);
+  --border-mid: rgba(255, 255, 255, 0.22);
 
   /* Semantic — Graph palette */
   --green: rgb(75, 202, 129);
