@@ -118,7 +118,7 @@ export function UndelegatePanel({ position, className, onClose }: UndelegatePane
           <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M4.5 15h15M4.5 15a2.25 2.25 0 00-2.25 2.25v.75a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25v-.75A2.25 2.25 0 0019.5 15" />
         </svg>
         <span className="text-[11px] text-[var(--accent)]">
-          <strong>Experimental</strong> — on-chain transactions are irreversible. Verify before signing.
+On-chain transactions are irreversible. Verify before signing.
         </span>
       </div>
 

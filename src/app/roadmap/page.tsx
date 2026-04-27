@@ -335,7 +335,6 @@ const FILTER_OPTIONS: { value: OfficialStatus | null; label: string }[] = [
   { value: 'shipped', label: 'Shipped' },
   { value: 'in_progress', label: 'In Progress' },
   { value: 'planned', label: 'Planned' },
-  { value: 'experimental', label: 'Experimental' },
 ];
 
 const LODESTAR_FILTER_OPTIONS: { value: LodestarStatus | null; label: string }[] = [

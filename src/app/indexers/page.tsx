@@ -42,9 +42,6 @@ export default function IndexerDirectory() {
               </p>
             </div>
           </div>
-          <span className="flex-shrink-0 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-[var(--accent)]/15 text-[var(--accent)]">
-            Experimental
-          </span>
         </div>
       )}
 

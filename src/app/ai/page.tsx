@@ -68,7 +68,7 @@ const MCPS: McpEntry[] = [
     name: 'graph-advocate',
     author: 'PaulieB14',
     category: 'community',
-    description: 'Experimental multi-agent routing agent that intelligently routes data requests across The Graph\'s AI suite — Token API, Subgraph Registry, and Substreams — based on query intent.',
+    description: 'Multi-agent routing agent that intelligently routes data requests across The Graph\'s AI suite — Token API, Subgraph Registry, and Substreams — based on query intent.',
     capabilities: ['Multi-agent request routing', 'Token API integration', 'Subgraph Registry lookup', 'Substreams routing'],
     clients: ['Claude', 'Any MCP-compatible client'],
     repoUrl: 'https://github.com/PaulieB14/graph-advocate',

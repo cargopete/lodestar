@@ -98,7 +98,6 @@ export default function IndexerPaymentsPage({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-[var(--text)]">{displayName}</h1>
-            <Badge variant="default">Experimental</Badge>
           </div>
           <p className="text-xs font-mono text-[var(--text-faint)]">{address}</p>
         </div>
