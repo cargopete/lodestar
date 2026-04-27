@@ -62,7 +62,7 @@ export default function RootLayout({
         className={`${dmSans.variable} ${geist.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          <div className="min-h-screen bg-[var(--bg)]">
+          <div className="min-h-screen">
             <Sidebar />
             <Topbar />
             <BottomNav />
