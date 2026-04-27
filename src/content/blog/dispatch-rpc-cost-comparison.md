@@ -210,7 +210,7 @@ import { DISPATCHClient } from "@lodestar-dispatch/consumer-sdk";
 
 const client = new DISPATCHClient({
   chainId: 42161,
-  dataServiceAddress: "0xA983b18B8291F0c317Ba4Fe0dc0f7cc9373AF078",
+  dataServiceAddress: "0x7101D5C1A5c89C3647F5118da118E56C023bA0b9",
   graphTallyCollector: "0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e",
   subgraphUrl: "https://api.studio.thegraph.com/query/1747796/rpc-network/v0.2.0",
   signerPrivateKey: process.env.CONSUMER_KEY as `0x${string}`,
@@ -251,7 +251,7 @@ cast send 0xf6Fcc27aAf1fcD8B254498c9794451d82afC673E \
 
 | Contract | Address |
 |---|---|
-| RPCDataService | `0xA983b18B8291F0c317Ba4Fe0dc0f7cc9373AF078` |
+| RPCDataService (proxy) | `0x7101D5C1A5c89C3647F5118da118E56C023bA0b9` |
 | GraphTallyCollector | `0x8f69F5C07477Ac46FBc491B1E6D91E2be0111A9e` |
 | PaymentsEscrow | `0xf6Fcc27aAf1fcD8B254498c9794451d82afC673E` |
 | HorizonStaking | `0x00669A4CF01450B64E8A2A20E9b1FCB71E61eF03` |

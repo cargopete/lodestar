@@ -91,7 +91,7 @@ The on-chain infrastructure lives on Arbitrum One:
 |---|---|
 | HorizonStaking | `0x00669A4CF01450B64E8A2A20E9b1FCB71E61eF03` |
 | GraphTallyCollector | `0x8f69F5C07477Ac46FBc491B1E6D91E2be0111A9e` |
-| RPCDataService | `0x73846272813065c3e4efdb3fb82e0d128c8c2364` |
+| RPCDataService | `0x7101D5C1A5c89C3647F5118da118E56C023bA0b9` |
 
 Subgraph: `https://api.studio.thegraph.com/query/1747796/rpc-network/v0.1.1`
 
@@ -123,7 +123,7 @@ Archive tier (historical state) working on Arbitrum One in 649ms. That's a real 
 ## Become a provider
 
 Requirements:
-- ≥ 25,000 GRT staked and provisioned to `0x73846272813065c3e4efdb3fb82e0d128c8c2364` on Arbitrum One
+- ≥ 555 GRT staked and provisioned to `0x7101D5C1A5c89C3647F5118da118E56C023bA0b9` on Arbitrum One
 - A running Ethereum node (full or archive, depending on which tiers you want to serve)
 - `dispatch-service` running alongside your node
 
@@ -144,7 +144,7 @@ import { IndexerAgent } from "@graph-dispatch/indexer-agent";
 
 const agent = new IndexerAgent({
   arbitrumRpcUrl: "https://arb1.arbitrum.io/rpc",
-  rpcDataServiceAddress: "0x73846272813065c3e4efdb3fb82e0d128c8c2364",
+  rpcDataServiceAddress: "0x7101D5C1A5c89C3647F5118da118E56C023bA0b9",
   operatorPrivateKey: process.env.OPERATOR_KEY,
   providerAddress: "0x...",
   endpoint: "https://rpc.your-indexer.com",
@@ -172,7 +172,7 @@ import { DispatchClient } from "@graph-dispatch/consumer-sdk";
 
 const client = new DispatchClient({
   chainId: 42161,
-  dataServiceAddress: "0x73846272813065c3e4efdb3fb82e0d128c8c2364",
+  dataServiceAddress: "0x7101D5C1A5c89C3647F5118da118E56C023bA0b9",
   graphTallyCollector: "0x8f69F5C07477Ac46FBc491B1E6D91E2be0111A9e",
   subgraphUrl: "https://api.studio.thegraph.com/query/1747796/rpc-network/v0.1.1",
   signerPrivateKey: process.env.CONSUMER_KEY,
@@ -202,4 +202,4 @@ This is a community experiment. If you're curious about what decentralised RPC o
 - [Dispatch GitHub repository](https://github.com/cargopete/dispatch)
 - [The Graph Horizon documentation](https://thegraph.com/docs/en/horizon/)
 - [GraphTally / TAP v2 GIP](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-timeline-aggregation-protocol.md)
-- [RPCDataService on Arbiscan](https://arbiscan.io/address/0x73846272813065c3e4efdb3fb82e0d128c8c2364)
+- [RPCDataService on Arbiscan](https://arbiscan.io/address/0x7101D5C1A5c89C3647F5118da118E56C023bA0b9)

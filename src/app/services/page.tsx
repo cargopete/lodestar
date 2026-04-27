@@ -13,7 +13,7 @@ import type { DataService, ProvisionWithIndexer } from '@/lib/queries';
 // Known data service addresses → friendly names
 const SERVICE_NAMES: Record<string, string> = {
   '0xb2bb92d0de618878e438b55d5846cfecd9301105': 'Subgraph Service',
-  '0xa983b18b8291f0c317ba4fe0dc0f7cc9373af078': 'Dispatch (JSON-RPC)',
+  '0x7101d5c1a5c89c3647f5118da118e56c023ba0b9': 'Dispatch (JSON-RPC)',
 };
 
 function resolveServiceName(id: string): string {
@@ -26,7 +26,7 @@ export default function ServicesPage() {
   const [selectedService, setSelectedService] = useState<string | null>(null);
 
   const grtPrice = priceData?.price ?? 0;
-  const RETIRED = new Set(['0x73846272813065c3e4efdb3fb82e0d128c8c2364']);
+  const RETIRED = new Set(['0x73846272813065c3e4efdb3fb82e0d128c8c2364', '0xa983b18b8291f0c317ba4fe0dc0f7cc9373af078']);
   const services = (servicesData?.dataServices ?? []).filter(
     (s) => !RETIRED.has(s.id.toLowerCase())
   );
@@ -90,7 +90,7 @@ export default function ServicesPage() {
             onSelect={() =>
               setSelectedService(selectedService === service.id ? null : service.id)
             }
-            ctaHref={service.id.toLowerCase() === '0xa983b18b8291f0c317ba4fe0dc0f7cc9373af078' ? '/dispatch' : undefined}
+            ctaHref={service.id.toLowerCase() === '0x7101d5c1a5c89c3647f5118da118e56c023ba0b9' ? '/dispatch' : undefined}
           />
         ))}
       </div>
@@ -140,7 +140,7 @@ interface ServiceCardProps {
   ctaHref?: string;
 }
 
-const DISPATCH_ID = '0xa983b18b8291f0c317ba4fe0dc0f7cc9373af078';
+const DISPATCH_ID = '0x7101d5c1a5c89c3647f5118da118e56c023ba0b9';
 
 function ServiceCard({ service, grtPrice, isSelected, onSelect, ctaHref }: ServiceCardProps) {
   const provisioned = weiToGRT(service.totalTokensProvisioned);

@@ -10,7 +10,7 @@ import type { Provision } from '@/lib/queries';
 // Known data service addresses → friendly names
 const SERVICE_NAMES: Record<string, string> = {
   '0xb2bb92d0de618878e438b55d5846cfecd9301105': 'Subgraph Service',
-  '0x73846272813065c3e4efdb3fb82e0d128c8c2364': 'Dispatch (JSON-RPC)',
+  '0x7101d5c1a5c89c3647f5118da118e56c023ba0b9': 'Dispatch (JSON-RPC)',
 };
 
 // Colors for up to 6 services — enough for the 2026 roadmap

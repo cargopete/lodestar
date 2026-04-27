@@ -13,7 +13,7 @@ import { useServiceProvisions } from '@/hooks/useNetworkStats';
 // ── Dispatch contract addresses ──────────────────────────────────────────────
 
 const DISPATCH = {
-  rpcDataService: '0xA983b18B8291F0c317Ba4Fe0dc0f7cc9373AF078' as const,
+  rpcDataService: '0x7101D5C1A5c89C3647F5118da118E56C023bA0b9' as const,
   graphTallyCollector: '0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e' as const,
   paymentsEscrow: '0xf6Fcc27aAf1fcD8B254498c9794451d82afC673E' as const,
   grt: '0x9623063377AD1B27544C965cCd7342f7EA7e88C7' as const,

@@ -103,31 +103,39 @@ optimizer_runs = 200
 The package ships base contracts that handle the boilerplate:
 
 ```solidity
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DataService} from "@graphprotocol/horizon/data-service/DataService.sol";
 import {DataServiceFees} from "@graphprotocol/horizon/data-service/extensions/DataServiceFees.sol";
-import {DataServicePausable} from "@graphprotocol/horizon/data-service/extensions/DataServicePausable.sol";
+import {DataServicePausableUpgradeable} from "@graphprotocol/horizon/data-service/extensions/DataServicePausableUpgradeable.sol";
 // Payment interfaces live in the interfaces package, not horizon/payments/
 import {IGraphTallyCollector} from "@graphprotocol/horizon/interfaces/IGraphTallyCollector.sol";
 import {IGraphPayments} from "@graphprotocol/horizon/interfaces/IGraphPayments.sol";
 
-contract MyDataService is Ownable, DataService, DataServiceFees, DataServicePausable, IMyDataService {
+contract MyDataService is OwnableUpgradeable, UUPSUpgradeable, DataService, DataServiceFees, DataServicePausableUpgradeable, IMyDataService {
     // ...
 }
 ```
 
-**`DataService`** gives you `GraphDirectory` (resolves all Horizon contract addresses from the controller — so you're upgrade-proof), `_checkProvisionTokens()`, `_checkProvisionParameters()`, and the `onlyAuthorizedForProvision` modifier. **`DataServiceFees`** gives you `_lockStake()` / `_releaseStake()`. **`DataServicePausable`** gives you an emergency stop.
+**`DataService`** gives you `GraphDirectory` (resolves all Horizon contract addresses from the controller — so you're upgrade-proof), `_checkProvisionTokens()`, `_checkProvisionParameters()`, and the `onlyAuthorizedForProvision` modifier. **`DataServiceFees`** gives you `_lockStake()` / `_releaseStake()`. **`DataServicePausableUpgradeable`** gives you an emergency stop. The UUPS pattern means you can upgrade the logic contract without requiring providers to re-stake — essential when you expect to iterate on your service.
 
-The constructor wires up the provision parameter ranges:
+The constructor sets immutables and locks the implementation; `initialize()` handles all mutable setup:
 
 ```solidity
-uint256 public constant MIN_PROVISION = 10_000e18;     // 10,000 GRT
+uint256 public constant MIN_PROVISION = 555e18;        // 555 GRT
 uint64  public constant MIN_THAWING_PERIOD = 14 days;
 uint256 public constant STAKE_TO_FEES_RATIO = 5;       // matches SubgraphService
 
-constructor(address owner_, address controller, address graphTallyCollector, address pauseGuardian)
-    Ownable(owner_) DataService(controller)
-{
+// UUPS upgradeable: immutables live in implementation bytecode, accessible via delegatecall.
+constructor(address controller, address graphTallyCollector) DataService(controller) {
     GRAPH_TALLY_COLLECTOR = IGraphTallyCollector(graphTallyCollector);
+    _disableInitializers();
+}
+
+function initialize(address owner_, address pauseGuardian) external initializer {
+    __Ownable_init(owner_);
+    __DataService_init();
+    __DataServicePausable_init();
     minThawingPeriod = MIN_THAWING_PERIOD;
     _setProvisionTokensRange(MIN_PROVISION, type(uint256).max);
     _setThawingPeriodRange(MIN_THAWING_PERIOD, type(uint64).max);
@@ -136,7 +144,7 @@ constructor(address owner_, address controller, address graphTallyCollector, add
 }
 ```
 
-Pass `controller` instead of individual contract addresses. The controller is the registry — if Horizon contracts are upgraded, your service picks up the new addresses automatically.
+Pass `controller` instead of individual contract addresses. The controller is the registry — if Horizon contracts are upgraded, your service picks up the new addresses automatically. Deploy via an ERC1967 proxy: `new ERC1967Proxy(address(impl), abi.encodeCall(MyDataService.initialize, (owner, pauseGuardian)))`.
 
 ### Provider lifecycle
 
@@ -225,8 +233,8 @@ function collect(
         paymentType,
         abi.encode(
             signedRav,
-            uint256(0),                            // dataServiceCut (0 for simple services)
-            paymentsDestination[serviceProvider]   // where GRT lands
+            BURN_CUT_PPM + DATA_SERVICE_CUT_PPM,   // 2% total: 1% burned + 1% retained
+            paymentsDestination[serviceProvider]    // where GRT lands
         ),
         tokensToCollect
     );
@@ -252,7 +260,7 @@ Explicitly reject payment types other than `QueryFee`. SubstreamsDataService doe
 
 ### The dataServiceCut — creator revenue
 
-This is the most underappreciated part of Horizon. That `uint256(0)` in the `collect()` call above is the `dataServiceCut`, expressed in PPM (parts per million, where `1_000_000` = 100%). Set it to anything other than zero and every provider on your service pays you a cut of their fees — automatically, on-chain, in perpetuity.
+This is the most underappreciated part of Horizon. The `dataServiceCut` in the `collect()` call is expressed in PPM (parts per million, where `1_000_000` = 100%). Set it to anything other than zero and every provider on your service pays you a cut of their fees — automatically, on-chain, in perpetuity. Dispatch uses 20,000 PPM (2% total): half burned to reduce GRT supply, half retained as contract revenue.
 
 ```solidity
 // Example: take a 2% creator cut on all fees
