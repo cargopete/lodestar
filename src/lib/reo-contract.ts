@@ -44,8 +44,8 @@ export const REO_ABI = [
 ] as const;
 
 // Server-side public client for Arbitrum One
-// Uses custom RPC if provided, otherwise Arbitrum's default public endpoint
-const rpcUrl = process.env.ARBITRUM_RPC_URL;
+// Uses custom RPC if provided, otherwise Dispatch gateway (dogfooding!)
+const rpcUrl = process.env.ARBITRUM_RPC_URL ?? 'https://gateway.lodestar-dashboard.com/rpc/42161';
 export const arbitrumClient = createPublicClient({
   chain: arbitrum,
   transport: http(rpcUrl),
