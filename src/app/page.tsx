@@ -1,6 +1,7 @@
 'use client';
 
-import { useNetworkStats, useGRTPrice, useTVL, useEpochInfo } from '@/hooks/useNetworkStats';
+import Link from 'next/link';
+import { useNetworkStats, useGRTPrice, useTVL, useEpochInfo, useSubgraphDeployments30d } from '@/hooks/useNetworkStats';
 import { weiToGRT, formatGRT, formatUSD, formatNumber, formatPPM } from '@/lib/utils';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
@@ -12,11 +13,14 @@ import dynamic from 'next/dynamic';
 const StakingTrendChart = dynamic(() => import('@/components/charts/StakingTrendChart').then(m => ({ default: m.StakingTrendChart })), { ssr: false });
 const RewardSplitDonut = dynamic(() => import('@/components/charts/RewardSplitDonut').then(m => ({ default: m.RewardSplitDonut })), { ssr: false });
 const QueryFeesChart = dynamic(() => import('@/components/charts/QueryFeesChart').then(m => ({ default: m.QueryFeesChart })), { ssr: false });
+const TokenIssuanceChart = dynamic(() => import('@/components/charts/TokenIssuanceChart').then(m => ({ default: m.TokenIssuanceChart })), { ssr: false });
+const DelegationFlowChart = dynamic(() => import('@/components/charts/DelegationFlowChart').then(m => ({ default: m.DelegationFlowChart })), { ssr: false });
 
 export default function ProtocolOverview() {
   const { data: networkData, isLoading: networkLoading } = useNetworkStats();
   const { data: priceData, isLoading: priceLoading } = useGRTPrice();
   const { data: tvlData, isLoading: tvlLoading } = useTVL();
+  const { data: subgraphs30d, isLoading: subgraphsLoading } = useSubgraphDeployments30d();
 
   const network = networkData?.graphNetwork;
 
@@ -24,12 +28,30 @@ export default function ProtocolOverview() {
   const totalDelegated = network ? weiToGRT(network.totalDelegatedTokens) : 0;
   const totalSignalled = network ? weiToGRT(network.totalTokensSignalled) : 0;
   const totalAllocated = network ? weiToGRT(network.totalTokensAllocated) : 0;
+  const totalQueryFees = network ? weiToGRT(network.totalQueryFees) : 0;
 
   const { epoch: actualEpoch, progress: epochProgress, epochLength } = useEpochInfo();
 
+  const topSubgraphs = (subgraphs30d ?? [])
+    .slice()
+    .sort((a, b) => {
+      const diff = BigInt(b.queryFees30d) - BigInt(a.queryFees30d);
+      return diff > 0n ? 1 : diff < 0n ? -1 : 0;
+    })
+    .slice(0, 10);
+
   return (
     <div className="space-y-6">
-      {/* Stat cards row */}
+
+      {/* Page header */}
+      <div className="pb-2 border-b border-[var(--border)]">
+        <h1 className="text-2xl font-semibold text-[var(--text)]">The Graph Protocol</h1>
+        <p className="text-sm text-[var(--text-muted)] mt-1">
+          Decentralised indexing infrastructure — live network data
+        </p>
+      </div>
+
+      {/* KPI stat cards */}
       <StatGrid>
         <StatCard
           label="Total Staked"
@@ -64,6 +86,11 @@ export default function ProtocolOverview() {
           value={tvlLoading ? '—' : formatUSD(tvlData?.tvl ?? 0)}
           loading={tvlLoading}
         />
+        <StatCard
+          label="Lifetime Query Fees"
+          value={networkLoading ? '—' : `${formatGRT(totalQueryFees)} GRT`}
+          loading={networkLoading}
+        />
       </StatGrid>
 
       {/* Epoch progress */}
@@ -94,18 +121,23 @@ export default function ProtocolOverview() {
         </CardContent>
       </Card>
 
-      {/* Charts row */}
+      {/* Query fees — most important revenue chart, prominent position */}
+      <QueryFeesChart />
+
+      {/* Rewards per epoch + token distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <StakingTrendChart />
         <RewardSplitDonut />
       </div>
 
-      {/* Query fees comparison */}
-      <QueryFeesChart />
+      {/* Token issuance & burn */}
+      <TokenIssuanceChart />
 
-      {/* Bottom panels */}
+      {/* Delegation flows */}
+      <DelegationFlowChart />
+
+      {/* Network participants + protocol parameters */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Participant counts */}
         <Card>
           <CardHeader>
             <CardTitle>Network Participants</CardTitle>
@@ -146,7 +178,6 @@ export default function ProtocolOverview() {
           </CardContent>
         </Card>
 
-        {/* Protocol parameters */}
         <Card>
           <CardHeader>
             <CardTitle>Protocol Parameters</CardTitle>
@@ -204,41 +235,83 @@ export default function ProtocolOverview() {
         </Card>
       </div>
 
-      {/* Friends of the Graph */}
+      {/* Top subgraphs by 30-day query fees */}
       <Card>
         <CardHeader>
-          <CardTitle>Friends of Lodestar</CardTitle>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
-            Other tools and dashboards built by community members — give them a look.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Top Subgraphs by Revenue</CardTitle>
+              <p className="text-sm text-[var(--text-muted)] mt-1">Ranked by query fees collected in the last 30 days</p>
+            </div>
+            <Link
+              href="/subgraphs"
+              className="text-xs text-[var(--accent)] hover:underline shrink-0"
+            >
+              View all →
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-3">
-            {[
-              { name: 'GraphTools.pro', url: 'https://graphtools.pro/', description: 'Indexer & delegator tooling' },
-              { name: 'GraphScan', url: 'https://graphscan.io/', description: 'Network explorer & analytics' },
-            ].map(({ name, url, description }) => (
-              <a
-                key={url}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg border border-[var(--border)] hover:border-[var(--accent)] hover:bg-[var(--surface-hover)] transition-colors group"
-              >
-                <div>
-                  <div className="text-sm font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">{name}</div>
-                  <div className="text-xs text-[var(--text-muted)]">{description}</div>
-                </div>
-                <svg className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
-            ))}
-          </div>
+          {subgraphsLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-10 shimmer rounded" />
+              ))}
+            </div>
+          ) : topSubgraphs.length === 0 ? (
+            <p className="text-sm text-[var(--text-faint)]">No data available</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="text-left py-2 pr-4 text-[11px] font-medium text-[var(--text-faint)] w-8">#</th>
+                    <th className="text-left py-2 pr-4 text-[11px] font-medium text-[var(--text-faint)]">Subgraph</th>
+                    <th className="text-right py-2 pr-4 text-[11px] font-medium text-[var(--text-faint)]">30d Fees</th>
+                    <th className="text-right py-2 pr-4 text-[11px] font-medium text-[var(--text-faint)]">Signal</th>
+                    <th className="text-right py-2 text-[11px] font-medium text-[var(--text-faint)]">Indexers</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topSubgraphs.map((sg, i) => {
+                    const fees30d = weiToGRT(sg.queryFees30d);
+                    const signal = weiToGRT(sg.signalledTokens);
+                    const name = sg.displayName ?? `${sg.ipfsHash.slice(0, 10)}…`;
+                    return (
+                      <tr
+                        key={sg.id}
+                        className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-elevated)] transition-colors"
+                      >
+                        <td className="py-3 pr-4 text-[var(--text-faint)] font-mono text-xs">{i + 1}</td>
+                        <td className="py-3 pr-4 max-w-[200px]">
+                          <Link
+                            href={`/subgraphs/${sg.ipfsHash}`}
+                            className="text-[var(--text)] hover:text-[var(--accent)] transition-colors truncate block font-medium"
+                            title={name}
+                          >
+                            {name}
+                          </Link>
+                        </td>
+                        <td className="py-3 pr-4 text-right font-mono text-[var(--accent)]">
+                          {formatGRT(fees30d)} GRT
+                        </td>
+                        <td className="py-3 pr-4 text-right font-mono text-[var(--text-muted)] text-xs">
+                          {formatGRT(signal)}
+                        </td>
+                        <td className="py-3 text-right font-mono text-[var(--text-muted)] text-xs">
+                          {sg.indexerAllocations.length}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Horizon Activity */}
+      {/* Live activity feed */}
       <HorizonActivity />
 
       {/* Horizon Parameters */}
