@@ -107,7 +107,7 @@ export default function IndexerDetailPage({
   const { data: recentDelegations } = useRecentDelegations(address);
   const { data: ensData } = useENSName(address);
   const { data: enrichedData } = useEnrichedIndexers();
-  const { data: statusData, isLoading: statusLoading } = useIndexerStatus(address);
+  const { data: statusData, isLoading: statusLoading, dataUpdatedAt: statusUpdatedAt } = useIndexerStatus(address);
 
   // Pull pre-computed fields from enriched cache (rolling APY, score)
   const enrichedIndexer = enrichedData?.indexers?.find(
@@ -761,31 +761,45 @@ export default function IndexerDetailPage({
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Active Allocations</CardTitle>
-              {statusData && (
-                <div className="flex items-center gap-3 text-xs">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[var(--green)]" />
-                    {statusData.syncedCount} synced
+              <div className="flex items-center gap-3 text-xs">
+                {statusData && (
+                  <>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[var(--green)]" />
+                      {statusData.syncedCount} synced
+                    </span>
+                    {statusData.syncingCount > 0 && (
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[var(--amber)]" />
+                        {statusData.syncingCount} syncing
+                      </span>
+                    )}
+                    {statusData.failedCount > 0 && (
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[var(--red)]" />
+                        {statusData.failedCount} failed
+                      </span>
+                    )}
+                    {statusData.unreachableCount > 0 && (
+                      <span className="flex items-center gap-1.5 text-[var(--text-faint)]">
+                        {statusData.unreachableCount} unreachable
+                      </span>
+                    )}
+                    <span className="w-px h-3 bg-[var(--border)]" />
+                  </>
+                )}
+                {statusUpdatedAt > 0 ? (
+                  <span
+                    className="flex items-center gap-1 text-[10px] text-[var(--text-faint)] tabular-nums"
+                    title="Status fetched live from the indexer's own node · refreshes every 30s"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse shrink-0" />
+                    {new Date(statusUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>
-                  {statusData.syncingCount > 0 && (
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[var(--amber)]" />
-                      {statusData.syncingCount} syncing
-                    </span>
-                  )}
-                  {statusData.failedCount > 0 && (
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[var(--red)]" />
-                      {statusData.failedCount} failed
-                    </span>
-                  )}
-                  {statusData.unreachableCount > 0 && (
-                    <span className="flex items-center gap-1.5 text-[var(--text-faint)]">
-                      {statusData.unreachableCount} unreachable
-                    </span>
-                  )}
-                </div>
-              )}
+                ) : statusLoading ? (
+                  <span className="text-[10px] text-[var(--text-faint)]">Loading…</span>
+                ) : null}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
