@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { usePayments, useGRTPrice, useEnrichedIndexers } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -269,12 +270,27 @@ function GatewayBreakdownCard({
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
-export default function PaymentsPage() {
+function PaymentsInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { data, isLoading, isError } = usePayments();
   const { data: priceData } = useGRTPrice();
   const names = useIndexerNames();
   const [activeTab, setActiveTab] = useState<Tab>('escrow');
-  const [selectedGateway, setSelectedGateway] = useState<string | null>(null);
+  const [selectedGateway, setSelectedGateway] = useState<string | null>(
+    searchParams.get('gateway')
+  );
+
+  function handleGatewaySelect(id: string | null) {
+    setSelectedGateway(id);
+    const params = new URLSearchParams(searchParams.toString());
+    if (id) {
+      params.set('gateway', id);
+    } else {
+      params.delete('gateway');
+    }
+    router.replace(`/payments?${params.toString()}`, { scroll: false });
+  }
 
   const grtPrice = priceData?.price ?? 0;
 
@@ -403,7 +419,7 @@ export default function PaymentsPage() {
         <GatewayBreakdownCard
           breakdown={gatewayBreakdown}
           selectedGateway={selectedGateway}
-          onSelect={setSelectedGateway}
+          onSelect={handleGatewaySelect}
           grtPrice={grtPrice}
         />
       )}
@@ -471,6 +487,14 @@ export default function PaymentsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <Suspense>
+      <PaymentsInner />
+    </Suspense>
   );
 }
 

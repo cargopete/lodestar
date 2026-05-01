@@ -29,6 +29,7 @@ const WINDOW_DAYS: Record<TimeWindow, number> = {
 
 interface EpochFee {
   epoch: string;
+  date: string;
   fees: number;
   period: 'current' | 'previous' | 'older';
 }
@@ -73,13 +74,16 @@ export function QueryFeesChart() {
   // Non-yearly: label each epoch as current / previous / older
   const chartData: EpochFee[] = useMemo(() => {
     if (isYearly || !epochDuration) return [];
+    const now = Date.now();
     return epochs.map((ep) => {
       const epochsAgo = latestEpochId - Number(ep.id);
       const ageSeconds = epochsAgo * epochDuration;
+      const epochMs = now - epochsAgo * epochDuration * 1000;
+      const date = new Date(epochMs).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
       let period: 'current' | 'previous' | 'older' = 'older';
       if (ageSeconds <= windowSeconds) period = 'current';
       else if (ageSeconds <= windowSeconds * 2) period = 'previous';
-      return { epoch: ep.id, fees: weiToGRT(ep.totalQueryFees), period };
+      return { epoch: ep.id, date, fees: weiToGRT(ep.totalQueryFees), period };
     });
   }, [epochs, latestEpochId, epochDuration, windowSeconds, isYearly]);
 
@@ -271,7 +275,10 @@ export function QueryFeesChart() {
                   />
                   <Tooltip
                     {...TOOLTIP_STYLE}
-                    labelFormatter={(label) => `Epoch ${label}`}
+                    labelFormatter={(label, payload) => {
+                      const date = payload?.[0]?.payload?.date;
+                      return date ? `Epoch ${label} · ${date}` : `Epoch ${label}`;
+                    }}
                     formatter={(value) => [formatGRTFull(Number(value)) + ' GRT', 'Query Fees']}
                   />
                   <Bar dataKey="fees" radius={[2, 2, 0, 0]}>
