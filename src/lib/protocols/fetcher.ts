@@ -135,6 +135,18 @@ const UNISWAP_V3_QUERY = `{
 
 // --- Shared normalisation ---
 
+/**
+ * Remove snapshots where feesUSD is an obvious outlier (>50× the median).
+ * Some Messari subgraphs have single corrupt historical snapshots with absurd values.
+ */
+function filterFeeOutliers(snapshots: ProtocolDaySnapshot[]): ProtocolDaySnapshot[] {
+  if (snapshots.length < 3) return snapshots;
+  const fees = snapshots.map((s) => s.feesUSD).sort((a, b) => a - b);
+  const median = fees[Math.floor(fees.length / 2)];
+  if (median === 0) return snapshots;
+  return snapshots.filter((s) => s.feesUSD <= median * 50);
+}
+
 function computeSummary(
   slug: string,
   tvlUSD: number,
@@ -171,15 +183,16 @@ function normalizeMessariDex(slug: string, data: MessariDexData): ProtocolDetail
     }))
     .sort((a, b) => a.timestamp - b.timestamp);
 
+  const clean = filterFeeOutliers(snapshots);
   return {
     summary: computeSummary(
       slug,
       parseF(p?.totalValueLockedUSD),
       parseF(p?.cumulativeVolumeUSD),
       parseF(p?.cumulativeTotalRevenueUSD),
-      snapshots,
+      clean,
     ),
-    snapshots,
+    snapshots: clean,
   };
 }
 
@@ -194,16 +207,17 @@ function normalizeMessariLending(slug: string, data: MessariLendingData): Protoc
     }))
     .sort((a, b) => a.timestamp - b.timestamp);
 
+  const clean = filterFeeOutliers(snapshots);
   return {
     summary: computeSummary(
       slug,
       parseF(p?.totalValueLockedUSD),
       parseF(p?.cumulativeBorrowUSD),
       parseF(p?.cumulativeTotalRevenueUSD),
-      snapshots,
+      clean,
       parseF(p?.totalBorrowBalanceUSD),
     ),
-    snapshots,
+    snapshots: clean,
   };
 }
 
@@ -218,15 +232,16 @@ function normalizeUniswapV3(slug: string, data: UniswapV3Data): ProtocolDetail {
     }))
     .sort((a, b) => a.timestamp - b.timestamp);
 
+  const clean = filterFeeOutliers(snapshots);
   return {
     summary: computeSummary(
       slug,
       parseF(f?.totalValueLockedUSD),
       parseF(f?.totalVolumeUSD),
       parseF(f?.totalFeesUSD),
-      snapshots,
+      clean,
     ),
-    snapshots,
+    snapshots: clean,
   };
 }
 
