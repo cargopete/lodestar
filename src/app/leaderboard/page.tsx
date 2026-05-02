@@ -9,10 +9,6 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Pagination } from '@/components/ui/Pagination';
 import { cn, shortenAddress } from '@/lib/utils';
 import type { LeaderboardEntry } from '@/lib/scoring';
-import { VoteButton } from '@/components/VoteButton';
-import { VoterList, VoteCount } from '@/components/VoterList';
-import { useVotes } from '@/hooks/useVoting';
-import { getCurrentPeriod } from '@/lib/voting';
 
 const PAGE_SIZE = 25;
 
@@ -21,14 +17,12 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-/** Month name only — used in the period selector dropdown */
 function formatPeriod(periodStart: string): string {
   const d = new Date(periodStart.length === 10 ? periodStart + 'T00:00:00Z' : periodStart);
   if (isNaN(d.getTime())) return periodStart;
   return MONTH_NAMES[d.getUTCMonth()];
 }
 
-/** "March 2026" — used in the banner */
 function formatPeriodFull(periodStart: string): string {
   const d = new Date(periodStart.length === 10 ? periodStart + 'T00:00:00Z' : periodStart);
   if (isNaN(d.getTime())) return periodStart;
@@ -47,30 +41,6 @@ function barWidth(score: number, max: number): string {
   return `${Math.min(100, (score / max) * 100)}%`;
 }
 
-const MAX_SUBTOTAL = 81;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type VoteTallies = { indexer_address: string; weighted_votes: number }[];
-
-/** Pure function: compute live score + community score for one entry */
-function computeLiveScores(
-  entry: LeaderboardEntry,
-  tallies: VoteTallies | undefined,
-  maxWeighted: number,
-): { liveScore: number; liveCommunityScore: number } {
-  if (!tallies?.length || maxWeighted === 0)
-    return { liveScore: entry.final_score, liveCommunityScore: entry.community_vote_score };
-  const tally = tallies.find(
-    (t) => t.indexer_address.toLowerCase() === entry.indexer_address.toLowerCase()
-  );
-  const liveCommunityScore = ((tally?.weighted_votes ?? 0) / maxWeighted) * 10;
-  const delta = liveCommunityScore - entry.community_vote_score;
-  if (delta === 0) return { liveScore: entry.final_score, liveCommunityScore };
-  const adjusted = entry.final_score + (delta * entry.penalty_multiplier / MAX_SUBTOTAL) * 100;
-  return { liveScore: Math.min(100, Math.max(0, +adjusted.toFixed(2))), liveCommunityScore };
-}
-
-// Component score sections for the expanded breakdown
 const SCORE_SECTIONS = [
   {
     label: 'Network Service',
@@ -79,13 +49,6 @@ const SCORE_SECTIONS = [
       { key: 'allocation_breadth_score' as const, label: 'Subgraph Coverage', max: 20 },
       { key: 'query_fee_score' as const, label: 'Query Fees', max: 10 },
       { key: 'allocation_efficiency_score' as const, label: 'Allocation Efficiency', max: 10 },
-    ],
-  },
-  {
-    label: 'Community',
-    max: 10,
-    items: [
-      { key: 'community_vote_score' as const, label: 'Community Votes', max: 10 },
     ],
   },
   {
@@ -138,7 +101,6 @@ function LeaderboardContent() {
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  // Build name lookup from enriched indexers
   const nameMap = useMemo(() => {
     const map = new Map<string, string>();
     if (enrichedData?.indexers) {
@@ -149,55 +111,24 @@ function LeaderboardContent() {
     return map;
   }, [enrichedData]);
 
-  // Derive the voting period from the data (YYYY-MM of the scores being viewed)
-  const votePeriod = useMemo(() => {
-    if (!data?.periodStart) return getCurrentPeriod();
-    const ps = typeof data.periodStart === 'string' ? data.periodStart : String(data.periodStart);
-    return ps.slice(0, 7); // "2026-03-01" → "2026-03"
-  }, [data?.periodStart]);
-  const isCurrentPeriod = votePeriod === getCurrentPeriod();
-
-  const { data: votes } = useVotes(votePeriod);
   const rawEntries = data?.entries ?? [];
 
-  // Compute live scores, re-sort, and assign live ranks
-  // Only overlay live vote tallies when viewing the current scoring period
   const entries = useMemo(() => {
     if (!rawEntries.length) return rawEntries;
-    if (!isCurrentPeriod) {
-      // Historical: use stored scores as-is, just assign ranks
-      const sorted = [...rawEntries].sort((a, b) => {
-        const diff = b.final_score - a.final_score;
-        if (diff !== 0) return diff;
-        return b.months_active - a.months_active;
-      });
-      sorted.forEach((e, i) => { e.rank = i + 1; });
-      return sorted;
-    }
-    const tallies = votes?.tallies as VoteTallies | undefined;
-    const maxWeighted = tallies?.length
-      ? Math.max(...tallies.map((t) => t.weighted_votes))
-      : 0;
-    const withLive = rawEntries.map((e) => {
-      const { liveScore } = computeLiveScores(e, tallies, maxWeighted);
-      return { ...e, final_score: liveScore };
-    });
-    withLive.sort((a, b) => {
+    const sorted = [...rawEntries].sort((a, b) => {
       const diff = b.final_score - a.final_score;
       if (diff !== 0) return diff;
-      // Tiebreaker: more months active (longer tenure wins)
       return b.months_active - a.months_active;
     });
-    withLive.forEach((e, i) => { e.rank = i + 1; });
-    return withLive;
-  }, [rawEntries, votes, isCurrentPeriod]);
+    sorted.forEach((e, i) => { e.rank = i + 1; });
+    return sorted;
+  }, [rawEntries]);
 
   const paginatedEntries = useMemo(() => {
     const start = page * PAGE_SIZE;
     return entries.slice(start, start + PAGE_SIZE);
   }, [entries, page]);
 
-  // Resolve highlight param to a canonical address (entries must be computed first)
   const highlightAddress = useMemo(() => {
     if (!highlightParam || !entries.length) return null;
     const byAddr = entries.find((e) => e.indexer_address.toLowerCase() === highlightParam);
@@ -208,7 +139,6 @@ function LeaderboardContent() {
     return byName?.indexer_address ?? null;
   }, [highlightParam, entries, nameMap]);
 
-  // Jump to the page containing the highlighted entry (once, after entries load)
   const hasJumped = useRef(false);
   useEffect(() => {
     if (hasJumped.current || !highlightAddress || !entries.length) return;
@@ -221,7 +151,6 @@ function LeaderboardContent() {
     }
   }, [highlightAddress, entries]);
 
-  // Scroll highlighted row into view after page change settles
   useEffect(() => {
     if (!highlightAddress) return;
     const timer = setTimeout(() => {
@@ -230,7 +159,6 @@ function LeaderboardContent() {
     return () => clearTimeout(timer);
   }, [highlightAddress, page]);
 
-  // Summary stats
   const topScore = entries[0]?.final_score ?? 0;
   const medianScore = entries.length > 0 ? entries[Math.floor(entries.length / 2)]?.final_score ?? 0 : 0;
 
@@ -253,12 +181,8 @@ function LeaderboardContent() {
     );
   }
 
-  // Badge holder: API returns badgeHolder for both current (previous month's winner)
-  // and historical views (that month's winner)
   const badgeHolder = data?.badgeHolder ?? null;
   const badgeHolderAddress = badgeHolder?.address ?? null;
-
-  // Banner info
   const bannerAddress = badgeHolderAddress;
   const bannerName = bannerAddress
     ? nameMap.get(bannerAddress.toLowerCase()) ?? shortenAddress(bannerAddress)
@@ -301,7 +225,7 @@ function LeaderboardContent() {
           <h1 className="text-xl font-semibold text-[var(--text)]">Indexer Leaderboard</h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
             Community favourites — recognising the indexers who contribute most to The Graph network.
-            Scored on subgraph coverage, query serving, trust, and community votes.
+            Scored on subgraph coverage, query serving, trust, and protocol health.
             For delegator-focused metrics like APR and effective cut, see the{' '}
             <Link href="/indexers" className="text-[var(--accent)] hover:underline">Indexer Directory</Link> scores.
           </p>
@@ -357,7 +281,6 @@ function LeaderboardContent() {
                 name={nameMap.get(entry.indexer_address.toLowerCase())}
                 isBadgeHolder={entry.indexer_address.toLowerCase() === badgeHolderAddress?.toLowerCase()}
                 badgePeriod={bannerPeriod}
-                votePeriod={votePeriod}
                 expanded={expanded === entry.indexer_address}
                 onToggle={() => setExpanded(expanded === entry.indexer_address ? null : entry.indexer_address)}
                 isHighlighted={highlighted}
@@ -381,13 +304,11 @@ function LeaderboardContent() {
               <tr>
                 <th className={`${TH_CLASS_CENTER} w-12`}>Rank</th>
                 <th className={TH_CLASS_LEFT}>Indexer</th>
-                <th className={`${TH_CLASS_CENTER} w-20`}>Vote</th>
                 <th className={`${TH_CLASS} w-16`}>Score</th>
                 <th className={`${TH_CLASS} w-28 hidden lg:table-cell`}>Network</th>
                 <th className={`${TH_CLASS} w-24 hidden lg:table-cell`}>Economics</th>
                 <th className={`${TH_CLASS} w-24 hidden lg:table-cell`}>Trust</th>
                 <th className={`${TH_CLASS} w-24 hidden lg:table-cell`}>Health</th>
-                <th className={`${TH_CLASS} w-24 hidden lg:table-cell`}>Community</th>
               </tr>
             </thead>
             <tbody>
@@ -398,7 +319,6 @@ function LeaderboardContent() {
                   name={nameMap.get(entry.indexer_address.toLowerCase())}
                   isBadgeHolder={entry.indexer_address.toLowerCase() === badgeHolderAddress?.toLowerCase()}
                   badgePeriod={bannerPeriod}
-                  votePeriod={votePeriod}
                   expanded={expanded === entry.indexer_address}
                   onToggle={() => setExpanded(expanded === entry.indexer_address ? null : entry.indexer_address)}
                   isHighlighted={!!highlightAddress && entry.indexer_address.toLowerCase() === highlightAddress.toLowerCase()}
@@ -423,9 +343,8 @@ function LeaderboardContent() {
             <p className="text-sm text-[var(--text-muted)]">
               The community leaderboard celebrates the indexers who contribute most to The Graph
               network — not just the most profitable ones. Scores are computed monthly using
-              percentile normalisation (p10/p90) across all active indexers, grouped into 5 components:
+              percentile normalisation (p10/p90) across all active indexers, grouped into 4 components:
               Network Service (40pts — subgraph coverage, query fees, allocation efficiency),
-              Community Votes (10pts — anyone with a wallet can vote once per month; delegator votes count 5x),
               Trust &amp; Stability (20pts — cut stability, tenure, delegation retention),
               Protocol Health (6pts — REO eligibility), and
               Economics (5pts — delegation capacity headroom).
@@ -495,7 +414,6 @@ function DesktopRow({
   name,
   isBadgeHolder,
   badgePeriod,
-  votePeriod,
   expanded,
   onToggle,
   isHighlighted,
@@ -504,7 +422,6 @@ function DesktopRow({
   name: string | undefined;
   isBadgeHolder?: boolean;
   badgePeriod?: string | null;
-  votePeriod: string;
   expanded: boolean;
   onToggle: () => void;
   isHighlighted?: boolean;
@@ -567,9 +484,6 @@ function DesktopRow({
             <CopyLinkButton address={entry.indexer_address} />
           </div>
         </td>
-        <td className={`px-4 py-3 text-center ${TD_BORDER}`}>
-          <VoteButton indexerAddress={entry.indexer_address} period={votePeriod} />
-        </td>
         <td className={`px-4 py-3 text-right ${TD_BORDER}`}>
           <span className="font-mono text-sm font-semibold" style={{ color: scoreColor(entry.final_score) }}>
             {entry.final_score.toFixed(2)}
@@ -584,18 +498,14 @@ function DesktopRow({
         <td className={`px-4 py-3 text-right hidden lg:table-cell ${TD_BORDER}`}>
           <ComponentCell score={trustScore} max={20} />
         </td>
-        <td className={`px-4 py-3 text-right hidden lg:table-cell ${TD_BORDER}`}>
-          <ComponentCell score={healthScore} max={6} />
-        </td>
         <td className="px-4 py-3 text-right hidden lg:table-cell">
-          <VoteCount indexerAddress={entry.indexer_address} period={votePeriod} />
+          <ComponentCell score={healthScore} max={6} />
         </td>
       </tr>
       {expanded && (
         <tr className="border-b border-[0.5px] border-[var(--border)]">
-          <td colSpan={9} className="px-4 py-4 bg-[var(--bg-elevated)]">
-            <ScoreBreakdown entry={entry} votePeriod={votePeriod} />
-            <VoterListSection indexerAddress={entry.indexer_address} period={votePeriod} />
+          <td colSpan={7} className="px-4 py-4 bg-[var(--bg-elevated)]">
+            <ScoreBreakdown entry={entry} />
           </td>
         </tr>
       )}
@@ -610,7 +520,6 @@ function MobileCard({
   name,
   isBadgeHolder,
   badgePeriod,
-  votePeriod,
   expanded,
   onToggle,
   isHighlighted,
@@ -619,7 +528,6 @@ function MobileCard({
   name: string | undefined;
   isBadgeHolder?: boolean;
   badgePeriod?: string | null;
-  votePeriod: string;
   expanded: boolean;
   onToggle: () => void;
   isHighlighted?: boolean;
@@ -680,28 +588,23 @@ function MobileCard({
       <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-[var(--bg)]">
         <div
           className="rounded-l-full bg-[var(--accent)]"
-          style={{ width: barWidth(entry.allocation_breadth_score + entry.query_fee_score + entry.allocation_efficiency_score, 96) }}
+          style={{ width: barWidth(entry.allocation_breadth_score + entry.query_fee_score + entry.allocation_efficiency_score, 71) }}
           title="Network"
         />
         <div
           className="bg-[var(--green)]"
-          style={{ width: barWidth(entry.capacity_score, 96) }}
+          style={{ width: barWidth(entry.capacity_score, 71) }}
           title="Economics"
         />
         <div
           className="bg-[var(--cyan)]"
-          style={{ width: barWidth(entry.cut_stability_score + entry.tenure_bonus + entry.retention_score, 96) }}
+          style={{ width: barWidth(entry.cut_stability_score + entry.tenure_bonus + entry.retention_score, 71) }}
           title="Trust"
         />
         <div
-          className="bg-[var(--amber)]"
-          style={{ width: barWidth(entry.reo_score, 96) }}
+          className="rounded-r-full bg-[var(--amber)]"
+          style={{ width: barWidth(entry.reo_score, 71) }}
           title="Health"
-        />
-        <div
-          className="rounded-r-full bg-[var(--purple)]"
-          style={{ width: barWidth(entry.community_vote_score, 96) }}
-          title="Community"
         />
       </div>
       <div className="flex justify-between mt-1.5 text-[10px] text-[var(--text-faint)]">
@@ -709,66 +612,24 @@ function MobileCard({
         <span>Economics</span>
         <span>Trust</span>
         <span>Health</span>
-        <span>Community</span>
-      </div>
-
-      {/* Vote button */}
-      <div className="mt-3">
-        <VoteButton indexerAddress={entry.indexer_address} period={votePeriod} />
       </div>
 
       {expanded && (
         <div className="mt-4 pt-4 border-t border-[var(--border)]">
-          <ScoreBreakdown entry={entry} votePeriod={votePeriod} />
-          <div className="mt-4 pt-3 border-t border-[var(--border)]">
-            <VoterList indexerAddress={entry.indexer_address} period={votePeriod} />
-          </div>
+          <ScoreBreakdown entry={entry} />
         </div>
       )}
     </Card>
   );
 }
 
-// ── Voter list wrapper (hides border when no voters) ──────
+// ── Score breakdown ───────────────────────────────────────
 
-function VoterListSection({ indexerAddress, period }: { indexerAddress: string; period: string }) {
-  const { data: votes } = useVotes(period);
-  const hasVoters = (votes?.voters ?? []).some(
-    (v) => v.indexer_address.toLowerCase() === indexerAddress.toLowerCase()
-  );
-  if (!hasVoters) return null;
-  return (
-    <div className="mt-4 pt-3 border-t border-[var(--border)]">
-      <VoterList indexerAddress={indexerAddress} period={period} />
-    </div>
-  );
-}
-
-// ── Score breakdown (shared between mobile/desktop) ───────
-
-function ScoreBreakdown({ entry, votePeriod }: { entry: LeaderboardEntry; votePeriod: string }) {
-  const isCurrentPeriod = votePeriod === getCurrentPeriod();
-  const { data: votes } = useVotes(votePeriod);
-  const liveCommunityScore = useMemo(() => {
-    // For historical periods, use the stored score as-is
-    if (!isCurrentPeriod) return entry.community_vote_score;
-    const tallies = votes?.tallies as VoteTallies | undefined;
-    if (!tallies?.length) return entry.community_vote_score;
-    const maxWeighted = Math.max(...tallies.map((t) => t.weighted_votes));
-    if (maxWeighted === 0) return entry.community_vote_score;
-    const tally = tallies.find(
-      (t) => t.indexer_address.toLowerCase() === entry.indexer_address.toLowerCase()
-    );
-    return ((tally?.weighted_votes ?? 0) / maxWeighted) * 10;
-  }, [votes, entry.indexer_address, entry.community_vote_score, isCurrentPeriod]);
-
+function ScoreBreakdown({ entry }: { entry: LeaderboardEntry }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {SCORE_SECTIONS.map((section) => {
-        const sectionTotal = section.items.reduce((sum, item) => {
-          const val = item.key === 'community_vote_score' ? liveCommunityScore : entry[item.key];
-          return sum + val;
-        }, 0);
+        const sectionTotal = section.items.reduce((sum, item) => sum + entry[item.key], 0);
         return (
           <div key={section.label}>
             <div className="flex items-center justify-between mb-2">
@@ -779,7 +640,7 @@ function ScoreBreakdown({ entry, votePeriod }: { entry: LeaderboardEntry; votePe
             </div>
             <div className="space-y-1.5">
               {section.items.map((item) => {
-                const value = item.key === 'community_vote_score' ? liveCommunityScore : entry[item.key];
+                const value = entry[item.key];
                 const pct = item.max > 0 ? (value / item.max) * 100 : 0;
                 return (
                   <div key={item.key}>

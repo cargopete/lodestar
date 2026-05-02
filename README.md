@@ -32,7 +32,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Indexing Health** — Chain-by-chain indexing lag monitoring, sync progress, and subgraph health across the network
 - **AI / MCP Directory** — Curated directory of Graph-ecosystem MCP servers and AI tools at `/ai`
 - **Lodie AI Assistant** — Conversational AI assistant with live protocol context, multi-turn memory, and page-aware suggestions. Runs qwen3:8b via self-hosted Ollama; degrades gracefully if unavailable
-- **Monthly Leaderboard** — Community favourites leaderboard scored on network service, community votes, trust, and protocol health, with expandable score breakdowns and EIP-712 gasless voting
+- **Monthly Leaderboard** — Community favourites leaderboard scored on network service, trust, and protocol health, with expandable score breakdowns
 - **Blog** — Technical writeups on indexer infrastructure, Graph Node architecture, Amp self-hosting, and Horizon tooling
 - **Wallet Connection** — Connect via MetaMask, WalletConnect, or Coinbase Wallet (Arbitrum only)
 - **Mobile-First Layout** — Bottom tab navigation, table-to-card patterns, responsive grids, touch-friendly targets
@@ -147,7 +147,7 @@ Code: [`src/app/delegate/`](src/app/delegate/) · API: [`src/app/api/delegate/re
 
 ## Monthly Leaderboard
 
-The community leaderboard at `/leaderboard` celebrates the indexers who contribute most to The Graph network — not just the most profitable ones. It's a "community favourites" ranking: indexers who serve more subgraphs, earn community votes, and maintain trust score highest.
+The community leaderboard at `/leaderboard` celebrates the indexers who contribute most to The Graph network — not just the most profitable ones. It's a "community favourites" ranking: indexers who serve more subgraphs and maintain trust score highest.
 
 Scores are computed on the 1st of each month via cron, using percentile normalisation (p10/p90) across all active indexers.
 
@@ -160,14 +160,13 @@ Delegator-focused metrics like APR and effective cut live on the **Indexer Direc
 | **Network Service** | Subgraph Coverage | 20 | Distinct active deployments, percentile-normalised |
 | | Query Fees Earned | 10 | Percentile-normalised |
 | | Allocation Efficiency | 10 | Fees-to-allocated ratio, percentile-normalised |
-| **Community Votes** | Community Votes | 10 | Proportional to highest-voted indexer. 1 vote/wallet/month; delegator votes count 5x. EIP-712 gasless signing. |
 | **Trust & Stability** | Cut Stability | 12 | 12-month net change in reward cut |
 | | Tenure | 5 | Months active: 24+ = 5, 12+ = 3, 6+ = 2, 3+ = 1 |
 | | Delegation Retention | 3 | 30-day net delegation flow |
 | **Protocol Health** | REO Eligibility | 6 | Oracle-sourced status |
 | **Economics** | Delegation Capacity | 5 | Bucket: <70% = 5, 70-90% = 3, 90-99% = 1, 100% = 0 |
 
-**Total: 81 points**, normalised to 0–100.
+**Total: 71 points**, normalised to 0–100.
 
 ### Penalties
 
