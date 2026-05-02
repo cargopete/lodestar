@@ -47,28 +47,6 @@ export const PROTOCOLS: ProtocolConfig[] = [
     chains: ['Ethereum'],
     color: '#00D395',
   },
-  {
-    slug: 'balancer-v2',
-    name: 'Balancer V2',
-    category: 'DEX',
-    description: 'Automated portfolio manager and flexible AMM supporting multi-token weighted pools.',
-    subgraphId: '794H6CNzdGF5YfBK9nPsUgGn7EBbdJSCTjgcKPEPyFnn',
-    schemaType: 'messari-dex',
-    website: 'https://balancer.fi',
-    chains: ['Ethereum', 'Polygon', 'Arbitrum'],
-    color: '#8B8BF5',
-  },
-  {
-    slug: 'curve',
-    name: 'Curve Finance',
-    category: 'DEX',
-    description: 'Exchange protocol optimised for stablecoin and pegged-asset swaps with minimal slippage.',
-    subgraphId: '3fy93eAT56UJsRCEht8iFhfi6wjHWXtZ9dnnbQmvFopF',
-    schemaType: 'messari-dex',
-    website: 'https://curve.fi',
-    chains: ['Ethereum', 'Polygon', 'Arbitrum', 'Optimism'],
-    color: '#D9261C',
-  },
 ];
 
 export function getProtocol(slug: string): ProtocolConfig | undefined {
