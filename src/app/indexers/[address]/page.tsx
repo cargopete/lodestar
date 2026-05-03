@@ -30,6 +30,7 @@ const StakeHistoryChart = dynamic(() => import('@/components/charts/StakeHistory
 const IndexerQoSChart = dynamic(() => import('@/components/charts/IndexerQoSChart').then(m => ({ default: m.IndexerQoSChart })), { ssr: false });
 import { ParameterHistory } from '@/components/ParameterHistory';
 import { calculateIndexerScore, SCORE_WEIGHTS, SCORE_LABELS, type IndexerScore } from '@/lib/risk-score';
+import { FoghornQuality } from '@/components/foghorn/FoghornQuality';
 
 interface IndexerDetail {
   id: string;
@@ -665,6 +666,9 @@ export default function IndexerDetailPage({
               </CardContent>
             </Card>
           )}
+
+          {/* Foghorn Quality — block-pinned response observations */}
+          <FoghornQuality address={address} />
 
           {/* Recent Delegation Activity — reusable feed component pre-filtered to this indexer */}
           <DelegationFeed indexerAddress={address} />
