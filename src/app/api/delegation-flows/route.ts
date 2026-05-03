@@ -69,42 +69,46 @@ export async function GET(request: NextRequest) {
     ? Number(params.get('days'))
     : 90;
 
-  const cacheKey = `lodestar:delegation-flows:v2:${days}`;
+  const cacheKey = `lodestar:delegation-flows:v3:${days}`;
 
   try {
     const data = await cached<DelegationFlowPoint[]>(cacheKey, 600, async () => {
       // Try DB first
       if (hasDbAccess() && db) {
-        const cutoff = new Date(Date.now() - days * 86400_000).toISOString();
-        const rows = await db!`
-          SELECT
-            DATE(timestamp) AS date,
-            COALESCE(SUM(CASE
-              WHEN event_type = 'delegation' THEN tokens_grt
-              ELSE 0
-            END), 0) AS inflows,
-            COALESCE(SUM(CASE
-              WHEN event_type = 'undelegation' THEN tokens_grt
-              ELSE 0
-            END), 0) AS outflows
-          FROM delegation_events
-          WHERE timestamp >= ${cutoff}
-            AND timestamp IS NOT NULL
-          GROUP BY DATE(timestamp)
-          ORDER BY DATE(timestamp) ASC
-        `;
+        try {
+          const cutoff = new Date(Date.now() - days * 86400_000).toISOString();
+          const rows = await db!`
+            SELECT
+              DATE(timestamp) AS date,
+              COALESCE(SUM(CASE
+                WHEN event_type = 'delegation' THEN tokens_grt
+                ELSE 0
+              END), 0) AS inflows,
+              COALESCE(SUM(CASE
+                WHEN event_type = 'undelegation' THEN tokens_grt
+                ELSE 0
+              END), 0) AS outflows
+            FROM delegation_events
+            WHERE timestamp >= ${cutoff}
+              AND timestamp IS NOT NULL
+            GROUP BY DATE(timestamp)
+            ORDER BY DATE(timestamp) ASC
+          `;
 
-        if (rows.length > 0) {
-          return rows.map((r) => ({
-            date: r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
-            inflows: Number(r.inflows),
-            outflows: Number(r.outflows),
-            net: Number(r.inflows) - Number(r.outflows),
-          }));
+          if (rows.length > 0) {
+            return rows.map((r) => ({
+              date: r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
+              inflows: Number(r.inflows),
+              outflows: Number(r.outflows),
+              net: Number(r.inflows) - Number(r.outflows),
+            }));
+          }
+        } catch {
+          // DB unreachable or query failed — fall through to subgraph
         }
       }
 
-      // DB empty or unavailable — fall back to subgraph
+      // DB empty, unavailable, or failed — fall back to subgraph
       if (!hasSubgraphAccess()) return [];
       return fetchFromSubgraph(days);
     });
