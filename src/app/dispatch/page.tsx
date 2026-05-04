@@ -7,6 +7,7 @@ import { arbitrum } from 'wagmi/chains';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/Badge';
+import Link from 'next/link';
 import { cn, weiToGRT, formatGRT } from '@/lib/utils';
 import { useServiceProvisions } from '@/hooks/useNetworkStats';
 
@@ -1293,7 +1294,7 @@ export default function DispatchPage() {
                   <div key={p.indexer.id} className={cn('px-4 py-3 space-y-3', i > 0 && 'border-t border-[var(--border)]')}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[13px] font-medium text-[var(--text)]">{name}</p>
+                        <Link href={`/indexers/${p.indexer.id}`} className="text-[13px] font-medium text-[var(--accent)] hover:underline">{name}</Link>
                         <p className="text-[11px] font-mono text-[var(--text-faint)]">{shortAddr(p.indexer.id)}</p>
                       </div>
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-badge)] bg-[var(--green-dim)] text-[var(--green)] text-[10px]">

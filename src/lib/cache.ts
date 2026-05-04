@@ -4,12 +4,19 @@ import { log } from './logger';
 let _redis: Redis | null = null;
 
 function getRedis(): Redis {
-  if (!_redis) _redis = Redis.fromEnv();
+  if (!_redis) {
+    const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
+    _redis = new Redis({ url: url!, token: token! });
+  }
   return _redis;
 }
 
 function hasRedis(): boolean {
-  return !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+  return !!(
+    (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ||
+    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+  );
 }
 
 /**
