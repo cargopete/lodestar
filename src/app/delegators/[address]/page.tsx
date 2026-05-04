@@ -4,7 +4,6 @@ import React, { use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   type DelegatedStake,
-  type Indexer,
 } from '@/lib/queries';
 import { useGRTPrice, useIndexers, useDelegatorPortfolio, useEnrichedIndexers, useRewardsHistory } from '@/hooks/useNetworkStats';
 import {
@@ -32,86 +31,6 @@ const PortfolioChart = dynamic(() => import('@/components/charts/PortfolioChart'
 import { ExportButton } from '@/components/ui/ExportButton';
 import { PushSubscribeButton } from '@/components/PushSubscribeButton';
 
-/** Estimate a simple APR from an indexer's rewards earned and total stake */
-function estimateIndexerAPR(indexer: {
-  rewardsEarned?: string;
-  stakedTokens: string;
-  delegatedTokens: string;
-  indexingRewardCut: number;
-}): number {
-  const rewardsEarned = indexer.rewardsEarned ? weiToGRT(indexer.rewardsEarned) : 0;
-  const selfStake = weiToGRT(indexer.stakedTokens);
-  const delegated = weiToGRT(indexer.delegatedTokens);
-  const totalStake = selfStake + delegated;
-
-  if (totalStake === 0 || rewardsEarned === 0) return 0;
-
-  // Rough annualised estimate — assume rewards earned represent ~1 year of activity
-  // Delegator share after indexer cut
-  const protocolCut = indexer.indexingRewardCut / 1000000;
-  const delegatorPortion = delegated / totalStake;
-  const delegatorRewards = rewardsEarned * delegatorPortion * (1 - protocolCut);
-
-  if (delegated === 0) return 0;
-  return (delegatorRewards / delegated) * 100;
-}
-
-/** Compute median of a number array */
-function median(arr: number[]): number {
-  if (arr.length === 0) return 0;
-  const sorted = [...arr].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
-interface PositionInsight {
-  positionAPR: number;
-  medianAPR: number;
-  belowMedianPercent: number;
-  topAlternative: {
-    name: string;
-    address: string;
-    apr: number;
-    availableCapacity: number;
-  } | null;
-}
-
-function getPositionInsight(
-  stake: DelegatedStake,
-  allIndexers: Indexer[],
-  positionAPR: number,
-  medianAPR: number
-): PositionInsight | null {
-  const belowMedianPercent = medianAPR > 0 ? ((medianAPR - positionAPR) / medianAPR) * 100 : 0;
-
-  if (belowMedianPercent <= 20) return null;
-
-  // Find top alternative indexer (not this one) with capacity
-  const alternatives = allIndexers
-    .filter((idx) => idx.id !== stake.indexer.id)
-    .map((idx) => {
-      const apr = estimateIndexerAPR(idx);
-      const selfStake = weiToGRT(idx.stakedTokens);
-      const delegated = weiToGRT(idx.delegatedTokens);
-      // Assume delegation ratio of 16
-      const capacity = Math.max(selfStake * 16 - delegated, 0);
-      return {
-        name: resolveIndexerName(idx.account, idx.id),
-        address: idx.id,
-        apr,
-        availableCapacity: capacity,
-      };
-    })
-    .filter((a) => a.apr > positionAPR && a.availableCapacity > 0)
-    .sort((a, b) => b.apr - a.apr);
-
-  return {
-    positionAPR,
-    medianAPR,
-    belowMedianPercent,
-    topAlternative: alternatives[0] || null,
-  };
-}
 
 export default function DelegatorPortfolioPage({
   params,
@@ -143,15 +62,6 @@ export default function DelegatorPortfolioPage({
     return map;
   }, [enrichedData]);
 
-  // Network median APR across top indexers
-  const networkMedianAPR = useMemo(() => {
-    if (allIndexers.length === 0) return 0;
-    const aprs = allIndexers
-      .map((idx) => estimateIndexerAPR(idx))
-      .filter((apr) => apr > 0);
-    return median(aprs);
-  }, [allIndexers]);
-
   // Minimum self-stake for REO eligibility (100K GRT)
   const MIN_STAKE_REO = 100000;
 
@@ -172,8 +82,6 @@ export default function DelegatorPortfolioPage({
       currentValue: number;
       unrealizedGRT: number;
       realizedGRT: number;
-      apr: number;
-      insight: PositionInsight | null;
       isActive: boolean;
     }> = [];
 
@@ -191,16 +99,6 @@ export default function DelegatorPortfolioPage({
       const currentValue = stakedGRT + unrealizedGRT;
       const isActive = stakedGRT > 0;
 
-      // Estimate APR for this position's indexer
-      const posAPR = estimateIndexerAPR({
-        rewardsEarned: (allIndexers.find((i) => i.id === stake.indexer.id) as Indexer | undefined)?.rewardsEarned ?? '0',
-        stakedTokens: stake.indexer.stakedTokens,
-        delegatedTokens: stake.indexer.delegatedTokens,
-        indexingRewardCut: stake.indexer.indexingRewardCut,
-      });
-
-      const insight = getPositionInsight(stake, allIndexers, posAPR, networkMedianAPR);
-
       staked += stakedGRT;
       thawing += lockedGRT;
       realized += realizedGRT;
@@ -213,8 +111,6 @@ export default function DelegatorPortfolioPage({
         currentValue,
         unrealizedGRT,
         realizedGRT,
-        apr: posAPR,
-        insight,
         isActive,
       });
     }
@@ -634,63 +530,7 @@ export default function DelegatorPortfolioPage({
         </CardContent>
       </Card>
 
-      {/* Rebalancing Insights */}
-      {positions.some((p) => p.insight !== null) && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <CardTitle>Rebalancing Insights</CardTitle>
-              <Badge variant="warning">Action Suggested</Badge>
-            </div>
-            <p className="text-[11px] text-[var(--text-faint)] mt-1">
-              Positions earning significantly below network median APR ({networkMedianAPR.toFixed(1)}%)
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {positions
-              .filter((p) => p.insight !== null)
-              .map((pos) => {
-                const insight = pos.insight!;
-                const indexerName = resolveIndexerName(pos.stake.indexer.account, pos.stake.indexer.id);
 
-                return (
-                  <div
-                    key={pos.stake.id}
-                    className="p-4 rounded-[var(--radius-button)] border-[0.5px] border-[var(--amber)] bg-[var(--amber-dim)]"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-[var(--text)]">
-                          <span className="font-medium">{indexerName}</span>
-                          {' '}earns ~{insight.positionAPR.toFixed(1)}% APR vs. network median of{' '}
-                          {insight.medianAPR.toFixed(1)}%.
-                        </p>
-                        {insight.topAlternative && (
-                          <p className="text-[13px] text-[var(--text-muted)] mt-1">
-                            Top alternative:{' '}
-                            <Link
-                              href={`/indexers/${insight.topAlternative.address}`}
-                              className="text-[var(--accent)] hover:underline font-medium"
-                            >
-                              {insight.topAlternative.name}
-                            </Link>
-                            {' '}&mdash; {insight.topAlternative.apr.toFixed(1)}% APR,{' '}
-                            <span className="font-mono">{formatGRT(insight.topAlternative.availableCapacity)}</span> GRT capacity available.
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex-shrink-0">
-                        <span className="text-[11px] font-mono text-[var(--amber)]">
-                          {insight.belowMedianPercent.toFixed(0)}% below median
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

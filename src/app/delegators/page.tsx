@@ -37,7 +37,7 @@ export default function DelegatorsPage() {
       </div>
       <h2 className="text-xl font-semibold text-[var(--text)] mb-2">Delegator Portfolio</h2>
       <p className="text-[var(--text-muted)] max-w-md mb-8">
-        Enter a delegator address to view their portfolio, delegation positions, and rebalancing insights.
+        Enter a delegator address to view their portfolio and delegation positions.
       </p>
 
       {/* Connected wallet shortcuts */}
