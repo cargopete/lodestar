@@ -211,6 +211,13 @@ docker exec cli graph indexer rules set <IPFS_HASH> \
 docker exec cli graph indexer rules prepare <GRAFT_BASE_HASH> --network arbitrum-one
 ```
 
+**Auto-graft handles this automatically.** As of indexer-agent v0.24.3, there's an `--enable-auto-graft` flag (or `INDEXER_AGENT_ENABLE_AUTO_GRAFT=true`) that makes the agent detect graft dependencies, deploy them in the correct order, sync each to the required block, and pause them — recursively, all the way down the chain. It's off by default. If you're indexing anything with deep graft chains, turn it on and save yourself the archaeology:
+
+```bash
+# In your indexer-agent environment
+INDEXER_AGENT_ENABLE_AUTO_GRAFT=true
+```
+
 **Set a cost model before allocations open** or the gateway won't route queries to you:
 
 ```bash

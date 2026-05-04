@@ -30,6 +30,7 @@ export async function GET(
             metadata {
               displayName
               description
+              website
             }
           }
           stakedTokens

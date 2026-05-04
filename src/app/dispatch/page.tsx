@@ -1154,6 +1154,15 @@ function ProviderMethods() {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
+interface DispatchRegistryIndexer {
+  id: string;
+  address: string;
+  endpoint: string;
+  registered: boolean;
+  registeredAt: string;
+  chains: Array<{ id: string }>;
+}
+
 export default function DispatchPage() {
   const { data: provisionsData } = useServiceProvisions(DISPATCH.rpcDataService);
   const provisions = provisionsData?.provisions ?? [];
@@ -1162,6 +1171,14 @@ export default function DispatchPage() {
   );
   const provisionedGRT = providerProvision ? weiToGRT(providerProvision.tokensProvisioned) : null;
   const thawingGRT = providerProvision ? weiToGRT(providerProvision.tokensThawing) : null;
+
+  const [registryIndexers, setRegistryIndexers] = useState<DispatchRegistryIndexer[]>([]);
+  useEffect(() => {
+    fetch('/api/dispatch/indexers')
+      .then((r) => r.json())
+      .then((j) => { if (j.data) setRegistryIndexers(j.data); })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -1290,6 +1307,10 @@ export default function DispatchPage() {
                 const name = p.indexer.account.defaultDisplayName ?? shortAddr(p.indexer.id);
                 const pGRT = weiToGRT(p.tokensProvisioned);
                 const tGRT = weiToGRT(p.tokensThawing);
+                const regInfo = registryIndexers.find(
+                  (r) => r.address.toLowerCase() === p.indexer.id.toLowerCase()
+                );
+                const chainCount = regInfo?.chains?.length ?? null;
                 return (
                   <div key={p.indexer.id} className={cn('px-4 py-3 space-y-3', i > 0 && 'border-t border-[var(--border)]')}>
                     <div className="flex items-center justify-between">
@@ -1306,7 +1327,7 @@ export default function DispatchPage() {
                       {[
                         { label: 'Stake', value: `${formatGRT(pGRT)} GRT` },
                         { label: 'Thawing', value: tGRT > 0 ? `${formatGRT(tGRT)} GRT` : '0' },
-                        { label: 'Chain', value: 'Arb One' },
+                        { label: 'Chains', value: chainCount != null ? `${chainCount} chain${chainCount !== 1 ? 's' : ''}` : 'Arb One' },
                         { label: 'Tiers', value: 'Std + Archive' },
                       ].map(({ label, value }) => (
                         <div key={label} className="p-2 rounded bg-[var(--bg-elevated)]">

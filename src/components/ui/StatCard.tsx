@@ -11,6 +11,7 @@ interface StatCardProps {
     positive?: boolean;
   };
   subtitle?: string;
+  tag?: string;
   icon?: React.ReactNode;
   loading?: boolean;
   className?: string;
@@ -21,6 +22,7 @@ export function StatCard({
   value,
   delta,
   subtitle,
+  tag,
   icon,
   loading = false,
   className,
@@ -31,7 +33,14 @@ export function StatCard({
       <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent-dim)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
       <div className="relative flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-[11px] text-[var(--text-muted)] mb-1.5">{label}</p>
+          <p className="text-[11px] text-[var(--text-muted)] mb-1.5 flex items-center gap-1.5">
+            {label}
+            {tag && (
+              <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-[var(--accent-dim)] text-[var(--accent)] uppercase tracking-wide leading-none">
+                {tag}
+              </span>
+            )}
+          </p>
           {loading ? (
             <div className="h-8 w-24 shimmer rounded" />
           ) : (

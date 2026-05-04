@@ -96,6 +96,35 @@ export async function horizonPerfQuery<T = Record<string, unknown>>(query: strin
   return json.data as T;
 }
 
+// Dispatch JSON-RPC indexer registry (tracks Dispatch-registered indexers + supported chains)
+// https://thegraph.com/explorer/subgraphs/6qhppfDgeQkQPdCeH297kD82FMYoya3BLYV7rNTkiJz1
+const DISPATCH_REGISTRY_URL = process.env.GRAPH_API_KEY
+  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/6qhppfDgeQkQPdCeH297kD82FMYoya3BLYV7rNTkiJz1`
+  : null;
+
+export async function dispatchRegistryQuery<T = Record<string, unknown>>(query: string): Promise<T> {
+  if (!DISPATCH_REGISTRY_URL) {
+    throw new Error('GRAPH_API_KEY not configured');
+  }
+
+  const res = await fetch(DISPATCH_REGISTRY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Dispatch registry subgraph request failed: ${res.status}`);
+  }
+
+  const json = await res.json();
+  if (json.errors) {
+    throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
+  }
+
+  return json.data as T;
+}
+
 // Gateway QoS Oracle subgraph (Edge & Node — indexer quality of service timeseries)
 // https://thegraph.com/explorer/subgraphs/Dtr9rETvwokot4BSXaD5tECanXfqfJKcvHuaaEgPDD2D
 const QOS_ORACLE_URL = process.env.GRAPH_API_KEY

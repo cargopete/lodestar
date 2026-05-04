@@ -36,7 +36,7 @@ interface IndexerDetail {
   account: {
     id: string;
     defaultDisplayName: string | null;
-    metadata?: { displayName?: string | null; description?: string | null } | null;
+    metadata?: { displayName?: string | null; description?: string | null; website?: string | null } | null;
   };
   stakedTokens: string;
   lockedTokens?: string;
@@ -237,9 +237,9 @@ export default function IndexerDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
-          {indexer.url && (
+          {(indexer.account.metadata?.website || indexer.url) && (
             <a
-              href={indexer.url}
+              href={indexer.account.metadata?.website || (indexer.id.toLowerCase() === '0xb43b2cccceada5292732a8c58ae134adefce09bb' ? 'https://www.lodestar-dashboard.com/' : indexer.url!)}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
@@ -307,11 +307,13 @@ export default function IndexerDetailPage({
         />
         <StatCard
           label="Allocated"
+          tag="Subgraph"
           value={`${formatGRT(allocated)} GRT`}
           subtitle={`${indexer.allocationCount} allocations`}
         />
         <StatCard
           label="Total Rewards Earned"
+          tag="Subgraph"
           value={`${formatGRT(totalRewards)} GRT`}
           subtitle={formatUSD(totalRewards * grtPrice)}
         />
