@@ -62,9 +62,10 @@ const SCORE_SECTIONS = [
   },
   {
     label: 'Protocol Health',
-    max: 6,
+    max: 11,
     items: [
       { key: 'reo_score' as const, label: 'REO Eligibility', max: 6 },
+      { key: 'data_service_score' as const, label: 'Data Service Coverage', max: 5 },
     ],
   },
   {
@@ -429,7 +430,7 @@ function DesktopRow({
   const networkScore = entry.allocation_breadth_score + entry.query_fee_score + entry.allocation_efficiency_score;
   const economicsScore = entry.capacity_score;
   const trustScore = entry.cut_stability_score + entry.tenure_bonus + entry.retention_score;
-  const healthScore = entry.reo_score;
+  const healthScore = entry.reo_score + (entry.data_service_score ?? 0);
 
   return (
     <>
@@ -588,22 +589,22 @@ function MobileCard({
       <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-[var(--bg)]">
         <div
           className="rounded-l-full bg-[var(--accent)]"
-          style={{ width: barWidth(entry.allocation_breadth_score + entry.query_fee_score + entry.allocation_efficiency_score, 71) }}
+          style={{ width: barWidth(entry.allocation_breadth_score + entry.query_fee_score + entry.allocation_efficiency_score, 76) }}
           title="Network"
         />
         <div
           className="bg-[var(--green)]"
-          style={{ width: barWidth(entry.capacity_score, 71) }}
+          style={{ width: barWidth(entry.capacity_score, 76) }}
           title="Economics"
         />
         <div
           className="bg-[var(--cyan)]"
-          style={{ width: barWidth(entry.cut_stability_score + entry.tenure_bonus + entry.retention_score, 71) }}
+          style={{ width: barWidth(entry.cut_stability_score + entry.tenure_bonus + entry.retention_score, 76) }}
           title="Trust"
         />
         <div
           className="rounded-r-full bg-[var(--amber)]"
-          style={{ width: barWidth(entry.reo_score, 71) }}
+          style={{ width: barWidth(entry.reo_score + (entry.data_service_score ?? 0), 76) }}
           title="Health"
         />
       </div>

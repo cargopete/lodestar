@@ -57,6 +57,8 @@ export interface EnrichedIndexer {
   // Rolling APY (exchange-rate-based when available, else closed-allocation fallback)
   rollingAPY30d: number | null;
   rollingAPY90d: number | null;
+  // Distinct Horizon data services this indexer is provisioned to
+  distinctDataServices: number;
   // Composite risk score (computed from all dimensions above)
   score: number;               // 0–100 composite
   scoreGrade: 'A' | 'B' | 'C' | 'D' | 'F';
@@ -70,6 +72,7 @@ export interface EnrichedIndexer {
     transparency: number;
     delegationTrend: number;
     delegatorAPY: number;
+    dataServiceDiversity: number;
   };
   computedAt: number;
 }

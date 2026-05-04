@@ -107,6 +107,7 @@ export async function writeIndexers(
         rewards_earned_grt = EXCLUDED.rewards_earned_grt,
         query_fees_collected_grt = EXCLUDED.query_fees_collected_grt,
         allocation_count = EXCLUDED.allocation_count,
+        distinct_data_services = EXCLUDED.distinct_data_services,
         delegation_exchange_rate = EXCLUDED.delegation_exchange_rate,
         last_updated = EXCLUDED.last_updated
     `;
@@ -179,6 +180,7 @@ function mapToIndexerRow(i: EnrichedIndexer) {
     rewards_earned_grt: weiToGRT(i.rewardsEarned),
     query_fees_collected_grt: i.queryFeesCollectedGRT,
     allocation_count: i.allocationCount,
+    distinct_data_services: i.distinctDataServices,
     delegation_exchange_rate: i.delegationExchangeRate,
     last_updated: new Date().toISOString(),
   };

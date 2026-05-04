@@ -169,6 +169,9 @@ export default function IndexerDetailPage({
 
   // Compute risk score from available data
   const provisionedGRT = indexer.provisionedTokens ? weiToGRT(indexer.provisionedTokens) : null;
+  const distinctDataServices = new Set(
+    (provisionsData?.provisions ?? []).map((p) => p.dataService.id.toLowerCase())
+  ).size;
   const ownStakeRatio = indexer.ownStakeRatio ? parseFloat(indexer.ownStakeRatio) * 100 : null;
   const netFlowGRT = recentDelegations?.reduce((sum, e) => {
     const tokens = weiToGRT(e.tokens);
@@ -202,6 +205,7 @@ export default function IndexerDetailPage({
     delegatedGRT: delegated,
     rollingAPY30d: enrichedIndexer?.rollingAPY30d ?? null,
     delegatorAPR: enrichedIndexer?.delegatorAPR ?? 0,
+    distinctDataServices,
   }) : null;
 
   return (

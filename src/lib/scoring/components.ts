@@ -97,3 +97,16 @@ export function scoreDelegationCapacity(capacityUsedPct: number): number {
   if (capacityUsedPct >= 70) return 3;
   return 5;
 }
+
+// ── Component 6: Protocol Participation (5 pts) ────────────
+
+/**
+ * Data Service Coverage — 5 pts.
+ * Rewards indexers supporting multiple Horizon data services.
+ * Running more than one service signals broader protocol commitment.
+ */
+export function scoreDataServiceDiversity(distinctServices: number): number {
+  if (distinctServices >= 3) return 5;
+  if (distinctServices === 2) return 3;
+  return 0;
+}

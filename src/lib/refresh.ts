@@ -417,6 +417,36 @@ export async function refreshIndexers(opts: {
     log.refresh.warn({ err: e }, 'Time-travel exchange rate fetch failed (non-fatal)');
   }
 
+  // Step 5d: Count distinct Horizon data services per indexer
+  const dataServiceCountMap = new Map<string, number>();
+  try {
+    const PROV_BATCH = 50;
+    for (let i = 0; i < indexerIds.length; i += PROV_BATCH) {
+      const batch = indexerIds.slice(i, i + PROV_BATCH);
+      const idList = batch.map((id) => `"${id}"`).join(', ');
+      const result = await subgraphQuery<{
+        provisions: Array<{ indexer: { id: string }; dataService: { id: string } }>;
+      }>(`{
+        provisions(first: 1000, where: { indexer_in: [${idList}] }) {
+          indexer { id }
+          dataService { id }
+        }
+      }`);
+      const servicesByIndexer = new Map<string, Set<string>>();
+      for (const p of result.provisions) {
+        const addr = p.indexer.id.toLowerCase();
+        if (!servicesByIndexer.has(addr)) servicesByIndexer.set(addr, new Set());
+        servicesByIndexer.get(addr)!.add(p.dataService.id.toLowerCase());
+      }
+      for (const [addr, services] of servicesByIndexer) {
+        dataServiceCountMap.set(addr, services.size);
+      }
+    }
+    log.refresh.info({ count: dataServiceCountMap.size }, 'Data service counts loaded');
+  } catch (e) {
+    log.refresh.warn({ err: e }, 'Provisions fetch failed (non-fatal), data service counts will be 0');
+  }
+
   // Step 6: Compute enriched data for each indexer
   const enriched: EnrichedIndexer[] = indexers.map((indexer) => {
     const lockedTokens = weiToGRT(indexer.lockedTokens ?? '0');
@@ -460,6 +490,7 @@ export async function refreshIndexers(opts: {
     }
 
     const activity = delegationActivity[indexer.id] ?? { delegations: 0, undelegations: 0, netFlowGRT: 0 };
+    const distinctDataServices = dataServiceCountMap.get(indexer.id.toLowerCase()) ?? 0;
 
     const ens = ensNames[indexer.id] ?? null;
     const displayName = ens || resolveIndexerName(indexer.account, indexer.id);
@@ -522,6 +553,7 @@ export async function refreshIndexers(opts: {
       delegatedGRT: delegated,
       rollingAPY30d,
       delegatorAPR: apr,
+      distinctDataServices,
     });
 
     return {
@@ -569,6 +601,7 @@ export async function refreshIndexers(opts: {
         ? parseFloat(indexer.indexerRewardsOwnGenerationRatio)
         : null,
       provisionedGRT,
+      distinctDataServices,
       delegationExchangeRate: currentExchangeRate,
       rollingAPY30d,
       rollingAPY90d,

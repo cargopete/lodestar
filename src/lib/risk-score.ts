@@ -28,6 +28,7 @@ export interface ScoreBreakdown {
   transparency: number;
   delegationTrend: number;
   delegatorAPY: number;
+  dataServiceDiversity: number;
 }
 
 export interface IndexerScore {
@@ -41,12 +42,13 @@ export const SCORE_WEIGHTS: Record<keyof ScoreBreakdown, number> = {
   allocationEfficiency: 13,
   selfStake: 12,
   delegatorCut: 10,
-  overDelegation: 10,
-  transparency: 9,
+  overDelegation: 9,
+  transparency: 8,
   delegatorAPY: 8,
-  queryVolume: 7,
-  cutStability: 7,
-  delegationTrend: 4,
+  queryVolume: 6,
+  cutStability: 6,
+  delegationTrend: 3,
+  dataServiceDiversity: 5,
 };
 
 export const SCORE_LABELS: Record<keyof ScoreBreakdown, string> = {
@@ -60,6 +62,7 @@ export const SCORE_LABELS: Record<keyof ScoreBreakdown, string> = {
   transparency: 'Transparency',
   delegationTrend: 'Delegation Trend',
   delegatorAPY: 'Delegator APY',
+  dataServiceDiversity: 'Data Service Coverage',
 };
 
 // --- Individual dimension scorers ---
@@ -350,6 +353,17 @@ function scoreDelegatorAPY(
 }
 
 /**
+ * Data service diversity: distinct Horizon data services provisioned to.
+ * Running more than one shows broader protocol commitment.
+ */
+function scoreDataServiceDiversity(distinctServices: number): number {
+  if (distinctServices >= 3) return 100;
+  if (distinctServices === 2) return 75;
+  if (distinctServices === 1) return 40;
+  return 0;
+}
+
+/**
  * Delegation trend: net flow relative to total delegated.
  * Positive inflow = crowd confidence. Neutral = baseline. Outflow = warning.
  */
@@ -404,6 +418,7 @@ export interface ScoreInput {
   delegatedGRT: number;
   rollingAPY30d?: number | null;
   delegatorAPR?: number;
+  distinctDataServices?: number;
 }
 
 export function calculateIndexerScore(input: ScoreInput): IndexerScore {
@@ -430,6 +445,7 @@ export function calculateIndexerScore(input: ScoreInput): IndexerScore {
     ),
     delegationTrend: scoreDelegationTrend(input.netFlowGRT, input.delegatedGRT),
     delegatorAPY: scoreDelegatorAPY(input.rollingAPY30d ?? null, input.delegatorAPR ?? 0),
+    dataServiceDiversity: scoreDataServiceDiversity(input.distinctDataServices ?? 0),
   };
 
   // Weighted composite

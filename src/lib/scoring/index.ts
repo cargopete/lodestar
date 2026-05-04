@@ -10,4 +10,5 @@ export {
   scoreRetention,
   scoreReo,
   scoreAllocationBreadth,
+  scoreDataServiceDiversity,
 } from './components';

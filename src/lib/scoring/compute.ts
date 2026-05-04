@@ -19,11 +19,12 @@ import {
   scoreTenure,
   scoreRetention,
   scoreReo,
+  scoreDataServiceDiversity,
 } from './components';
 import { calculatePenalties, type PenaltyInput } from './penalties';
 
-// Max achievable subtotal including community votes (10pts)
-const MAX_SUBTOTAL = 81;
+// Max achievable subtotal including community votes (10pts) and data service diversity (5pts)
+const MAX_SUBTOTAL = 86;
 const MAX_COMMUNITY_VOTE_SCORE = 10;
 
 // Protocol team indexers excluded from the community leaderboard
@@ -47,6 +48,7 @@ interface IndexerMetrics {
   // Protocol Health
   reoStatus: string;
   distinctDeployments: number;
+  distinctDataServices: number;
   // Penalties
   penalties: PenaltyInput;
   // Raw for query
@@ -72,6 +74,7 @@ export interface LeaderboardEntry {
   poi_consensus_score: number;
   allocation_breadth_score: number;
   community_vote_score: number;
+  data_service_score: number;
   subtotal: number;
   penalty_multiplier: number;
   final_score: number;
@@ -98,7 +101,7 @@ export async function computeMonthlyScores(
   const allIndexers = await sql`
     SELECT address, self_stake_grt, delegated_grt, delegator_apr,
            effective_cut, delegation_capacity_pct, reo_status,
-           created_at_epoch, allocation_count
+           created_at_epoch, allocation_count, distinct_data_services
     FROM indexers
     WHERE self_stake_grt > 0
   `;
@@ -234,6 +237,7 @@ export async function computeMonthlyScores(
       netFlow30d: flowMap.get(addr) ?? 0,
       reoStatus: idx.reo_status ?? 'unknown',
       distinctDeployments: breadthMap.get(addr) ?? 0,
+      distinctDataServices: Number(idx.distinct_data_services) || 0,
       penalties: {
         hasActiveDispute: disputes.hasActive,
         hasRecentSlashing: disputes.hasRecent,
@@ -277,6 +281,7 @@ export async function computeMonthlyScores(
     const tenureScore = scoreTenure(m.monthsActive);
     const retScore = scoreRetention(m.netFlow30d);
     const reoScore = scoreReo(m.reoStatus);
+    const dataServiceScore = scoreDataServiceDiversity(m.distinctDataServices);
 
     // Community vote score: proportional to max weighted votes (0-10)
     const voterWeighted = voteMap.get(m.address) ?? 0;
@@ -289,7 +294,8 @@ export async function computeMonthlyScores(
       communityVoteScore +
       stabilityScore + tenureScore + retScore +
       reoScore +
-      capScore;
+      capScore +
+      dataServiceScore;
 
     const { multiplier: penaltyMultiplier } = calculatePenalties(m.penalties);
 
@@ -314,6 +320,7 @@ export async function computeMonthlyScores(
       poi_consensus_score: 0,
       allocation_breadth_score: round2(breadthScore),
       community_vote_score: round2(communityVoteScore),
+      data_service_score: round2(dataServiceScore),
       subtotal: round2(subtotal),
       penalty_multiplier: round2(penaltyMultiplier),
       final_score: round2(Math.min(100, Math.max(0, finalScore))),

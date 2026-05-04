@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS indexers (
   rewards_earned_grt               NUMERIC,
   query_fees_collected_grt         NUMERIC,
   allocation_count                 INTEGER,
+  distinct_data_services           INTEGER DEFAULT 0,
   delegation_exchange_rate         NUMERIC,
   last_updated                     TIMESTAMPTZ
 );
@@ -208,6 +209,7 @@ CREATE TABLE IF NOT EXISTS indexer_scores (
   poi_consensus_score       NUMERIC,
   allocation_breadth_score  NUMERIC,
   community_vote_score      NUMERIC,
+  data_service_score        NUMERIC,
   subtotal                  NUMERIC,
   penalty_multiplier        NUMERIC,
   final_score               NUMERIC,

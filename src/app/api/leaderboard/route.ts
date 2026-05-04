@@ -138,6 +138,7 @@ export async function GET(request: NextRequest) {
     poi_consensus_score: Number(r.poi_consensus_score ?? 0),
     allocation_breadth_score: Number(r.allocation_breadth_score),
     community_vote_score: Number(r.community_vote_score),
+    data_service_score: Number(r.data_service_score ?? 0),
     subtotal: Number(r.subtotal),
     penalty_multiplier: Number(r.penalty_multiplier),
     final_score: Number(r.final_score),
