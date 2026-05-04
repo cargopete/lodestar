@@ -664,7 +664,7 @@ export default function IndexerDetailPage({
                   })}
                 </div>
                 <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
-                  Composite score from 10 on-chain dimensions. Weights reflect delegator priorities: REO compliance (20%), allocation efficiency (13%), self-stake (12%), delegator cut (10%), delegation safety (10%), transparency (9%), delegator APY (8%), query volume (7%), cut stability (7%), delegation trend (4%). Higher = better for delegators.
+                  Composite score from 11 on-chain dimensions. Weights reflect delegator priorities: REO compliance (20%), allocation efficiency (13%), self-stake (12%), delegator cut (10%), delegation safety (9%), transparency (8%), delegator APY (8%), data service coverage (5%), query volume (6%), cut stability (6%), delegation trend (3%). Higher = better for delegators.
                 </p>
               </CardContent>
             </Card>

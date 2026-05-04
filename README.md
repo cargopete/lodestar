@@ -72,7 +72,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 
 ## Indexer Scoring
 
-Each indexer receives a composite score (0–100) across ten dimensions, combined with transparent weights. The score is designed for delegator decision-making — higher is better.
+Each indexer receives a composite score (0–100) across eleven dimensions, combined with transparent weights. The score is designed for delegator decision-making — higher is better.
 
 ### Dimensions & Weights
 
@@ -82,12 +82,13 @@ Each indexer receives a composite score (0–100) across ten dimensions, combine
 | **Allocation Efficiency** | 13% | Allocated tokens ÷ provisioned tokens. Higher utilisation = more operationally competent. 80%+ = 100, no allocations = 0. |
 | **Self-Stake** | 12% | Absolute GRT staked by the indexer — skin in the game. Scored on raw amount, **not** as a ratio of total stake. Having more delegation does *not* reduce this score. Anchors: 100K (protocol minimum) = 35, 500K = 65, 1M = 80, 10M+ = 100, with linear interpolation between points. |
 | **Delegator Cut** | 10% | How much of the earnings delegators actually keep. Uses **effective cut** (what delegators actually experience, accounting for indexer's own stake ratio) when available, falling back to raw cut. 0% cut = 100, 25% = 60, 50% = 35, 100% = 0. 100% query fee cut applies a further -15 penalty. |
-| **Delegation Safety** | 10% | How close the indexer is to maximum delegation capacity (self-stake × 16). Lower utilisation = more room for new delegators without reward dilution. <50% used = 100, 100% full = 0. |
-| **Transparency** | 9% | Has the indexer set an ENS name (+40), website URL (+30), and display name (+30)? Presence and accountability signals. |
+| **Delegation Safety** | 9% | How close the indexer is to maximum delegation capacity (self-stake × 16). Lower utilisation = more room for new delegators without reward dilution. <50% used = 100, 100% full = 0. |
+| **Transparency** | 8% | Has the indexer set an ENS name (+40), website URL (+30), and display name (+30)? Presence and accountability signals. |
 | **Delegator APY** | 8% | Actual returns delivered to delegators. Uses 30-day rolling realised APY from closed allocations when available, falling back to estimated APR from current allocations. Anchors: 20%+ = 100, 10% = 75, 5% = 50, 1% = 20, 0% = 0. New indexers with strong returns benefit directly. |
-| **Query Volume** | 7% | Cumulative query fees collected in GRT — proof the indexer serves real query traffic. Anchors: 100K+ GRT = 100, 50K = 90, 10K = 70, 1K = 50, >0 = 15, 0 = 0. Weight reduced from 12% to mitigate structural advantage for long-running indexers. |
-| **Cut Stability** | 7% | How long since the indexer last changed reward/query fee parameters. Longer = more predictable. 180+ days = 100, <7 days = 30. Floor raised (was 10, now 30) so new indexers aren't punished for being new. Bonus +10 if a cooldown period is set. Hard cap for greedy cuts (100% reward cut → forced to 5). |
-| **Delegation Trend** | 4% | 7-day net delegation flow as a percentage of total delegated stake. Positive inflow = crowd confidence; outflow = warning. Low weight because it's inherently noisy. No delegation = neutral 50. |
+| **Data Service Coverage** | 5% | Distinct Horizon data services provisioned to. Supporting multiple services (Subgraph Service, Dispatch JSON-RPC, etc.) signals broader protocol commitment. 1 service = 40, 2 = 75, 3+ = 100. |
+| **Query Volume** | 6% | Cumulative query fees collected in GRT — proof the indexer serves real query traffic. Anchors: 100K+ GRT = 100, 50K = 90, 10K = 70, 1K = 50, >0 = 15, 0 = 0. |
+| **Cut Stability** | 6% | How long since the indexer last changed reward/query fee parameters. Longer = more predictable. 180+ days = 100, <7 days = 30. Bonus +10 if a cooldown period is set. Hard cap for greedy cuts (100% reward cut → forced to 5). |
+| **Delegation Trend** | 3% | 7-day net delegation flow as a percentage of total delegated stake. Positive inflow = crowd confidence; outflow = warning. Low weight because it's inherently noisy. No delegation = neutral 50. |
 
 ### Grades
 
