@@ -139,7 +139,7 @@ export default function DelegatorPortfolioPage({
     } : null;
 
     return { totalStaked: staked, totalThawing: thawing, totalRealized: realized, totalUnrealized: unrealized, positions: posData, portfolioHealth: health };
-  }, [delegator, allIndexers, networkMedianAPR]);
+  }, [delegator, allIndexers]);
 
   const portfolioValue = totalStaked + totalThawing + totalUnrealized;
 
