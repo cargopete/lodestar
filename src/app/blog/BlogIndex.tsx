@@ -104,18 +104,6 @@ export default function BlogIndex({ posts }: { posts: PostMeta[] }) {
 
   const isFiltering = query.trim() !== '' || category !== 'All';
 
-  // Group posts by category for the default view
-  const grouped = useMemo(() => {
-    const order = ['News', 'Analysis', 'Ecosystem', 'Guides'];
-    const map: Record<string, PostMeta[]> = {};
-    for (const post of filtered) {
-      const cat = post.category || 'Other';
-      if (!map[cat]) map[cat] = [];
-      map[cat].push(post);
-    }
-    return order.filter((c) => map[c]?.length).map((c) => ({ label: c, posts: map[c] }));
-  }, [filtered]);
-
   const showGrouped = !isFiltering;
 
   return (
@@ -181,29 +169,11 @@ export default function BlogIndex({ posts }: { posts: PostMeta[] }) {
         </div>
       )}
 
-      {/* Default grouped view */}
+      {/* Default view — newest first, featured post at top */}
       {showGrouped && filtered.length > 0 && (
-        <div className="space-y-12">
-          {grouped.map(({ label, posts: groupPosts }, i) => (
-            <div key={label}>
-              {i === 0 && groupPosts.length > 0 ? (
-                <div className="space-y-8">
-                  <PostCard post={groupPosts[0]} featured />
-                  {groupPosts.length > 1 && (
-                    <>
-                      <h2 className="text-[11px] text-[var(--text-muted)] font-medium pt-2">{label}</h2>
-                      <PostGrid posts={groupPosts.slice(1)} />
-                    </>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <h2 className="text-[11px] text-[var(--text-muted)] font-medium mb-5">{label}</h2>
-                  <PostGrid posts={groupPosts} />
-                </>
-              )}
-            </div>
-          ))}
+        <div className="space-y-8">
+          <PostCard post={filtered[0]} featured />
+          {filtered.length > 1 && <PostGrid posts={filtered.slice(1)} />}
         </div>
       )}
     </>
