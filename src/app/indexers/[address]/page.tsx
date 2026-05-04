@@ -197,9 +197,10 @@ export default function IndexerDetailPage({
     id: indexer.id,
     rewardCutPPM: indexer.indexingRewardCut,
     queryFeeCutPPM: indexer.queryFeeCut,
-    effectiveCutPercent: indexer.indexingRewardEffectiveCut
-      ? parseFloat(indexer.indexingRewardEffectiveCut) * 100
-      : null,
+    effectiveCutPercent: (() => {
+      const v = indexer.indexingRewardEffectiveCut ? parseFloat(indexer.indexingRewardEffectiveCut) : null;
+      return v !== null && v >= 0 && v <= 1 ? v * 100 : null;
+    })(),
     queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected ?? '0'),
     netFlowGRT,
     delegatedGRT: delegated,
@@ -692,12 +693,15 @@ export default function IndexerDetailPage({
                   <span className="text-sm text-[var(--text-muted)]">Indexing Reward Cut</span>
                   <span className="font-mono text-[var(--text)]">{formatPPM(indexer.indexingRewardCut)}</span>
                 </div>
-                {indexer.indexingRewardEffectiveCut && (
-                  <div className="flex justify-between items-center py-2 border-b border-[var(--border)]">
-                    <span className="text-sm text-[var(--text-muted)]">Effective Cut</span>
-                    <span className="font-mono text-[var(--text)]">{(parseFloat(indexer.indexingRewardEffectiveCut) * 100).toFixed(2)}%</span>
-                  </div>
-                )}
+                {(() => {
+                  const v = indexer.indexingRewardEffectiveCut ? parseFloat(indexer.indexingRewardEffectiveCut) : null;
+                  return v !== null && v >= 0 && v <= 1 ? (
+                    <div className="flex justify-between items-center py-2 border-b border-[var(--border)]">
+                      <span className="text-sm text-[var(--text-muted)]">Effective Cut</span>
+                      <span className="font-mono text-[var(--text)]">{(v * 100).toFixed(2)}%</span>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex justify-between items-center py-2 border-b border-[var(--border)]">
                   <span className="text-sm text-[var(--text-muted)]">Query Fee Cut</span>
                   <span className="font-mono text-[var(--text)]">{formatPPM(indexer.queryFeeCut)}</span>
