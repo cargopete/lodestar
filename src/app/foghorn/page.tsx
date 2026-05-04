@@ -83,9 +83,9 @@ export default function FoghornPage() {
           <Badge variant="accent">Observability</Badge>
         </div>
         <p className="text-sm text-[var(--text-muted)] max-w-2xl">
-          Block-pinned query probes fired at opted-in indexers. Responses are
-          canonicalized, hashed, and clustered. Divergence events appear here when
-          indexers return different data for the same deterministic query.
+          GraphQL probes dispatched via The Graph gateway. Responses are
+          canonicalized, hashed, and clustered by allocation. Divergence events
+          appear here when allocations return different data for the same query.
         </p>
       </div>
 
@@ -121,7 +121,7 @@ export default function FoghornPage() {
             subtitle="of probes with divergent clusters"
           />
           <StatCard
-            label="Opted-in Indexers"
+            label="Observed Allocations"
             value={stats.opted_in_indexers.toLocaleString()}
             subtitle={`across ${stats.deployments_covered} deployments`}
           />
@@ -224,10 +224,11 @@ export default function FoghornPage() {
       <div className="text-[11px] text-[var(--text-faint)] leading-relaxed space-y-1 px-1">
         <p>
           <strong className="text-[var(--text-muted)]">Methodology.</strong> Foghorn dispatches
-          identical, block-hash-pinned GraphQL queries to opted-in indexers. Responses are stripped
-          of volatile fields, canonicalized via JCS (RFC 8785), and hashed with SHA-256. Indexers
-          returning the same hash belong to the same cluster. When clusters diverge, an RFC 6902
-          JSON-Patch diff between cluster representatives is computed and stored.
+          identical GraphQL queries via The Graph gateway, which load-balances across allocating
+          indexers. Responses are stripped of volatile fields (extensions, block metadata),
+          canonicalized via JCS (RFC 8785), and hashed with SHA-256. Allocations returning the same
+          hash belong to the same cluster. When clusters diverge, an RFC 6902 JSON-Patch diff
+          between cluster representatives is computed and stored.
         </p>
         <p>
           <strong className="text-[var(--text-muted)]">No verdict.</strong> Foghorn does not label,
