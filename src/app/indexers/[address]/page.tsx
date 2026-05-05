@@ -3,7 +3,7 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName, useEnrichedIndexers, useIndexerStatus, useIndexerPayments } from '@/hooks/useNetworkStats';
+import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName, useEnrichedIndexers, useIndexerStatus, useIndexerPayments, useDispatchProviderEarnings } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
   formatGRT,
@@ -110,6 +110,11 @@ export default function IndexerDetailPage({
   const { data: statusData, isLoading: statusLoading, dataUpdatedAt: statusUpdatedAt } = useIndexerStatus(address);
   const { data: paymentsData } = useIndexerPayments(address);
 
+  // Dispatch gateway total receipt earnings — only relevant for the lodestar provider
+  const DISPATCH_PROVIDER = '0xb43b2cccceada5292732a8c58ae134adefce09bb';
+  const isDispatchProvider = address.toLowerCase() === DISPATCH_PROVIDER;
+  const { data: dispatchEarningsWei } = useDispatchProviderEarnings(isDispatchProvider);
+
   // Pull pre-computed fields from enriched cache (rolling APY, score)
   const enrichedIndexer = enrichedData?.indexers?.find(
     (e) => e.id.toLowerCase() === address.toLowerCase()
@@ -172,8 +177,10 @@ export default function IndexerDetailPage({
   );
   const extraAllocated = nonSubgraphProvisions.reduce((sum, p) => sum + weiToGRT(p.tokensAllocated), 0);
   const extraAllocationCount = nonSubgraphProvisions.reduce((sum, p) => sum + p.allocationCount, 0);
-  // TAP fees collected on-chain via GraphTally (receiver = indexer address)
-  const tapCollected = paymentsData?.totalCollected ? weiToGRT(paymentsData.totalCollected) : 0;
+  // TAP fees: prefer gateway total (includes pending receipts not yet submitted as RAVs);
+  // fall back to on-chain GraphTally collected amount.
+  const gatewayEarnings = dispatchEarningsWei ? weiToGRT(dispatchEarningsWei) : null;
+  const tapCollected = gatewayEarnings ?? (paymentsData?.totalCollected ? weiToGRT(paymentsData.totalCollected) : 0);
   const extraRewards = nonSubgraphProvisions.reduce(
     (sum, p) => sum + weiToGRT(p.rewardsEarned ?? '0') + weiToGRT(p.queryFeesCollected ?? '0'),
     0

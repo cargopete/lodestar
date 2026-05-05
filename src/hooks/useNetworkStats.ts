@@ -508,6 +508,26 @@ export function useIndexerPayments(receiver: string) {
 }
 
 /**
+ * Hook for total GRT earned from Dispatch gateway receipts (all-time sum).
+ * Only makes sense for the lodestar provider since it's a single-provider gateway.
+ */
+export function useDispatchProviderEarnings(enabled: boolean) {
+  return useQuery({
+    queryKey: ['dispatchProviderEarnings'],
+    queryFn: async () => {
+      const resp = await fetch('/api/dispatch/provider-earnings');
+      if (!resp.ok) throw new Error(`provider-earnings: ${resp.status}`);
+      const json = await resp.json();
+      return json.totalWei as string | undefined;
+    },
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    enabled,
+    retry: 1,
+  });
+}
+
+/**
  * Hook for indexer daily reward & query fee trends
  * (supplementary data from community Horizon Performance subgraph)
  */
