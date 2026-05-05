@@ -36,6 +36,8 @@ export async function GET(request: NextRequest) {
             thawingPeriod
             createdAt
             allocationCount
+            rewardsEarned
+            queryFeesCollected
             dataService {
               id
               totalTokensProvisioned

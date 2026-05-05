@@ -164,6 +164,22 @@ export default function IndexerDetailPage({
   const totalRewards = weiToGRT(indexer.rewardsEarned);
   const capacity = calculateDelegationCapacity(selfStake, delegated, delegationRatio);
 
+  // Combine Subgraph data with other data service provisions (Dispatch, etc.)
+  const SUBGRAPH_SERVICE = '0xb2bb92d0de618878e438b55d5846cfecd9301105';
+  const nonSubgraphProvisions = (provisionsData?.provisions ?? []).filter(
+    p => p.dataService.id.toLowerCase() !== SUBGRAPH_SERVICE
+  );
+  const extraAllocated = nonSubgraphProvisions.reduce((sum, p) => sum + weiToGRT(p.tokensAllocated), 0);
+  const extraAllocationCount = nonSubgraphProvisions.reduce((sum, p) => sum + p.allocationCount, 0);
+  const extraRewards = nonSubgraphProvisions.reduce(
+    (sum, p) => sum + weiToGRT(p.rewardsEarned ?? '0') + weiToGRT(p.queryFeesCollected ?? '0'),
+    0
+  );
+  const hasMultipleServices = extraAllocated > 0 || extraRewards > 0;
+  const totalAllocated = allocated + extraAllocated;
+  const totalAllocationCount = indexer.allocationCount + extraAllocationCount;
+  const totalRewardsCombined = totalRewards + extraRewards;
+
   // Check parameter lock status
   const createdDate = new Date(indexer.createdAt * 1000);
 
@@ -308,15 +324,15 @@ export default function IndexerDetailPage({
         />
         <StatCard
           label="Allocated"
-          tag="Subgraph"
-          value={`${formatGRT(allocated)} GRT`}
-          subtitle={`${indexer.allocationCount} allocations`}
+          tag={hasMultipleServices ? 'All Services' : 'Subgraph'}
+          value={`${formatGRT(totalAllocated)} GRT`}
+          subtitle={`${totalAllocationCount} allocation${totalAllocationCount !== 1 ? 's' : ''}`}
         />
         <StatCard
           label="Total Rewards Earned"
-          tag="Subgraph"
-          value={`${formatGRT(totalRewards)} GRT`}
-          subtitle={formatUSD(totalRewards * grtPrice)}
+          tag={hasMultipleServices ? 'All Services' : 'Subgraph'}
+          value={`${formatGRT(totalRewardsCombined)} GRT`}
+          subtitle={formatUSD(totalRewardsCombined * grtPrice)}
         />
       </StatGrid>
 

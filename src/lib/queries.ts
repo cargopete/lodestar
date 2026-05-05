@@ -737,6 +737,8 @@ export interface Provision {
   thawingPeriod: string;
   createdAt: string;
   allocationCount: number;
+  rewardsEarned?: string;
+  queryFeesCollected?: string;
   dataService: {
     id: string;
     totalTokensProvisioned: string;
