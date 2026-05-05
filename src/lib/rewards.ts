@@ -150,7 +150,7 @@ export function calculateDelegatorAPR(
   // After indexer cut, entire remainder goes to delegators
   const delegatorRewards = totalRewards * (1 - rawCut);
 
-  return (delegatorRewards / delegated) * 100;
+  return Math.min((delegatorRewards / delegated) * 100, 100);
 }
 
 /**

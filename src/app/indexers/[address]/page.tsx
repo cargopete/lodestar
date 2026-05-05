@@ -357,7 +357,7 @@ export default function IndexerDetailPage({
               <p className="text-xl font-semibold font-mono text-[var(--text)]">
                 {enrichedIndexer.delegatorAPR.toFixed(2)}%
               </p>
-              <p className="text-[10px] text-[var(--text-faint)] mt-1">Theoretical from current allocations</p>
+              <p className="text-[10px] text-[var(--text-faint)] mt-1">Theoretical from active allocations · capped at 100%</p>
             </CardContent>
           </Card>
         </div>
@@ -433,7 +433,7 @@ export default function IndexerDetailPage({
           <div>
             <p className="text-base font-semibold text-[var(--text)]">Delegate to {name}</p>
             <p className="text-sm text-[var(--text-muted)]">
-              {formatGRT(capacity.availableCapacity)} GRT capacity available · {enrichedIndexer?.delegatorAPR?.toFixed(1) ?? '—'}% APR
+              {formatGRT(capacity.availableCapacity)} GRT capacity available · {enrichedIndexer?.delegatorAPR != null ? `${enrichedIndexer.delegatorAPR.toFixed(1)}% APR` : '—'}
             </p>
           </div>
         </div>
