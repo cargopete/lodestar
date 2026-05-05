@@ -162,6 +162,17 @@ export const PROTOCOLS: ProtocolConfig[] = [
     color: '#1A33FF',
   },
   {
+    slug: 'pancakeswap-v3',
+    name: 'PancakeSwap V3',
+    category: 'DEX',
+    description: 'Largest DEX on BNB Chain, with V3 also deployed to Ethereum. Concentrated-liquidity AMM forked from Uniswap V3 with multi-tier fees. This entry tracks the Ethereum mainnet deployment.',
+    subgraphId: 'JAGXF8B14mpB8QGKnwhKTs5JxsQZBJQvbDGFcWwL7gbm',
+    schemaType: 'messari-dex',
+    website: 'https://pancakeswap.finance',
+    chains: ['Ethereum'],
+    color: '#D1884F',
+  },
+  {
     slug: 'ether-fi',
     name: 'ether.fi',
     category: 'Liquid Staking',
