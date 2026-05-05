@@ -521,3 +521,21 @@ export async function fetchSubgraphCuration(hash: string): Promise<SubgraphCurat
   const json = await response.json();
   return json.data;
 }
+
+export async function fetchSubgraphSchema(hash: string): Promise<{ schemaText: string; schemaHash: string }> {
+  const response = await fetch(`/api/subgraph-schema/${encodeURIComponent(hash)}`);
+  if (!response.ok) throw new Error(`Schema fetch failed: ${response.status}`);
+  const json = await response.json();
+  return json.data;
+}
+
+export async function fetchCuratorLeaderboard(params: { first?: number; skip?: number } = {}): Promise<
+  import('@/app/api/curators/route').CuratorLeaderboardEntry[]
+> {
+  const { first = 50, skip = 0 } = params;
+  const qs = new URLSearchParams({ first: String(first), skip: String(skip) });
+  const response = await fetch(`/api/curators?${qs}`);
+  if (!response.ok) throw new Error(`Curator leaderboard failed: ${response.status}`);
+  const json = await response.json();
+  return json.data;
+}

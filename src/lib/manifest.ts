@@ -45,6 +45,7 @@ export interface ManifestAnalysis {
   network: string;
   graft: { base: string; block: number } | null;
   pruning: string | null;
+  schemaHash: string | null;
 }
 
 // ---------- chain block times (seconds) ----------
@@ -354,6 +355,20 @@ export function parseManifest(yamlString: string): ManifestAnalysis {
     network,
   );
 
+  // Extract schema file IPFS hash (format: schema.file["/"] = "/ipfs/QmHASH")
+  const schemaConfig = doc.schema as Record<string, unknown> | undefined;
+  let schemaHash: string | null = null;
+  if (schemaConfig?.file) {
+    const fileVal = schemaConfig.file as unknown;
+    const raw = typeof fileVal === 'string'
+      ? fileVal
+      : typeof fileVal === 'object' && fileVal !== null
+        ? ((fileVal as Record<string, string>)['/'] ?? '')
+        : '';
+    const m = raw.match(/Qm[1-9A-HJ-NP-Za-km-z]{44}/);
+    if (m) schemaHash = m[0];
+  }
+
   return {
     score,
     category: categoryFromScore(score),
@@ -365,5 +380,6 @@ export function parseManifest(yamlString: string): ManifestAnalysis {
     network,
     graft,
     pruning,
+    schemaHash,
   };
 }
