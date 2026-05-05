@@ -3,7 +3,7 @@
 import { use, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useIndexingStatus, useManifestAnalysis, useNetworksRegistry, useSubgraphCuration, useSubgraphHistory } from '@/hooks/useNetworkStats';
+import { useIndexingStatus, useManifestAnalysis, useNetworksRegistry, useSubgraphCuration, useSubgraphHistory, useENSName } from '@/hooks/useNetworkStats';
 import { SubgraphHistoryChart } from '@/components/charts/SubgraphHistoryChart';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -57,6 +57,11 @@ function StatusBadge({ status }: { status: IndexerStatusResult['status'] }) {
       {cfg.label}
     </Badge>
   );
+}
+
+function IndexerNameDisplay({ indexerId, indexerName }: { indexerId: string; indexerName: string | null }) {
+  const { data } = useENSName(indexerName ? '' : indexerId);
+  return <>{indexerName ?? data?.ensName ?? shortenAddress(indexerId)}</>;
 }
 
 function HandlerCounts({ source }: { source: DataSourceSignal | TemplateSignal }) {
@@ -217,7 +222,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                             className="hover:text-[var(--accent)] transition-colors"
                           >
                             <p className="font-medium text-[var(--text)] text-sm">
-                              {indexer.indexerName ?? shortenAddress(indexer.indexerId)}
+                              <IndexerNameDisplay indexerId={indexer.indexerId} indexerName={indexer.indexerName} />
                             </p>
                           </Link>
                           <p className="text-[10px] text-[var(--text-faint)] font-mono">
@@ -316,7 +321,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                             href={`/indexers/${indexer.indexerId}`}
                             className="text-xs font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors"
                           >
-                            {indexer.indexerName ?? shortenAddress(indexer.indexerId)}
+                            <IndexerNameDisplay indexerId={indexer.indexerId} indexerName={indexer.indexerName} />
                           </Link>
                           <StatusBadge status={indexer.status} />
                           {(indexer.nonFatalErrorCount ?? 0) > 0 && (
@@ -388,7 +393,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                         className="hover:text-[var(--accent)] transition-colors"
                       >
                         <p className="font-medium text-sm text-[var(--text)]">
-                          {indexer.indexerName ?? shortenAddress(indexer.indexerId)}
+                          <IndexerNameDisplay indexerId={indexer.indexerId} indexerName={indexer.indexerName} />
                         </p>
                         <p className="text-[10px] text-[var(--text-faint)] font-mono">
                           {shortenAddress(indexer.indexerId, 6)}
