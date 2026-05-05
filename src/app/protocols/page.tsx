@@ -12,6 +12,7 @@ const CATEGORY_STYLES: Record<string, string> = {
   'DEX': 'bg-[var(--accent)]/10 text-[var(--accent)]',
   'Lending': 'bg-[var(--green)]/10 text-[var(--green)]',
   'Liquid Staking': 'bg-[#00A3FF]/12 text-[#5BC2FF]',
+  'Yield Aggregator': 'bg-[#0657F9]/12 text-[#6E92FF]',
 };
 
 const CATEGORY_FILTERS: Array<'All' | ProtocolCategory> = [

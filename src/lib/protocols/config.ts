@@ -2,6 +2,7 @@ export type SchemaType =
   | 'messari-dex'
   | 'messari-lending'
   | 'messari-staking'
+  | 'messari-yield'
   | 'uniswap-v2'
   | 'uniswap-v3'
   | 'etherfi-native';
@@ -9,7 +10,8 @@ export type SchemaType =
 export type ProtocolCategory =
   | 'DEX'
   | 'Lending'
-  | 'Liquid Staking';
+  | 'Liquid Staking'
+  | 'Yield Aggregator';
 
 export interface ProtocolConfig {
   slug: string;
@@ -169,6 +171,17 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://ether.fi',
     chains: ['Ethereum'],
     color: '#A0FFE6',
+  },
+  {
+    slug: 'yearn-v2',
+    name: 'Yearn V2',
+    category: 'Yield Aggregator',
+    description: 'Long-running yield optimisation protocol that routes deposits across vault strategies to maximise returns. The Ethereum mainnet V2 deployment, original automated yield primitive in DeFi.',
+    subgraphId: 'FDLuaz69DbMADuBjJDEcLnTuPnjhZqNbFVrkNiBLGkEg',
+    schemaType: 'messari-yield',
+    website: 'https://yearn.fi',
+    chains: ['Ethereum'],
+    color: '#0657F9',
   },
 ];
 
