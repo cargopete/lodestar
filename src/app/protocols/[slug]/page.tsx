@@ -14,7 +14,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { getProtocol } from '@/lib/protocols/config';
+import { getProtocol, type ProtocolCategory } from '@/lib/protocols/config';
+import type { ProtocolSummary } from '@/lib/protocols/fetcher';
 import { useProtocolDetail } from '@/hooks/useProtocols';
 import { formatUSD } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
@@ -36,6 +37,10 @@ function formatDate(timestamp: number) {
   return new Date(timestamp * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 }
 
+function formatPercent(n: number) {
+  return `${n.toFixed(2)}%`;
+}
+
 function MetricCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="p-4 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
@@ -44,6 +49,63 @@ function MetricCard({ label, value, sub }: { label: string; value: string; sub?:
       {sub && <p className="text-[10px] text-[var(--text-faint)] mt-0.5">{sub}</p>}
     </div>
   );
+}
+
+interface CategoryLabels {
+  tvlLabel: string;
+  volumeLabel: string;
+  volumeChartTitle: string;
+  volumeTooltipLabel: string;
+  feesLabel: string;
+  cumulativeLabel: string;
+  cumulativeValue: (s?: ProtocolSummary) => number;
+  cumulativeSub: string;
+}
+
+const CATEGORY_LABELS: Record<ProtocolCategory, CategoryLabels> = {
+  'DEX': {
+    tvlLabel: 'Total Value Locked',
+    volumeLabel: '30d Volume',
+    volumeChartTitle: 'Daily Volume (90 days)',
+    volumeTooltipLabel: 'Volume',
+    feesLabel: '30d Fees',
+    cumulativeLabel: 'Total Volume',
+    cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
+    cumulativeSub: 'all time',
+  },
+  'Lending': {
+    tvlLabel: 'Total Value Locked',
+    volumeLabel: 'Active Borrows',
+    volumeChartTitle: 'Daily Borrowing (90 days)',
+    volumeTooltipLabel: 'Borrowed',
+    feesLabel: '30d Fees',
+    cumulativeLabel: 'Total Borrowed',
+    cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
+    cumulativeSub: 'all time',
+  },
+  'Liquid Staking': {
+    tvlLabel: 'Total Value Staked',
+    volumeLabel: '30d Staker Yield',
+    volumeChartTitle: 'Daily Yield to Stakers (90 days)',
+    volumeTooltipLabel: 'Yield',
+    feesLabel: '30d Protocol Fees',
+    cumulativeLabel: 'Cumulative Yield',
+    cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
+    cumulativeSub: 'all time',
+  },
+};
+
+interface ExtraStat {
+  label: string;
+  value: string;
+}
+
+function getExtraStats(category: ProtocolCategory, summary?: ProtocolSummary): ExtraStat[] {
+  if (!summary) return [];
+  if (category === 'Liquid Staking' && summary.stakingAPR) {
+    return [{ label: 'Staking APR (30d est.)', value: formatPercent(summary.stakingAPR) }];
+  }
+  return [];
 }
 
 export default function ProtocolDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -62,7 +124,14 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
     fees: s.feesUSD,
   }));
 
-  const isLending = config.category === 'Lending';
+  const labels = CATEGORY_LABELS[config.category];
+  const extras = getExtraStats(config.category, summary);
+
+  // Lending uses Active Borrows (current snapshot) instead of summed 30d volume
+  const volumeKpiValue = config.category === 'Lending'
+    ? summary?.totalBorrowUSD ?? 0
+    : summary?.volume30dUSD ?? 0;
+  const volumeKpiSub = config.category === 'Lending' ? undefined : 'last 30 days';
 
   return (
     <div className="space-y-6">
@@ -100,33 +169,45 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MetricCard
-          label="Total Value Locked"
+          label={labels.tvlLabel}
           value={isLoading ? '—' : formatUSD(summary?.tvlUSD ?? 0)}
         />
         <MetricCard
-          label={isLending ? 'Active Borrows' : '30d Volume'}
-          value={isLoading ? '—' : isLending
-            ? formatUSD(summary?.totalBorrowUSD ?? 0)
-            : formatUSD(summary?.volume30dUSD ?? 0)
-          }
-          sub={isLending ? undefined : 'last 30 days'}
+          label={labels.volumeLabel}
+          value={isLoading ? '—' : formatUSD(volumeKpiValue)}
+          sub={volumeKpiSub}
         />
         <MetricCard
-          label="30d Fees"
+          label={labels.feesLabel}
           value={isLoading ? '—' : formatUSD(summary?.fees30dUSD ?? 0)}
           sub="last 30 days"
         />
         <MetricCard
-          label={isLending ? 'Total Borrowed' : 'Total Volume'}
-          value={isLoading ? '—' : formatUSD(summary?.cumulativeVolumeUSD ?? 0)}
-          sub="all time"
+          label={labels.cumulativeLabel}
+          value={isLoading ? '—' : formatUSD(labels.cumulativeValue(summary))}
+          sub={labels.cumulativeSub}
         />
       </div>
+
+      {/* Category-specific extras */}
+      {extras.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {extras.map((stat) => (
+            <div
+              key={stat.label}
+              className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]/60 border border-[var(--border)]"
+            >
+              <p className="text-[10px] text-[var(--text-faint)] mb-0.5">{stat.label}</p>
+              <p className="text-sm font-mono font-medium text-[var(--text)]">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* TVL chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Total Value Locked (90 days)</CardTitle>
+          <CardTitle>{labels.tvlLabel} (90 days)</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -179,7 +260,7 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>{isLending ? 'Daily Borrowing (90 days)' : 'Daily Volume (90 days)'}</CardTitle>
+            <CardTitle>{labels.volumeChartTitle}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -205,7 +286,7 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
                     />
                     <Tooltip
                       {...TOOLTIP_STYLE}
-                      formatter={(value) => [formatUSD(Number(value)), isLending ? 'Borrowed' : 'Volume']}
+                      formatter={(value) => [formatUSD(Number(value)), labels.volumeTooltipLabel]}
                     />
                     <Bar dataKey="volume" fill={config.color} fillOpacity={0.7} radius={[2, 2, 0, 0]} />
                   </BarChart>
@@ -274,4 +355,3 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
     </div>
   );
 }
-

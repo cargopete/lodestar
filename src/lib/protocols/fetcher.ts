@@ -15,6 +15,7 @@ export interface ProtocolSummary {
   volume30dUSD: number;
   fees30dUSD: number;
   totalBorrowUSD?: number;
+  stakingAPR?: number;
 }
 
 export interface ProtocolDetail {
@@ -101,6 +102,47 @@ const MESSARI_LENDING_QUERY = `{
   }
 }`;
 
+// --- Messari Staking / Yield schema (used by the Messari Lido subgraph).
+//
+// Same `protocols` + `financialsDailySnapshots` shape as the other Messari templates,
+// but volume / fee semantics are different: dailySupplySideRevenueUSD is yield earned
+// by stakers and the protocol's cut is captured cumulatively but not split daily.
+//
+// Most Messari staking deployments (including Lido) write `dailyProtocolSideRevenueUSD = 0`
+// across every snapshot while still maintaining a non-zero `cumulativeProtocolSideRevenueUSD`.
+// To produce a usable daily-fees series we estimate it as a constant fraction of supply-side
+// revenue, derived from the protocol-level cumulative ratio.
+
+interface MessariStakingData {
+  protocols: Array<{
+    totalValueLockedUSD: string;
+    cumulativeSupplySideRevenueUSD: string;
+    cumulativeProtocolSideRevenueUSD: string;
+    cumulativeTotalRevenueUSD: string;
+  }>;
+  financialsDailySnapshots: Array<{
+    timestamp: string;
+    totalValueLockedUSD: string;
+    dailySupplySideRevenueUSD: string;
+    dailyProtocolSideRevenueUSD: string;
+  }>;
+}
+
+const MESSARI_STAKING_QUERY = `{
+  protocols(first: 1) {
+    totalValueLockedUSD
+    cumulativeSupplySideRevenueUSD
+    cumulativeProtocolSideRevenueUSD
+    cumulativeTotalRevenueUSD
+  }
+  financialsDailySnapshots(first: 90, orderBy: timestamp, orderDirection: desc) {
+    timestamp
+    totalValueLockedUSD
+    dailySupplySideRevenueUSD
+    dailyProtocolSideRevenueUSD
+  }
+}`;
+
 // --- Uniswap V3 native schema ---
 
 interface UniswapV3Data {
@@ -111,7 +153,7 @@ interface UniswapV3Data {
     txCount: string;
   }>;
   uniswapDayDatas: Array<{
-    date: string; // unix timestamp seconds (start of day)
+    date: string;
     volumeUSD: string;
     feesUSD: string;
     tvlUSD: string;
@@ -135,10 +177,6 @@ const UNISWAP_V3_QUERY = `{
 
 // --- Shared normalisation ---
 
-/**
- * Remove snapshots where feesUSD is an obvious outlier (>50× the median).
- * Some Messari subgraphs have single corrupt historical snapshots with absurd values.
- */
 function filterFeeOutliers(snapshots: ProtocolDaySnapshot[]): ProtocolDaySnapshot[] {
   if (snapshots.length < 3) return snapshots;
   const fees = snapshots.map((s) => s.feesUSD).sort((a, b) => a - b);
@@ -153,7 +191,7 @@ function computeSummary(
   cumulativeVolumeUSD: number,
   cumulativeFeesUSD: number,
   snapshots: ProtocolDaySnapshot[],
-  totalBorrowUSD?: number,
+  extras: Partial<ProtocolSummary> = {},
 ): ProtocolSummary {
   const thirtyDaysAgo = Date.now() / 1000 - 30 * 86400;
   const recent = snapshots.filter((s) => s.timestamp >= thirtyDaysAgo);
@@ -164,12 +202,26 @@ function computeSummary(
     cumulativeFeesUSD,
     volume30dUSD: recent.reduce((s, d) => s + d.volumeUSD, 0),
     fees30dUSD: recent.reduce((s, d) => s + d.feesUSD, 0),
-    totalBorrowUSD,
+    ...extras,
   };
 }
 
 function parseF(v: string | null | undefined): number {
   return parseFloat(v ?? '0') || 0;
+}
+
+// Some Messari subgraphs (Curve mainnet, certain Aave snapshots) leak unscaled
+// integer values into USD fields, producing impossible numbers like 3.7e20.
+// Anything north of $1 quadrillion (1e15) is a data-quality artefact, not a
+// real protocol metric. Clamp it to a snapshot-derived fallback so the UI
+// never renders "$ 376424613377.91B" and breaks card layout.
+const SANE_USD_CEILING = 1e15;
+
+function sanitizeCumulative(raw: number, snapshotSum: number): number {
+  if (!Number.isFinite(raw) || raw < 0 || raw > SANE_USD_CEILING) {
+    return Number.isFinite(snapshotSum) && snapshotSum >= 0 ? snapshotSum : 0;
+  }
+  return raw;
 }
 
 function normalizeMessariDex(slug: string, data: MessariDexData): ProtocolDetail {
@@ -184,12 +236,15 @@ function normalizeMessariDex(slug: string, data: MessariDexData): ProtocolDetail
     .sort((a, b) => a.timestamp - b.timestamp);
 
   const clean = filterFeeOutliers(snapshots);
+  const snapshotVolumeSum = clean.reduce((acc, s) => acc + s.volumeUSD, 0);
+  const snapshotFeesSum = clean.reduce((acc, s) => acc + s.feesUSD, 0);
+
   return {
     summary: computeSummary(
       slug,
       parseF(p?.totalValueLockedUSD),
-      parseF(p?.cumulativeVolumeUSD),
-      parseF(p?.cumulativeTotalRevenueUSD),
+      sanitizeCumulative(parseF(p?.cumulativeVolumeUSD), snapshotVolumeSum),
+      sanitizeCumulative(parseF(p?.cumulativeTotalRevenueUSD), snapshotFeesSum),
       clean,
     ),
     snapshots: clean,
@@ -208,14 +263,69 @@ function normalizeMessariLending(slug: string, data: MessariLendingData): Protoc
     .sort((a, b) => a.timestamp - b.timestamp);
 
   const clean = filterFeeOutliers(snapshots);
+  const snapshotVolumeSum = clean.reduce((acc, s) => acc + s.volumeUSD, 0);
+  const snapshotFeesSum = clean.reduce((acc, s) => acc + s.feesUSD, 0);
+
   return {
     summary: computeSummary(
       slug,
       parseF(p?.totalValueLockedUSD),
-      parseF(p?.cumulativeBorrowUSD),
-      parseF(p?.cumulativeTotalRevenueUSD),
+      sanitizeCumulative(parseF(p?.cumulativeBorrowUSD), snapshotVolumeSum),
+      sanitizeCumulative(parseF(p?.cumulativeTotalRevenueUSD), snapshotFeesSum),
       clean,
-      parseF(p?.totalBorrowBalanceUSD),
+      { totalBorrowUSD: parseF(p?.totalBorrowBalanceUSD) },
+    ),
+    snapshots: clean,
+  };
+}
+
+function normalizeMessariStaking(slug: string, data: MessariStakingData): ProtocolDetail {
+  const p = data.protocols[0];
+
+  // Estimate the daily fee from the cumulative protocol/supply-side ratio. Most
+  // staking deployments leave dailyProtocolSideRevenueUSD at 0 even though the
+  // cumulative is correct, so we back-derive it for a continuous fees chart.
+  const cumulativeSupply = parseF(p?.cumulativeSupplySideRevenueUSD);
+  const cumulativeProtocol = parseF(p?.cumulativeProtocolSideRevenueUSD);
+  const protocolFeeRatio = cumulativeSupply > 0
+    ? cumulativeProtocol / cumulativeSupply
+    : 0;
+
+  const snapshots: ProtocolDaySnapshot[] = data.financialsDailySnapshots
+    .map((s) => {
+      const supply = parseF(s.dailySupplySideRevenueUSD);
+      const reportedProtocol = parseF(s.dailyProtocolSideRevenueUSD);
+      // Use the reported daily fee if present, else estimate from the ratio.
+      const fees = reportedProtocol > 0 ? reportedProtocol : supply * protocolFeeRatio;
+      return {
+        timestamp: parseInt(s.timestamp),
+        tvlUSD: parseF(s.totalValueLockedUSD),
+        volumeUSD: supply,
+        feesUSD: fees,
+      };
+    })
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const clean = filterFeeOutliers(snapshots);
+  const snapshotVolumeSum = clean.reduce((acc, s) => acc + s.volumeUSD, 0);
+  const snapshotFeesSum = clean.reduce((acc, s) => acc + s.feesUSD, 0);
+
+  // Estimate APR from the most recent 30 days of supply-side revenue vs current TVL.
+  const tvl = parseF(p?.totalValueLockedUSD);
+  const last30 = clean.slice(-30);
+  const last30Yield = last30.reduce((sum, d) => sum + d.volumeUSD, 0);
+  const stakingAPR = tvl > 0 && last30.length > 0
+    ? (last30Yield / tvl) * (365 / last30.length) * 100
+    : 0;
+
+  return {
+    summary: computeSummary(
+      slug,
+      tvl,
+      sanitizeCumulative(cumulativeSupply, snapshotVolumeSum),
+      sanitizeCumulative(cumulativeProtocol, snapshotFeesSum),
+      clean,
+      { stakingAPR },
     ),
     snapshots: clean,
   };
@@ -256,6 +366,10 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
     case 'messari-lending': {
       const data = await queryProtocolSubgraph<MessariLendingData>(config.subgraphId, MESSARI_LENDING_QUERY);
       return normalizeMessariLending(config.slug, data);
+    }
+    case 'messari-staking': {
+      const data = await queryProtocolSubgraph<MessariStakingData>(config.subgraphId, MESSARI_STAKING_QUERY);
+      return normalizeMessariStaking(config.slug, data);
     }
     case 'uniswap-v3': {
       const data = await queryProtocolSubgraph<UniswapV3Data>(config.subgraphId, UNISWAP_V3_QUERY);
