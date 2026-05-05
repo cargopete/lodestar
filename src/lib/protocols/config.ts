@@ -19,6 +19,8 @@ export interface ProtocolConfig {
   website: string;
   chains: string[];
   color: string;
+  /** Known upstream data quality issue — surfaced as a notice on the detail page. */
+  knownIssues?: string;
 }
 
 export const PROTOCOLS: ProtocolConfig[] = [
@@ -98,6 +100,7 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://morpho.org',
     chains: ['Ethereum'],
     color: '#2470FF',
+    knownIssues: 'The upstream subgraph writes $0 to dailyProtocolSideRevenueUSD across all snapshots despite a non-zero cumulative figure. Daily fee charts show no data until this is fixed upstream.',
   },
   {
     slug: 'spark-lend-gnosis',

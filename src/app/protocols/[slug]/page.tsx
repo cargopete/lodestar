@@ -303,6 +303,11 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
           <CardContent>
             {isLoading ? (
               <ChartSkeleton height="180px" />
+            ) : config.knownIssues ? (
+              <div className="h-[180px] flex flex-col items-center justify-center gap-2 text-center px-4">
+                <p className="text-[11px] font-medium text-[var(--yellow,#f59e0b)]">Upstream data issue</p>
+                <p className="text-[11px] text-[var(--text-muted)] max-w-xs">{config.knownIssues}</p>
+              </div>
             ) : (
               <div className="h-[180px]">
                 <ResponsiveContainer width="100%" height="100%">
