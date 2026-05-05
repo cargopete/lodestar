@@ -175,7 +175,7 @@ export default function IndexerDetailPage({
     (sum, p) => sum + weiToGRT(p.rewardsEarned ?? '0') + weiToGRT(p.queryFeesCollected ?? '0'),
     0
   );
-  const hasMultipleServices = extraAllocated > 0 || extraRewards > 0;
+  const hasMultipleServices = nonSubgraphProvisions.length > 0;
   const totalAllocated = allocated + extraAllocated;
   const totalAllocationCount = indexer.allocationCount + extraAllocationCount;
   const totalRewardsCombined = totalRewards + extraRewards;
