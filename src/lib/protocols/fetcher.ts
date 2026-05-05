@@ -143,6 +143,38 @@ const MESSARI_STAKING_QUERY = `{
   }
 }`;
 
+// --- Uniswap V2 native schema ---
+//
+// V2 has no fees field on either the factory or the daily snapshot. Every swap
+// pays a flat 0.30% to LPs, so fees are derived from volume at query time.
+
+const UNISWAP_V2_FEE_RATE = 0.003;
+const UNISWAP_V2_FACTORY_ETH = '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f';
+
+interface UniswapV2Data {
+  uniswapFactory: {
+    totalVolumeUSD: string;
+    totalLiquidityUSD: string;
+  } | null;
+  uniswapDayDatas: Array<{
+    date: string;
+    dailyVolumeUSD: string;
+    totalLiquidityUSD: string;
+  }>;
+}
+
+const UNISWAP_V2_QUERY = `{
+  uniswapFactory(id: "${UNISWAP_V2_FACTORY_ETH}") {
+    totalVolumeUSD
+    totalLiquidityUSD
+  }
+  uniswapDayDatas(first: 90, orderBy: date, orderDirection: desc) {
+    date
+    dailyVolumeUSD
+    totalLiquidityUSD
+  }
+}`;
+
 // --- Uniswap V3 native schema ---
 
 interface UniswapV3Data {
@@ -331,6 +363,34 @@ function normalizeMessariStaking(slug: string, data: MessariStakingData): Protoc
   };
 }
 
+function normalizeUniswapV2(slug: string, data: UniswapV2Data): ProtocolDetail {
+  const f = data.uniswapFactory;
+  const totalVolume = parseF(f?.totalVolumeUSD);
+  const snapshots: ProtocolDaySnapshot[] = data.uniswapDayDatas
+    .map((s) => {
+      const volumeUSD = parseF(s.dailyVolumeUSD);
+      return {
+        timestamp: parseInt(s.date),
+        tvlUSD: parseF(s.totalLiquidityUSD),
+        volumeUSD,
+        feesUSD: volumeUSD * UNISWAP_V2_FEE_RATE,
+      };
+    })
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const clean = filterFeeOutliers(snapshots);
+  return {
+    summary: computeSummary(
+      slug,
+      parseF(f?.totalLiquidityUSD),
+      totalVolume,
+      totalVolume * UNISWAP_V2_FEE_RATE,
+      clean,
+    ),
+    snapshots: clean,
+  };
+}
+
 function normalizeUniswapV3(slug: string, data: UniswapV3Data): ProtocolDetail {
   const f = data.factories[0];
   const snapshots: ProtocolDaySnapshot[] = data.uniswapDayDatas
@@ -370,6 +430,10 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
     case 'messari-staking': {
       const data = await queryProtocolSubgraph<MessariStakingData>(config.subgraphId, MESSARI_STAKING_QUERY);
       return normalizeMessariStaking(config.slug, data);
+    }
+    case 'uniswap-v2': {
+      const data = await queryProtocolSubgraph<UniswapV2Data>(config.subgraphId, UNISWAP_V2_QUERY);
+      return normalizeUniswapV2(config.slug, data);
     }
     case 'uniswap-v3': {
       const data = await queryProtocolSubgraph<UniswapV3Data>(config.subgraphId, UNISWAP_V3_QUERY);

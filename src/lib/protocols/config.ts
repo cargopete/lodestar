@@ -2,6 +2,7 @@ export type SchemaType =
   | 'messari-dex'
   | 'messari-lending'
   | 'messari-staking'
+  | 'uniswap-v2'
   | 'uniswap-v3';
 
 export type ProtocolCategory =
@@ -34,6 +35,17 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://uniswap.org',
     chains: ['Ethereum'],
     color: '#FF007A',
+  },
+  {
+    slug: 'uniswap-v2',
+    name: 'Uniswap V2',
+    category: 'DEX',
+    description: 'The original constant-product AMM that proved permissionless token swaps at scale on Ethereum. Flat 0.30% fee, still the deepest liquidity venue for many long-tail ERC-20 pairs.',
+    subgraphId: 'GmSczqdCDZ3hJeYY9JphwsADn5rePUzUKm8EZcVuhRAm',
+    schemaType: 'uniswap-v2',
+    website: 'https://uniswap.org',
+    chains: ['Ethereum'],
+    color: '#FF6699',
   },
   {
     slug: 'uniswap-v3-polygon',
