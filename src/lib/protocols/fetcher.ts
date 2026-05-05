@@ -1,4 +1,9 @@
-import { POLYMARKET_OI_DEPLOYMENT, type ProtocolConfig } from './config';
+import {
+  POLYMARKET_OI_DEPLOYMENT,
+  POLYMARKET_MAIN_DEPLOYMENT,
+  POLYMARKET_RESOLUTION_DEPLOYMENT,
+  type ProtocolConfig,
+} from './config';
 
 export interface ProtocolDaySnapshot {
   timestamp: number; // unix seconds
@@ -21,6 +26,39 @@ export interface ProtocolSummary {
 export interface ProtocolDetail {
   summary: ProtocolSummary;
   snapshots: ProtocolDaySnapshot[];
+  /**
+   * Category-specific extension. Populated for protocols whose native data
+   * shape doesn't fit the standard TVL/Volume/Fees + 90d-snapshot pattern
+   * (currently: Prediction Markets). The detail page reads this when the
+   * protocol's category is configured for a tailored layout.
+   */
+  predictionMarkets?: PredictionMarketsDetail;
+}
+
+export interface PredictionMarketsDetail {
+  totalMarkets: number;
+  activeMarkets: number;
+  resolvedMarkets: number;
+  totalTraders: number;
+  totalTrades: number;
+  avgTradeSize: number;
+  marketCountWithOI: number;
+  disputedCount: number;
+  recentResolutions: Array<{
+    id: string;
+    title: string;
+    outcome: 'YES' | 'NO' | 'PARTIAL' | 'UNRESOLVED';
+    outcomePrice: number;       // 0..1
+    resolvedAt: number;          // unix seconds
+    wasDisputed: boolean;
+    flagged: boolean;
+  }>;
+  topMarketsByOI: Array<{
+    id: string;
+    amountUSD: number;
+    splitCount: number;
+    mergeCount: number;
+  }>;
 }
 
 // --- Generic gateway query ---
@@ -254,11 +292,36 @@ interface PolymarketOIData {
   // Used as the "active OI" headline because globalOpenInterests.amount is
   // inflated by resolved-market dead money across 700k+ historical markets.
   marketOpenInterests: Array<{
-    amount: string; // decimal-scaled USDC
+    id: string;
+    amount: string;       // decimal-scaled USDC
+    splitCount: string;
+    mergeCount: string;
   }>;
   globalOpenInterests: Array<{
     marketCount: number;
   }>;
+}
+
+interface PolymarketMainData {
+  globals: Array<{
+    numConditions: string;
+    numOpenConditions: string;
+    numClosedConditions: string;
+    numTraders: string;
+  }>;
+}
+
+interface PolymarketResolutionData {
+  recentResolutions: Array<{
+    id: string;
+    status: string;
+    flagged: boolean;
+    wasDisputed: boolean;
+    price: string;        // 1e18-scaled outcome
+    lastUpdateTimestamp: string;
+    ancillaryData: string;
+  }>;
+  disputedSample: Array<{ id: string }>;
 }
 
 const POLYMARKET_ORDERBOOK_QUERY = `{
@@ -272,27 +335,125 @@ const POLYMARKET_ORDERBOOK_QUERY = `{
 
 const POLYMARKET_OI_QUERY = `{
   marketOpenInterests(first: 200, orderBy: amount, orderDirection: desc, where: {amount_lt: "10000000000"}) {
+    id
     amount
+    splitCount
+    mergeCount
   }
   globalOpenInterests(first: 1) {
     marketCount
   }
 }`;
 
+const POLYMARKET_MAIN_QUERY = `{
+  globals(first: 1) {
+    numConditions
+    numOpenConditions
+    numClosedConditions
+    numTraders
+  }
+}`;
+
+// Resolution returns recent resolved markets (ancillaryData carries the human-
+// readable question text) plus a sample of disputed markets used to size a
+// "Disputed" headline. The disputed bucket is capped at 1000 by the subgraph;
+// for our purposes the lower-bound is sufficient signal.
+const POLYMARKET_RESOLUTION_QUERY = `{
+  recentResolutions: marketResolutions(
+    first: 12,
+    orderBy: lastUpdateTimestamp,
+    orderDirection: desc,
+    where: {status: "resolved"}
+  ) {
+    id
+    status
+    flagged
+    wasDisputed
+    price
+    lastUpdateTimestamp
+    ancillaryData
+  }
+  disputedSample: marketResolutions(first: 1000, where: {wasDisputed: true}) {
+    id
+  }
+}`;
+
+// MarketResolution.ancillaryData is the UMA-encoded UTF-8 prompt sent to the
+// optimistic oracle. It always begins with "q: title: <TITLE>, description: ..."
+// for Polymarket-issued questions. We extract just the title for the UI.
+function decodeMarketTitle(hexAncillary: string): string {
+  if (!hexAncillary || !hexAncillary.startsWith('0x')) return '';
+  try {
+    const buf = Buffer.from(hexAncillary.slice(2), 'hex');
+    const text = buf.toString('utf-8');
+    const match = text.match(/title:\s*(.*?)(?:,\s*description:|$)/);
+    return match ? match[1].trim() : '';
+  } catch {
+    return '';
+  }
+}
+
+function classifyOutcome(priceWei: string): {
+  outcome: 'YES' | 'NO' | 'PARTIAL' | 'UNRESOLVED';
+  outcomePrice: number;
+} {
+  const p = parseF(priceWei) / 1e18;
+  if (!Number.isFinite(p)) return { outcome: 'UNRESOLVED', outcomePrice: 0 };
+  if (p >= 0.99) return { outcome: 'YES', outcomePrice: p };
+  if (p <= 0.01) return { outcome: 'NO', outcomePrice: p };
+  return { outcome: 'PARTIAL', outcomePrice: p };
+}
+
 function normalizePolymarket(
   slug: string,
   orderbook: PolymarketOrderbookData,
   oi: PolymarketOIData,
+  main: PolymarketMainData,
+  resolution: PolymarketResolutionData,
 ): ProtocolDetail {
   const ob = orderbook.ordersMatchedGlobals[0];
   const tvlUSD = oi.marketOpenInterests.reduce((sum, m) => sum + parseF(m.amount), 0);
   const cumulativeVolumeUSD = parseF(ob?.scaledCollateralVolume);
   const cumulativeFeesUSD = parseF(ob?.totalFees) / POLYMARKET_USDC_DECIMALS;
 
+  const g = main.globals[0];
+  const recentResolutions = resolution.recentResolutions.map((r) => {
+    const { outcome, outcomePrice } = classifyOutcome(r.price);
+    return {
+      id: r.id,
+      title: decodeMarketTitle(r.ancillaryData),
+      outcome,
+      outcomePrice,
+      resolvedAt: parseInt(r.lastUpdateTimestamp),
+      wasDisputed: r.wasDisputed,
+      flagged: r.flagged,
+    };
+  });
+
+  const topMarketsByOI = oi.marketOpenInterests.slice(0, 10).map((m) => ({
+    id: m.id,
+    amountUSD: parseF(m.amount),
+    splitCount: parseInt(m.splitCount),
+    mergeCount: parseInt(m.mergeCount),
+  }));
+
+  const predictionMarkets: PredictionMarketsDetail = {
+    totalMarkets: parseInt(g?.numConditions ?? '0'),
+    activeMarkets: parseInt(g?.numOpenConditions ?? '0'),
+    resolvedMarkets: parseInt(g?.numClosedConditions ?? '0'),
+    totalTraders: parseInt(g?.numTraders ?? '0'),
+    totalTrades: parseInt(ob?.tradesQuantity ?? '0'),
+    avgTradeSize: parseF(ob?.averageTradeSize),
+    marketCountWithOI: oi.globalOpenInterests[0]?.marketCount ?? 0,
+    disputedCount: resolution.disputedSample.length,
+    recentResolutions,
+    topMarketsByOI,
+  };
+
   // No daily aggregate entity exists on the orderbook subgraph, and
   // paginating through ~5M trades/day to derive a 30d window is not feasible
-  // at request time. We return an empty snapshots array; the directory shows
-  // lifetime totals and the detail page renders cumulative-only metrics.
+  // at request time. We return an empty snapshots array; the detail page
+  // renders the predictionMarkets-tailored layout instead.
   return {
     summary: {
       slug,
@@ -303,6 +464,7 @@ function normalizePolymarket(
       fees30dUSD: 0,
     },
     snapshots: [],
+    predictionMarkets,
   };
 }
 
@@ -756,11 +918,13 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
       return normalizeEtherFi(config.slug, rebases.rebaseEvents, ethPriceUSD);
     }
     case 'polymarket': {
-      const [orderbook, oi] = await Promise.all([
+      const [orderbook, oi, main, resolution] = await Promise.all([
         queryDeployment<PolymarketOrderbookData>(config.subgraphId, POLYMARKET_ORDERBOOK_QUERY),
         queryDeployment<PolymarketOIData>(POLYMARKET_OI_DEPLOYMENT, POLYMARKET_OI_QUERY),
+        queryDeployment<PolymarketMainData>(POLYMARKET_MAIN_DEPLOYMENT, POLYMARKET_MAIN_QUERY),
+        queryDeployment<PolymarketResolutionData>(POLYMARKET_RESOLUTION_DEPLOYMENT, POLYMARKET_RESOLUTION_QUERY),
       ]);
-      return normalizePolymarket(config.slug, orderbook, oi);
+      return normalizePolymarket(config.slug, orderbook, oi, main, resolution);
     }
   }
 }

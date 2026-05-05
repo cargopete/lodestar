@@ -218,6 +218,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
 // Maintained by the Polymarket team (per github.com/Polymarket/polymarket-subgraph
 // and PaulieB14/graph-polymarket-mcp).
 export const POLYMARKET_OI_DEPLOYMENT = 'QmbT2MmS2VGbGihiTUmWk6GMc2QYqoT9ZhiupUicYMWt6H';
+export const POLYMARKET_MAIN_DEPLOYMENT = 'QmdyCguLEisTtQFveEkvMhTH7UzjyhnrF9kpvhYeG4QX8a';
+export const POLYMARKET_RESOLUTION_DEPLOYMENT = 'QmZnnrHWCB1Mb8dxxXDxfComjNdaGyRC66W8derjn3XDPg';
 
 export function getProtocol(slug: string): ProtocolConfig | undefined {
   return PROTOCOLS.find(p => p.slug === slug);
