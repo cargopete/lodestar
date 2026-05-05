@@ -16,7 +16,7 @@ const CATEGORY_STYLES: Record<string, string> = {
 };
 
 const CATEGORY_FILTERS: Array<'All' | ProtocolCategory> = [
-  'All', 'DEX', 'Lending', 'Liquid Staking',
+  'All', 'DEX', 'Lending', 'Liquid Staking', 'Yield Aggregator',
 ];
 
 type SortKey = 'tvl' | 'volume' | 'fees';
