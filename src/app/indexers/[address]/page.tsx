@@ -3,7 +3,7 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName, useEnrichedIndexers, useIndexerStatus } from '@/hooks/useNetworkStats';
+import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName, useEnrichedIndexers, useIndexerStatus, useIndexerPayments } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
   formatGRT,
@@ -108,6 +108,7 @@ export default function IndexerDetailPage({
   const { data: ensData } = useENSName(address);
   const { data: enrichedData } = useEnrichedIndexers();
   const { data: statusData, isLoading: statusLoading, dataUpdatedAt: statusUpdatedAt } = useIndexerStatus(address);
+  const { data: paymentsData } = useIndexerPayments(address);
 
   // Pull pre-computed fields from enriched cache (rolling APY, score)
   const enrichedIndexer = enrichedData?.indexers?.find(
@@ -171,10 +172,12 @@ export default function IndexerDetailPage({
   );
   const extraAllocated = nonSubgraphProvisions.reduce((sum, p) => sum + weiToGRT(p.tokensAllocated), 0);
   const extraAllocationCount = nonSubgraphProvisions.reduce((sum, p) => sum + p.allocationCount, 0);
+  // TAP fees collected on-chain via GraphTally (receiver = indexer address)
+  const tapCollected = paymentsData?.totalCollected ? weiToGRT(paymentsData.totalCollected) : 0;
   const extraRewards = nonSubgraphProvisions.reduce(
     (sum, p) => sum + weiToGRT(p.rewardsEarned ?? '0') + weiToGRT(p.queryFeesCollected ?? '0'),
     0
-  );
+  ) + tapCollected;
   const hasMultipleServices = nonSubgraphProvisions.length > 0;
   const totalAllocated = allocated + extraAllocated;
   const totalAllocationCount = indexer.allocationCount + extraAllocationCount;
