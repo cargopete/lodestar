@@ -147,6 +147,17 @@ export const PROTOCOLS: ProtocolConfig[] = [
     chains: ['Ethereum'],
     color: '#00A3FF',
   },
+  {
+    slug: 'aerodrome',
+    name: 'Aerodrome',
+    category: 'DEX',
+    description: 'Largest DEX on Base by TVL and volume. ve(3,3) AMM combining stable, volatile, and concentrated-liquidity (Slipstream) pools, with veAERO emissions directing liquidity.',
+    subgraphId: 'GENunSHWLBXm59mBSgPzQ8metBEp9YDfdqwFr91Av1UM',
+    schemaType: 'uniswap-v3',
+    website: 'https://aerodrome.finance',
+    chains: ['Base'],
+    color: '#1A33FF',
+  },
 ];
 
 export function getProtocol(slug: string): ProtocolConfig | undefined {
