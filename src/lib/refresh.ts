@@ -545,9 +545,10 @@ export async function refreshIndexers(opts: {
       id: indexer.id,
       rewardCutPPM: indexer.indexingRewardCut,
       queryFeeCutPPM: indexer.queryFeeCut,
-      effectiveCutPercent: indexer.indexingRewardEffectiveCut
-        ? parseFloat(indexer.indexingRewardEffectiveCut) * 100
-        : null,
+      effectiveCutPercent: (() => {
+        const v = indexer.indexingRewardEffectiveCut ? parseFloat(indexer.indexingRewardEffectiveCut) : null;
+        return v !== null && v >= 0 && v <= 1 ? v * 100 : null;
+      })(),
       queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected),
       netFlowGRT: activity.netFlowGRT,
       delegatedGRT: delegated,
