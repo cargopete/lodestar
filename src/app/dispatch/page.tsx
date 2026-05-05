@@ -1026,14 +1026,21 @@ function ConsumerHistory() {
 
 // ── Chainlist Widget ──────────────────────────────────────────────────────────
 
-const DISPATCH_RPC_URL = 'https://gateway.lodestar-dashboard.com/rpc/42161';
+const DISPATCH_CHAINS = [
+  { id: 1,     hexId: '0x1',    name: 'Ethereum',         symbol: 'ETH', explorer: 'https://etherscan.io', initial: 'E', color: '#627EEA', builtIn: true },
+  { id: 42161, hexId: '0xA4B1', name: 'Arbitrum One',     symbol: 'ETH', explorer: 'https://arbiscan.io',  initial: 'A', color: '#1b4add', builtIn: false },
+  { id: 8453,  hexId: '0x2105', name: 'Base',             symbol: 'ETH', explorer: 'https://basescan.org', initial: 'B', color: '#0052FF', builtIn: false },
+  { id: 56,    hexId: '0x38',   name: 'BNB Smart Chain',  symbol: 'BNB', explorer: 'https://bscscan.com',  initial: 'B', color: '#F3BA2F', builtIn: false },
+] as const;
+
+const GATEWAY_BASE = 'https://gateway.lodestar-dashboard.com/rpc';
 
 function ChainlistWidget() {
-  const [added, setAdded] = useState(false);
+  const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
   const [addError, setAddError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
-  const addToMetaMask = async () => {
+  const addToMetaMask = async (chain: typeof DISPATCH_CHAINS[number]) => {
     setAddError(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const eth = (window as any).ethereum;
@@ -1042,23 +1049,23 @@ function ChainlistWidget() {
       await eth.request({
         method: 'wallet_addEthereumChain',
         params: [{
-          chainId: '0xA4B1', // 42161
-          chainName: 'Arbitrum One',
-          nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-          rpcUrls: [DISPATCH_RPC_URL],
-          blockExplorerUrls: ['https://arbiscan.io'],
+          chainId: chain.hexId,
+          chainName: chain.name,
+          nativeCurrency: { name: chain.symbol, symbol: chain.symbol, decimals: 18 },
+          rpcUrls: [`${GATEWAY_BASE}/${chain.id}`],
+          blockExplorerUrls: [chain.explorer],
         }],
       });
-      setAdded(true);
+      setAddedIds(prev => new Set(prev).add(chain.id));
     } catch (e) {
       setAddError(String(e).split('(')[0].trim());
     }
   };
 
-  const copyUrl = () => {
-    navigator.clipboard.writeText(DISPATCH_RPC_URL).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+  const copyUrl = (chainId: number) => {
+    navigator.clipboard.writeText(`${GATEWAY_BASE}/${chainId}`).then(() => {
+      setCopiedId(chainId);
+      setTimeout(() => setCopiedId(null), 1500);
     });
   };
 
@@ -1072,38 +1079,45 @@ function ChainlistWidget() {
       </CardHeader>
       <CardContent className="space-y-3">
 
-        {/* Network card */}
-        <div className="rounded-[var(--radius-button)] border border-[var(--border)] overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#1b4add] flex items-center justify-center text-white text-[11px] font-bold shrink-0">A</div>
-              <div className="min-w-0">
-                <p className="text-[13px] font-medium text-[var(--text)]">Arbitrum One</p>
-                <p className="text-[11px] text-[var(--text-muted)]">Chain ID 42161 · Standard + Archive</p>
+        {/* Network cards */}
+        <div className="rounded-[var(--radius-button)] border border-[var(--border)] overflow-hidden divide-y divide-[var(--border)]">
+          {DISPATCH_CHAINS.map((chain) => {
+            const rpcUrl = `${GATEWAY_BASE}/${chain.id}`;
+            const added = addedIds.has(chain.id);
+            return (
+              <div key={chain.id}>
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0" style={{ backgroundColor: chain.color }}>{chain.initial}</div>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-medium text-[var(--text)]">{chain.name}</p>
+                      <p className="text-[11px] text-[var(--text-muted)]">Chain ID {chain.id} · Standard + Archive</p>
+                    </div>
+                  </div>
+                  {chain.builtIn ? (
+                    <span className="shrink-0 px-3 py-1.5 text-[12px] font-medium text-[var(--text-faint)]">Built-in</span>
+                  ) : (
+                    <button
+                      onClick={() => addToMetaMask(chain)}
+                      disabled={added}
+                      className={cn(
+                        'shrink-0 px-3 py-1.5 text-[12px] font-medium rounded-[var(--radius-button)] transition-colors',
+                        added ? 'bg-[var(--green-dim)] text-[var(--green)] cursor-default' : 'bg-[var(--accent)] text-white hover:opacity-90',
+                      )}
+                    >
+                      {added ? '✓ Added' : 'Add to MetaMask'}
+                    </button>
+                  )}
+                </div>
+                <div className="border-t border-[var(--border)] px-4 py-2.5 flex items-center justify-between gap-3 bg-[var(--bg-elevated)]">
+                  <code className="text-[11px] font-mono text-[var(--text-faint)] truncate">{rpcUrl}</code>
+                  <button onClick={() => copyUrl(chain.id)} className="shrink-0 text-[11px] text-[var(--accent)] hover:opacity-80 transition-opacity font-medium">
+                    {copiedId === chain.id ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
               </div>
-            </div>
-            <button
-              onClick={addToMetaMask}
-              disabled={added}
-              className={cn(
-                'shrink-0 px-3 py-1.5 text-[12px] font-medium rounded-[var(--radius-button)] transition-colors',
-                added
-                  ? 'bg-[var(--green-dim)] text-[var(--green)] cursor-default'
-                  : 'bg-[var(--accent)] text-white hover:opacity-90',
-              )}
-            >
-              {added ? '✓ Added' : 'Add to MetaMask'}
-            </button>
-          </div>
-          <div className="border-t border-[var(--border)] px-4 py-2.5 flex items-center justify-between gap-3 bg-[var(--bg-elevated)]">
-            <code className="text-[11px] font-mono text-[var(--text-faint)] truncate">{DISPATCH_RPC_URL}</code>
-            <button
-              onClick={copyUrl}
-              className="shrink-0 text-[11px] text-[var(--accent)] hover:opacity-80 transition-opacity font-medium"
-            >
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
+            );
+          })}
         </div>
 
         {addError && <p className="text-[11px] text-[var(--red)] font-mono">{addError}</p>}
@@ -1119,9 +1133,9 @@ function ChainlistWidget() {
 
         {/* Quick curl */}
         <div>
-          <p className="text-[10px] text-[var(--text-muted)] mb-1.5">Quick test</p>
+          <p className="text-[10px] text-[var(--text-muted)] mb-1.5">Quick test (Arbitrum One)</p>
           <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] overflow-x-auto">
-            <pre className="text-[11px] font-mono text-[var(--text-muted)] whitespace-pre">{`curl ${DISPATCH_RPC_URL} \\
+            <pre className="text-[11px] font-mono text-[var(--text-muted)] whitespace-pre">{`curl ${GATEWAY_BASE}/42161 \\
   -H "X-Consumer-Address: 0xYOUR_ADDRESS" \\
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'`}</pre>
           </div>
@@ -1242,9 +1256,9 @@ export default function DispatchPage() {
           }
         />
         <StatCard
-          label="Chain"
-          value="Arb One"
-          subtitle="chain ID 42161"
+          label="Chains"
+          value="4 chains"
+          subtitle="ETH · Arb · Base · BNB"
           icon={
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
