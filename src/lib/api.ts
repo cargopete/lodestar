@@ -290,6 +290,7 @@ export async function fetchIndexerStatus(address: string): Promise<{
   deployments: Array<{
     deploymentId: string;
     ipfsHash: string;
+    displayName: string | null;
     allocatedTokens: string;
     signalledTokens: string;
     stakedTokens: string;

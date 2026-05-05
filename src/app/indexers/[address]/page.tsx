@@ -68,8 +68,10 @@ interface IndexerDetail {
     createdAtEpoch: number;
     subgraphDeployment: {
       id: string;
+      ipfsHash: string;
       signalledTokens: string;
       stakedTokens: string;
+      versions: Array<{ subgraph: { metadata: { displayName: string } | null } | null }>;
     };
   }>;
   delegators: Array<{
@@ -853,7 +855,8 @@ export default function IndexerDetailPage({
                 <tbody className="divide-y divide-[var(--border)]">
                   {(statusData?.deployments ?? indexer.allocations.map((a) => ({
                     deploymentId: a.subgraphDeployment.id,
-                    ipfsHash: '',
+                    ipfsHash: a.subgraphDeployment.ipfsHash ?? '',
+                    displayName: a.subgraphDeployment.versions?.[0]?.subgraph?.metadata?.displayName ?? null,
                     allocatedTokens: a.allocatedTokens,
                     signalledTokens: a.subgraphDeployment.signalledTokens,
                     stakedTokens: a.subgraphDeployment.stakedTokens,
@@ -885,10 +888,13 @@ export default function IndexerDetailPage({
                           <div className="flex flex-col">
                             <Link
                               href={dep.ipfsHash ? `/subgraphs/${dep.ipfsHash}` : '#'}
-                              className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+                              className="text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors truncate max-w-[200px]"
                             >
-                              {shortenAddress(dep.deploymentId)}
+                              {dep.displayName ?? shortenAddress(dep.deploymentId)}
                             </Link>
+                            <span className="text-[10px] font-mono text-[var(--text-faint)]">
+                              {dep.ipfsHash ? `${dep.ipfsHash.slice(0, 8)}...${dep.ipfsHash.slice(-6)}` : shortenAddress(dep.deploymentId)}
+                            </span>
                             {dep.network && (
                               <span className="text-[10px] text-[var(--text-faint)]">{dep.network}</span>
                             )}

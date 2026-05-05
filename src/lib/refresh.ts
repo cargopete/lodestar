@@ -591,9 +591,10 @@ export async function refreshIndexers(opts: {
         undelegationsIn7d: activity.undelegations,
         netFlowGRT: activity.netFlowGRT,
       },
-      effectiveCut: indexer.indexingRewardEffectiveCut
-        ? parseFloat(indexer.indexingRewardEffectiveCut) * 100
-        : null,
+      effectiveCut: (() => {
+        const v = indexer.indexingRewardEffectiveCut ? parseFloat(indexer.indexingRewardEffectiveCut) : null;
+        return v !== null && v >= 0 && v <= 1 ? v * 100 : null;
+      })(),
       overDelegationDilution: indexer.overDelegationDilution
         ? parseFloat(indexer.overDelegationDilution) * 100
         : null,

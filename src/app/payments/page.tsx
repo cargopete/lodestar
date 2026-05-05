@@ -7,7 +7,7 @@ import { usePayments, useGRTPrice, useEnrichedIndexers } from '@/hooks/useNetwor
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
-import { weiToGRT, formatGRT, formatUSD, shortenAddress, formatRelativeTime, cn, GATEWAY_ALIASES } from '@/lib/utils';
+import { weiToGRT, formatGRT, formatUSD, shortenAddress, formatRelativeTime, cn, GATEWAY_ALIASES, GATEWAY_CANONICAL } from '@/lib/utils';
 import type { PaymentsEscrowAccount, PaymentsEscrowTransaction, GraphTallyTokensCollected } from '@/lib/queries';
 
 const ARBISCAN = 'https://arbiscan.io/address/';
@@ -164,9 +164,6 @@ function GatewayBreakdownCard({
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
                     <span className="font-medium text-sm text-[var(--text)]">{gw.name}</span>
-                    {gw.payerId === '0xdd6a6f76eb36b873c1c184e8b9b9e762fe216490' && (
-                      <Badge variant="default" className="text-[10px] px-1 py-0">NEW</Badge>
-                    )}
                   </div>
                   <span className="text-xs text-[var(--text-faint)]">{gw.receivers} indexers</span>
                 </div>
@@ -227,9 +224,6 @@ function GatewayBreakdownCard({
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
                         <span className="font-medium text-sm text-[var(--text)]">{gw.name}</span>
-                        {gw.payerId === '0xdd6a6f76eb36b873c1c184e8b9b9e762fe216490' && (
-                          <Badge variant="default" className="text-[10px] px-1 py-0">NEW</Badge>
-                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -294,21 +288,23 @@ function PaymentsInner() {
 
   const grtPrice = priceData?.price ?? 0;
 
-  // Per-gateway breakdown (computed from raw data)
+  // Per-gateway breakdown (computed from raw data, grouped by canonical address)
   const gatewayBreakdown = useMemo<GatewayStats[]>(() => {
     if (!data) return [];
-    const allPayers = new Set([
-      ...data.escrowAccounts.map(a => a.payer.id.toLowerCase()),
-      ...data.topCollectors.map(c => c.payer.id.toLowerCase()),
+    const canonical = (id: string) => GATEWAY_CANONICAL[id] ?? id;
+    const allCanonical = new Set([
+      ...data.escrowAccounts.map(a => canonical(a.payer.id.toLowerCase())),
+      ...data.topCollectors.map(c => canonical(c.payer.id.toLowerCase())),
     ]);
-    return Array.from(allPayers).map((payerId) => {
-      const accounts = data.escrowAccounts.filter(a => a.payer.id.toLowerCase() === payerId);
-      const collected = data.topCollectors.filter(c => c.payer.id.toLowerCase() === payerId);
+    return Array.from(allCanonical).map((canonicalId) => {
+      const aliases = new Set([canonicalId, ...Object.keys(GATEWAY_CANONICAL).filter(k => GATEWAY_CANONICAL[k] === canonicalId)]);
+      const accounts = data.escrowAccounts.filter(a => aliases.has(a.payer.id.toLowerCase()));
+      const collected = data.topCollectors.filter(c => aliases.has(c.payer.id.toLowerCase()));
       const totalEscrow = accounts.reduce((s, a) => s + BigInt(a.balance), BigInt(0));
       const totalCollected = collected.reduce((s, c) => s + BigInt(c.tokens), BigInt(0));
       return {
-        payerId,
-        name: GATEWAY_ALIASES[payerId] ?? shortenAddress(payerId),
+        payerId: canonicalId,
+        name: GATEWAY_ALIASES[canonicalId] ?? shortenAddress(canonicalId),
         receivers: new Set(accounts.map(a => a.receiver.id)).size,
         totalEscrow: weiToGRT(totalEscrow.toString()),
         totalCollected: weiToGRT(totalCollected.toString()),
@@ -316,24 +312,30 @@ function PaymentsInner() {
     }).sort((a, b) => b.totalEscrow - a.totalEscrow);
   }, [data]);
 
+  // Expand selected canonical gateway address to all aliases for filtering
+  const selectedGatewayAddresses = useMemo(() => {
+    if (!selectedGateway) return null;
+    return new Set([selectedGateway, ...Object.keys(GATEWAY_CANONICAL).filter(k => GATEWAY_CANONICAL[k] === selectedGateway)]);
+  }, [selectedGateway]);
+
   // Filtered slices (applied to all three panels)
   const filteredAccounts = useMemo(() =>
-    selectedGateway
-      ? (data?.escrowAccounts ?? []).filter(a => a.payer.id.toLowerCase() === selectedGateway)
+    selectedGatewayAddresses
+      ? (data?.escrowAccounts ?? []).filter(a => selectedGatewayAddresses.has(a.payer.id.toLowerCase()))
       : (data?.escrowAccounts ?? []),
-    [data, selectedGateway]
+    [data, selectedGatewayAddresses]
   );
   const filteredTransactions = useMemo(() =>
-    selectedGateway
-      ? (data?.recentTransactions ?? []).filter(tx => tx.payer.id.toLowerCase() === selectedGateway)
+    selectedGatewayAddresses
+      ? (data?.recentTransactions ?? []).filter(tx => selectedGatewayAddresses.has(tx.payer.id.toLowerCase()))
       : (data?.recentTransactions ?? []),
-    [data, selectedGateway]
+    [data, selectedGatewayAddresses]
   );
   const filteredCollectors = useMemo(() =>
-    selectedGateway
-      ? (data?.topCollectors ?? []).filter(c => c.payer.id.toLowerCase() === selectedGateway)
+    selectedGatewayAddresses
+      ? (data?.topCollectors ?? []).filter(c => selectedGatewayAddresses.has(c.payer.id.toLowerCase()))
       : (data?.topCollectors ?? []),
-    [data, selectedGateway]
+    [data, selectedGatewayAddresses]
   );
 
   // Stat card totals — reflect current filter

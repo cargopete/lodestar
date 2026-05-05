@@ -36,6 +36,7 @@ interface Allocation {
     ipfsHash: string;
     signalledTokens: string;
     stakedTokens: string;
+    versions: Array<{ subgraph: { metadata: { displayName: string } | null } | null }>;
   };
 }
 
@@ -56,6 +57,7 @@ interface StatusEntry {
 export interface IndexerDeploymentStatus {
   deploymentId: string;
   ipfsHash: string;
+  displayName: string | null;
   allocatedTokens: string;
   signalledTokens: string;
   stakedTokens: string;
@@ -186,6 +188,9 @@ export async function GET(
                 ipfsHash
                 signalledTokens
                 stakedTokens
+                versions(first: 1, orderBy: createdAt, orderDirection: desc) {
+                  subgraph { metadata { displayName } }
+                }
               }
             }
           }`);
@@ -224,10 +229,13 @@ export async function GET(
           const dep = alloc.subgraphDeployment;
           const s = statusMap.get(dep.ipfsHash);
 
+          const displayName = dep.versions?.[0]?.subgraph?.metadata?.displayName ?? null;
+
           if (!s) {
             return {
               deploymentId: dep.id,
               ipfsHash: dep.ipfsHash,
+              displayName,
               allocatedTokens: alloc.allocatedTokens,
               signalledTokens: dep.signalledTokens,
               stakedTokens: dep.stakedTokens,
@@ -260,6 +268,7 @@ export async function GET(
           return {
             deploymentId: dep.id,
             ipfsHash: dep.ipfsHash,
+            displayName,
             allocatedTokens: alloc.allocatedTokens,
             signalledTokens: dep.signalledTokens,
             stakedTokens: dep.stakedTokens,

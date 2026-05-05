@@ -76,8 +76,10 @@ export async function GET(
         createdAtEpoch: number;
         subgraphDeployment: {
           id: string;
+          ipfsHash: string;
           signalledTokens: string;
           stakedTokens: string;
+          versions: Array<{ subgraph: { metadata: { displayName: string } | null } | null }>;
         };
       }
       let allAllocations: Allocation[] = [];
@@ -95,8 +97,12 @@ export async function GET(
             createdAtEpoch
             subgraphDeployment {
               id
+              ipfsHash
               signalledTokens
               stakedTokens
+              versions(first: 1, orderBy: createdAt, orderDirection: desc) {
+                subgraph { metadata { displayName } }
+              }
             }
           }
         }`);
