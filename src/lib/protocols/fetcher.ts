@@ -143,6 +143,42 @@ const MESSARI_STAKING_QUERY = `{
   }
 }`;
 
+// --- Messari Yield Aggregator schema (used by Yearn V2 Ethereum and similar).
+//
+// Mirrors the Messari Staking shape: same field names, same dailyProtocolSide=0
+// quirk, same proportional fee back-derivation. The only difference is the
+// protocol-level entity is `yieldAggregators` instead of `protocols`.
+
+interface MessariYieldData {
+  yieldAggregators: Array<{
+    totalValueLockedUSD: string;
+    cumulativeSupplySideRevenueUSD: string;
+    cumulativeProtocolSideRevenueUSD: string;
+    cumulativeTotalRevenueUSD: string;
+  }>;
+  financialsDailySnapshots: Array<{
+    timestamp: string;
+    totalValueLockedUSD: string;
+    dailySupplySideRevenueUSD: string;
+    dailyProtocolSideRevenueUSD: string;
+  }>;
+}
+
+const MESSARI_YIELD_QUERY = `{
+  yieldAggregators(first: 1) {
+    totalValueLockedUSD
+    cumulativeSupplySideRevenueUSD
+    cumulativeProtocolSideRevenueUSD
+    cumulativeTotalRevenueUSD
+  }
+  financialsDailySnapshots(first: 90, orderBy: timestamp, orderDirection: desc) {
+    timestamp
+    totalValueLockedUSD
+    dailySupplySideRevenueUSD
+    dailyProtocolSideRevenueUSD
+  }
+}`;
+
 // --- Uniswap V3 native schema ---
 
 interface UniswapV3Data {
@@ -387,6 +423,57 @@ function normalizeMessariStaking(slug: string, data: MessariStakingData): Protoc
   };
 }
 
+function normalizeMessariYield(slug: string, data: MessariYieldData): ProtocolDetail {
+  // Same back-derivation pattern as normalizeMessariStaking: yield-aggregator
+  // subgraphs leave dailyProtocolSideRevenueUSD at 0 in snapshots while the
+  // cumulative figure is correct. We back-derive a daily protocol fee using
+  // the cumulative protocol/supply ratio so the fees chart renders.
+  const p = data.yieldAggregators[0];
+  const cumulativeSupply = parseF(p?.cumulativeSupplySideRevenueUSD);
+  const cumulativeProtocol = parseF(p?.cumulativeProtocolSideRevenueUSD);
+  const protocolFeeRatio = cumulativeSupply > 0
+    ? cumulativeProtocol / cumulativeSupply
+    : 0;
+
+  const snapshots: ProtocolDaySnapshot[] = data.financialsDailySnapshots
+    .map((s) => {
+      const supply = parseF(s.dailySupplySideRevenueUSD);
+      const reportedProtocol = parseF(s.dailyProtocolSideRevenueUSD);
+      const fees = reportedProtocol > 0 ? reportedProtocol : supply * protocolFeeRatio;
+      return {
+        timestamp: parseInt(s.timestamp),
+        tvlUSD: parseF(s.totalValueLockedUSD),
+        volumeUSD: supply,
+        feesUSD: fees,
+      };
+    })
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const clean = filterFeeOutliers(snapshots);
+  const snapshotVolumeSum = clean.reduce((acc, s) => acc + s.volumeUSD, 0);
+  const snapshotFeesSum = clean.reduce((acc, s) => acc + s.feesUSD, 0);
+
+  // 30d-window APY estimate, identical formula to Liquid Staking.
+  const tvl = parseF(p?.totalValueLockedUSD);
+  const last30 = clean.slice(-30);
+  const last30Yield = last30.reduce((sum, d) => sum + d.volumeUSD, 0);
+  const stakingAPR = tvl > 0 && last30.length > 0
+    ? (last30Yield / tvl) * (365 / last30.length) * 100
+    : 0;
+
+  return {
+    summary: computeSummary(
+      slug,
+      tvl,
+      sanitizeCumulative(cumulativeSupply, snapshotVolumeSum),
+      sanitizeCumulative(cumulativeProtocol, snapshotFeesSum),
+      clean,
+      { stakingAPR },
+    ),
+    snapshots: clean,
+  };
+}
+
 function normalizeEtherFi(
   slug: string,
   rebases: EtherFiData['rebaseEvents'],
@@ -490,6 +577,10 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
     case 'messari-staking': {
       const data = await queryProtocolSubgraph<MessariStakingData>(config.subgraphId, MESSARI_STAKING_QUERY);
       return normalizeMessariStaking(config.slug, data);
+    }
+    case 'messari-yield': {
+      const data = await queryProtocolSubgraph<MessariYieldData>(config.subgraphId, MESSARI_YIELD_QUERY);
+      return normalizeMessariYield(config.slug, data);
     }
     case 'uniswap-v3': {
       const data = await queryProtocolSubgraph<UniswapV3Data>(config.subgraphId, UNISWAP_V3_QUERY);

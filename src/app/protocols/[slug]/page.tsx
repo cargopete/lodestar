@@ -93,6 +93,16 @@ const CATEGORY_LABELS: Record<ProtocolCategory, CategoryLabels> = {
     cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
     cumulativeSub: 'all time',
   },
+  'Yield Aggregator': {
+    tvlLabel: 'Total Value Locked',
+    volumeLabel: '30d Yield to Depositors',
+    volumeChartTitle: 'Daily Yield (90 days)',
+    volumeTooltipLabel: 'Yield',
+    feesLabel: '30d Protocol Fees',
+    cumulativeLabel: 'Cumulative Yield',
+    cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
+    cumulativeSub: 'all time',
+  },
 };
 
 interface ExtraStat {
@@ -104,6 +114,9 @@ function getExtraStats(category: ProtocolCategory, summary?: ProtocolSummary): E
   if (!summary) return [];
   if (category === 'Liquid Staking' && summary.stakingAPR) {
     return [{ label: 'Staking APR (30d est.)', value: formatPercent(summary.stakingAPR) }];
+  }
+  if (category === 'Yield Aggregator' && summary.stakingAPR) {
+    return [{ label: 'Net APY (30d est.)', value: formatPercent(summary.stakingAPR) }];
   }
   return [];
 }
