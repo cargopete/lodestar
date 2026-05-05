@@ -1,4 +1,4 @@
-import type { ProtocolConfig } from './config';
+import { POLYMARKET_OI_DEPLOYMENT, type ProtocolConfig } from './config';
 
 export interface ProtocolDaySnapshot {
   timestamp: number; // unix seconds
@@ -35,6 +35,24 @@ async function queryProtocolSubgraph<T>(subgraphId: string, query: string): Prom
     body: JSON.stringify({ query }),
   });
   if (!res.ok) throw new Error(`Protocol subgraph request failed: ${res.status}`);
+  const json = await res.json();
+  if (json.errors) throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
+  return json.data as T;
+}
+
+// IPFS-pinned deployments that aren't registered as network Subgraphs but are
+// served by the gateway via /deployments/id/{hash}. Used for Polymarket where
+// the team publishes data through unregistered deployment hashes.
+async function queryDeployment<T>(ipfsHash: string, query: string): Promise<T> {
+  const apiKey = process.env.GRAPH_API_KEY;
+  if (!apiKey) throw new Error('GRAPH_API_KEY not configured');
+  const url = `https://gateway.thegraph.com/api/${apiKey}/deployments/id/${ipfsHash}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+  if (!res.ok) throw new Error(`Deployment request failed: ${res.status}`);
   const json = await res.json();
   if (json.errors) throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
   return json.data as T;
@@ -210,6 +228,83 @@ const UNISWAP_V2_QUERY = `{
     totalLiquidityUSD
   }
 }`;
+
+// --- Polymarket multi-deployment schema ---
+//
+// Polymarket data lives across two unregistered IPFS deployments served by
+// the gateway: an Orderbook subgraph (lifetime trade volume + fees + count)
+// and an Open Interest subgraph (aggregate USDC locked across markets).
+// We use the OI total as a TVL proxy. The orderbook subgraph has no daily
+// aggregate entity, so 30d windows are not computed for this protocol;
+// directory cells will render as 0 / "—" for the 30d columns.
+
+const POLYMARKET_USDC_DECIMALS = 1_000_000;
+
+interface PolymarketOrderbookData {
+  ordersMatchedGlobals: Array<{
+    tradesQuantity: string;
+    scaledCollateralVolume: string; // already decimal-scaled by the subgraph
+    totalFees: string;              // raw USDC, needs /1e6
+    averageTradeSize: string;
+  }>;
+}
+
+interface PolymarketOIData {
+  // Top markets by OI, excluding obvious single-market outliers (>$10B).
+  // Used as the "active OI" headline because globalOpenInterests.amount is
+  // inflated by resolved-market dead money across 700k+ historical markets.
+  marketOpenInterests: Array<{
+    amount: string; // decimal-scaled USDC
+  }>;
+  globalOpenInterests: Array<{
+    marketCount: number;
+  }>;
+}
+
+const POLYMARKET_ORDERBOOK_QUERY = `{
+  ordersMatchedGlobals(first: 1) {
+    tradesQuantity
+    scaledCollateralVolume
+    totalFees
+    averageTradeSize
+  }
+}`;
+
+const POLYMARKET_OI_QUERY = `{
+  marketOpenInterests(first: 200, orderBy: amount, orderDirection: desc, where: {amount_lt: "10000000000"}) {
+    amount
+  }
+  globalOpenInterests(first: 1) {
+    marketCount
+  }
+}`;
+
+function normalizePolymarket(
+  slug: string,
+  orderbook: PolymarketOrderbookData,
+  oi: PolymarketOIData,
+): ProtocolDetail {
+  const ob = orderbook.ordersMatchedGlobals[0];
+  const tvlUSD = oi.marketOpenInterests.reduce((sum, m) => sum + parseF(m.amount), 0);
+  const cumulativeVolumeUSD = parseF(ob?.scaledCollateralVolume);
+  const cumulativeFeesUSD = parseF(ob?.totalFees) / POLYMARKET_USDC_DECIMALS;
+
+  // No daily aggregate entity exists on the orderbook subgraph, and
+  // paginating through ~5M trades/day to derive a 30d window is not feasible
+  // at request time. We return an empty snapshots array; the directory shows
+  // lifetime totals and the detail page renders cumulative-only metrics.
+  return {
+    summary: {
+      slug,
+      tvlUSD,
+      cumulativeVolumeUSD,
+      cumulativeFeesUSD,
+      volume30dUSD: 0,
+      fees30dUSD: 0,
+    },
+    snapshots: [],
+  };
+}
 
 // --- Uniswap V3 native schema ---
 
@@ -659,6 +754,13 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
       ]);
       const ethPriceUSD = parseF(price.bundles[0]?.ethPriceUSD);
       return normalizeEtherFi(config.slug, rebases.rebaseEvents, ethPriceUSD);
+    }
+    case 'polymarket': {
+      const [orderbook, oi] = await Promise.all([
+        queryDeployment<PolymarketOrderbookData>(config.subgraphId, POLYMARKET_ORDERBOOK_QUERY),
+        queryDeployment<PolymarketOIData>(POLYMARKET_OI_DEPLOYMENT, POLYMARKET_OI_QUERY),
+      ]);
+      return normalizePolymarket(config.slug, orderbook, oi);
     }
   }
 }

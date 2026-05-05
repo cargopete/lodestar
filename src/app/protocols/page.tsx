@@ -13,10 +13,11 @@ const CATEGORY_STYLES: Record<string, string> = {
   'Lending': 'bg-[var(--green)]/10 text-[var(--green)]',
   'Liquid Staking': 'bg-[#00A3FF]/12 text-[#5BC2FF]',
   'Yield Aggregator': 'bg-[#0657F9]/12 text-[#6E92FF]',
+  'Prediction Markets': 'bg-[#2D9CDB]/12 text-[#5FB3E0]',
 };
 
 const CATEGORY_FILTERS: Array<'All' | ProtocolCategory> = [
-  'All', 'DEX', 'Lending', 'Liquid Staking', 'Yield Aggregator',
+  'All', 'DEX', 'Lending', 'Liquid Staking', 'Yield Aggregator', 'Prediction Markets',
 ];
 
 type SortKey = 'category' | 'tvl' | 'volume' | 'fees';
@@ -27,6 +28,7 @@ const CATEGORY_ORDER: Record<ProtocolCategory, number> = {
   'Lending': 1,
   'Liquid Staking': 2,
   'Yield Aggregator': 3,
+  'Prediction Markets': 4,
 };
 
 function CategoryBadge({ category }: { category: string }) {

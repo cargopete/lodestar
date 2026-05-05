@@ -5,13 +5,15 @@ export type SchemaType =
   | 'messari-yield'
   | 'uniswap-v2'
   | 'uniswap-v3'
-  | 'etherfi-native';
+  | 'etherfi-native'
+  | 'polymarket';
 
 export type ProtocolCategory =
   | 'DEX'
   | 'Lending'
   | 'Liquid Staking'
-  | 'Yield Aggregator';
+  | 'Yield Aggregator'
+  | 'Prediction Markets';
 
 export interface ProtocolConfig {
   slug: string;
@@ -194,7 +196,28 @@ export const PROTOCOLS: ProtocolConfig[] = [
     chains: ['Ethereum'],
     color: '#0657F9',
   },
+  {
+    slug: 'polymarket',
+    name: 'Polymarket',
+    category: 'Prediction Markets',
+    description: 'Largest decentralised prediction-market venue. CLOB-style orderbook on Polygon settling outcome shares against USDC collateral, with over a billion trades on $100B+ of lifetime notional.',
+    // The Polymarket-team deployments are pinned by IPFS hash on the gateway,
+    // not registered Subgraph IDs. The fetcher routes polymarket schemaType
+    // queries to the deployment endpoint.
+    subgraphId: 'QmVGA9vvNZtEquVzDpw8wnTFDxVjB6mavTRMTrKuUBhi4t',
+    schemaType: 'polymarket',
+    website: 'https://polymarket.com',
+    chains: ['Polygon'],
+    color: '#2D9CDB',
+    knownIssues: 'Headline TVL is total cumulative open interest (USDC locked into outstanding outcome tokens) and includes residual "dead money" from resolved markets where losing-side tokens were never burned. 30d windows are not currently computed for Polymarket as the orderbook subgraph has no daily aggregate entity; the directory shows lifetime totals instead.',
+  },
 ];
+
+// Deployment IPFS hashes for Polymarket subgraphs that aren't registered as
+// network Subgraphs but are exposed via the gateway's /deployments/id/ path.
+// Maintained by the Polymarket team (per github.com/Polymarket/polymarket-subgraph
+// and PaulieB14/graph-polymarket-mcp).
+export const POLYMARKET_OI_DEPLOYMENT = 'QmbT2MmS2VGbGihiTUmWk6GMc2QYqoT9ZhiupUicYMWt6H';
 
 export function getProtocol(slug: string): ProtocolConfig | undefined {
   return PROTOCOLS.find(p => p.slug === slug);

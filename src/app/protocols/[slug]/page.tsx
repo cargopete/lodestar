@@ -103,6 +103,16 @@ const CATEGORY_LABELS: Record<ProtocolCategory, CategoryLabels> = {
     cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
     cumulativeSub: 'all time',
   },
+  'Prediction Markets': {
+    tvlLabel: 'Open Interest',
+    volumeLabel: '30d Volume',
+    volumeChartTitle: 'Daily Volume (90 days)',
+    volumeTooltipLabel: 'Volume',
+    feesLabel: '30d Fees',
+    cumulativeLabel: 'Lifetime Volume',
+    cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
+    cumulativeSub: 'all time',
+  },
 };
 
 interface ExtraStat {
@@ -139,6 +149,10 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
 
   const labels = CATEGORY_LABELS[config.category];
   const extras = getExtraStats(config.category, summary);
+  // Some protocols don't expose a daily aggregate entity in their subgraphs
+  // (e.g. Polymarket's orderbook). When that's the case, normalize() returns
+  // an empty snapshots array and the TVL/Volume charts have nothing to draw.
+  const hasDailySeries = !isLoading && chartData.length > 0;
 
   // Lending uses Active Borrows (current snapshot) instead of summed 30d volume
   const volumeKpiValue = config.category === 'Lending'
@@ -225,6 +239,11 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
         <CardContent>
           {isLoading ? (
             <ChartSkeleton height="220px" />
+          ) : !hasDailySeries ? (
+            <div className="h-[220px] flex flex-col items-center justify-center gap-2 text-center px-4">
+              <p className="text-[11px] font-medium text-[var(--text-muted)]">No daily series available</p>
+              <p className="text-[11px] text-[var(--text-faint)] max-w-md">Headline numbers above are computed from cumulative on-chain state. The upstream subgraph does not expose a daily aggregate entity, so a 90-day TVL chart is not available for this protocol.</p>
+            </div>
           ) : (
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -278,6 +297,11 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
           <CardContent>
             {isLoading ? (
               <ChartSkeleton height="180px" />
+            ) : !hasDailySeries ? (
+              <div className="h-[180px] flex flex-col items-center justify-center gap-2 text-center px-4">
+                <p className="text-[11px] font-medium text-[var(--text-muted)]">No daily series available</p>
+                <p className="text-[11px] text-[var(--text-faint)] max-w-xs">{labels.cumulativeLabel} is shown above as a lifetime total.</p>
+              </div>
             ) : (
               <div className="h-[180px]">
                 <ResponsiveContainer width="100%" height="100%">
