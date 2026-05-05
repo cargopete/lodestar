@@ -115,6 +115,17 @@ export const PROTOCOLS: ProtocolConfig[] = [
     knownIssues: 'The upstream subgraph writes $0 to dailyProtocolSideRevenueUSD across all snapshots despite a non-zero cumulative figure. Daily fee charts show no data until this is fixed upstream.',
   },
   {
+    slug: 'spark-lend',
+    name: 'Spark Lend',
+    category: 'Lending',
+    description: 'Aave V3 fork operated by the Sky / MakerDAO ecosystem on Ethereum mainnet, with sDAI yield routing baked into the supply side. The largest Spark deployment by TVL.',
+    subgraphId: 'GbKdmBe4ycCYCQLQSjqGg6UHYoYfbyJyq5WrG35pv1si',
+    schemaType: 'messari-lending',
+    website: 'https://spark.fi',
+    chains: ['Ethereum'],
+    color: '#E07A52',
+  },
+  {
     slug: 'spark-lend-gnosis',
     name: 'Spark Lend (Gnosis)',
     category: 'Lending',
