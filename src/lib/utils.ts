@@ -75,6 +75,9 @@ export function formatPercent(value: number, decimals = 2): string {
  * Format USD currency with compact notation for large values
  */
 export function formatUSD(amount: number, decimals = 2): string {
+  if (decimals <= 2 && amount >= 1e12) {
+    return `$ ${(amount / 1e12).toFixed(2)}T`;
+  }
   if (decimals <= 2 && amount >= 1e9) {
     return `$ ${(amount / 1e9).toFixed(2)}B`;
   }

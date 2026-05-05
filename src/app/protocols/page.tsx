@@ -6,16 +6,16 @@ import { useProtocolsDirectory } from '@/hooks/useProtocols';
 import { formatUSD } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 
+const CATEGORY_STYLES: Record<string, string> = {
+  'DEX': 'bg-[var(--accent)]/10 text-[var(--accent)]',
+  'Lending': 'bg-[var(--green)]/10 text-[var(--green)]',
+  'Liquid Staking': 'bg-[#00A3FF]/12 text-[#5BC2FF]',
+};
+
 function CategoryBadge({ category }: { category: string }) {
-  const isDex = category === 'DEX';
+  const styles = CATEGORY_STYLES[category] ?? 'bg-[var(--bg-elevated)] text-[var(--text-muted)]';
   return (
-    <span
-      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-        isDex
-          ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-          : 'bg-[var(--green)]/10 text-[var(--green)]'
-      }`}
-    >
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap ${styles}`}>
       {category}
     </span>
   );
@@ -90,13 +90,13 @@ export default function ProtocolsPage() {
                         <td className="py-3 pr-4">
                           <CategoryBadge category={protocol.category} />
                         </td>
-                        <td className="py-3 pr-4 text-right font-mono text-[var(--text)]">
+                        <td className="py-3 pr-4 text-right font-mono text-[var(--text)] whitespace-nowrap">
                           {failed ? '—' : summary ? formatUSD(summary.tvlUSD) : <span className="text-[var(--text-faint)]">—</span>}
                         </td>
-                        <td className="py-3 pr-4 text-right font-mono text-[var(--text-muted)] text-xs">
+                        <td className="py-3 pr-4 text-right font-mono text-[var(--text-muted)] text-xs whitespace-nowrap">
                           {failed ? '—' : summary ? formatUSD(summary.volume30dUSD) : '—'}
                         </td>
-                        <td className="py-3 text-right font-mono text-[var(--accent)] text-xs">
+                        <td className="py-3 text-right font-mono text-[var(--accent)] text-xs whitespace-nowrap">
                           {failed ? '—' : summary ? formatUSD(summary.fees30dUSD) : '—'}
                         </td>
                       </tr>
