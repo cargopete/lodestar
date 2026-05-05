@@ -2,7 +2,8 @@ export type SchemaType =
   | 'messari-dex'
   | 'messari-lending'
   | 'messari-staking'
-  | 'uniswap-v3';
+  | 'uniswap-v3'
+  | 'etherfi-native';
 
 export type ProtocolCategory =
   | 'DEX'
@@ -123,6 +124,17 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://lido.fi',
     chains: ['Ethereum'],
     color: '#00A3FF',
+  },
+  {
+    slug: 'ether-fi',
+    name: 'ether.fi',
+    category: 'Liquid Staking',
+    description: 'Liquid restaking protocol on Ethereum issuing eETH (rebasing) and weETH (wrapped). Stakers earn validator rewards plus EigenLayer restaking yield. Largest LRT by TVL.',
+    subgraphId: 'AEsX7AeqTD9bpFFaHwmCZbEXaHWsmzekoPKKuJUGQiQA',
+    schemaType: 'etherfi-native',
+    website: 'https://ether.fi',
+    chains: ['Ethereum'],
+    color: '#A0FFE6',
   },
 ];
 

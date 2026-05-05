@@ -175,6 +175,62 @@ const UNISWAP_V3_QUERY = `{
   }
 }`;
 
+// --- EtherFi native schema ---
+//
+// ether.fi's v3 subgraph stores values in ETH (BigInt wei) and exposes a
+// stream of `rebaseEvents` carrying the post-rebase totalEthLocked and
+// totalEEthShares. To produce the same TVL/Volume/Fees/APR shape as the
+// other Liquid Staking protocols we:
+//
+//   1. Fetch all rebases in the last ~95 days (5 events/day average).
+//   2. Group by day, take the last event of each day.
+//   3. Derive net yield-to-stakers via the eETH share-price delta:
+//        priceUSD(day) = totalEthLocked(day) / totalEEthShares(day)
+//        yieldEth(day) = sharesPrev * (priceUSD(day) - priceUSD(day-1))
+//      This isolates rebase yield from deposits and withdrawals, since
+//      share price only moves with rebases (deposits mint at par).
+//   4. Multiply by current ETH/USD (fetched in parallel from Uniswap V3
+//      mainnet) for USD denomination. Historic rebases are anchored to
+//      today's ETH price, an acceptable approximation given Lodestar's
+//      'current snapshot' framing.
+//   5. Approximate protocol fees as 10% of supply-side yield, matching
+//      ether.fi's documented protocol take. Replace with a real source
+//      if/when the subgraph exposes it.
+
+const ETHERFI_PROTOCOL_FEE_RATIO = 0.10;
+// ETH mainnet Uniswap V3 subgraph (already used elsewhere in lodestar) —
+// queried only for `bundle.ethPriceUSD` to convert ETH-denominated values.
+const UNISWAP_V3_ETH_MAINNET_SUBGRAPH = '5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV';
+
+interface EtherFiData {
+  rebaseEvents: Array<{
+    timestamp: string;
+    totalEthLocked: string;
+    totalEEthShares: string;
+    aprs: string[];
+  }>;
+}
+
+interface EthPriceData {
+  bundles: Array<{ ethPriceUSD: string }>;
+}
+
+const ETHERFI_QUERY = `{
+  rebaseEvents(
+    first: 1000
+    orderBy: timestamp
+    orderDirection: desc
+    where: { timestamp_gt: "$SINCE" }
+  ) {
+    timestamp
+    totalEthLocked
+    totalEEthShares
+    aprs
+  }
+}`;
+
+const ETH_PRICE_QUERY = `{ bundles(first: 1) { ethPriceUSD } }`;
+
 // --- Shared normalisation ---
 
 function filterFeeOutliers(snapshots: ProtocolDaySnapshot[]): ProtocolDaySnapshot[] {
@@ -331,6 +387,70 @@ function normalizeMessariStaking(slug: string, data: MessariStakingData): Protoc
   };
 }
 
+function normalizeEtherFi(
+  slug: string,
+  rebases: EtherFiData['rebaseEvents'],
+  ethPriceUSD: number,
+): ProtocolDetail {
+  if (rebases.length === 0 || ethPriceUSD <= 0) {
+    return {
+      summary: computeSummary(slug, 0, 0, 0, []),
+      snapshots: [],
+    };
+  }
+
+  // Group rebases by UTC day, keeping the last event of each day.
+  const byDay = new Map<number, EtherFiData['rebaseEvents'][number]>();
+  for (const r of rebases) {
+    const day = Math.floor(parseInt(r.timestamp) / 86400);
+    const existing = byDay.get(day);
+    if (!existing || parseInt(r.timestamp) > parseInt(existing.timestamp)) {
+      byDay.set(day, r);
+    }
+  }
+  const sorted = Array.from(byDay.values()).sort(
+    (a, b) => parseInt(a.timestamp) - parseInt(b.timestamp),
+  );
+
+  const latest = sorted[sorted.length - 1];
+  const tvlUSD = (parseFloat(latest.totalEthLocked) / 1e18) * ethPriceUSD;
+
+  const snapshots: ProtocolDaySnapshot[] = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    const sharesPrev = parseFloat(prev.totalEEthShares) / 1e18;
+    const sharesCurr = parseFloat(curr.totalEEthShares) / 1e18;
+    const ethPrev = parseFloat(prev.totalEthLocked) / 1e18;
+    const ethCurr = parseFloat(curr.totalEthLocked) / 1e18;
+    const pricePrev = sharesPrev > 0 ? ethPrev / sharesPrev : 1;
+    const priceCurr = sharesCurr > 0 ? ethCurr / sharesCurr : 1;
+    const yieldEth = Math.max(0, sharesPrev * (priceCurr - pricePrev));
+    const yieldUSD = yieldEth * ethPriceUSD;
+    snapshots.push({
+      timestamp: parseInt(curr.timestamp),
+      tvlUSD: ethCurr * ethPriceUSD,
+      volumeUSD: yieldUSD,
+      feesUSD: yieldUSD * ETHERFI_PROTOCOL_FEE_RATIO,
+    });
+  }
+
+  const clean = filterFeeOutliers(snapshots);
+  const cumulativeYield = clean.reduce((sum, s) => sum + s.volumeUSD, 0);
+  const cumulativeFees = clean.reduce((sum, s) => sum + s.feesUSD, 0);
+
+  const last30 = clean.slice(-30);
+  const last30Yield = last30.reduce((sum, s) => sum + s.volumeUSD, 0);
+  const stakingAPR = tvlUSD > 0 && last30.length > 0
+    ? (last30Yield / tvlUSD) * (365 / last30.length) * 100
+    : 0;
+
+  return {
+    summary: computeSummary(slug, tvlUSD, cumulativeYield, cumulativeFees, clean, { stakingAPR }),
+    snapshots: clean,
+  };
+}
+
 function normalizeUniswapV3(slug: string, data: UniswapV3Data): ProtocolDetail {
   const f = data.factories[0];
   const snapshots: ProtocolDaySnapshot[] = data.uniswapDayDatas
@@ -374,6 +494,16 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
     case 'uniswap-v3': {
       const data = await queryProtocolSubgraph<UniswapV3Data>(config.subgraphId, UNISWAP_V3_QUERY);
       return normalizeUniswapV3(config.slug, data);
+    }
+    case 'etherfi-native': {
+      const since = Math.floor(Date.now() / 1000) - 95 * 86400;
+      const query = ETHERFI_QUERY.replace('$SINCE', String(since));
+      const [rebases, price] = await Promise.all([
+        queryProtocolSubgraph<EtherFiData>(config.subgraphId, query),
+        queryProtocolSubgraph<EthPriceData>(UNISWAP_V3_ETH_MAINNET_SUBGRAPH, ETH_PRICE_QUERY),
+      ]);
+      const ethPriceUSD = parseF(price.bundles[0]?.ethPriceUSD);
+      return normalizeEtherFi(config.slug, rebases.rebaseEvents, ethPriceUSD);
     }
   }
 }
