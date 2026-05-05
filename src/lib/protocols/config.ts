@@ -3,7 +3,8 @@ export type SchemaType =
   | 'messari-lending'
   | 'messari-staking'
   | 'uniswap-v2'
-  | 'uniswap-v3';
+  | 'uniswap-v3'
+  | 'etherfi-native';
 
 export type ProtocolCategory =
   | 'DEX'
@@ -157,6 +158,17 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://aerodrome.finance',
     chains: ['Base'],
     color: '#1A33FF',
+  },
+  {
+    slug: 'ether-fi',
+    name: 'ether.fi',
+    category: 'Liquid Staking',
+    description: 'Liquid restaking protocol on Ethereum issuing eETH (rebasing) and weETH (wrapped). Stakers earn validator rewards plus EigenLayer restaking yield. Largest LRT by TVL.',
+    subgraphId: 'AEsX7AeqTD9bpFFaHwmCZbEXaHWsmzekoPKKuJUGQiQA',
+    schemaType: 'etherfi-native',
+    website: 'https://ether.fi',
+    chains: ['Ethereum'],
+    color: '#A0FFE6',
   },
 ];
 
