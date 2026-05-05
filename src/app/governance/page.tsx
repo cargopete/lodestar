@@ -63,10 +63,10 @@ const GIPS: GIP[] = [
   {
     id: 'GIP-0076',
     title: 'Issuance Allocator Contract',
-    status: 'draft',
+    status: 'approved',
     authors: 'Rembrandt Kuipers (Edge & Node)',
     forumUrl: 'https://forum.thegraph.com/t/gip-0076-issuance-allocator-contract-to-split-issuance-across-distribution-targets/6867',
-    summary: 'Introduces a governance-controlled smart contract that splits protocol GRT issuance across multiple configurable distribution targets. Total issuance is unchanged — this is the infrastructure layer that enables GIP-0087 and GIP-0088 to redirect a portion of minted GRT away from the existing RewardsManager. Published March 2026, currently in Draft.',
+    summary: 'Introduces a governance-controlled smart contract that splits protocol GRT issuance across multiple configurable distribution targets. Total issuance is unchanged — this is the infrastructure layer that enables GIP-0087 and GIP-0088 to redirect a portion of minted GRT away from the existing RewardsManager. Approved by the Graph Council in April 2026 alongside GIP-0086, 0087, and 0088. Audit fixes submitted; testnet deployment in progress.',
     indexerImpact: 'No immediate changes to reward amounts. Enables future issuance redirects to new targets like the RecurringAgreementManager. Indexers participating in on-chain agreements (GIP-0087) stand to benefit from those redirected flows.',
     delegatorImpact: 'No immediate APR impact. Provides the plumbing that GIP-0088 activates — once deployed, a portion of issuance flows to agreement funding rather than purely allocation rewards.',
   },
@@ -76,7 +76,7 @@ const GIPS: GIP[] = [
     status: 'draft',
     authors: 'Rembrandt Kuipers, Samuel Metcalfe',
     forumUrl: 'https://forum.thegraph.com/t/gip-0079-indexer-rewards-eligibility-oracle/6734',
-    summary: 'Gates indexing rewards on actual service quality — HTTP status, response speed, and data freshness — evaluated over 28-day windows with 14-day renewal cycles. The oracle contract is live on Arbitrum and actively scoring indexers; the GIP formalises its integration with the RewardsManager via GIP-0086. Revised March 2026 to make GIP-0086 an explicit dependency.',
+    summary: 'Gates indexing rewards on actual service quality — HTTP status, response speed, and data freshness — evaluated over 28-day windows with 14-day renewal cycles. The oracle contract is live on Arbitrum One and actively scoring indexers. GIP-0086 (its dependency) was approved by the Graph Council in April 2026; mainnet enforcement activation now requires audit completion and a final governance vote to flip the switch.',
     indexerImpact: 'Must maintain quality service to retain reward eligibility. Failure to meet thresholds (200 OK, <5s response, <50K blocks behind) will result in lost rewards once GIP-0086 enforcement is active.',
     delegatorImpact: 'Once enforced, delegation to ineligible indexers will earn zero rewards. Monitor your indexer\'s REO status now — Lodestar shows oracle-sourced eligibility data and renewal countdowns on every indexer page.',
     liveMetrics: (indexers) => {
@@ -96,30 +96,30 @@ const GIPS: GIP[] = [
   {
     id: 'GIP-0086',
     title: 'Rewards Manager & Subgraph Service Upgrade',
-    status: 'draft',
+    status: 'approved',
     authors: 'Rembrandt Kuipers (Edge & Node)',
     forumUrl: 'https://forum.thegraph.com/t/gip-0086-rewards-manager-and-subgraph-service-upgrade/6868',
-    summary: 'Incremental upgrade to the RewardsManager and SubgraphService contracts that plugs in the REO oracle, refines reward collection logic (claimed/denied/deferred outcomes via POIPresented events), and adds reclaiming config for inactive allocations. Prerequisite for GIP-0079 enforcement and GIP-0088 deployment. Published March 2026.',
+    summary: 'Incremental upgrade to the RewardsManager and SubgraphService contracts that plugs in the REO oracle, refines reward collection logic (claimed/denied/deferred outcomes via POIPresented events), and adds reclaiming config for inactive allocations. Prerequisite for GIP-0079 enforcement and GIP-0088 deployment. Approved by the Graph Council in April 2026. Audit fixes submitted; testnet stress testing underway. Mainnet deployment pending audit sign-off.',
     indexerImpact: 'RewardsManager will check REO eligibility at reward claim time once deployed. New POIPresented events create richer on-chain data about indexer performance, feeding into scoring and compliance tracking.',
     delegatorImpact: 'Improves reward distribution accuracy. POI presentation data will feed into indexer scoring. No immediate APR impact, but it gates the enforcement of REO eligibility (GIP-0079).',
   },
   {
     id: 'GIP-0087',
     title: 'On-Chain Indexing Agreements',
-    status: 'draft',
+    status: 'approved',
     authors: 'Rembrandt Kuipers (Edge & Node)',
     forumUrl: 'https://forum.thegraph.com/t/on-chain-indexing-agreements-and-issuance-allocation-gip-0087-gip-0088/6869',
-    summary: 'Replaces the off-chain indexing payment MVP (GIP-0081) with a fully on-chain contract system. Payers and indexers offer, accept, and settle agreements on-chain, with escrow funded from protocol issuance via Horizon primitives. Introduces the RecurringAgreementManager which receives minted GRT. Published March 2026.',
+    summary: 'Replaces the off-chain indexing payment MVP (GIP-0081) with a fully on-chain contract system. Payers and indexers offer, accept, and settle agreements on-chain, with escrow funded from protocol issuance via Horizon primitives. Introduces the RecurringAgreementManager which receives minted GRT. Approved by the Graph Council in April 2026. This clears the final governance hurdle before mainnet Decentralized Indexing Payments (DIPs) launch.',
     indexerImpact: 'New revenue stream from on-chain agreements alongside existing allocation rewards. Must actively manage agreements, present POIs, and maintain escrow health.',
     delegatorImpact: 'Indexers with active agreements generate additional revenue that flows through to delegators. Agreement participation becomes a key factor in indexer selection.',
   },
   {
     id: 'GIP-0088',
     title: 'Issuance Allocator Deployment',
-    status: 'draft',
+    status: 'approved',
     authors: 'Rembrandt Kuipers (Edge & Node)',
     forumUrl: 'https://forum.thegraph.com/t/on-chain-indexing-agreements-and-issuance-allocation-gip-0087-gip-0088/6869',
-    summary: 'The deployment and configuration GIP that wires everything together: deploys the IssuanceAllocator, connects the upgraded RewardsManager to source its rate from the allocator, and allocates an initial 5% of issuance to the RecurringAgreementManager for protocol-funded indexing agreements. Depends on GIP-0076, 0086, and 0087. Published March 2026.',
+    summary: 'The deployment and configuration GIP that wires everything together: deploys the IssuanceAllocator, connects the upgraded RewardsManager to source its rate from the allocator, and allocates an initial 5% of issuance to the RecurringAgreementManager for protocol-funded indexing agreements. Depends on GIP-0076, 0086, and 0087. Approved by the Graph Council in April 2026. All four DIPs GIPs now approved — testnet stress testing ongoing ahead of mainnet deployment.',
     indexerImpact: 'Allocation-based rewards decrease by ~5% initially as issuance redirects to agreement funding. Indexers participating in agreements can recapture and exceed this via agreement revenue.',
     delegatorImpact: 'Base APR from allocations decreases slightly (~5%). But total ecosystem rewards increase if indexers actively participate in agreements. Net effect depends on your indexer\'s agreement activity.',
     liveMetrics: (_indexers, network) => {
@@ -147,6 +147,7 @@ export default function GovernancePage() {
   const sortedGIPs = [...GIPS].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
 
   const deployed = GIPS.filter(g => g.status === 'deployed').length;
+  const approved = GIPS.filter(g => g.status === 'approved').length;
   const candidate = GIPS.filter(g => g.status === 'candidate').length;
   const draft = GIPS.filter(g => g.status === 'draft').length;
 
@@ -169,10 +170,14 @@ export default function GovernancePage() {
       </div>
 
       {/* Status summary */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] text-center">
           <p className="text-2xl font-mono font-bold text-[var(--green)]">{deployed}</p>
           <p className="text-xs text-[var(--text-faint)] mt-1">Deployed</p>
+        </div>
+        <div className="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] text-center">
+          <p className="text-2xl font-mono font-bold text-[var(--cyan)]">{approved}</p>
+          <p className="text-xs text-[var(--text-faint)] mt-1">Approved</p>
         </div>
         <div className="p-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] text-center">
           <p className="text-2xl font-mono font-bold text-[var(--accent)]">{candidate}</p>

@@ -1,5 +1,31 @@
 [
   {
+    "id": "forum-2026-05-05-en-april-may-update",
+    "type": "news",
+    "title": "E&N April/May Update: all four DIPs GIPs approved, graph-node v0.43.0",
+    "summary": "The Graph Council approved GIP-0076, 0086, 0087, and 0088 — clearing the final governance hurdle for on-chain Decentralized Indexing Payments (DIPs). graph-node v0.43.0 ships per-chain RPC config and Subgraph log querying. Gateway v27.6.0 adds x402 payment support.",
+    "body": "The Graph Council approved all four GIPs underpinning Decentralized Indexing Payments (DIPs) in April 2026, clearing the final governance hurdle before mainnet launch. The approved GIPs are:\n\n• GIP-0076: Issuance Allocator Contract\n• GIP-0086: Rewards Manager & Subgraph Service Upgrade\n• GIP-0087: On-Chain Indexing Agreements\n• GIP-0088: Issuance Allocator Deployment\n\nAudit fixes have been submitted and testnet stress testing is ongoing against the real scoring pipeline. Mainnet deployment is now pending final audit sign-off.\n\nSoftware releases in this period:\n• graph-node v0.43.0: per-chain RPC configuration, automatic provider failover, Subgraph log querying via GraphQL, call cache optimization\n• Gateway v27.6.0: x402 payment support for queries, restored query attestations\n\nREO (Rewards Eligibility Oracle) testnet contracts are deployed; mainnet launch described as imminent with final testing wrapping up.",
+    "url": "https://forum.thegraph.com/t/edge-nodes-april-may-2026-update/6944",
+    "timestamp": "2026-05-05T00:00:00Z",
+    "tags": ["governance", "indexers", "rewards", "gips"],
+    "metadata": {
+      "author": "Edge & Node"
+    }
+  },
+  {
+    "id": "forum-2026-04-24-grc-006-mainline",
+    "type": "news",
+    "title": "GRC-006: Mainline — Firehose data service on Horizon proposed",
+    "summary": "Community RFC to bring raw Firehose block streams on-chain as a Horizon data service. Staked indexers serve fork-aware block data over gRPC, paid via GraphTally. Phase 0 testnet targets Q2 2026; Phase 1 limited mainnet with 3–5 operators Q3 2026.",
+    "body": "Petko Pavlovski (cargopete) filed GRC-006 on April 24, 2026, proposing Mainline — a decentralized Firehose block stream data service built on Horizon.\n\nMainline delivers raw, fork-aware blockchain data over gRPC. It is the data layer beneath Substreams, Subgraphs, and other Graph services. Indexers stake GRT to operate it; consumers pay via GraphTally using existing Horizon payment primitives.\n\nTimeline:\n• Phase 0 (Q1–Q2 2026): Testnet with one operator\n• Phase 1 (Q2–Q3 2026): Limited mainnet — 3–5 operators, 4 chains (Ethereum, Base, Solana, Arbitrum One)\n• Phase 2 (Q4 2026): General availability, permissionless registration\n• Phase 3 (Q1–Q2 2027): Cryptographic verification\n\nThis is a community RFC — not yet a formal GIP. No Council vote has been held.",
+    "url": "https://forum.thegraph.com/t/grc-006-mainline-a-firehose-data-service-on-horizon",
+    "timestamp": "2026-04-24T00:00:00Z",
+    "tags": ["indexers", "firehose", "horizon", "governance"],
+    "metadata": {
+      "author": "cargopete"
+    }
+  },
+  {
     "id": "discord-2026-04-21-council-marc-andre",
     "type": "news",
     "title": "Marc-André Dumas joins The Graph Council",

@@ -29,7 +29,7 @@ export interface RoadmapItem {
   tags?: string[];
 }
 
-export const ROADMAP_LAST_UPDATED = 'April 22, 2026';
+export const ROADMAP_LAST_UPDATED = 'May 5, 2026';
 
 export const ROADMAP_ITEMS: RoadmapItem[] = [
 
@@ -158,7 +158,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterEnd: 'Q1 2026',
     officialStatus: 'in_progress',
     lodestarStatus: 'delayed',
-    lodestarNote: "Horizon live Dec 2025 (confirmed). GIP-0086 (Rewards Manager upgrade) in active Council Snapshot vote closing April 30, 2026. Reward gating activation requires a further separate governance vote after GIP-0086 passes.",
+    lodestarNote: "Horizon live Dec 2025 (confirmed). GIP-0086 (Rewards Manager upgrade) approved by the Graph Council in April 2026. Audit fixes submitted; testnet stress testing underway. Reward gating activation still requires a further separate governance vote after mainnet contract deployment.",
     links: [
       { label: 'Horizon Upgrade Live Blog', url: 'https://thegraph.com/blog/horizon-upgrade-live/' },
       { label: 'GIP-0086 Forum Thread', url: 'https://forum.thegraph.com/t/gip-0086-rewards-manager-and-subgraph-service-upgrade/6868' },
@@ -295,6 +295,25 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
   },
 
   {
+    id: 'firehose-horizon-service',
+    layer: 'protocol',
+    title: 'Mainline: Firehose Data Service on Horizon',
+    description: 'Decentralized Firehose block stream service on Horizon — raw fork-aware blockchain data over gRPC, staked indexers, GraphTally payments. GRC-006 RFC filed April 2026.',
+    detail: "GRC-006 was filed by Petko Pavlovski (cargopete) on April 24, 2026. Mainline delivers raw block streams (Firehose) over gRPC — the data layer beneath Substreams and Subgraphs. Indexers stake GRT to serve it; consumers pay via GraphTally. The reference implementation is planned in Rust and inherits from Horizon DataService/GraphTallyCollector primitives — no new payment systems. Phase 0 (testnet with one operator) targets Q1–Q2 2026; Phase 1 (limited mainnet, 3–5 operators, 4 chains) Q2–Q3 2026; Phase 2 (general availability) Q4 2026; Phase 3 (cryptographic verification) Q1–Q2 2027. This is a community RFC — not yet a formal GIP, no Council vote held.",
+    indexerImpact: "Operators already running Firehose nodes for internal use could earn protocol fees on existing infrastructure once Mainline ships. Phase 1 targets only 3–5 operators — early movers get first access.",
+    delegatorImpact: "If Mainline scales, it becomes a fee stream from chains and dApps consuming raw block data. Still early stage — no confirmed mainnet date beyond Phase 1.",
+    quarterStart: 'Q2 2026',
+    quarterEnd: 'Q4 2026',
+    officialStatus: 'experimental',
+    lodestarStatus: 'uncertain',
+    lodestarNote: "GRC-006 filed April 24, 2026 (cargopete) — RFC stage, no GIP or Council vote yet. Reference implementation in Rust planned; testnet demo is the first milestone. Watch for a formal GIP filing.",
+    links: [
+      { label: 'GRC-006: Mainline (Forum)', url: 'https://forum.thegraph.com/t/grc-006-mainline-a-firehose-data-service-on-horizon' },
+    ],
+    tags: ['Firehose', 'Mainline'],
+  },
+
+  {
     id: 'subgraphs-amp-powered',
     layer: 'protocol',
     title: 'Subgraphs: Amp-Powered Verifiable Subgraphs',
@@ -361,7 +380,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterStart: 'Q2 2026',
     officialStatus: 'in_progress',
     lodestarStatus: 'on_track',
-    lodestarNote: "GIP-0087 and GIP-0088 in active Council Snapshot vote closing April 30, 2026 — bundled with GIP-0076 (Issuance Allocator) and GIP-0086 (Rewards Manager). The most consequential new economic primitive in Horizon for indexers.",
+    lodestarNote: "GIP-0087 and GIP-0088 approved by the Graph Council in April 2026 alongside GIP-0076 and GIP-0086 — all four DIPs GIPs clear. Audit fixes submitted; testnet stress testing ongoing against real scoring pipeline. Mainnet DIPs launch now pending final audit sign-off.",
     gipId: 'GIP-0087',
     links: [
       { label: 'GIP-0087 & 0088 Forum Thread', url: 'https://forum.thegraph.com/t/on-chain-indexing-agreements-and-issuance-allocation-gip-0087-gip-0088/6869' },
@@ -380,7 +399,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
     quarterStart: 'Q1 2026',
     officialStatus: 'in_progress',
     lodestarStatus: 'delayed',
-    lodestarNote: "REO contract deployed to Arbitrum One mainnet, off-chain oracle node live in observation mode (Edge & Node Mar/Apr 2026 update). Reward gating activation pending: (1) audit completion, (2) GIP-0086 passing Snapshot vote (closes April 30), (3) separate governance vote to flip the switch. Q1 target missed.",
+    lodestarNote: "REO contract live on Arbitrum One, oracle actively scoring indexers. GIP-0086 (the dependency that wires REO into the RewardsManager) approved by Council in April 2026. Reward gating activation now requires: (1) audit sign-off, (2) mainnet contract deployment, (3) a separate governance vote. Q1 target missed; enforcement now targeting H2 2026.",
     gipId: 'GIP-0079',
     links: [
       { label: 'GIP-0079 Forum Thread', url: 'https://forum.thegraph.com/t/gip-0079-indexer-rewards-eligibility-oracle/6734' },
