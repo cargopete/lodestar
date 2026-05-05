@@ -19,8 +19,15 @@ const CATEGORY_FILTERS: Array<'All' | ProtocolCategory> = [
   'All', 'DEX', 'Lending', 'Liquid Staking', 'Yield Aggregator',
 ];
 
-type SortKey = 'tvl' | 'volume' | 'fees';
+type SortKey = 'category' | 'tvl' | 'volume' | 'fees';
 type SortDir = 'asc' | 'desc';
+
+const CATEGORY_ORDER: Record<ProtocolCategory, number> = {
+  'DEX': 0,
+  'Lending': 1,
+  'Liquid Staking': 2,
+  'Yield Aggregator': 3,
+};
 
 function CategoryBadge({ category }: { category: string }) {
   const styles = CATEGORY_STYLES[category] ?? 'bg-[var(--bg-elevated)] text-[var(--text-muted)]';
@@ -62,7 +69,7 @@ interface DirectoryRow {
   failed: boolean;
 }
 
-const SORT_VALUE: Record<SortKey, (s: ProtocolSummary) => number> = {
+const METRIC_SORT_VALUE: Record<Exclude<SortKey, 'category'>, (s: ProtocolSummary) => number> = {
   tvl: (s) => s.tvlUSD,
   volume: (s) => s.volume30dUSD,
   fees: (s) => s.fees30dUSD,
@@ -71,7 +78,7 @@ const SORT_VALUE: Record<SortKey, (s: ProtocolSummary) => number> = {
 export default function ProtocolsPage() {
   const { data: summaries, isLoading } = useProtocolsDirectory();
   const [category, setCategory] = useState<'All' | ProtocolCategory>('All');
-  const [sortKey, setSortKey] = useState<SortKey>('tvl');
+  const [sortKey, setSortKey] = useState<SortKey>('category');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const rows: DirectoryRow[] = useMemo(() => {
@@ -86,8 +93,15 @@ export default function ProtocolsPage() {
       : all.filter((r) => r.config.category === category);
 
     const sorted = [...filtered].sort((a, b) => {
-      const av = a.summary ? SORT_VALUE[sortKey](a.summary) : -1;
-      const bv = b.summary ? SORT_VALUE[sortKey](b.summary) : -1;
+      if (sortKey === 'category') {
+        const catDelta = CATEGORY_ORDER[a.config.category] - CATEGORY_ORDER[b.config.category];
+        if (catDelta !== 0) return catDelta;
+        const av = a.summary?.tvlUSD ?? -1;
+        const bv = b.summary?.tvlUSD ?? -1;
+        return bv - av;
+      }
+      const av = a.summary ? METRIC_SORT_VALUE[sortKey](a.summary) : -1;
+      const bv = b.summary ? METRIC_SORT_VALUE[sortKey](b.summary) : -1;
       return sortDir === 'desc' ? bv - av : av - bv;
     });
     return sorted;
