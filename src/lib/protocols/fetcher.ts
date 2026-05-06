@@ -58,6 +58,10 @@ export interface PredictionMarketsDetail {
     amountUSD: number;
     splitCount: number;
     mergeCount: number;
+    /** Human-readable market question, hydrated from the Polymarket CLOB API. */
+    title?: string;
+    /** URL slug for `polymarket.com/event/{slug}`, if returned by the CLOB API. */
+    slug?: string;
   }>;
 }
 
@@ -235,6 +239,42 @@ const MESSARI_YIELD_QUERY = `{
   }
 }`;
 
+// --- Messari Bridge schema (Hop, Stargate, cBridge, Axelar, Across V2 etc.) ---
+//
+// Standard Messari bridge template: protocol-level `bridgeProtocols` plus
+// `financialsDailySnapshots` with per-chain volumeIn / volumeOut series.
+// We use cumulativeTotalVolumeUSD as the headline cumulative metric and
+// dailyVolumeOutUSD as the daily series so the volume chart shows what
+// users sent through the bridge from this chain.
+
+interface MessariBridgeData {
+  bridgeProtocols: Array<{
+    totalValueLockedUSD: string;
+    cumulativeTotalVolumeUSD: string;
+    cumulativeTotalRevenueUSD: string;
+  }>;
+  financialsDailySnapshots: Array<{
+    timestamp: string;
+    totalValueLockedUSD: string;
+    dailyVolumeOutUSD: string;
+    dailyTotalRevenueUSD: string;
+  }>;
+}
+
+const MESSARI_BRIDGE_QUERY = `{
+  bridgeProtocols(first: 1) {
+    totalValueLockedUSD
+    cumulativeTotalVolumeUSD
+    cumulativeTotalRevenueUSD
+  }
+  financialsDailySnapshots(first: 90, orderBy: timestamp, orderDirection: desc) {
+    timestamp
+    totalValueLockedUSD
+    dailyVolumeOutUSD
+    dailyTotalRevenueUSD
+  }
+}`;
+
 // --- Uniswap V2 native schema ---
 //
 // V2 has no fees field on either the factory or the daily snapshot. Every swap
@@ -356,8 +396,8 @@ const POLYMARKET_MAIN_QUERY = `{
 
 // Resolution returns recent resolved markets (ancillaryData carries the human-
 // readable question text) plus a sample of disputed markets used to size a
-// "Disputed" headline. The disputed bucket is capped at 1000 by the subgraph;
-// for our purposes the lower-bound is sufficient signal.
+// "Disputed" headline. We cap the disputed bucket at 250 — enough for the
+// "250+ tracked" banner while keeping the resolution-subgraph response fast.
 const POLYMARKET_RESOLUTION_QUERY = `{
   recentResolutions: marketResolutions(
     first: 12,
@@ -373,10 +413,39 @@ const POLYMARKET_RESOLUTION_QUERY = `{
     lastUpdateTimestamp
     ancillaryData
   }
-  disputedSample: marketResolutions(first: 1000, where: {wasDisputed: true}) {
+  disputedSample: marketResolutions(first: 250, where: {wasDisputed: true}) {
     id
   }
 }`;
+
+// Polymarket CLOB API exposes per-condition market metadata — title, slug,
+// description, status, etc. Used to hydrate top-OI condition IDs into
+// human-readable rows in the UI. Hits run inside the cached fetch path so
+// the per-condition HTTP cost is amortised over the 1-hour cache window.
+const POLYMARKET_CLOB_BASE = 'https://clob.polymarket.com/markets';
+const POLYMARKET_CLOB_TIMEOUT_MS = 4000;
+
+interface ClobMarketResponse {
+  condition_id?: string;
+  question?: string;
+  market_slug?: string;
+}
+
+async function fetchClobMarket(conditionId: string): Promise<ClobMarketResponse | null> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), POLYMARKET_CLOB_TIMEOUT_MS);
+    const res = await fetch(`${POLYMARKET_CLOB_BASE}/${conditionId}`, {
+      signal: ctrl.signal,
+      headers: { Accept: 'application/json' },
+    });
+    clearTimeout(t);
+    if (!res.ok) return null;
+    return (await res.json()) as ClobMarketResponse;
+  } catch {
+    return null;
+  }
+}
 
 // MarketResolution.ancillaryData is the UMA-encoded UTF-8 prompt sent to the
 // optimistic oracle. It always begins with "q: title: <TITLE>, description: ..."
@@ -493,6 +562,42 @@ const UNISWAP_V3_QUERY = `{
     txCount
   }
   uniswapDayDatas(first: 90, orderBy: date, orderDirection: desc) {
+    date
+    volumeUSD
+    feesUSD
+    tvlUSD
+  }
+}`;
+
+// --- Algebra V1 schema (Camelot V3 etc.) ---
+//
+// Algebra is the concentrated-liquidity engine Camelot V3 uses. Same Factory
+// + day-data shape as Uniswap V3 except the day entity is `algebraDayDatas`.
+// We fetch with the renamed entity and reuse normalizeUniswapV3 unchanged.
+
+interface AlgebraV1Data {
+  factories: Array<{
+    totalVolumeUSD: string;
+    totalValueLockedUSD: string;
+    totalFeesUSD: string;
+    txCount: string;
+  }>;
+  algebraDayDatas: Array<{
+    date: string;
+    volumeUSD: string;
+    feesUSD: string;
+    tvlUSD: string;
+  }>;
+}
+
+const ALGEBRA_V1_QUERY = `{
+  factories(first: 1) {
+    totalVolumeUSD
+    totalValueLockedUSD
+    totalFeesUSD
+    txCount
+  }
+  algebraDayDatas(first: 90, orderBy: date, orderDirection: desc) {
     date
     volumeUSD
     feesUSD
@@ -763,6 +868,33 @@ function normalizeMessariYield(slug: string, data: MessariYieldData): ProtocolDe
   };
 }
 
+function normalizeMessariBridge(slug: string, data: MessariBridgeData): ProtocolDetail {
+  const p = data.bridgeProtocols[0];
+  const snapshots: ProtocolDaySnapshot[] = data.financialsDailySnapshots
+    .map((s) => ({
+      timestamp: parseInt(s.timestamp),
+      tvlUSD: parseF(s.totalValueLockedUSD),
+      volumeUSD: parseF(s.dailyVolumeOutUSD),
+      feesUSD: parseF(s.dailyTotalRevenueUSD),
+    }))
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const clean = filterFeeOutliers(snapshots);
+  const snapshotVolumeSum = clean.reduce((acc, s) => acc + s.volumeUSD, 0);
+  const snapshotFeesSum = clean.reduce((acc, s) => acc + s.feesUSD, 0);
+
+  return {
+    summary: computeSummary(
+      slug,
+      parseF(p?.totalValueLockedUSD),
+      sanitizeCumulative(parseF(p?.cumulativeTotalVolumeUSD), snapshotVolumeSum),
+      sanitizeCumulative(parseF(p?.cumulativeTotalRevenueUSD), snapshotFeesSum),
+      clean,
+    ),
+    snapshots: clean,
+  };
+}
+
 function normalizeUniswapV2(slug: string, data: UniswapV2Data): ProtocolDetail {
   const f = data.uniswapFactory;
   const totalVolume = parseF(f?.totalVolumeUSD);
@@ -899,6 +1031,10 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
       const data = await queryProtocolSubgraph<MessariYieldData>(config.subgraphId, MESSARI_YIELD_QUERY);
       return normalizeMessariYield(config.slug, data);
     }
+    case 'messari-bridge': {
+      const data = await queryProtocolSubgraph<MessariBridgeData>(config.subgraphId, MESSARI_BRIDGE_QUERY);
+      return normalizeMessariBridge(config.slug, data);
+    }
     case 'uniswap-v2': {
       const data = await queryProtocolSubgraph<UniswapV2Data>(config.subgraphId, UNISWAP_V2_QUERY);
       return normalizeUniswapV2(config.slug, data);
@@ -906,6 +1042,13 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
     case 'uniswap-v3': {
       const data = await queryProtocolSubgraph<UniswapV3Data>(config.subgraphId, UNISWAP_V3_QUERY);
       return normalizeUniswapV3(config.slug, data);
+    }
+    case 'algebra-v1': {
+      const data = await queryProtocolSubgraph<AlgebraV1Data>(config.subgraphId, ALGEBRA_V1_QUERY);
+      return normalizeUniswapV3(config.slug, {
+        factories: data.factories,
+        uniswapDayDatas: data.algebraDayDatas,
+      });
     }
     case 'etherfi-native': {
       const since = Math.floor(Date.now() / 1000) - 95 * 86400;
@@ -924,7 +1067,20 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
         queryDeployment<PolymarketMainData>(POLYMARKET_MAIN_DEPLOYMENT, POLYMARKET_MAIN_QUERY),
         queryDeployment<PolymarketResolutionData>(POLYMARKET_RESOLUTION_DEPLOYMENT, POLYMARKET_RESOLUTION_QUERY),
       ]);
-      return normalizePolymarket(config.slug, orderbook, oi, main, resolution);
+      const detail = normalizePolymarket(config.slug, orderbook, oi, main, resolution);
+      // Hydrate top-OI condition IDs with human-readable market questions from
+      // the Polymarket CLOB API. Fan out in parallel and tolerate per-request
+      // failures so a single 404/timeout doesn't blank the whole table.
+      if (detail.predictionMarkets) {
+        const top = detail.predictionMarkets.topMarketsByOI;
+        const lookups = await Promise.allSettled(top.map((m) => fetchClobMarket(m.id)));
+        detail.predictionMarkets.topMarketsByOI = top.map((m, i) => {
+          const r = lookups[i];
+          if (r.status !== 'fulfilled' || !r.value) return m;
+          return { ...m, title: r.value.question, slug: r.value.market_slug };
+        });
+      }
+      return detail;
     }
   }
 }

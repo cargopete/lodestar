@@ -129,6 +129,16 @@ const CATEGORY_LABELS: Record<ProtocolCategory, CategoryLabels> = {
     cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
     cumulativeSub: 'all time',
   },
+  'Bridge': {
+    tvlLabel: 'Total Value Locked',
+    volumeLabel: '30d Bridged Out',
+    volumeChartTitle: 'Daily Bridge Volume (90 days)',
+    volumeTooltipLabel: 'Bridged Out',
+    feesLabel: '30d Fees',
+    cumulativeLabel: 'Cumulative Volume',
+    cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
+    cumulativeSub: 'all time',
+  },
 };
 
 interface ExtraStat {
@@ -240,7 +250,7 @@ function PredictionMarketsView({
           { label: 'Active Markets', value: placeholder ? '—' : formatCount(detail.activeMarkets) },
           { label: 'Resolved Markets', value: placeholder ? '—' : formatCount(detail.resolvedMarkets) },
           { label: 'Unique Traders', value: placeholder ? '—' : formatCount(detail.totalTraders) },
-          { label: 'Disputed Resolutions', value: placeholder ? '—' : formatCount(detail.disputedCount), sub: detail && detail.disputedCount >= 1000 ? '1000+ tracked' : undefined },
+          { label: 'Disputed Resolutions', value: placeholder ? '—' : formatCount(detail.disputedCount), sub: detail && detail.disputedCount >= 250 ? '250+ tracked' : undefined },
         ].map((s) => (
           <div key={s.label} className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)]/60 border border-[var(--border)]">
             <p className="text-[10px] text-[var(--text-faint)] mb-0.5">{s.label}</p>
@@ -327,27 +337,49 @@ function PredictionMarketsView({
                 <thead>
                   <tr className="border-b border-[var(--border)]">
                     <th className="text-left py-2 pr-4 text-[11px] font-medium text-[var(--text-faint)] w-8">#</th>
-                    <th className="text-left py-2 pr-4 text-[11px] font-medium text-[var(--text-faint)]">Condition ID</th>
+                    <th className="text-left py-2 pr-4 text-[11px] font-medium text-[var(--text-faint)]">Market</th>
                     <th className="text-right py-2 pr-4 text-[11px] font-medium text-[var(--text-faint)]">OI</th>
                     <th className="text-right py-2 pr-4 text-[11px] font-medium text-[var(--text-faint)]">Splits</th>
                     <th className="text-right py-2 text-[11px] font-medium text-[var(--text-faint)]">Merges</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {detail.topMarketsByOI.map((m, i) => (
-                    <tr
-                      key={m.id}
-                      className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-elevated)]/40 transition-colors"
-                    >
-                      <td className="py-2.5 pr-4 text-[var(--text-faint)] font-mono text-xs">{i + 1}</td>
-                      <td className="py-2.5 pr-4 text-[var(--text-muted)] font-mono text-xs">
-                        {m.id.slice(0, 10)}…{m.id.slice(-6)}
-                      </td>
-                      <td className="py-2.5 pr-4 text-right font-mono text-[var(--text)] whitespace-nowrap">{formatUSD(m.amountUSD)}</td>
-                      <td className="py-2.5 pr-4 text-right font-mono text-[var(--text-muted)] text-xs whitespace-nowrap">{formatCount(m.splitCount)}</td>
-                      <td className="py-2.5 text-right font-mono text-[var(--text-muted)] text-xs whitespace-nowrap">{formatCount(m.mergeCount)}</td>
-                    </tr>
-                  ))}
+                  {detail.topMarketsByOI.map((m, i) => {
+                    const idShort = `${m.id.slice(0, 10)}…${m.id.slice(-6)}`;
+                    const titleNode = m.title ? (
+                      m.slug ? (
+                        <a
+                          href={`https://polymarket.com/event/${m.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[var(--text)] hover:text-[var(--accent)] transition-colors line-clamp-2 leading-snug"
+                        >
+                          {m.title}
+                        </a>
+                      ) : (
+                        <span className="text-[var(--text)] line-clamp-2 leading-snug">{m.title}</span>
+                      )
+                    ) : (
+                      <span className="text-[var(--text-muted)] font-mono text-xs">{idShort}</span>
+                    );
+                    return (
+                      <tr
+                        key={m.id}
+                        className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-elevated)]/40 transition-colors"
+                      >
+                        <td className="py-2.5 pr-4 text-[var(--text-faint)] font-mono text-xs align-top">{i + 1}</td>
+                        <td className="py-2.5 pr-4 max-w-md align-top">
+                          {titleNode}
+                          {m.title && (
+                            <div className="text-[10px] text-[var(--text-faint)] font-mono mt-0.5">{idShort}</div>
+                          )}
+                        </td>
+                        <td className="py-2.5 pr-4 text-right font-mono text-[var(--text)] whitespace-nowrap align-top">{formatUSD(m.amountUSD)}</td>
+                        <td className="py-2.5 pr-4 text-right font-mono text-[var(--text-muted)] text-xs whitespace-nowrap align-top">{formatCount(m.splitCount)}</td>
+                        <td className="py-2.5 text-right font-mono text-[var(--text-muted)] text-xs whitespace-nowrap align-top">{formatCount(m.mergeCount)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -402,6 +434,11 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
   // (e.g. Polymarket's orderbook). When that's the case, normalize() returns
   // an empty snapshots array and the TVL/Volume charts have nothing to draw.
   const hasDailySeries = !isLoading && chartData.length > 0;
+  // Route the knownIssues notice to the chart it actually affects. Defaults to
+  // 'fees' to preserve existing behavior for Morpho Blue.
+  const issueAffects = config.knownIssueAffects ?? 'fees';
+  const volumeIssue = config.knownIssues && issueAffects === 'volume' ? config.knownIssues : null;
+  const feesIssue = config.knownIssues && issueAffects === 'fees' ? config.knownIssues : null;
 
   // Lending uses Active Borrows (current snapshot) instead of summed 30d volume
   const volumeKpiValue = config.category === 'Lending'
@@ -546,6 +583,11 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
           <CardContent>
             {isLoading ? (
               <ChartSkeleton height="180px" />
+            ) : volumeIssue ? (
+              <div className="h-[180px] flex flex-col items-center justify-center gap-2 text-center px-4">
+                <p className="text-[11px] font-medium text-[var(--yellow,#f59e0b)]">Upstream data issue</p>
+                <p className="text-[11px] text-[var(--text-muted)] max-w-xs">{volumeIssue}</p>
+              </div>
             ) : !hasDailySeries ? (
               <div className="h-[180px] flex flex-col items-center justify-center gap-2 text-center px-4">
                 <p className="text-[11px] font-medium text-[var(--text-muted)]">No daily series available</p>
@@ -589,10 +631,10 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
           <CardContent>
             {isLoading ? (
               <ChartSkeleton height="180px" />
-            ) : config.knownIssues ? (
+            ) : feesIssue ? (
               <div className="h-[180px] flex flex-col items-center justify-center gap-2 text-center px-4">
                 <p className="text-[11px] font-medium text-[var(--yellow,#f59e0b)]">Upstream data issue</p>
-                <p className="text-[11px] text-[var(--text-muted)] max-w-xs">{config.knownIssues}</p>
+                <p className="text-[11px] text-[var(--text-muted)] max-w-xs">{feesIssue}</p>
               </div>
             ) : (
               <div className="h-[180px]">

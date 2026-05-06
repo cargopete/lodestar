@@ -3,8 +3,10 @@ export type SchemaType =
   | 'messari-lending'
   | 'messari-staking'
   | 'messari-yield'
+  | 'messari-bridge'
   | 'uniswap-v2'
   | 'uniswap-v3'
+  | 'algebra-v1'
   | 'etherfi-native'
   | 'polymarket';
 
@@ -13,7 +15,8 @@ export type ProtocolCategory =
   | 'Lending'
   | 'Liquid Staking'
   | 'Yield Aggregator'
-  | 'Prediction Markets';
+  | 'Prediction Markets'
+  | 'Bridge';
 
 export interface ProtocolConfig {
   slug: string;
@@ -27,6 +30,8 @@ export interface ProtocolConfig {
   color: string;
   /** Known upstream data quality issue — surfaced as a notice on the detail page. */
   knownIssues?: string;
+  /** Which 90-day chart the knownIssues message belongs to. Defaults to 'fees'. */
+  knownIssueAffects?: 'fees' | 'volume';
 }
 
 export const PROTOCOLS: ProtocolConfig[] = [
@@ -140,6 +145,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://spark.fi',
     chains: ['Gnosis'],
     color: '#F58A65',
+    knownIssues: 'The upstream subgraph writes $0 to dailyBorrowUSD across all snapshots while the cumulative borrow figure remains correct. Daily borrowing chart shows no data until this is fixed upstream.',
+    knownIssueAffects: 'volume',
   },
   {
     slug: 'lido',
@@ -175,6 +182,50 @@ export const PROTOCOLS: ProtocolConfig[] = [
     color: '#D1884F',
   },
   {
+    slug: 'uniswap-v3-arbitrum',
+    name: 'Uniswap V3 (Arbitrum)',
+    category: 'DEX',
+    description: 'Uniswap V3 deployment on Arbitrum One. Major L2 venue with deep ARB-ecosystem liquidity, queried via the Messari DEX-AMM schema.',
+    subgraphId: 'FQ6JYszEKApsBpAmiHesRsd9Ygc6mzmpNRANeVQFYoVX',
+    schemaType: 'messari-dex',
+    website: 'https://app.uniswap.org',
+    chains: ['Arbitrum'],
+    color: '#FF007A',
+  },
+  {
+    slug: 'uniswap-v3-optimism',
+    name: 'Uniswap V3 (Optimism)',
+    category: 'DEX',
+    description: 'Uniswap V3 deployment on Optimism. OP-ecosystem trading hub, queried via the Messari DEX-AMM schema.',
+    subgraphId: 'EgnS9YE1avupkvCNj9fHnJxppfEmNNywYJtghqiu2pd9',
+    schemaType: 'messari-dex',
+    website: 'https://app.uniswap.org',
+    chains: ['Optimism'],
+    color: '#FF66B3',
+  },
+  {
+    slug: 'velodrome-v2',
+    name: 'Velodrome V2',
+    category: 'DEX',
+    description: 'Flagship native DEX on Optimism. ve(3,3) AMM with stable and volatile pools and veVELO emissions; the protocol Aerodrome was forked from before launching on Base.',
+    subgraphId: 'A4Y1A82YhSLTn998BVVELC8eWzhi992k4ZitByvssxqA',
+    schemaType: 'messari-dex',
+    website: 'https://velodrome.finance',
+    chains: ['Optimism'],
+    color: '#FF1B6B',
+  },
+  {
+    slug: 'camelot-v3',
+    name: 'Camelot V3',
+    category: 'DEX',
+    description: 'Native Arbitrum DEX with concentrated-liquidity pools built on the Algebra V1 engine, plus dynamic fees and a launchpad pipeline. The most-used non-Uniswap DEX on Arbitrum.',
+    subgraphId: '3utanEBA9nqMjPnuQP1vMCCys6enSM3EawBpKTVwnUw2',
+    schemaType: 'algebra-v1',
+    website: 'https://app.camelot.exchange',
+    chains: ['Arbitrum'],
+    color: '#E8B964',
+  },
+  {
     slug: 'ether-fi',
     name: 'ether.fi',
     category: 'Liquid Staking',
@@ -195,6 +246,52 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://yearn.fi',
     chains: ['Ethereum'],
     color: '#0657F9',
+  },
+  {
+    slug: 'stargate-arbitrum',
+    name: 'Stargate (Arbitrum)',
+    category: 'Bridge',
+    description: 'Cross-chain liquidity transport built on LayerZero. Stargate routes native assets across chains via unified pools. This entry tracks the Arbitrum deployment, the highest-volume Stargate venue with $14B+ in lifetime bridge volume.',
+    subgraphId: 'DWo7jrtpTtUM1buqiCUg7j7XUF568qNPBv7FwwDceuxm',
+    schemaType: 'messari-bridge',
+    website: 'https://stargate.finance',
+    chains: ['Arbitrum'],
+    color: '#3CC9F2',
+  },
+  {
+    slug: 'stargate-optimism',
+    name: 'Stargate (Optimism)',
+    category: 'Bridge',
+    description: 'Stargate cross-chain liquidity transport on Optimism. Routes native assets via unified pools. Second-largest Stargate venue by lifetime volume.',
+    subgraphId: '7NAF7ZtNtJiXkfCFkTSAyFbfLLfUFa55UgK5woxPxZ46',
+    schemaType: 'messari-bridge',
+    website: 'https://stargate.finance',
+    chains: ['Optimism'],
+    color: '#FF0420',
+  },
+  {
+    slug: 'cbridge',
+    name: 'cBridge',
+    category: 'Bridge',
+    description: 'Celer Network multi-chain transport routing assets across 40+ chains. Ethereum deployment indexed here, with $10B+ in cumulative bridge volume.',
+    subgraphId: 'DokJsCswtSfoQreapeZDaJR9jAfZ9t4zdNbNqgwM117L',
+    schemaType: 'messari-bridge',
+    website: 'https://cbridge.celer.network',
+    chains: ['Ethereum'],
+    color: '#5BC2F6',
+  },
+  {
+    slug: 'axelar',
+    name: 'Axelar',
+    category: 'Bridge',
+    description: 'Cross-chain communication layer connecting 70+ chains via a proof-of-stake validator network. Ethereum deployment with $45M+ in pool TVL.',
+    subgraphId: '8u1rrGZY3gjXAAVJidygbpKeHzitrMSQV1RoLAkyd1AA',
+    schemaType: 'messari-bridge',
+    website: 'https://axelar.network',
+    chains: ['Ethereum'],
+    color: '#FF6B57',
+    knownIssues: 'The upstream subgraph reports $0 dailyTotalRevenueUSD across all snapshots while bridge volume is healthy. Daily fees chart shows no data until this is fixed upstream.',
+    knownIssueAffects: 'fees',
   },
   {
     slug: 'polymarket',
