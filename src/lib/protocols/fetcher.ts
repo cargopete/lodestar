@@ -21,6 +21,15 @@ export interface ProtocolSummary {
   fees30dUSD: number;
   totalBorrowUSD?: number;
   stakingAPR?: number;
+  // RWA-specific extras. Lending-shaped RWA protocols issue infrequent, large
+  // institutional drawdowns rather than continuous spot loans, so we surface
+  // pool/borrower/default metrics that better reflect the asset class.
+  rwaDrawnBalanceUSD?: number;
+  rwaCumulativeBorrowUSD?: number;
+  rwaPoolCount?: number;
+  rwaUniqueBorrowers?: number;
+  rwaOpenPositionCount?: number;
+  rwaDefaultsUSD?: number;
 }
 
 export interface ProtocolDetail {
@@ -158,6 +167,53 @@ const MESSARI_LENDING_QUERY = `{
     timestamp
     totalValueLockedUSD
     dailyBorrowUSD
+    dailyTotalRevenueUSD
+  }
+}`;
+
+// --- Messari RWA schema (uncollateralised real-world credit pools) ---
+//
+// Same `lendingProtocols` shape as standard Messari Lending but the meaningful
+// daily activity is interest accrual, not new borrowing. RWA originations
+// happen in discrete institutional drawdowns (often months apart) so a
+// dailyBorrowUSD-driven volume series reads as flat zero for healthy
+// protocols. We map the headline cumulative + daily volume metrics to the
+// revenue stream and expose pool/borrower/default extras.
+
+interface MessariRwaData {
+  lendingProtocols: Array<{
+    totalValueLockedUSD: string;
+    totalDepositBalanceUSD: string;
+    totalBorrowBalanceUSD: string;
+    cumulativeBorrowUSD: string;
+    cumulativeTotalRevenueUSD: string;
+    cumulativeLiquidateUSD: string;
+    totalPoolCount: number;
+    openPositionCount: number;
+    cumulativeUniqueBorrowers: number;
+  }>;
+  financialsDailySnapshots: Array<{
+    timestamp: string;
+    totalValueLockedUSD: string;
+    dailyTotalRevenueUSD: string;
+  }>;
+}
+
+const MESSARI_RWA_QUERY = `{
+  lendingProtocols(first: 1) {
+    totalValueLockedUSD
+    totalDepositBalanceUSD
+    totalBorrowBalanceUSD
+    cumulativeBorrowUSD
+    cumulativeTotalRevenueUSD
+    cumulativeLiquidateUSD
+    totalPoolCount
+    openPositionCount
+    cumulativeUniqueBorrowers
+  }
+  financialsDailySnapshots(first: 90, orderBy: timestamp, orderDirection: desc) {
+    timestamp
+    totalValueLockedUSD
     dailyTotalRevenueUSD
   }
 }`;
@@ -765,6 +821,52 @@ function normalizeMessariLending(slug: string, data: MessariLendingData): Protoc
   };
 }
 
+function normalizeMessariRwa(slug: string, data: MessariRwaData): ProtocolDetail {
+  const p = data.lendingProtocols[0];
+  // For RWA, the "volume" series is daily interest accrued. Real-world credit
+  // pools earn interest on outstanding principal continuously even when no
+  // new originations happen, so this gives a non-zero daily series for
+  // healthy harvest-mode protocols (e.g. Goldfinch).
+  const snapshots: ProtocolDaySnapshot[] = data.financialsDailySnapshots
+    .map((s) => {
+      const interestUSD = parseF(s.dailyTotalRevenueUSD);
+      return {
+        timestamp: parseInt(s.timestamp),
+        tvlUSD: parseF(s.totalValueLockedUSD),
+        // Volume = interest earned. Fees = the same number (the interest is
+        // the fee in this asset class) so the fees panel renders meaningfully.
+        volumeUSD: interestUSD,
+        feesUSD: interestUSD,
+      };
+    })
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const clean = filterFeeOutliers(snapshots);
+  const snapshotVolumeSum = clean.reduce((acc, s) => acc + s.volumeUSD, 0);
+
+  return {
+    summary: computeSummary(
+      slug,
+      parseF(p?.totalValueLockedUSD),
+      // Cumulative volume = lifetime interest paid out. Sanitize against the
+      // 90-day snapshot sum the same way the other Messari fetchers do.
+      sanitizeCumulative(parseF(p?.cumulativeTotalRevenueUSD), snapshotVolumeSum),
+      sanitizeCumulative(parseF(p?.cumulativeTotalRevenueUSD), snapshotVolumeSum),
+      clean,
+      {
+        totalBorrowUSD: parseF(p?.totalBorrowBalanceUSD),
+        rwaDrawnBalanceUSD: parseF(p?.totalBorrowBalanceUSD),
+        rwaCumulativeBorrowUSD: parseF(p?.cumulativeBorrowUSD),
+        rwaPoolCount: p?.totalPoolCount ?? 0,
+        rwaUniqueBorrowers: p?.cumulativeUniqueBorrowers ?? 0,
+        rwaOpenPositionCount: p?.openPositionCount ?? 0,
+        rwaDefaultsUSD: parseF(p?.cumulativeLiquidateUSD),
+      },
+    ),
+    snapshots: clean,
+  };
+}
+
 function normalizeMessariStaking(slug: string, data: MessariStakingData): ProtocolDetail {
   const p = data.protocols[0];
 
@@ -1022,6 +1124,10 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
     case 'messari-lending': {
       const data = await queryProtocolSubgraph<MessariLendingData>(config.subgraphId, MESSARI_LENDING_QUERY);
       return normalizeMessariLending(config.slug, data);
+    }
+    case 'messari-rwa': {
+      const data = await queryProtocolSubgraph<MessariRwaData>(config.subgraphId, MESSARI_RWA_QUERY);
+      return normalizeMessariRwa(config.slug, data);
     }
     case 'messari-staking': {
       const data = await queryProtocolSubgraph<MessariStakingData>(config.subgraphId, MESSARI_STAKING_QUERY);

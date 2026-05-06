@@ -139,19 +139,21 @@ const CATEGORY_LABELS: Record<ProtocolCategory, CategoryLabels> = {
     cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
     cumulativeSub: 'all time',
   },
-  // RWA protocols (uncollateralised real-world credit, tokenised treasuries)
-  // borrow infrequently in large institutional drawdowns rather than continuous
-  // small loans. Daily borrowing series will commonly read 0 for stretches even
-  // when the protocol is healthy. Labels reflect this credit framing.
+  // RWA protocols (uncollateralised real-world credit pools) accrue interest
+  // continuously on outstanding principal but originate new loans only in
+  // discrete institutional drawdowns. The volume series therefore tracks
+  // daily interest earned rather than new borrow volume, which gives a
+  // meaningful daily picture for harvest-mode protocols. Drawn-balance,
+  // pool count, borrower count, and defaults are surfaced via getExtraStats.
   'RWA': {
     tvlLabel: 'Total Lent',
-    volumeLabel: 'Drawn Balance',
-    volumeChartTitle: 'Daily Drawdowns (90 days)',
-    volumeTooltipLabel: 'Drawn',
-    feesLabel: '30d Revenue',
-    cumulativeLabel: 'Cumulative Drawn',
+    volumeLabel: '30d Interest',
+    volumeChartTitle: 'Daily Interest Earned (90 days)',
+    volumeTooltipLabel: 'Interest',
+    feesLabel: '30d Interest',
+    cumulativeLabel: 'Lifetime Interest',
     cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
-    cumulativeSub: 'all time',
+    cumulativeSub: 'paid to LPs + protocol',
   },
 };
 
@@ -167,6 +169,25 @@ function getExtraStats(category: ProtocolCategory, summary?: ProtocolSummary): E
   }
   if (category === 'Yield Aggregator' && summary.stakingAPR) {
     return [{ label: 'Net APY (30d est.)', value: formatPercent(summary.stakingAPR) }];
+  }
+  if (category === 'RWA') {
+    const stats: ExtraStat[] = [];
+    if (typeof summary.rwaDrawnBalanceUSD === 'number') {
+      stats.push({ label: 'Drawn Balance', value: formatUSD(summary.rwaDrawnBalanceUSD) });
+    }
+    if (typeof summary.rwaPoolCount === 'number' && summary.rwaPoolCount > 0) {
+      stats.push({ label: 'Active Pools', value: summary.rwaPoolCount.toLocaleString() });
+    }
+    if (typeof summary.rwaUniqueBorrowers === 'number' && summary.rwaUniqueBorrowers > 0) {
+      stats.push({ label: 'Unique Borrowers', value: summary.rwaUniqueBorrowers.toLocaleString() });
+    }
+    if (typeof summary.rwaDefaultsUSD === 'number') {
+      stats.push({
+        label: 'Defaults',
+        value: summary.rwaDefaultsUSD === 0 ? 'None' : formatUSD(summary.rwaDefaultsUSD),
+      });
+    }
+    return stats;
   }
   return [];
 }

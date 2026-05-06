@@ -1,6 +1,7 @@
 export type SchemaType =
   | 'messari-dex'
   | 'messari-lending'
+  | 'messari-rwa'
   | 'messari-staking'
   | 'messari-yield'
   | 'messari-bridge'
@@ -252,12 +253,36 @@ export const PROTOCOLS: ProtocolConfig[] = [
     slug: 'goldfinch',
     name: 'Goldfinch',
     category: 'RWA',
-    description: 'Uncollateralised credit pools backing real-world borrowers, primarily emerging-market fintechs. Liquidity providers fund Senior and Junior pools that finance off-chain credit deals; backers underwrite Borrower Pools and absorb first-loss tranches. Daily borrowing is sparse by design, drawdowns are infrequent institutional events rather than continuous lending activity.',
+    description: 'Uncollateralised credit pools backing real-world borrowers, primarily emerging-market fintechs. Liquidity providers fund Senior and Junior pools that finance off-chain credit deals; backers underwrite Borrower Pools and absorb first-loss tranches. Currently in harvest mode, no new originations in 90+ days but $105M of outstanding loans accruing interest daily.',
     subgraphId: 'GRwpFCPYyQPdz84sCnKemzrNvgFPuKkFLcRLR6jsRxHr',
-    schemaType: 'messari-lending',
+    schemaType: 'messari-rwa',
     website: 'https://goldfinch.finance',
     chains: ['Ethereum'],
     color: '#FFCC55',
+  },
+  {
+    slug: 'truefi',
+    name: 'TrueFi',
+    category: 'RWA',
+    description: 'Uncollateralised institutional lending protocol. Capital pools fund credit lines to vetted borrowers (asset managers, market makers, crypto-native firms) on fixed terms. Originated $1.7B+ in lifetime credit and earned $41M+ in revenue with zero defaults to date.',
+    subgraphId: '39F8fYCvLYmutjqpzEwx3dcEJTtFFVupvBzJqkEzftA7',
+    schemaType: 'messari-rwa',
+    website: 'https://truefi.io',
+    chains: ['Ethereum'],
+    color: '#5673E0',
+  },
+  {
+    slug: 'maple-finance',
+    name: 'Maple Finance',
+    category: 'RWA',
+    description: 'Institutional lending platform offering undercollateralised loans to vetted borrowers via Pool Delegate-managed lending pools. This entry tracks the v2 protocol deployment; total Maple TVL across all product lines is materially higher per Maple\'s official dashboards.',
+    subgraphId: '94swSaaFChsQoZzb9Vc7Lo6FWFV6YZUMNSdFVTMAeRgj',
+    schemaType: 'messari-rwa',
+    website: 'https://maple.finance',
+    chains: ['Ethereum'],
+    color: '#FF9354',
+    knownIssues: 'This subgraph indexes the Maple v2 deployment only. Maple\'s total protocol footprint, including Maple Cash Management and other product lines, is materially larger than the figures shown here.',
+    knownIssueAffects: 'volume',
   },
   {
     slug: 'stargate-arbitrum',
