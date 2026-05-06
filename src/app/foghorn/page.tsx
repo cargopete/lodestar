@@ -8,6 +8,37 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface Stats {
+  total_probes: number;
+  total_divergences: number;
+  opted_in_indexers: number;
+  deployments_covered: number;
+  divergence_rate_24h: number;
+  probes_24h: number;
+  divergences_24h: number;
+}
+
+interface DeploymentSummary {
+  deployment_id: string;
+  total_probes: number;
+  avg_latency_ms: number | null;
+  p50_latency_ms: number | null;
+  p95_latency_ms: number | null;
+  last_probe_at: string | null;
+  unique_indexers: number;
+}
+
+interface IndexerQuality {
+  indexer_address: string;
+  total_probes: number;
+  divergent_probes: number;
+  divergence_rate: number;
+  avg_latency_ms: number | null;
+  last_seen: string | null;
+}
+
 interface FeedEvent {
   probe_id: string;
   deployment_id: string;
@@ -20,15 +51,28 @@ interface FeedEvent {
   diff_patch_count: number;
 }
 
-interface Stats {
-  total_probes: number;
-  total_divergences: number;
-  opted_in_indexers: number;
-  deployments_covered: number;
-  divergence_rate_24h: number;
-  probes_24h: number;
-  divergences_24h: number;
-}
+// ── Deployment metadata ───────────────────────────────────────────────────────
+
+const DEPLOYMENT_INFO: Record<string, { label: string; network: string }> = {
+  '0x45c636b73728d75a77b84c782e2a44624a294c1414326e59f12d60e0a6e58f51': {
+    label: 'Graph Network',
+    network: 'Arbitrum One',
+  },
+  '0xde0a7b5368f846f7d863d9f64949b688ad9818243151d488b4c6b206145b9ea3': {
+    label: 'Premia Finance',
+    network: 'Arbitrum One',
+  },
+  '0xce57e4bc7b885a6255edd3e9d1617bb8819559f3903b84c18bb5db31afe17d06': {
+    label: 'ENS',
+    network: 'Ethereum',
+  },
+  '0xe7b79e8051d136a6ab0ffd6016c7b7fd96dc63e220fe4071021844f36796398b': {
+    label: 'Aave V2',
+    network: 'Ethereum',
+  },
+};
+
+// ── Hooks ─────────────────────────────────────────────────────────────────────
 
 function useFoghornStats() {
   return useQuery<Stats>({
@@ -43,18 +87,68 @@ function useFoghornStats() {
   });
 }
 
-function useFoghornFeed(deploymentId?: string) {
-  return useQuery<{ events: FeedEvent[]; count: number }>({
-    queryKey: ['foghorn-feed', deploymentId],
+function useFoghornDeployments() {
+  return useQuery<{ deployments: DeploymentSummary[] }>({
+    queryKey: ['foghorn-deployments'],
     queryFn: async () => {
-      const qs = deploymentId ? `?deployment_id=${encodeURIComponent(deploymentId)}` : '';
-      const r = await fetch(`/api/foghorn/feed${qs}`);
+      const r = await fetch('/api/foghorn/deployments');
       if (!r.ok) throw new Error(`${r.status}`);
       return r.json();
     },
     staleTime: 60_000,
     retry: 1,
   });
+}
+
+function useDeploymentQuality(deploymentId: string, enabled: boolean) {
+  return useQuery<{ deployment_id: string; indexers: IndexerQuality[] }>({
+    queryKey: ['foghorn-deployment-quality', deploymentId],
+    queryFn: async () => {
+      const r = await fetch(`/api/foghorn/deployment/${encodeURIComponent(deploymentId)}/quality?days=7`);
+      if (!r.ok) throw new Error(`${r.status}`);
+      return r.json();
+    },
+    enabled,
+    staleTime: 300_000,
+    retry: 1,
+  });
+}
+
+function useFoghornFeed() {
+  return useQuery<{ events: FeedEvent[]; count: number }>({
+    queryKey: ['foghorn-feed'],
+    queryFn: async () => {
+      const r = await fetch('/api/foghorn/feed');
+      if (!r.ok) throw new Error(`${r.status}`);
+      return r.json();
+    },
+    staleTime: 60_000,
+    retry: 1,
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function latencyColor(ms: number | null): string {
+  if (ms === null) return 'text-[var(--text-faint)]';
+  if (ms < 80) return 'text-[var(--green)]';
+  if (ms < 200) return 'text-[var(--text)]';
+  if (ms < 500) return 'text-[var(--amber)]';
+  return 'text-[var(--red)]';
+}
+
+function latencyLabel(ms: number | null): string {
+  if (ms === null) return '—';
+  return `${ms}ms`;
+}
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return '—';
+  const diff = Date.now() - new Date(iso).getTime();
+  const h = Math.floor(diff / 3_600_000);
+  if (h < 1) return '<1h ago';
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -64,13 +158,172 @@ const CATEGORY_LABELS: Record<string, string> = {
   Q_timetravel: 'Time-travel',
 };
 
-export default function FoghornPage() {
-  const [deploymentFilter, setDeploymentFilter] = useState('');
+// ── Deployment row ────────────────────────────────────────────────────────────
 
-  const { data: stats, isLoading: statsLoading } = useFoghornStats();
-  const { data: feedData, isLoading: feedLoading } = useFoghornFeed(
-    deploymentFilter || undefined
+type SortKey = 'latency' | 'probes' | 'last_seen';
+
+function DeploymentRow({ summary }: { summary: DeploymentSummary }) {
+  const [expanded, setExpanded] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>('latency');
+  const { data, isLoading } = useDeploymentQuality(summary.deployment_id, expanded);
+
+  const info = DEPLOYMENT_INFO[summary.deployment_id];
+  const label = info?.label ?? shortenAddress(summary.deployment_id);
+  const network = info?.network ?? 'Unknown';
+
+  const sorted = [...(data?.indexers ?? [])].sort((a, b) => {
+    if (sortKey === 'latency') return (a.avg_latency_ms ?? 9999) - (b.avg_latency_ms ?? 9999);
+    if (sortKey === 'probes') return b.total_probes - a.total_probes;
+    if (sortKey === 'last_seen') return new Date(b.last_seen ?? 0).getTime() - new Date(a.last_seen ?? 0).getTime();
+    return 0;
+  });
+
+  return (
+    <div className="border border-[var(--border)] rounded-lg overflow-hidden">
+      {/* Summary row */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center gap-4 px-4 py-3 bg-[var(--bg-elevated)] hover:bg-[var(--bg-card)] text-left transition-colors"
+      >
+        <svg
+          className={cn('w-4 h-4 text-[var(--text-faint)] shrink-0 transition-transform', expanded && 'rotate-90')}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-[var(--text)]">{label}</span>
+            <Badge variant="default" className="text-[10px]">{network}</Badge>
+          </div>
+          <span className="font-mono text-[10px] text-[var(--text-faint)]">
+            {summary.deployment_id.slice(0, 18)}…
+          </span>
+        </div>
+
+        <div className="flex items-center gap-6 shrink-0 text-right">
+          <div>
+            <div className={cn('font-mono text-sm font-medium', latencyColor(summary.avg_latency_ms))}>
+              {latencyLabel(summary.avg_latency_ms)}
+            </div>
+            <div className="text-[10px] text-[var(--text-faint)]">avg</div>
+          </div>
+          <div>
+            <div className={cn('font-mono text-sm font-medium', latencyColor(summary.p95_latency_ms))}>
+              {latencyLabel(summary.p95_latency_ms)}
+            </div>
+            <div className="text-[10px] text-[var(--text-faint)]">p95</div>
+          </div>
+          <div>
+            <div className="font-mono text-sm font-medium text-[var(--text)]">
+              {summary.unique_indexers}
+            </div>
+            <div className="text-[10px] text-[var(--text-faint)]">indexers</div>
+          </div>
+          <div>
+            <div className="text-sm text-[var(--text-muted)]">{timeAgo(summary.last_probe_at)}</div>
+            <div className="text-[10px] text-[var(--text-faint)]">last probe</div>
+          </div>
+        </div>
+      </button>
+
+      {/* Expanded indexer table */}
+      {expanded && (
+        <div className="border-t border-[var(--border)]">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">
+                      Allocation key
+                    </th>
+                    <th
+                      className={cn(
+                        'px-4 py-2 text-right text-[11px] font-medium cursor-pointer select-none',
+                        sortKey === 'latency' ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
+                      )}
+                      onClick={() => setSortKey('latency')}
+                    >
+                      Avg latency {sortKey === 'latency' && '↑'}
+                    </th>
+                    <th
+                      className={cn(
+                        'px-4 py-2 text-right text-[11px] font-medium cursor-pointer select-none',
+                        sortKey === 'probes' ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
+                      )}
+                      onClick={() => setSortKey('probes')}
+                    >
+                      Probes {sortKey === 'probes' && '↓'}
+                    </th>
+                    <th
+                      className={cn(
+                        'px-4 py-2 text-right text-[11px] font-medium cursor-pointer select-none',
+                        sortKey === 'last_seen' ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
+                      )}
+                      onClick={() => setSortKey('last_seen')}
+                    >
+                      Last seen {sortKey === 'last_seen' && '↓'}
+                    </th>
+                    <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">
+                      Divergent
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                  {sorted.map((ix) => (
+                    <tr key={ix.indexer_address} className="hover:bg-[var(--bg-elevated)]">
+                      <td className="px-4 py-2">
+                        <span className="font-mono text-xs text-[var(--text-muted)]">
+                          {ix.indexer_address.slice(0, 10)}…{ix.indexer_address.slice(-6)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <span className={cn('font-mono text-xs font-medium', latencyColor(ix.avg_latency_ms))}>
+                          {latencyLabel(ix.avg_latency_ms)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <span className="font-mono text-xs text-[var(--text-muted)]">
+                          {ix.total_probes}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <span className="text-xs text-[var(--text-faint)]">
+                          {timeAgo(ix.last_seen)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <span className={cn(
+                          'font-mono text-xs',
+                          ix.divergent_probes > 0 ? 'text-[var(--amber)] font-medium' : 'text-[var(--text-faint)]'
+                        )}>
+                          {ix.divergent_probes > 0 ? ix.divergent_probes : '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default function FoghornPage() {
+  const { data: stats, isLoading: statsLoading } = useFoghornStats();
+  const { data: deploymentsData, isLoading: deploymentsLoading } = useFoghornDeployments();
+  const { data: feedData } = useFoghornFeed();
 
   const isUnavailable = !statsLoading && !stats;
 
@@ -83,9 +336,8 @@ export default function FoghornPage() {
           <Badge variant="accent">Observability</Badge>
         </div>
         <p className="text-sm text-[var(--text-muted)] max-w-2xl">
-          GraphQL probes dispatched via The Graph gateway. Responses are
-          canonicalized, hashed, and clustered by allocation. Divergence events
-          appear here when allocations return different data for the same query.
+          Block-pinned GraphQL probes dispatched via The Graph gateway. Latency and
+          response consistency observed across all allocating indexers.
         </p>
       </div>
 
@@ -111,6 +363,11 @@ export default function FoghornPage() {
             subtitle={`${stats.probes_24h.toLocaleString()} in last 24h`}
           />
           <StatCard
+            label="Observed Allocations"
+            value={stats.opted_in_indexers.toLocaleString()}
+            subtitle={`across ${stats.deployments_covered} deployments`}
+          />
+          <StatCard
             label="Divergences"
             value={stats.total_divergences.toLocaleString()}
             subtitle={`${stats.divergences_24h} in last 24h`}
@@ -120,40 +377,40 @@ export default function FoghornPage() {
             value={`${(stats.divergence_rate_24h * 100).toFixed(1)}%`}
             subtitle="of probes with divergent clusters"
           />
-          <StatCard
-            label="Observed Allocations"
-            value={stats.opted_in_indexers.toLocaleString()}
-            subtitle={`across ${stats.deployments_covered} deployments`}
-          />
         </StatGrid>
       )}
 
-      {/* Feed */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <CardTitle>Divergence Events</CardTitle>
-            <input
-              type="text"
-              placeholder="Filter by deployment ID..."
-              value={deploymentFilter}
-              onChange={(e) => setDeploymentFilter(e.target.value)}
-              className="text-xs px-3 py-1.5 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-[var(--radius-button)] text-[var(--text)] placeholder-[var(--text-faint)] outline-none focus:ring-1 focus:ring-[var(--accent)] w-56"
-            />
+      {/* Deployments */}
+      <div>
+        <h2 className="text-sm font-semibold text-[var(--text)] mb-3">
+          Deployments
+          <span className="ml-2 text-xs font-normal text-[var(--text-faint)]">
+            — click to expand per-indexer latency
+          </span>
+        </h2>
+        {deploymentsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
           </div>
-        </CardHeader>
-        <CardContent>
-          {feedLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : !feedData?.events.length ? (
-            <div className="text-center py-12">
-              <p className="text-sm text-[var(--text-faint)]">
-                {stats ? 'No divergence events yet — probes running.' : 'No data available.'}
-              </p>
-            </div>
-          ) : (
+        ) : (
+          <div className="space-y-2">
+            {(deploymentsData?.deployments ?? []).map((d) => (
+              <DeploymentRow key={d.deployment_id} summary={d} />
+            ))}
+            {!deploymentsData?.deployments.length && !deploymentsLoading && (
+              <p className="text-sm text-[var(--text-faint)] text-center py-8">No probe data yet.</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Divergence Events — only shown when there are some */}
+      {!!feedData?.events.length && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Divergence Events</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -216,24 +473,22 @@ export default function FoghornPage() {
                 </tbody>
               </table>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Methodology note */}
+      {/* Methodology */}
       <div className="text-[11px] text-[var(--text-faint)] leading-relaxed space-y-1 px-1">
         <p>
           <strong className="text-[var(--text-muted)]">Methodology.</strong> Foghorn dispatches
           identical GraphQL queries via The Graph gateway, which load-balances across allocating
-          indexers. Responses are stripped of volatile fields (extensions, block metadata),
-          canonicalized via JCS (RFC 8785), and hashed with SHA-256. Allocations returning the same
-          hash belong to the same cluster. When clusters diverge, an RFC 6902 JSON-Patch diff
-          between cluster representatives is computed and stored.
+          indexers. Responses are stripped of volatile fields, canonicalized via JCS (RFC 8785),
+          and hashed with SHA-256. Latency is measured gateway-to-response. Allocation keys are
+          recovered via EIP-712 ecrecover against the DisputeManager domain.
         </p>
         <p>
           <strong className="text-[var(--text-muted)]">No verdict.</strong> Foghorn does not label,
-          rank, or flag indexers. Cluster membership and diffs are neutral observations — consumers
-          draw their own conclusions.
+          rank, or flag indexers. Observations are neutral — consumers draw their own conclusions.
         </p>
       </div>
     </div>

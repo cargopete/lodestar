@@ -33,6 +33,8 @@ import {
   fetchTokenMetrics,
   fetchParameterHistory,
   fetchSubgraphCuration,
+  fetchSubgraphSchema,
+  fetchCuratorLeaderboard,
 } from '@/lib/api';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -602,5 +604,31 @@ export function useParameterHistory(address: string | null) {
     staleTime: TEN_MINUTES,
     refetchInterval: TEN_MINUTES,
     enabled: !!address,
+  });
+}
+
+/**
+ * Hook for subgraph schema.graphql content (fetched via IPFS → manifest → schema file)
+ */
+export function useSubgraphSchema(hash: string | null) {
+  return useQuery({
+    queryKey: ['subgraphSchema', hash],
+    queryFn: () => fetchSubgraphSchema(hash!),
+    staleTime: ONE_HOUR,
+    enabled: !!hash,
+    retry: 1,
+  });
+}
+
+/**
+ * Hook for curator leaderboard
+ */
+export function useCuratorLeaderboard(params: { first?: number; skip?: number } = {}) {
+  return useQuery({
+    queryKey: ['curatorLeaderboard', params],
+    queryFn: () => fetchCuratorLeaderboard(params),
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    placeholderData: keepPreviousData,
   });
 }

@@ -1,8 +1,152 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useCuratorLeaderboard } from '@/hooks/useNetworkStats';
 import { Card, CardContent } from '@/components/ui/Card';
+import { Pagination } from '@/components/ui/Pagination';
+import { weiToGRT, formatGRT, shortenAddress, cn } from '@/lib/utils';
+
+const PAGE_SIZE = 50;
+
+function LeaderboardTable() {
+  const [page, setPage] = useState(0);
+  const { data, isLoading, isError } = useCuratorLeaderboard({ first: PAGE_SIZE, skip: page * PAGE_SIZE });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+        <span className="ml-3 text-sm text-[var(--text-muted)]">Loading curators…</span>
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <p className="text-sm text-[var(--text-muted)] py-8 text-center">
+        Could not load curator data. Check that the Graph API key is configured.
+      </p>
+    );
+  }
+
+  const thBase = 'px-4 py-3 text-[11px] font-medium text-[var(--text-muted)] select-none';
+
+  return (
+    <>
+      {/* Desktop table */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-[var(--bg-elevated)]">
+            <tr>
+              <th className={cn(thBase, 'text-left w-12')}>#</th>
+              <th className={cn(thBase, 'text-left')}>Address</th>
+              <th className={cn(thBase, 'text-right')}>Signalled (GRT)</th>
+              <th className={cn(thBase, 'text-right')}>Realized Rewards</th>
+              <th className={cn(thBase, 'text-right')}>Return %</th>
+              <th className={cn(thBase, 'text-right')}>Active Signals</th>
+              <th className={cn(thBase, 'text-right')}>Total Signals</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((curator, idx) => {
+              const signalled = weiToGRT(curator.totalSignalledTokens);
+              const realized = weiToGRT(curator.realizedRewards);
+              const returnPct = signalled > 0 ? (realized / signalled) * 100 : 0;
+              return (
+                <tr
+                  key={curator.id}
+                  className="border-b border-[0.5px] border-[var(--border)] hover:bg-[var(--bg-elevated)] transition-colors"
+                >
+                  <td className="px-4 py-3 text-sm text-[var(--text-faint)]">{page * PAGE_SIZE + idx + 1}</td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/curators/${curator.id}`}
+                      className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+                    >
+                      {shortenAddress(curator.id, 8)}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text)]">
+                    {formatGRT(signalled)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-sm">
+                    {realized > 0
+                      ? <span className="text-[var(--green)]">+{formatGRT(realized)}</span>
+                      : <span className="text-[var(--text-faint)]">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-sm">
+                    {realized > 0
+                      ? <span className={cn(returnPct >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]')}>
+                          {returnPct.toFixed(2)}%
+                        </span>
+                      : <span className="text-[var(--text-faint)]">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text)]">
+                    {curator.activeSignalCount}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text-faint)]">
+                    {curator.signalCount}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {data.map((curator, idx) => {
+          const signalled = weiToGRT(curator.totalSignalledTokens);
+          const realized = weiToGRT(curator.realizedRewards);
+          const returnPct = signalled > 0 ? (realized / signalled) * 100 : 0;
+          return (
+            <Link key={curator.id} href={`/curators/${curator.id}`} className="block">
+              <div className="p-4 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--bg-surface)] hover:border-[var(--accent-hover)] transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-[var(--text-faint)]">#{page * PAGE_SIZE + idx + 1}</span>
+                    <span className="font-mono text-sm text-[var(--text)]">{shortenAddress(curator.id, 6)}</span>
+                  </div>
+                  {realized > 0 && (
+                    <span className={cn('text-sm font-mono font-semibold', returnPct >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]')}>
+                      {returnPct.toFixed(2)}%
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded bg-[var(--bg-elevated)]">
+                    <p className="text-[10px] text-[var(--text-faint)]">Signalled</p>
+                    <p className="text-xs font-mono text-[var(--text)]">{formatGRT(signalled)}</p>
+                  </div>
+                  <div className="p-2 rounded bg-[var(--bg-elevated)]">
+                    <p className="text-[10px] text-[var(--text-faint)]">Realized</p>
+                    <p className={cn('text-xs font-mono', realized > 0 ? 'text-[var(--green)]' : 'text-[var(--text-faint)]')}>
+                      {realized > 0 ? `+${formatGRT(realized)}` : '—'}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded bg-[var(--bg-elevated)]">
+                    <p className="text-[10px] text-[var(--text-faint)]">Active</p>
+                    <p className="text-xs font-mono text-[var(--text)]">{curator.activeSignalCount}</p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      <Pagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        totalItems={(page + (data.length === PAGE_SIZE ? 2 : 1)) * PAGE_SIZE}
+        onPageChange={setPage}
+      />
+    </>
+  );
+}
 
 export default function CuratorsPage() {
   const [address, setAddress] = useState('');
@@ -11,26 +155,20 @@ export default function CuratorsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = address.trim();
-    if (trimmed) {
-      router.push(`/curators/${trimmed}`);
-    }
+    if (trimmed) router.push(`/curators/${trimmed}`);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <div className="w-16 h-16 rounded-full bg-[var(--accent-dim)] flex items-center justify-center mb-6">
-        <svg className="w-8 h-8 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-        </svg>
-      </div>
-      <Card className="w-full max-w-lg">
+    <div className="space-y-6">
+      {/* Address lookup */}
+      <Card>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex gap-3">
             <input
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="0x..."
+              placeholder="Jump to address — 0x…"
               className="flex-1 px-4 py-2.5 text-sm font-mono bg-[var(--bg-elevated)] text-[var(--text)] border-[0.5px] border-[var(--border)] rounded-[var(--radius-button)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] transition-colors"
             />
             <button
@@ -42,6 +180,17 @@ export default function CuratorsPage() {
             </button>
           </form>
         </CardContent>
+      </Card>
+
+      {/* Leaderboard */}
+      <Card className="overflow-hidden">
+        <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-[var(--text)]">Curator Leaderboard</h2>
+          <span className="text-xs text-[var(--text-faint)]">Sorted by signalled GRT</span>
+        </div>
+        <Suspense fallback={<div className="h-32 flex items-center justify-center"><div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" /></div>}>
+          <LeaderboardTable />
+        </Suspense>
       </Card>
     </div>
   );

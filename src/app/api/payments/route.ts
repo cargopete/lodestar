@@ -8,6 +8,7 @@ import type {
   PaymentsOverview,
 } from '@/lib/queries';
 import { log } from '@/lib/logger';
+import { GATEWAY_CANONICAL } from '@/lib/utils';
 
 const ESCROW_ACCOUNTS_QUERY = `{
   paymentsEscrowAccounts(
@@ -123,7 +124,7 @@ function aggregateOverview(
   for (const acct of accounts) {
     totalBalance += BigInt(acct.balance);
     totalThawing += BigInt(acct.totalAmountThawing);
-    payers.add(acct.payer.id);
+    payers.add(GATEWAY_CANONICAL[acct.payer.id.toLowerCase()] ?? acct.payer.id.toLowerCase());
     receivers.add(acct.receiver.id);
   }
 
