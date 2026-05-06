@@ -139,6 +139,20 @@ const CATEGORY_LABELS: Record<ProtocolCategory, CategoryLabels> = {
     cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
     cumulativeSub: 'all time',
   },
+  // RWA protocols (uncollateralised real-world credit, tokenised treasuries)
+  // borrow infrequently in large institutional drawdowns rather than continuous
+  // small loans. Daily borrowing series will commonly read 0 for stretches even
+  // when the protocol is healthy. Labels reflect this credit framing.
+  'RWA': {
+    tvlLabel: 'Total Lent',
+    volumeLabel: 'Drawn Balance',
+    volumeChartTitle: 'Daily Drawdowns (90 days)',
+    volumeTooltipLabel: 'Drawn',
+    feesLabel: '30d Revenue',
+    cumulativeLabel: 'Cumulative Drawn',
+    cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
+    cumulativeSub: 'all time',
+  },
 };
 
 interface ExtraStat {

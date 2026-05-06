@@ -16,7 +16,8 @@ export type ProtocolCategory =
   | 'Liquid Staking'
   | 'Yield Aggregator'
   | 'Prediction Markets'
-  | 'Bridge';
+  | 'Bridge'
+  | 'RWA';
 
 export interface ProtocolConfig {
   slug: string;
@@ -246,6 +247,17 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://yearn.fi',
     chains: ['Ethereum'],
     color: '#0657F9',
+  },
+  {
+    slug: 'goldfinch',
+    name: 'Goldfinch',
+    category: 'RWA',
+    description: 'Uncollateralised credit pools backing real-world borrowers, primarily emerging-market fintechs. Liquidity providers fund Senior and Junior pools that finance off-chain credit deals; backers underwrite Borrower Pools and absorb first-loss tranches. Daily borrowing is sparse by design, drawdowns are infrequent institutional events rather than continuous lending activity.',
+    subgraphId: 'GRwpFCPYyQPdz84sCnKemzrNvgFPuKkFLcRLR6jsRxHr',
+    schemaType: 'messari-lending',
+    website: 'https://goldfinch.finance',
+    chains: ['Ethereum'],
+    color: '#FFCC55',
   },
   {
     slug: 'stargate-arbitrum',
