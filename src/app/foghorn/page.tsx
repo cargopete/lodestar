@@ -31,7 +31,9 @@ interface DeploymentSummary {
 }
 
 interface IndexerQuality {
-  indexer_address: string;
+  indexer_address: string;       // allocation key (ecrecover'd signer)
+  resolved_indexer: string | null; // real indexer address from network subgraph
+  indexer_url: string | null;
   total_probes: number;
   divergent_probes: number;
   divergence_rate: number;
@@ -114,6 +116,28 @@ function useDeploymentQuality(deploymentId: string, enabled: boolean) {
   });
 }
 
+interface IndexerMeta {
+  id: string;
+  ensName: string | null;
+  name: string | null;
+  url: string | null;
+}
+
+function useIndexerEnsMap() {
+  return useQuery<Record<string, IndexerMeta>>({
+    queryKey: ['indexers-ens-map'],
+    queryFn: async () => {
+      const r = await fetch('/api/indexers-enriched');
+      if (!r.ok) return {};
+      const data = await r.json();
+      const items: IndexerMeta[] = Array.isArray(data) ? data : (data.indexers ?? []);
+      return Object.fromEntries(items.map((i) => [i.id.toLowerCase(), i]));
+    },
+    staleTime: 300_000,
+    retry: 1,
+  });
+}
+
 function useFoghornFeed() {
   return useQuery<{ events: FeedEvent[]; count: number }>({
     queryKey: ['foghorn-feed'],
@@ -162,7 +186,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 type SortKey = 'latency' | 'probes' | 'last_seen';
 
-function DeploymentRow({ summary }: { summary: DeploymentSummary }) {
+function DeploymentRow({ summary, ensMap }: { summary: DeploymentSummary; ensMap: Record<string, IndexerMeta> }) {
   const [expanded, setExpanded] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('latency');
   const { data, isLoading } = useDeploymentQuality(summary.deployment_id, expanded);
@@ -241,7 +265,7 @@ function DeploymentRow({ summary }: { summary: DeploymentSummary }) {
                 <thead>
                   <tr className="border-b border-[var(--border)]">
                     <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">
-                      Allocation key
+                      Indexer
                     </th>
                     <th
                       className={cn(
@@ -279,9 +303,40 @@ function DeploymentRow({ summary }: { summary: DeploymentSummary }) {
                   {sorted.map((ix) => (
                     <tr key={ix.indexer_address} className="hover:bg-[var(--bg-elevated)]">
                       <td className="px-4 py-2">
-                        <span className="font-mono text-xs text-[var(--text-muted)]">
-                          {ix.indexer_address.slice(0, 10)}…{ix.indexer_address.slice(-6)}
-                        </span>
+                        {(() => {
+                          const meta = ix.resolved_indexer ? ensMap[ix.resolved_indexer.toLowerCase()] : null;
+                          const displayUrl = meta?.url ?? ix.indexer_url;
+                          if (ix.resolved_indexer) {
+                            const label = meta?.ensName ?? meta?.name ?? null;
+                            return (
+                              <div>
+                                {label ? (
+                                  <span className="text-xs font-medium text-[var(--text)]">{label}</span>
+                                ) : (
+                                  <span className="font-mono text-xs text-[var(--text)]">
+                                    {ix.resolved_indexer.slice(0, 10)}…{ix.resolved_indexer.slice(-6)}
+                                  </span>
+                                )}
+                                {displayUrl && (
+                                  <a
+                                    href={displayUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block text-[10px] text-[var(--accent)] hover:underline truncate max-w-[180px]"
+                                  >
+                                    {displayUrl.replace(/^https?:\/\//, '')}
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          }
+                          return (
+                            <span className="font-mono text-xs text-[var(--text-faint)]" title={ix.indexer_address}>
+                              {ix.indexer_address.slice(0, 10)}…{ix.indexer_address.slice(-6)}
+                              <span className="ml-1 text-[9px] opacity-50">alloc</span>
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-2 text-right">
                         <span className={cn('font-mono text-xs font-medium', latencyColor(ix.avg_latency_ms))}>
@@ -324,6 +379,7 @@ export default function FoghornPage() {
   const { data: stats, isLoading: statsLoading } = useFoghornStats();
   const { data: deploymentsData, isLoading: deploymentsLoading } = useFoghornDeployments();
   const { data: feedData } = useFoghornFeed();
+  const { data: ensMap = {} } = useIndexerEnsMap();
 
   const isUnavailable = !statsLoading && !stats;
 
@@ -395,7 +451,7 @@ export default function FoghornPage() {
         ) : (
           <div className="space-y-2">
             {(deploymentsData?.deployments ?? []).map((d) => (
-              <DeploymentRow key={d.deployment_id} summary={d} />
+              <DeploymentRow key={d.deployment_id} summary={d} ensMap={ensMap} />
             ))}
             {!deploymentsData?.deployments.length && !deploymentsLoading && (
               <p className="text-sm text-[var(--text-faint)] text-center py-8">No probe data yet.</p>
