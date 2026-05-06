@@ -13,10 +13,12 @@ function getRedis(): Redis {
 }
 
 function hasRedis(): boolean {
-  return !!(
-    (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ||
-    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
-  );
+  // Treat empty strings as unset. Some deploy targets inject the env keys with
+  // empty values when no Redis is provisioned, which would otherwise route
+  // every cache read/write through an invalid URL and stall on TCP timeout.
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  return !!(url && token);
 }
 
 /**
