@@ -44,3 +44,7 @@ next-env.d.ts
 
 # private / local-only docs
 /private/
+
+# local dev artifacts
+/logs/
+/.playwright-screens/

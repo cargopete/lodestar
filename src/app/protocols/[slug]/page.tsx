@@ -155,6 +155,20 @@ const CATEGORY_LABELS: Record<ProtocolCategory, CategoryLabels> = {
     cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
     cumulativeSub: 'paid to LPs + protocol',
   },
+  // Perpetuals venues' "TVL" is LP capital backing the venue, not user
+  // deposits. Headline activity is trade volume; the dominant state metric
+  // is open interest (notional value of all currently-open positions),
+  // surfaced as a separate hero stat via getExtraStats.
+  'Perpetuals': {
+    tvlLabel: 'LP Capital',
+    volumeLabel: '30d Trading Volume',
+    volumeChartTitle: 'Daily Trading Volume (90 days)',
+    volumeTooltipLabel: 'Volume',
+    feesLabel: '30d Fees',
+    cumulativeLabel: 'Lifetime Volume',
+    cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
+    cumulativeSub: 'all time',
+  },
 };
 
 interface ExtraStat {
@@ -186,6 +200,19 @@ function getExtraStats(category: ProtocolCategory, summary?: ProtocolSummary): E
         label: 'Defaults',
         value: summary.rwaDefaultsUSD === 0 ? 'None' : formatUSD(summary.rwaDefaultsUSD),
       });
+    }
+    return stats;
+  }
+  if (category === 'Perpetuals') {
+    const stats: ExtraStat[] = [];
+    if (typeof summary.perpOpenInterestUSD === 'number' && summary.perpOpenInterestUSD > 0) {
+      stats.push({ label: 'Open Interest', value: formatUSD(summary.perpOpenInterestUSD) });
+    }
+    if (typeof summary.perpLongOpenInterestUSD === 'number' && summary.perpLongOpenInterestUSD > 0) {
+      stats.push({ label: 'Long OI', value: formatUSD(summary.perpLongOpenInterestUSD) });
+    }
+    if (typeof summary.perpShortOpenInterestUSD === 'number' && summary.perpShortOpenInterestUSD > 0) {
+      stats.push({ label: 'Short OI', value: formatUSD(summary.perpShortOpenInterestUSD) });
     }
     return stats;
   }

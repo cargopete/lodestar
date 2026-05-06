@@ -30,6 +30,12 @@ export interface ProtocolSummary {
   rwaUniqueBorrowers?: number;
   rwaOpenPositionCount?: number;
   rwaDefaultsUSD?: number;
+  // Perpetuals-specific extras. Open interest is the headline state metric
+  // for derivatives venues (the value of all currently-open positions);
+  // distinct from TVL which is LP capital backing the venue.
+  perpOpenInterestUSD?: number;
+  perpLongOpenInterestUSD?: number;
+  perpShortOpenInterestUSD?: number;
 }
 
 export interface ProtocolDetail {
@@ -327,6 +333,48 @@ const MESSARI_BRIDGE_QUERY = `{
     timestamp
     totalValueLockedUSD
     dailyVolumeOutUSD
+    dailyTotalRevenueUSD
+  }
+}`;
+
+// --- Messari Perpetuals schema (Kwenta, MUX, GMX-shape protocols) ---
+//
+// Standard Messari derivPerpProtocols template. TVL is LP capital backing
+// the venue; the headline activity metric is cumulative trade volume
+// (cumulativeVolumeUSD) and the headline state metric is total open
+// interest (totalOpenInterestUSD), which we surface as a separate hero
+// stat distinct from TVL.
+
+interface MessariPerpData {
+  derivPerpProtocols: Array<{
+    totalValueLockedUSD: string;
+    cumulativeVolumeUSD: string;
+    cumulativeTotalRevenueUSD: string;
+    totalOpenInterestUSD: string;
+    longOpenInterestUSD: string;
+    shortOpenInterestUSD: string;
+  }>;
+  financialsDailySnapshots: Array<{
+    timestamp: string;
+    totalValueLockedUSD: string;
+    dailyVolumeUSD: string;
+    dailyTotalRevenueUSD: string;
+  }>;
+}
+
+const MESSARI_PERP_QUERY = `{
+  derivPerpProtocols(first: 1) {
+    totalValueLockedUSD
+    cumulativeVolumeUSD
+    cumulativeTotalRevenueUSD
+    totalOpenInterestUSD
+    longOpenInterestUSD
+    shortOpenInterestUSD
+  }
+  financialsDailySnapshots(first: 90, orderBy: timestamp, orderDirection: desc) {
+    timestamp
+    totalValueLockedUSD
+    dailyVolumeUSD
     dailyTotalRevenueUSD
   }
 }`;
@@ -997,6 +1045,38 @@ function normalizeMessariBridge(slug: string, data: MessariBridgeData): Protocol
   };
 }
 
+function normalizeMessariPerp(slug: string, data: MessariPerpData): ProtocolDetail {
+  const p = data.derivPerpProtocols[0];
+  const snapshots: ProtocolDaySnapshot[] = data.financialsDailySnapshots
+    .map((s) => ({
+      timestamp: parseInt(s.timestamp),
+      tvlUSD: parseF(s.totalValueLockedUSD),
+      volumeUSD: parseF(s.dailyVolumeUSD),
+      feesUSD: parseF(s.dailyTotalRevenueUSD),
+    }))
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const clean = filterFeeOutliers(snapshots);
+  const snapshotVolumeSum = clean.reduce((acc, s) => acc + s.volumeUSD, 0);
+  const snapshotFeesSum = clean.reduce((acc, s) => acc + s.feesUSD, 0);
+
+  return {
+    summary: computeSummary(
+      slug,
+      parseF(p?.totalValueLockedUSD),
+      sanitizeCumulative(parseF(p?.cumulativeVolumeUSD), snapshotVolumeSum),
+      sanitizeCumulative(parseF(p?.cumulativeTotalRevenueUSD), snapshotFeesSum),
+      clean,
+      {
+        perpOpenInterestUSD: parseF(p?.totalOpenInterestUSD),
+        perpLongOpenInterestUSD: parseF(p?.longOpenInterestUSD),
+        perpShortOpenInterestUSD: parseF(p?.shortOpenInterestUSD),
+      },
+    ),
+    snapshots: clean,
+  };
+}
+
 function normalizeUniswapV2(slug: string, data: UniswapV2Data): ProtocolDetail {
   const f = data.uniswapFactory;
   const totalVolume = parseF(f?.totalVolumeUSD);
@@ -1140,6 +1220,10 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
     case 'messari-bridge': {
       const data = await queryProtocolSubgraph<MessariBridgeData>(config.subgraphId, MESSARI_BRIDGE_QUERY);
       return normalizeMessariBridge(config.slug, data);
+    }
+    case 'messari-perp': {
+      const data = await queryProtocolSubgraph<MessariPerpData>(config.subgraphId, MESSARI_PERP_QUERY);
+      return normalizeMessariPerp(config.slug, data);
     }
     case 'uniswap-v2': {
       const data = await queryProtocolSubgraph<UniswapV2Data>(config.subgraphId, UNISWAP_V2_QUERY);
