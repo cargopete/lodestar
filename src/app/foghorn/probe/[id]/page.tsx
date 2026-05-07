@@ -157,7 +157,7 @@ export default function ProbeDetailPage({ params }: { params: Promise<{ id: stri
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />
                 <span className="text-[var(--text-muted)]">
-                  Cluster C1 — {divergence.largest_by_count.size} indexers (largest by count)
+                  Cluster C1 — {divergence.largest_by_count.size} allocations (largest by count)
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -216,7 +216,7 @@ export default function ProbeDetailPage({ params }: { params: Promise<{ id: stri
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Indexer</th>
+                  <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Allocation</th>
                   <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Cluster</th>
                   <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Latency</th>
                   <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)] hidden sm:table-cell">Meta block</th>
@@ -229,12 +229,9 @@ export default function ProbeDetailPage({ params }: { params: Promise<{ id: stri
                   return (
                     <tr key={obs.indexer_address} className="hover:bg-[var(--bg-elevated)]">
                       <td className="px-4 py-3">
-                        <Link
-                          href={`/indexers/${obs.indexer_address}`}
-                          className="font-mono text-xs text-[var(--text)] hover:text-[var(--accent)]"
-                        >
+                        <span className="font-mono text-xs text-[var(--text)]" title={obs.indexer_address}>
                           {obs.indexer_address.slice(0, 10)}…
-                        </Link>
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
