@@ -61,12 +61,18 @@ export type TokenTag =
   | 'DEX'
   | 'Lending'
   | 'LST'
+  | 'Restaking'
   | 'Governance'
   | 'Oracle'
   | 'Infrastructure'
   | 'Identity'
   | 'Memecoin'
-  | 'DeFi';
+  | 'DeFi'
+  | 'AI'
+  | 'RWA'
+  | 'DePIN'
+  | 'Gaming'
+  | 'Bridge';
 
 export interface TokenSummary {
   contract: string;

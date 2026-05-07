@@ -785,4 +785,468 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     website: 'https://www.ether.fi',
     tags: ['LST', 'Governance'],
   },
+
+  // === Expansion v1: 36 new seeds (AI / Restaking / RWA / DePIN / L2 / newer memecoins) ===
+  // FET/WETH 10000bps  TVL=$4,367,136
+  {
+    contract: '0xaea46a60368a7bd060eec7df8cba43b7ef41ad85',
+    symbol: 'FET',
+    chain: 'mainnet',
+    pool: {
+      address: '0x948b54a93f5ad1df6b8bff6dc249d99ca2eca052',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'fet',
+    website: 'https://fetch.ai',
+    tags: ['AI', 'Governance'],
+  },
+  // RENDER/WETH 10000bps  TVL=$5,954,121
+  {
+    contract: '0x6de037ef9ad2725eb40118bb1702ebb27e4aeb24',
+    symbol: 'RENDER',
+    chain: 'mainnet',
+    pool: {
+      address: '0xe936f0073549ad8b1fa53583600d629ba9375161',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'rndr',
+    website: 'https://renderfoundation.com',
+    tags: ['AI', 'DePIN'],
+  },
+  // OCEAN/WETH 3000bps  TVL=$315,224
+  {
+    contract: '0x967da4048cd07ab37855c090aaf366e4ce1b9f48',
+    symbol: 'OCEAN',
+    chain: 'mainnet',
+    pool: {
+      address: '0x283e2e83b7f3e297c4b7c02114ab0196b001a109',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'ocean',
+    website: 'https://oceanprotocol.com',
+    tags: ['AI'],
+  },
+  // NMR/WETH 10000bps  TVL=$579,071
+  {
+    contract: '0x1776e1f26f98b1a5df9cd347953a26dd3cb46671',
+    symbol: 'NMR',
+    chain: 'mainnet',
+    pool: {
+      address: '0x8df016708a66377dae191ca6f9fff4705a3d951f',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'nmr',
+    website: 'https://numer.ai',
+    tags: ['AI'],
+  },
+  // ARKM/WETH 10000bps  TVL=$382,807
+  {
+    contract: '0x6e2a43be0b1d33b726f0ca3b8de60b3482b8b050',
+    symbol: 'ARKM',
+    chain: 'mainnet',
+    pool: {
+      address: '0x9cb91e5451d29c84b51ffd40df0b724b639bf841',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'arkm',
+    website: 'https://www.arkhamintelligence.com',
+    tags: ['AI', 'Infrastructure'],
+  },
+  // PRIME/WETH 10000bps  TVL=$2,826,312
+  {
+    contract: '0xb23d80f5fefcddaa212212f028021b41ded428cf',
+    symbol: 'PRIME',
+    chain: 'mainnet',
+    pool: {
+      address: '0xcd423f3ab39a11ff1d9208b7d37df56e902c932b',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'prime',
+    website: 'https://www.echelon.io',
+    tags: ['Gaming', 'AI'],
+  },
+  // EIGEN/WETH 3000bps  TVL=$4,986,564
+  {
+    contract: '0xec53bf9167f50cdeb3ae105f56099aaab9061f83',
+    symbol: 'EIGEN',
+    chain: 'mainnet',
+    pool: {
+      address: '0xc2c390c6cd3c4e6c2b70727d35a45e8a072f18ca',
+      quote: 'eth',
+      inverse: true,
+    },
+    iconSlug: 'eigen',
+    website: 'https://www.eigenlayer.xyz',
+    tags: ['Restaking', 'Governance'],
+  },
+  // REZ/WETH 10000bps  TVL=$186,870
+  {
+    contract: '0x3b50805453023a91a8bf641e279401a0b23fa6f9',
+    symbol: 'REZ',
+    chain: 'mainnet',
+    pool: {
+      address: '0x76366d95c2016446247296ea50c8d06d0585ae00',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'rez',
+    website: 'https://www.renzoprotocol.com',
+    tags: ['Restaking', 'Governance'],
+  },
+  // rsETH/WETH 500bps  TVL=$91,824
+  {
+    contract: '0xa1290d69c65a6fe4df752f95823fae25cb99e5a7',
+    symbol: 'rsETH',
+    chain: 'mainnet',
+    pool: {
+      address: '0x059615ebf32c946aaab3d44491f78e4f8e97e1d3',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'rseth',
+    website: 'https://kelpdao.xyz',
+    tags: ['LST', 'Restaking'],
+  },
+  // SWELL/WETH 10000bps  TVL=$51,081
+  {
+    contract: '0x0a6e7ba5042b38349e437ec6db6214aec7b35676',
+    symbol: 'SWELL',
+    chain: 'mainnet',
+    pool: {
+      address: '0x4765aa201b3c457742e93a329a9719e1d129acd4',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'swell',
+    website: 'https://www.swellnetwork.io',
+    tags: ['Restaking', 'Governance'],
+  },
+  // pufETH/WETH 3000bps  TVL=$1,064,712
+  {
+    contract: '0xd9a442856c234a39a81a089c06451ebaa4306a72',
+    symbol: 'pufETH',
+    chain: 'mainnet',
+    pool: {
+      address: '0xbdb04e915b94fbfd6e8552ff7860e59db7d4499a',
+      quote: 'eth',
+      inverse: true,
+    },
+    iconSlug: 'pufeth',
+    website: 'https://www.puffer.fi',
+    tags: ['LST', 'Restaking'],
+  },
+  // STRK/WETH 10000bps  TVL=$551,805
+  {
+    contract: '0xca14007eff0db1f8135f4c25b34de49ab0d42766',
+    symbol: 'STRK',
+    chain: 'mainnet',
+    pool: {
+      address: '0xac4fd96fcf729390a3c8044422a529028ec36751',
+      quote: 'eth',
+      inverse: true,
+    },
+    iconSlug: 'strk',
+    website: 'https://www.starknet.io',
+    tags: ['Infrastructure', 'Governance'],
+  },
+  // ZRO/WETH 3000bps  TVL=$485,453
+  {
+    contract: '0x6985884c4392d348587b19cb9eaaf157f13271cd',
+    symbol: 'ZRO',
+    chain: 'mainnet',
+    pool: {
+      address: '0x360acf12e72044ba3eaaa654e51e4725c699dcb1',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'zro',
+    website: 'https://layerzero.network',
+    tags: ['Bridge', 'Governance'],
+  },
+  // MNT/WETH 3000bps  TVL=$1,160,387
+  {
+    contract: '0x3c3a81e81dc49a522a592e7622a7e711c06bf354',
+    symbol: 'MNT',
+    chain: 'mainnet',
+    pool: {
+      address: '0xf4c5e0f4590b6679b3030d29a84857f226087fef',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'mnt',
+    website: 'https://www.mantle.xyz',
+    tags: ['Infrastructure', 'Restaking'],
+  },
+  // METIS/WETH 3000bps  TVL=$3,124,873
+  {
+    contract: '0x9e32b13ce7f2e80a01932b42553652e053d6ed8e',
+    symbol: 'METIS',
+    chain: 'mainnet',
+    pool: {
+      address: '0x1c98562a2fab5af19d8fb3291a36ac3c618835d9',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'metis',
+    website: 'https://www.metis.io',
+    tags: ['Infrastructure', 'Governance'],
+  },
+  // AXL/USDC 3000bps  TVL=$363,535
+  {
+    contract: '0x467719ad09025fcc6cf6f8311755809d45a5e5f3',
+    symbol: 'AXL',
+    chain: 'mainnet',
+    pool: {
+      address: '0x975c822e26a514e7a1b75be587aefc738a73eee7',
+      quote: 'usd',
+      inverse: false,
+    },
+    iconSlug: 'axl',
+    website: 'https://axelar.network',
+    tags: ['Bridge', 'Infrastructure'],
+  },
+  // ONDO/WETH 3000bps  TVL=$6,810,337
+  {
+    contract: '0xfaba6f8e4a5e8ab82f62fe7c39859fa577269be3',
+    symbol: 'ONDO',
+    chain: 'mainnet',
+    pool: {
+      address: '0x7b1e5d984a43ee732de195628d20d05cfabc3cc7',
+      quote: 'eth',
+      inverse: true,
+    },
+    iconSlug: 'ondo',
+    website: 'https://ondo.finance',
+    tags: ['RWA', 'Governance'],
+  },
+  // TRU/USDC 10000bps  TVL=$43,714
+  {
+    contract: '0x4c19596f5aaff459fa38b0f7ed92f11ae6543784',
+    symbol: 'TRU',
+    chain: 'mainnet',
+    pool: {
+      address: '0x8b65f72b5c3b1822d722d4927eda34f7efd8c7d2',
+      quote: 'usd',
+      inverse: false,
+    },
+    iconSlug: 'tru',
+    website: 'https://truefi.io',
+    tags: ['RWA', 'Lending'],
+  },
+  // CFG/USDC 3000bps  TVL=$368,738
+  {
+    contract: '0xc221b7e65ffc80de234bbb6667abdd46593d34f0',
+    symbol: 'CFG',
+    chain: 'mainnet',
+    pool: {
+      address: '0x7270233ccae676e776a659affc35219e6fcfbb10',
+      quote: 'usd',
+      inverse: true,
+    },
+    iconSlug: 'cfg',
+    website: 'https://centrifuge.io',
+    tags: ['RWA'],
+  },
+  // USDe/USDC 100bps  TVL=$2,455,334
+  {
+    contract: '0x4c9edd5852cd905f086c759e8383e09bff1e68b3',
+    symbol: 'USDe',
+    chain: 'mainnet',
+    pool: {
+      address: '0xe6d7ebb9f1a9519dc06d557e03c522d53520e76a',
+      quote: 'usd',
+      inverse: false,
+    },
+    iconSlug: 'usde',
+    website: 'https://www.ethena.fi',
+    tags: ['Stablecoin'],
+  },
+  // USDS/USDC 3000bps  TVL=$38,982
+  {
+    contract: '0xdc035d45d973e3ec169d2276ddab16f1e407384f',
+    symbol: 'USDS',
+    chain: 'mainnet',
+    pool: {
+      address: '0xa66a2770bc0e0c65b63b5a3bb4560e90f95d6146',
+      quote: 'usd',
+      inverse: true,
+    },
+    iconSlug: 'usds',
+    website: 'https://sky.money',
+    tags: ['Stablecoin'],
+  },
+  // JASMY/WETH 10000bps  TVL=$1,821,482
+  {
+    contract: '0x7420b4b9a0110cdc71fb720908340c03f9bc03ec',
+    symbol: 'JASMY',
+    chain: 'mainnet',
+    pool: {
+      address: '0x4d1eff861316396dd1915f69b49f4c2d7b11590d',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'jasmy',
+    website: 'https://www.jasmy.co.jp',
+    tags: ['DePIN'],
+  },
+  // LRC/USDC 3000bps  TVL=$404,807
+  {
+    contract: '0xbbbbca6a901c926f240b89eacb641d8aec7aeafd',
+    symbol: 'LRC',
+    chain: 'mainnet',
+    pool: {
+      address: '0x223a719005e758599dfc7840507c67e5240a930e',
+      quote: 'usd',
+      inverse: true,
+    },
+    iconSlug: 'lrc',
+    website: 'https://loopring.org',
+    tags: ['DEX', 'Infrastructure'],
+  },
+  // ZRX/WETH 3000bps  TVL=$636,740
+  {
+    contract: '0xe41d2489571d322189246dafa5ebde1f4699f498',
+    symbol: 'ZRX',
+    chain: 'mainnet',
+    pool: {
+      address: '0x14424eeecbff345b38187d0b8b749e56faa68539',
+      quote: 'eth',
+      inverse: true,
+    },
+    iconSlug: 'zrx',
+    website: 'https://0x.org',
+    tags: ['DEX', 'Governance'],
+  },
+  // BICO/WETH 3000bps  TVL=$66,372
+  {
+    contract: '0xf17e65822b568b3903685a7c9f496cf7656cc6c2',
+    symbol: 'BICO',
+    chain: 'mainnet',
+    pool: {
+      address: '0xad6b651df72b443f57b76ff79165ee771272e18e',
+      quote: 'eth',
+      inverse: true,
+    },
+    iconSlug: 'bico',
+    website: 'https://www.biconomy.io',
+    tags: ['Infrastructure'],
+  },
+  // MOG/WETH 10000bps  TVL=$1,936,543
+  {
+    contract: '0xaaee1a9723aadb7afa2810263653a34ba2c21c7a',
+    symbol: 'MOG',
+    chain: 'mainnet',
+    pool: {
+      address: '0x7832310cd0de39c4ce0a635f34d9a4b5b47fd434',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'mog',
+    website: 'https://www.mogcoin.xyz',
+    tags: ['Memecoin'],
+  },
+  // NEIRO/WETH 10000bps  TVL=$1,095,344
+  {
+    contract: '0x812ba41e071c7b7fa4ebcfb62df5f45f6fa853ee',
+    symbol: 'NEIRO',
+    chain: 'mainnet',
+    pool: {
+      address: '0x79a6683d82f25535ff3fd2753e03e0961060e882',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'neiro',
+    website: 'https://neirocoin.eth.limo',
+    tags: ['Memecoin'],
+  },
+  // TURBO/WETH 10000bps  TVL=$9,510,782
+  {
+    contract: '0xa35923162c49cf95e6bf26623385eb431ad920d3',
+    symbol: 'TURBO',
+    chain: 'mainnet',
+    pool: {
+      address: '0x7baece5d47f1bc5e1953fbe0e9931d54dab6d810',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'turbo',
+    website: 'https://turbotoad.io',
+    tags: ['Memecoin'],
+  },
+  // CHZ/WETH 10000bps  TVL=$231,800
+  {
+    contract: '0x3506424f91fd33084466f402d5d97f05f8e3b4af',
+    symbol: 'CHZ',
+    chain: 'mainnet',
+    pool: {
+      address: '0x325365ed8275f6a74cac98917b7f6face8da533b',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'chz',
+    website: 'https://www.chiliz.com',
+    tags: ['Memecoin'],
+  },
+  // PIXEL/WETH 10000bps  TVL=$93,164
+  {
+    contract: '0x3429d03c6f7521aec737a0bbf2e5ddcef2c3ae31',
+    symbol: 'PIXEL',
+    chain: 'mainnet',
+    pool: {
+      address: '0xf6e28a6bf73980d573cb53b71112b6886896ebcb',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'pixel',
+    website: 'https://pixels.xyz',
+    tags: ['Gaming'],
+  },
+  // BEAM/WETH 10000bps  TVL=$439,366
+  {
+    contract: '0x62d0a8458ed7719fdaf978fe5929c6d342b0bfce',
+    symbol: 'BEAM',
+    chain: 'mainnet',
+    pool: {
+      address: '0x318fbee0a0d60e5de7009864632ceda8d77489b8',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'beam',
+    website: 'https://onbeam.com',
+    tags: ['Gaming'],
+  },
+  // swETH/WETH 500bps  TVL=$346,732
+  {
+    contract: '0xf951e335afb289353dc249e82926178eac7ded78',
+    symbol: 'swETH',
+    chain: 'mainnet',
+    pool: {
+      address: '0x30ea22c879628514f1494d4bbfef79d21a6b49a2',
+      quote: 'eth',
+      inverse: true,
+    },
+    iconSlug: 'sweth',
+    website: 'https://www.swellnetwork.io',
+    tags: ['LST'],
+  },
+  // BNB/WETH 10000bps  TVL=$503,908
+  {
+    contract: '0xb8c77482e45f1f44de1745f52c74426c631bdd52',
+    symbol: 'BNB',
+    chain: 'mainnet',
+    pool: {
+      address: '0x9e7809c21ba130c1a51c112928ea6474d9a9ae3c',
+      quote: 'eth',
+      inverse: false,
+    },
+    iconSlug: 'bnb',
+    website: 'https://www.bnbchain.org',
+    tags: ['Infrastructure', 'Governance'],
+  },
 ];

@@ -1566,3 +1566,555 @@ Auto-appended by the /tokens prototype as it hits gaps in the Token API.
 | 2026-05-06T18:29:07.754Z | `TOKEN_API_POOLS_FILTER_LEAKS` | pools?input_token=0xc944e90c returned 5 unrelated pools (filter not enforced server-side) |
 | 2026-05-06T18:29:13.175Z | `TOKEN_API_HOLDERS_AMOUNT_STRING` | holders.amount returned as string base-units (OpenAPI says number): USDT |
 | 2026-05-06T18:29:57.247Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for USDT on mainnet (FDV cannot be computed) |
+| 2026-05-07T12:36:41.258Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 2 rows but only 1 distinct datetimes for pool 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 |
+| 2026-05-07T12:36:41.564Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x0e2c4be9f3408e5b1ff631576d946eb8c224b5ed |
+| 2026-05-07T12:36:41.652Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for GRT on mainnet (FDV cannot be computed) |
+| 2026-05-07T12:36:44.813Z | `TOKEN_API_HOLDERS_AMOUNT_STRING` | holders.amount returned as string base-units (OpenAPI says number): GRT |
+| 2026-05-07T12:36:44.813Z | `TOKEN_API_POOLS_FILTER_LEAKS` | pools?input_token=0xc944e90c returned 5 unrelated pools (filter not enforced server-side) |
+| 2026-05-07T13:42:53.104Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 2 rows but only 1 distinct datetimes for pool 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 |
+| 2026-05-07T13:42:56.554Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xeed4603bc333ef406e5eb691ba66798d5c857d8b |
+| 2026-05-07T13:42:56.646Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x223a719005e758599dfc7840507c67e5240a930e |
+| 2026-05-07T13:42:56.649Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xf6e28a6bf73980d573cb53b71112b6886896ebcb |
+| 2026-05-07T13:42:56.726Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x5b97b125cf8af96834f2d08c8f1291bd47724939 |
+| 2026-05-07T13:42:56.819Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x14424eeecbff345b38187d0b8b749e56faa68539 |
+| 2026-05-07T13:42:56.939Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0x9febc984504356225405e26833608b17719c82ae |
+| 2026-05-07T13:42:56.977Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xfd76be67fff3bac84e3d5444167bbc018f5968b6 |
+| 2026-05-07T13:42:56.980Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x06f00544c0bc62e6db10f46d370dfccdc23d8189 |
+| 2026-05-07T13:42:57.038Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xe41552e6212cb6f7faa381c7bc9434c58bf28ce1 |
+| 2026-05-07T13:42:57.039Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa |
+| 2026-05-07T13:42:57.073Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x13394005c1012e708fce1eb974f1130fdc73a5ce |
+| 2026-05-07T13:42:57.123Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x7270233ccae676e776a659affc35219e6fcfbb10 |
+| 2026-05-07T13:42:57.124Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x73a6a761fe483ba19debb8f56ac5bbf14c0cdad1 |
+| 2026-05-07T13:42:57.139Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xa6cc3c2531fdaa6ae1a3ca84c2855806728693e8 |
+| 2026-05-07T13:42:57.176Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xea4ba4ce14fdd287f380b55419b1c5b6c3f22ab6 |
+| 2026-05-07T13:42:57.195Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x059615ebf32c946aaab3d44491f78e4f8e97e1d3 |
+| 2026-05-07T13:42:57.211Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x3019d4e366576a88d28b623afaf3ecb9ec9d9580 |
+| 2026-05-07T13:42:57.255Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x4765aa201b3c457742e93a329a9719e1d129acd4 |
+| 2026-05-07T13:42:57.273Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x59354356ec5d56306791873f567d61ebf11dfbd5 |
+| 2026-05-07T13:42:57.290Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xf56d08221b5942c428acc5de8f78489a97fc5599 |
+| 2026-05-07T13:42:57.348Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xac4fd96fcf729390a3c8044422a529028ec36751 |
+| 2026-05-07T13:42:57.356Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0x5777d92f208679db4b9778590fa3cab3ac9e2168 |
+| 2026-05-07T13:42:57.382Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xad6b651df72b443f57b76ff79165ee771272e18e |
+| 2026-05-07T13:42:57.428Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x30ea22c879628514f1494d4bbfef79d21a6b49a2 |
+| 2026-05-07T13:42:57.430Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8 |
+| 2026-05-07T13:42:57.442Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x360acf12e72044ba3eaaa654e51e4725c699dcb1 |
+| 2026-05-07T13:42:57.458Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x5ab53ee1d50eef2c1dd3d5402789cd27bb52c1bb |
+| 2026-05-07T13:42:57.459Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x4c83a7f819a5c37d64b4c5a2f8238ea082fa1f4e |
+| 2026-05-07T13:42:57.481Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x1c98562a2fab5af19d8fb3291a36ac3c618835d9 |
+| 2026-05-07T13:42:57.503Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x325365ed8275f6a74cac98917b7f6face8da533b |
+| 2026-05-07T13:42:57.531Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xbe80225f09645f172b079394312220637c440a63 |
+| 2026-05-07T13:42:57.536Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xcd423f3ab39a11ff1d9208b7d37df56e902c932b |
+| 2026-05-07T13:42:57.554Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x7baece5d47f1bc5e1953fbe0e9931d54dab6d810 |
+| 2026-05-07T13:42:57.555Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x290a6a7460b308ee3f19023d2d00de604bcf5b42 |
+| 2026-05-07T13:42:57.579Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x127452f3f9cdc0389b0bf59ce6131aa3bd763598 |
+| 2026-05-07T13:42:57.581Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xac4b3dacb91461209ae9d41ec517c2b9cb1b7daf |
+| 2026-05-07T13:42:57.583Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x99ac8ca7087fa4a2a1fb6357269965a2014abc35 |
+| 2026-05-07T13:42:57.638Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x4d1eff861316396dd1915f69b49f4c2d7b11590d |
+| 2026-05-07T13:42:57.642Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xae614a7a56cb79c04df2aeba6f5dab80a39ca78e |
+| 2026-05-07T13:42:57.656Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xa3f558aebaecaf0e11ca4b2199cc5ed341edfd74 |
+| 2026-05-07T13:42:57.661Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x57af956d3e2cca3b86f3d8c6772c03ddca3eaacb |
+| 2026-05-07T13:42:57.662Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xe8c6c9227491c0a8156a0106a0204d881bb7e531 |
+| 2026-05-07T13:42:57.665Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0x5c95d4b1c3321cf898d25949f41d50be2db5bc1d |
+| 2026-05-07T13:42:57.844Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x92560c178ce069cc014138ed3c2f5221ba71f58a |
+| 2026-05-07T13:42:57.896Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x4e0924d3a751be199c426d52fb1f2337fa96f736 |
+| 2026-05-07T13:42:57.970Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0xc63b0708e2f7e69cb8a1df0e1389a98c35a76d52 |
+| 2026-05-07T13:42:57.974Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xe42318ea3b998e8355a3da364eb9d48ec725eb45 |
+| 2026-05-07T13:42:57.977Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for NMR on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:57.982Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for APU on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:57.982Z | `TOKEN_API_MISSING_ICON` | icon missing for APU on mainnet |
+| 2026-05-07T13:42:58.013Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x76366d95c2016446247296ea50c8d06d0585ae00 |
+| 2026-05-07T13:42:58.035Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x8b65f72b5c3b1822d722d4927eda34f7efd8c7d2 |
+| 2026-05-07T13:42:58.048Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x7b1e5d984a43ee732de195628d20d05cfabc3cc7 |
+| 2026-05-07T13:42:58.133Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xc2c390c6cd3c4e6c2b70727d35a45e8a072f18ca |
+| 2026-05-07T13:42:58.157Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0xa66a2770bc0e0c65b63b5a3bb4560e90f95d6146 |
+| 2026-05-07T13:42:58.253Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ZRO on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.253Z | `TOKEN_API_MISSING_ICON` | icon missing for ZRO on mainnet |
+| 2026-05-07T13:42:58.258Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xf4c5e0f4590b6679b3030d29a84857f226087fef |
+| 2026-05-07T13:42:58.258Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SWELL on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.302Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x1d42064fc4beb5f8aaf85f4617ae8b3b5b8bd801 |
+| 2026-05-07T13:42:58.302Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ENS on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.304Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0xe6d7ebb9f1a9519dc06d557e03c522d53520e76a |
+| 2026-05-07T13:42:58.346Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x9188d6690a84023ccfb712f409376587ee3b6b63 |
+| 2026-05-07T13:42:58.347Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SAFE on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.347Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FRAX on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.369Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for OCEAN on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.382Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x11950d141ecb863f01007add7d1a342041227b58 |
+| 2026-05-07T13:42:58.395Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x9e7809c21ba130c1a51c112928ea6474d9a9ae3c |
+| 2026-05-07T13:42:58.442Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SOL on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.444Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x7a415b19932c0105c82fdb6b720bb01b0cc2cae3 |
+| 2026-05-07T13:42:58.540Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BAL on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.540Z | `TOKEN_API_MISSING_ICON` | icon missing for BAL on mainnet |
+| 2026-05-07T13:42:58.555Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for USDS on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.555Z | `TOKEN_API_MISSING_ICON` | icon missing for USDS on mainnet |
+| 2026-05-07T13:42:58.559Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xbdb04e915b94fbfd6e8552ff7860e59db7d4499a |
+| 2026-05-07T13:42:58.561Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for GNO on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.569Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for WLD on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.569Z | `TOKEN_API_MISSING_ICON` | icon missing for WLD on mainnet |
+| 2026-05-07T13:42:58.610Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for LDO on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.674Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for weETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.675Z | `TOKEN_API_MISSING_ICON` | icon missing for weETH on mainnet |
+| 2026-05-07T13:42:58.698Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for CHZ on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.736Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BNB on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.820Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x975c822e26a514e7a1b75be587aefc738a73eee7 |
+| 2026-05-07T13:42:58.826Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for EIGEN on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.826Z | `TOKEN_API_MISSING_ICON` | icon missing for EIGEN on mainnet |
+| 2026-05-07T13:42:58.834Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FLOKI on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.835Z | `TOKEN_API_MISSING_ICON` | icon missing for FLOKI on mainnet |
+| 2026-05-07T13:42:58.840Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ZRX on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.843Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for LRC on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.870Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x8592064903ef23d34e4d5aaaed40abf6d96af186 |
+| 2026-05-07T13:42:58.896Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for wstETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.897Z | `TOKEN_API_MISSING_ICON` | icon missing for wstETH on mainnet |
+| 2026-05-07T13:42:58.943Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FET on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:58.948Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x0e2c4be9f3408e5b1ff631576d946eb8c224b5ed |
+| 2026-05-07T13:42:58.975Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x120ffad35bb97a5baf9ab68f9dd7667864530245 |
+| 2026-05-07T13:42:59.035Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PEPE on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:59.056Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PIXEL on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:59.090Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x9cb91e5451d29c84b51ffd40df0b724b639bf841 |
+| 2026-05-07T13:42:59.096Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x283e2e83b7f3e297c4b7c02114ab0196b001a109 |
+| 2026-05-07T13:42:59.233Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xc3db44adc1fcdfd5671f555236eae49f4a8eea18 |
+| 2026-05-07T13:42:59.262Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xd8de6af55f618a7bc69835d55ddc6582220c36c0 |
+| 2026-05-07T13:42:59.278Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x000ba527862e5b82cff0f7c66b646af023274aa1 |
+| 2026-05-07T13:42:59.295Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xdc2c21f1b54ddaf39e944689a8f90cb844135cc9 |
+| 2026-05-07T13:42:59.296Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xcd8286b48936cdac20518247dbd310ab681a9fbf |
+| 2026-05-07T13:42:59.400Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for Metis on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:59.401Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x7832310cd0de39c4ce0a635f34d9a4b5b47fd434 |
+| 2026-05-07T13:42:59.402Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x841820459769cd629b10a36fd12e603938cc2679 |
+| 2026-05-07T13:42:59.404Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for MATIC on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:59.461Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x948b54a93f5ad1df6b8bff6dc249d99ca2eca052 |
+| 2026-05-07T13:42:59.468Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x79a6683d82f25535ff3fd2753e03e0961060e882 |
+| 2026-05-07T13:42:59.524Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x318fbee0a0d60e5de7009864632ceda8d77489b8 |
+| 2026-05-07T13:42:59.525Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x6c063a6e8cd45869b5eb75291e65a3de298f3aa8 |
+| 2026-05-07T13:42:59.525Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xe936f0073549ad8b1fa53583600d629ba9375161 |
+| 2026-05-07T13:42:59.526Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for TRU on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:59.527Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x840deeef2f115cf50da625f7368c24af6fe74410 |
+| 2026-05-07T13:42:59.527Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xede8dd046586d22625ae7ff2708f879ef7bdb8cf |
+| 2026-05-07T13:42:59.531Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x8df016708a66377dae191ca6f9fff4705a3d951f |
+| 2026-05-07T13:42:59.533Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x553e9c493678d8606d6a5ba284643db2110df823 |
+| 2026-05-07T13:42:59.533Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0x73ea3d8ba3d7380201b270ec504b33ed5e478542 |
+| 2026-05-07T13:42:59.559Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x5764a6f2212d502bc5970f9f129ffcd61e5d7563 |
+| 2026-05-07T13:42:59.611Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x8661ae7918c0115af9e3691662f605e9c550ddc9 |
+| 2026-05-07T13:42:59.693Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for swETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:59.786Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for wCFG on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:59.809Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for REZ on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:59.809Z | `TOKEN_API_MISSING_ICON` | icon missing for REZ on mainnet |
+| 2026-05-07T13:42:59.867Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x4e68ccd3e89f51c3074ca5072bbac773960dfa36 |
+| 2026-05-07T13:42:59.923Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FDUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:59.977Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for TURBO on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:42:59.977Z | `TOKEN_API_MISSING_ICON` | icon missing for TURBO on mainnet |
+| 2026-05-07T13:43:00.150Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for JASMY on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.201Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for DAI on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.283Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BEAM on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.290Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for pufETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.290Z | `TOKEN_API_MISSING_ICON` | icon missing for pufETH on mainnet |
+| 2026-05-07T13:43:00.337Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for rsETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.337Z | `TOKEN_API_MISSING_ICON` | icon missing for rsETH on mainnet |
+| 2026-05-07T13:43:00.340Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for DYDX on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.421Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ezETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.421Z | `TOKEN_API_MISSING_ICON` | icon missing for ezETH on mainnet |
+| 2026-05-07T13:43:00.581Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ONDO on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.581Z | `TOKEN_API_MISSING_ICON` | icon missing for ONDO on mainnet |
+| 2026-05-07T13:43:00.585Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for USDE on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.585Z | `TOKEN_API_MISSING_ICON` | icon missing for USDE on mainnet |
+| 2026-05-07T13:43:00.587Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for  on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.587Z | `TOKEN_API_MISSING_ICON` | icon missing for  on mainnet |
+| 2026-05-07T13:43:00.633Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for MNT on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.635Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for STRK on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.649Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BICO on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.649Z | `TOKEN_API_MISSING_ICON` | icon missing for BICO on mainnet |
+| 2026-05-07T13:43:00.658Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for GRT on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.675Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for LUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.767Z | `TOKEN_API_MISSING_NAME` | name is null/empty for MKR on mainnet (contract 0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2) |
+| 2026-05-07T13:43:00.768Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for rETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.846Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ENA on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.846Z | `TOKEN_API_MISSING_ICON` | icon missing for ENA on mainnet |
+| 2026-05-07T13:43:00.848Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for AAVE on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.949Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for INJ on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:00.955Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for MOG on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.021Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for STG on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.108Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for sfrxETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.112Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for GHO on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.117Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for COMP on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.147Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for Neiro on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.147Z | `TOKEN_API_MISSING_ICON` | icon missing for Neiro on mainnet |
+| 2026-05-07T13:43:01.170Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for RPL on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.182Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PENDLE on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.251Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ARB on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.395Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for cbETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.415Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SNX on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.430Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for CRVUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.489Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for CRV on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.505Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PRIME on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.549Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for 1INCH on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.624Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ETHFI on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.624Z | `TOKEN_API_MISSING_ICON` | icon missing for ETHFI on mainnet |
+| 2026-05-07T13:43:01.652Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for RENDER on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.652Z | `TOKEN_API_MISSING_ICON` | icon missing for RENDER on mainnet |
+| 2026-05-07T13:43:01.655Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for AXS on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.658Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ARKM on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.694Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PYUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.701Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 |
+| 2026-05-07T13:43:01.706Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for APE on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.808Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for UNI on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.811Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SAND on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.839Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SUSHI on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.863Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for AXL on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.912Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BAT on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:01.918Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for IMX on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:02.101Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for WBTC on mainnet (FDV cannot be computed) |
+| 2026-05-07T13:43:02.181Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for MANA on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:38.223Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 2 rows but only 1 distinct datetimes for pool 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 |
+| 2026-05-07T14:26:42.515Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x99ac8ca7087fa4a2a1fb6357269965a2014abc35 |
+| 2026-05-07T14:26:42.714Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0x73ea3d8ba3d7380201b270ec504b33ed5e478542 |
+| 2026-05-07T14:26:42.726Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x8b65f72b5c3b1822d722d4927eda34f7efd8c7d2 |
+| 2026-05-07T14:26:43.425Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xe41552e6212cb6f7faa381c7bc9434c58bf28ce1 |
+| 2026-05-07T14:26:43.641Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x223a719005e758599dfc7840507c67e5240a930e |
+| 2026-05-07T14:26:43.663Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xd8de6af55f618a7bc69835d55ddc6582220c36c0 |
+| 2026-05-07T14:26:43.672Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x8661ae7918c0115af9e3691662f605e9c550ddc9 |
+| 2026-05-07T14:26:43.714Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xdc2c21f1b54ddaf39e944689a8f90cb844135cc9 |
+| 2026-05-07T14:26:43.775Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x9cb91e5451d29c84b51ffd40df0b724b639bf841 |
+| 2026-05-07T14:26:43.809Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x360acf12e72044ba3eaaa654e51e4725c699dcb1 |
+| 2026-05-07T14:26:43.854Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x553e9c493678d8606d6a5ba284643db2110df823 |
+| 2026-05-07T14:26:43.858Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x283e2e83b7f3e297c4b7c02114ab0196b001a109 |
+| 2026-05-07T14:26:43.903Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x76366d95c2016446247296ea50c8d06d0585ae00 |
+| 2026-05-07T14:26:43.943Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x318fbee0a0d60e5de7009864632ceda8d77489b8 |
+| 2026-05-07T14:26:43.955Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x13394005c1012e708fce1eb974f1130fdc73a5ce |
+| 2026-05-07T14:26:43.991Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x975c822e26a514e7a1b75be587aefc738a73eee7 |
+| 2026-05-07T14:26:44.060Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x3019d4e366576a88d28b623afaf3ecb9ec9d9580 |
+| 2026-05-07T14:26:44.154Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xad6b651df72b443f57b76ff79165ee771272e18e |
+| 2026-05-07T14:26:44.156Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x79a6683d82f25535ff3fd2753e03e0961060e882 |
+| 2026-05-07T14:26:44.199Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x7270233ccae676e776a659affc35219e6fcfbb10 |
+| 2026-05-07T14:26:44.259Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x841820459769cd629b10a36fd12e603938cc2679 |
+| 2026-05-07T14:26:44.260Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x4765aa201b3c457742e93a329a9719e1d129acd4 |
+| 2026-05-07T14:26:44.261Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xac4fd96fcf729390a3c8044422a529028ec36751 |
+| 2026-05-07T14:26:44.269Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x73a6a761fe483ba19debb8f56ac5bbf14c0cdad1 |
+| 2026-05-07T14:26:44.287Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x0e2c4be9f3408e5b1ff631576d946eb8c224b5ed |
+| 2026-05-07T14:26:44.293Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x92560c178ce069cc014138ed3c2f5221ba71f58a |
+| 2026-05-07T14:26:44.298Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xac4b3dacb91461209ae9d41ec517c2b9cb1b7daf |
+| 2026-05-07T14:26:44.367Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x5b97b125cf8af96834f2d08c8f1291bd47724939 |
+| 2026-05-07T14:26:44.381Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x059615ebf32c946aaab3d44491f78e4f8e97e1d3 |
+| 2026-05-07T14:26:44.382Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x4e0924d3a751be199c426d52fb1f2337fa96f736 |
+| 2026-05-07T14:26:44.424Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x9e7809c21ba130c1a51c112928ea6474d9a9ae3c |
+| 2026-05-07T14:26:44.427Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0xe6d7ebb9f1a9519dc06d557e03c522d53520e76a |
+| 2026-05-07T14:26:44.447Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xede8dd046586d22625ae7ff2708f879ef7bdb8cf |
+| 2026-05-07T14:26:44.463Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xea4ba4ce14fdd287f380b55419b1c5b6c3f22ab6 |
+| 2026-05-07T14:26:44.466Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x59354356ec5d56306791873f567d61ebf11dfbd5 |
+| 2026-05-07T14:26:44.492Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x4c83a7f819a5c37d64b4c5a2f8238ea082fa1f4e |
+| 2026-05-07T14:26:44.587Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa |
+| 2026-05-07T14:26:44.647Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x7b1e5d984a43ee732de195628d20d05cfabc3cc7 |
+| 2026-05-07T14:26:44.670Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xcd423f3ab39a11ff1d9208b7d37df56e902c932b |
+| 2026-05-07T14:26:44.694Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x1c98562a2fab5af19d8fb3291a36ac3c618835d9 |
+| 2026-05-07T14:26:44.728Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xf56d08221b5942c428acc5de8f78489a97fc5599 |
+| 2026-05-07T14:26:44.774Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x11950d141ecb863f01007add7d1a342041227b58 |
+| 2026-05-07T14:26:44.775Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xf6e28a6bf73980d573cb53b71112b6886896ebcb |
+| 2026-05-07T14:26:44.785Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x14424eeecbff345b38187d0b8b749e56faa68539 |
+| 2026-05-07T14:26:44.786Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x4d1eff861316396dd1915f69b49f4c2d7b11590d |
+| 2026-05-07T14:26:44.826Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xc2c390c6cd3c4e6c2b70727d35a45e8a072f18ca |
+| 2026-05-07T14:26:44.882Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x57af956d3e2cca3b86f3d8c6772c03ddca3eaacb |
+| 2026-05-07T14:26:44.915Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8 |
+| 2026-05-07T14:26:44.948Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x30ea22c879628514f1494d4bbfef79d21a6b49a2 |
+| 2026-05-07T14:26:44.962Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xa3f558aebaecaf0e11ca4b2199cc5ed341edfd74 |
+| 2026-05-07T14:26:44.970Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xa6cc3c2531fdaa6ae1a3ca84c2855806728693e8 |
+| 2026-05-07T14:26:45.037Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x1d42064fc4beb5f8aaf85f4617ae8b3b5b8bd801 |
+| 2026-05-07T14:26:45.173Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x127452f3f9cdc0389b0bf59ce6131aa3bd763598 |
+| 2026-05-07T14:26:45.194Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0x5777d92f208679db4b9778590fa3cab3ac9e2168 |
+| 2026-05-07T14:26:45.206Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xbe80225f09645f172b079394312220637c440a63 |
+| 2026-05-07T14:26:45.277Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xe42318ea3b998e8355a3da364eb9d48ec725eb45 |
+| 2026-05-07T14:26:45.278Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x4e68ccd3e89f51c3074ca5072bbac773960dfa36 |
+| 2026-05-07T14:26:45.304Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xbdb04e915b94fbfd6e8552ff7860e59db7d4499a |
+| 2026-05-07T14:26:45.435Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x5764a6f2212d502bc5970f9f129ffcd61e5d7563 |
+| 2026-05-07T14:26:45.526Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xe8c6c9227491c0a8156a0106a0204d881bb7e531 |
+| 2026-05-07T14:26:45.527Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x06f00544c0bc62e6db10f46d370dfccdc23d8189 |
+| 2026-05-07T14:26:45.527Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x8592064903ef23d34e4d5aaaed40abf6d96af186 |
+| 2026-05-07T14:26:45.540Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x5ab53ee1d50eef2c1dd3d5402789cd27bb52c1bb |
+| 2026-05-07T14:26:45.575Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x7baece5d47f1bc5e1953fbe0e9931d54dab6d810 |
+| 2026-05-07T14:26:45.711Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xcd8286b48936cdac20518247dbd310ab681a9fbf |
+| 2026-05-07T14:26:45.713Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x840deeef2f115cf50da625f7368c24af6fe74410 |
+| 2026-05-07T14:26:45.713Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x7832310cd0de39c4ce0a635f34d9a4b5b47fd434 |
+| 2026-05-07T14:26:45.714Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x7a415b19932c0105c82fdb6b720bb01b0cc2cae3 |
+| 2026-05-07T14:26:45.763Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ezETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:45.763Z | `TOKEN_API_MISSING_ICON` | icon missing for ezETH on mainnet |
+| 2026-05-07T14:26:45.794Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ZRO on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:45.794Z | `TOKEN_API_MISSING_ICON` | icon missing for ZRO on mainnet |
+| 2026-05-07T14:26:45.803Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0xc63b0708e2f7e69cb8a1df0e1389a98c35a76d52 |
+| 2026-05-07T14:26:45.910Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PIXEL on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.001Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0x5c95d4b1c3321cf898d25949f41d50be2db5bc1d |
+| 2026-05-07T14:26:46.002Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BICO on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.002Z | `TOKEN_API_MISSING_ICON` | icon missing for BICO on mainnet |
+| 2026-05-07T14:26:46.004Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xfd76be67fff3bac84e3d5444167bbc018f5968b6 |
+| 2026-05-07T14:26:46.037Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for MOG on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.041Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for STRK on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.053Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x9188d6690a84023ccfb712f409376587ee3b6b63 |
+| 2026-05-07T14:26:46.111Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xeed4603bc333ef406e5eb691ba66798d5c857d8b |
+| 2026-05-07T14:26:46.145Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for GHO on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.148Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for GNO on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.295Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FRAX on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.298Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0xa66a2770bc0e0c65b63b5a3bb4560e90f95d6146 |
+| 2026-05-07T14:26:46.377Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for TURBO on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.377Z | `TOKEN_API_MISSING_ICON` | icon missing for TURBO on mainnet |
+| 2026-05-07T14:26:46.393Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for RPL on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.394Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for Neiro on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.394Z | `TOKEN_API_MISSING_ICON` | icon missing for Neiro on mainnet |
+| 2026-05-07T14:26:46.396Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xc3db44adc1fcdfd5671f555236eae49f4a8eea18 |
+| 2026-05-07T14:26:46.433Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xae614a7a56cb79c04df2aeba6f5dab80a39ca78e |
+| 2026-05-07T14:26:46.437Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x948b54a93f5ad1df6b8bff6dc249d99ca2eca052 |
+| 2026-05-07T14:26:46.438Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xf4c5e0f4590b6679b3030d29a84857f226087fef |
+| 2026-05-07T14:26:46.438Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for MNT on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.439Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for swETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.440Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for TRU on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.445Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FDUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.471Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x290a6a7460b308ee3f19023d2d00de604bcf5b42 |
+| 2026-05-07T14:26:46.511Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x8df016708a66377dae191ca6f9fff4705a3d951f |
+| 2026-05-07T14:26:46.513Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SWELL on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.519Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for sfrxETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.526Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BEAM on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.578Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for IMX on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.622Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0xe936f0073549ad8b1fa53583600d629ba9375161 |
+| 2026-05-07T14:26:46.646Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ARKM on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.651Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for REZ on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.651Z | `TOKEN_API_MISSING_ICON` | icon missing for REZ on mainnet |
+| 2026-05-07T14:26:46.668Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for OCEAN on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.672Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PENDLE on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.738Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for weETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.738Z | `TOKEN_API_MISSING_ICON` | icon missing for weETH on mainnet |
+| 2026-05-07T14:26:46.755Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ENS on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.763Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for INJ on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.789Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 2 distinct datetimes for pool 0x9febc984504356225405e26833608b17719c82ae |
+| 2026-05-07T14:26:46.792Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for wstETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.792Z | `TOKEN_API_MISSING_ICON` | icon missing for wstETH on mainnet |
+| 2026-05-07T14:26:46.797Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for CRVUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.811Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for wCFG on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.825Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for STG on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.828Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for pufETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.828Z | `TOKEN_API_MISSING_ICON` | icon missing for pufETH on mainnet |
+| 2026-05-07T14:26:46.829Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ARB on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.833Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for rsETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.833Z | `TOKEN_API_MISSING_ICON` | icon missing for rsETH on mainnet |
+| 2026-05-07T14:26:46.849Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x325365ed8275f6a74cac98917b7f6face8da533b |
+| 2026-05-07T14:26:46.850Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for USDE on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.850Z | `TOKEN_API_MISSING_ICON` | icon missing for USDE on mainnet |
+| 2026-05-07T14:26:46.852Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for AXS on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.858Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x6c063a6e8cd45869b5eb75291e65a3de298f3aa8 |
+| 2026-05-07T14:26:46.868Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for JASMY on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.877Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SAFE on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.889Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for  on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.889Z | `TOKEN_API_MISSING_ICON` | icon missing for  on mainnet |
+| 2026-05-07T14:26:46.902Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for CRV on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.922Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for rETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.925Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for cbETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:46.936Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 3 distinct datetimes for pool 0x000ba527862e5b82cff0f7c66b646af023274aa1 |
+| 2026-05-07T14:26:47.002Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for USDS on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.002Z | `TOKEN_API_MISSING_ICON` | icon missing for USDS on mainnet |
+| 2026-05-07T14:26:47.040Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for APE on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.062Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ENA on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.062Z | `TOKEN_API_MISSING_ICON` | icon missing for ENA on mainnet |
+| 2026-05-07T14:26:47.071Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ZRX on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.086Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for LRC on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.103Z | `TOKEN_API_MISSING_NAME` | name is null/empty for MKR on mainnet (contract 0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2) |
+| 2026-05-07T14:26:47.150Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for EIGEN on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.150Z | `TOKEN_API_MISSING_ICON` | icon missing for EIGEN on mainnet |
+| 2026-05-07T14:26:47.151Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for COMP on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.152Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for AAVE on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.204Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ONDO on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.205Z | `TOKEN_API_MISSING_ICON` | icon missing for ONDO on mainnet |
+| 2026-05-07T14:26:47.226Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for Metis on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.237Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for LDO on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.360Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for CHZ on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.428Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for AXL on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.467Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FLOKI on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.467Z | `TOKEN_API_MISSING_ICON` | icon missing for FLOKI on mainnet |
+| 2026-05-07T14:26:47.472Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FET on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.473Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PYUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.482Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for NMR on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.491Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for LUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.503Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for WLD on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.503Z | `TOKEN_API_MISSING_ICON` | icon missing for WLD on mainnet |
+| 2026-05-07T14:26:47.516Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for DYDX on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.518Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for MANA on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.534Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PRIME on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.545Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SAND on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.557Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BNB on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.559Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PEPE on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.575Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BAT on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.607Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ETHFI on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.608Z | `TOKEN_API_MISSING_ICON` | icon missing for ETHFI on mainnet |
+| 2026-05-07T14:26:47.620Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for 1INCH on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.623Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for GRT on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.683Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SUSHI on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.687Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SNX on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.715Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SOL on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.735Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BAL on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.735Z | `TOKEN_API_MISSING_ICON` | icon missing for BAL on mainnet |
+| 2026-05-07T14:26:47.766Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for RENDER on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.767Z | `TOKEN_API_MISSING_ICON` | icon missing for RENDER on mainnet |
+| 2026-05-07T14:26:47.786Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for WBTC on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:47.800Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for UNI on mainnet (FDV cannot be computed) |
+| 2026-05-07T14:26:48.586Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for MATIC on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:17.850Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 2 rows but only 1 distinct datetimes for pool 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 |
+| 2026-05-07T15:45:24.105Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x0e2c4be9f3408e5b1ff631576d946eb8c224b5ed |
+| 2026-05-07T15:45:24.338Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FRAX on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:24.341Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PRIME on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:24.675Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ARB on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:24.749Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for LDO on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:24.808Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for AXL on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:24.936Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PENDLE on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.037Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for LRC on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.079Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for TRU on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.082Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SAFE on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.101Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for STRK on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.106Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for CRV on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.133Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for rsETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.133Z | `TOKEN_API_MISSING_ICON` | icon missing for rsETH on mainnet |
+| 2026-05-07T15:45:25.181Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for MNT on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.211Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SWELL on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.214Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FDUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.257Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for wCFG on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.285Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for  on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.285Z | `TOKEN_API_MISSING_ICON` | icon missing for  on mainnet |
+| 2026-05-07T15:45:25.324Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for Neiro on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.325Z | `TOKEN_API_MISSING_ICON` | icon missing for Neiro on mainnet |
+| 2026-05-07T15:45:25.332Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BICO on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.333Z | `TOKEN_API_MISSING_ICON` | icon missing for BICO on mainnet |
+| 2026-05-07T15:45:25.355Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for rETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.366Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for sfrxETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.390Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for USDS on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.391Z | `TOKEN_API_MISSING_ICON` | icon missing for USDS on mainnet |
+| 2026-05-07T15:45:25.478Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for LUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.481Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for TURBO on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.481Z | `TOKEN_API_MISSING_ICON` | icon missing for TURBO on mainnet |
+| 2026-05-07T15:45:25.517Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xa66a2770bc0e0c65b63b5a3bb4560e90f95d6146 |
+| 2026-05-07T15:45:25.534Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ENS on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.616Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for COMP on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.754Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BEAM on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.839Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x73a6a761fe483ba19debb8f56ac5bbf14c0cdad1 |
+| 2026-05-07T15:45:25.840Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x76366d95c2016446247296ea50c8d06d0585ae00 |
+| 2026-05-07T15:45:25.841Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for swETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.865Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for cbETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.912Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for NMR on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:25.948Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x9e7809c21ba130c1a51c112928ea6474d9a9ae3c |
+| 2026-05-07T15:45:25.956Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x4765aa201b3c457742e93a329a9719e1d129acd4 |
+| 2026-05-07T15:45:25.958Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x841820459769cd629b10a36fd12e603938cc2679 |
+| 2026-05-07T15:45:25.972Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x8df016708a66377dae191ca6f9fff4705a3d951f |
+| 2026-05-07T15:45:25.988Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xbe80225f09645f172b079394312220637c440a63 |
+| 2026-05-07T15:45:25.991Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x223a719005e758599dfc7840507c67e5240a930e |
+| 2026-05-07T15:45:26.008Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x3019d4e366576a88d28b623afaf3ecb9ec9d9580 |
+| 2026-05-07T15:45:26.009Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x8592064903ef23d34e4d5aaaed40abf6d96af186 |
+| 2026-05-07T15:45:26.013Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x325365ed8275f6a74cac98917b7f6face8da533b |
+| 2026-05-07T15:45:26.040Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x7270233ccae676e776a659affc35219e6fcfbb10 |
+| 2026-05-07T15:45:26.051Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for BAL on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.051Z | `TOKEN_API_MISSING_ICON` | icon missing for BAL on mainnet |
+| 2026-05-07T15:45:26.054Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xae614a7a56cb79c04df2aeba6f5dab80a39ca78e |
+| 2026-05-07T15:45:26.060Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xac4fd96fcf729390a3c8044422a529028ec36751 |
+| 2026-05-07T15:45:26.077Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x553e9c493678d8606d6a5ba284643db2110df823 |
+| 2026-05-07T15:45:26.098Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x9cb91e5451d29c84b51ffd40df0b724b639bf841 |
+| 2026-05-07T15:45:26.109Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x5b97b125cf8af96834f2d08c8f1291bd47724939 |
+| 2026-05-07T15:45:26.124Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for CRVUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.129Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xbdb04e915b94fbfd6e8552ff7860e59db7d4499a |
+| 2026-05-07T15:45:26.134Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for WLD on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.134Z | `TOKEN_API_MISSING_ICON` | icon missing for WLD on mainnet |
+| 2026-05-07T15:45:26.153Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xcd423f3ab39a11ff1d9208b7d37df56e902c932b |
+| 2026-05-07T15:45:26.239Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ETHFI on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.239Z | `TOKEN_API_MISSING_ICON` | icon missing for ETHFI on mainnet |
+| 2026-05-07T15:45:26.241Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x57af956d3e2cca3b86f3d8c6772c03ddca3eaacb |
+| 2026-05-07T15:45:26.249Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x99ac8ca7087fa4a2a1fb6357269965a2014abc35 |
+| 2026-05-07T15:45:26.251Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xe8c6c9227491c0a8156a0106a0204d881bb7e531 |
+| 2026-05-07T15:45:26.254Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x9febc984504356225405e26833608b17719c82ae |
+| 2026-05-07T15:45:26.271Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x7a415b19932c0105c82fdb6b720bb01b0cc2cae3 |
+| 2026-05-07T15:45:26.276Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x1d42064fc4beb5f8aaf85f4617ae8b3b5b8bd801 |
+| 2026-05-07T15:45:26.277Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ARKM on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.330Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FLOKI on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.331Z | `TOKEN_API_MISSING_ICON` | icon missing for FLOKI on mainnet |
+| 2026-05-07T15:45:26.352Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for USDE on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.353Z | `TOKEN_API_MISSING_ICON` | icon missing for USDE on mainnet |
+| 2026-05-07T15:45:26.355Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xc3db44adc1fcdfd5671f555236eae49f4a8eea18 |
+| 2026-05-07T15:45:26.367Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for IMX on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.414Z | `TOKEN_API_MISSING_NAME` | name is null/empty for MKR on mainnet (contract 0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2) |
+| 2026-05-07T15:45:26.431Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PYUSD on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.437Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for FET on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.445Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xf6e28a6bf73980d573cb53b71112b6886896ebcb |
+| 2026-05-07T15:45:26.473Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for AXS on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.502Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for APE on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.524Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xe936f0073549ad8b1fa53583600d629ba9375161 |
+| 2026-05-07T15:45:26.526Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PIXEL on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.555Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xfd76be67fff3bac84e3d5444167bbc018f5968b6 |
+| 2026-05-07T15:45:26.556Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x06f00544c0bc62e6db10f46d370dfccdc23d8189 |
+| 2026-05-07T15:45:26.573Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x948b54a93f5ad1df6b8bff6dc249d99ca2eca052 |
+| 2026-05-07T15:45:26.631Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for GRT on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.638Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xe42318ea3b998e8355a3da364eb9d48ec725eb45 |
+| 2026-05-07T15:45:26.639Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xad6b651df72b443f57b76ff79165ee771272e18e |
+| 2026-05-07T15:45:26.667Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for PEPE on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.684Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x73ea3d8ba3d7380201b270ec504b33ed5e478542 |
+| 2026-05-07T15:45:26.731Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xeed4603bc333ef406e5eb691ba66798d5c857d8b |
+| 2026-05-07T15:45:26.884Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for WBTC on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:26.990Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xf56d08221b5942c428acc5de8f78489a97fc5599 |
+| 2026-05-07T15:45:26.995Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x283e2e83b7f3e297c4b7c02114ab0196b001a109 |
+| 2026-05-07T15:45:26.996Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x13394005c1012e708fce1eb974f1130fdc73a5ce |
+| 2026-05-07T15:45:27.041Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x9188d6690a84023ccfb712f409376587ee3b6b63 |
+| 2026-05-07T15:45:27.051Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x1c98562a2fab5af19d8fb3291a36ac3c618835d9 |
+| 2026-05-07T15:45:27.058Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x4c83a7f819a5c37d64b4c5a2f8238ea082fa1f4e |
+| 2026-05-07T15:45:27.064Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x059615ebf32c946aaab3d44491f78e4f8e97e1d3 |
+| 2026-05-07T15:45:27.093Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for AAVE on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:27.103Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x5c95d4b1c3321cf898d25949f41d50be2db5bc1d |
+| 2026-05-07T15:45:27.132Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x8b65f72b5c3b1822d722d4927eda34f7efd8c7d2 |
+| 2026-05-07T15:45:27.167Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x14424eeecbff345b38187d0b8b749e56faa68539 |
+| 2026-05-07T15:45:27.217Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for MOG on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:27.309Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xea4ba4ce14fdd287f380b55419b1c5b6c3f22ab6 |
+| 2026-05-07T15:45:27.333Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for GHO on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:27.400Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for OCEAN on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:27.422Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x79a6683d82f25535ff3fd2753e03e0961060e882 |
+| 2026-05-07T15:45:27.445Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x30ea22c879628514f1494d4bbfef79d21a6b49a2 |
+| 2026-05-07T15:45:27.513Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xac4b3dacb91461209ae9d41ec517c2b9cb1b7daf |
+| 2026-05-07T15:45:27.514Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xcd8286b48936cdac20518247dbd310ab681a9fbf |
+| 2026-05-07T15:45:27.540Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x360acf12e72044ba3eaaa654e51e4725c699dcb1 |
+| 2026-05-07T15:45:27.549Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 |
+| 2026-05-07T15:45:27.592Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x8661ae7918c0115af9e3691662f605e9c550ddc9 |
+| 2026-05-07T15:45:27.610Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for pufETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:27.611Z | `TOKEN_API_MISSING_ICON` | icon missing for pufETH on mainnet |
+| 2026-05-07T15:45:27.751Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for REZ on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:27.752Z | `TOKEN_API_MISSING_ICON` | icon missing for REZ on mainnet |
+| 2026-05-07T15:45:27.762Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xe6d7ebb9f1a9519dc06d557e03c522d53520e76a |
+| 2026-05-07T15:45:27.768Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xc63b0708e2f7e69cb8a1df0e1389a98c35a76d52 |
+| 2026-05-07T15:45:27.780Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x290a6a7460b308ee3f19023d2d00de604bcf5b42 |
+| 2026-05-07T15:45:27.805Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xdc2c21f1b54ddaf39e944689a8f90cb844135cc9 |
+| 2026-05-07T15:45:27.809Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x4d1eff861316396dd1915f69b49f4c2d7b11590d |
+| 2026-05-07T15:45:27.853Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xf4c5e0f4590b6679b3030d29a84857f226087fef |
+| 2026-05-07T15:45:27.879Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xa6cc3c2531fdaa6ae1a3ca84c2855806728693e8 |
+| 2026-05-07T15:45:27.887Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x318fbee0a0d60e5de7009864632ceda8d77489b8 |
+| 2026-05-07T15:45:27.919Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x5777d92f208679db4b9778590fa3cab3ac9e2168 |
+| 2026-05-07T15:45:27.927Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x4e0924d3a751be199c426d52fb1f2337fa96f736 |
+| 2026-05-07T15:45:27.964Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x5ab53ee1d50eef2c1dd3d5402789cd27bb52c1bb |
+| 2026-05-07T15:45:27.978Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x4e68ccd3e89f51c3074ca5072bbac773960dfa36 |
+| 2026-05-07T15:45:28.044Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x840deeef2f115cf50da625f7368c24af6fe74410 |
+| 2026-05-07T15:45:28.051Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x975c822e26a514e7a1b75be587aefc738a73eee7 |
+| 2026-05-07T15:45:28.055Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for wstETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.055Z | `TOKEN_API_MISSING_ICON` | icon missing for wstETH on mainnet |
+| 2026-05-07T15:45:28.058Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x7832310cd0de39c4ce0a635f34d9a4b5b47fd434 |
+| 2026-05-07T15:45:28.064Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa |
+| 2026-05-07T15:45:28.096Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x7baece5d47f1bc5e1953fbe0e9931d54dab6d810 |
+| 2026-05-07T15:45:28.109Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x11950d141ecb863f01007add7d1a342041227b58 |
+| 2026-05-07T15:45:28.261Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x59354356ec5d56306791873f567d61ebf11dfbd5 |
+| 2026-05-07T15:45:28.263Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for JASMY on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.264Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for Metis on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.268Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for 1INCH on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.269Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ONDO on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.270Z | `TOKEN_API_MISSING_ICON` | icon missing for ONDO on mainnet |
+| 2026-05-07T15:45:28.291Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SHIB on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.395Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8 |
+| 2026-05-07T15:45:28.442Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for GNO on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.463Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x000ba527862e5b82cff0f7c66b646af023274aa1 |
+| 2026-05-07T15:45:28.495Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for DYDX on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.522Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xd8de6af55f618a7bc69835d55ddc6582220c36c0 |
+| 2026-05-07T15:45:28.564Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xede8dd046586d22625ae7ff2708f879ef7bdb8cf |
+| 2026-05-07T15:45:28.566Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ezETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.568Z | `TOKEN_API_MISSING_ICON` | icon missing for ezETH on mainnet |
+| 2026-05-07T15:45:28.569Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0x5764a6f2212d502bc5970f9f129ffcd61e5d7563 |
+| 2026-05-07T15:45:28.577Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for weETH on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.577Z | `TOKEN_API_MISSING_ICON` | icon missing for weETH on mainnet |
+| 2026-05-07T15:45:28.593Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SUSHI on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.679Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for ENA on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.680Z | `TOKEN_API_MISSING_ICON` | icon missing for ENA on mainnet |
+| 2026-05-07T15:45:28.698Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for RENDER on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.698Z | `TOKEN_API_MISSING_ICON` | icon missing for RENDER on mainnet |
+| 2026-05-07T15:45:28.716Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for SAND on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.724Z | `TOKEN_API_NO_TOTAL_SUPPLY` | total_supply is null for MANA on mainnet (FDV cannot be computed) |
+| 2026-05-07T15:45:28.725Z | `TOKEN_API_OHLC_DUPES` | OHLC returned 10 rows but only 5 distinct datetimes for pool 0xe41552e6212cb6f7faa381c7bc9434c58bf28ce1 |
