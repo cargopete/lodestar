@@ -13,7 +13,9 @@ import { classifyAddresses } from './contract-detection';
 import { recordDeficiency } from './deficiencies';
 import { fetchDexVolumes } from './dex-volume';
 import { TOKEN_SEEDS } from './seed';
+import { fetchPoolStats, type PoolStats } from './pool-stats';
 import { fetchSpotPrices } from './spot-price';
+import { fetchTotalSupplies } from './total-supply';
 import { getUniswapLogoUri } from './uniswap-token-list';
 import type {
   OhlcPoint,
@@ -28,6 +30,29 @@ import type {
 } from './types';
 
 const ETH_REFERENCE_POOL = '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640';
+
+// Token API rate limit: 500/min on our plan. With 4 calls per token (metadata
+// + sparkline ohlc + holders + logo), an unbounded fan-out at ~150 seeds
+// blows past the limit instantly. Cap concurrency so the calls trickle out
+// at sub-limit rate; per-call latency is ~150ms so 12 in flight = ~80 req/s,
+// well under the per-minute ceiling once the burst absorbs.
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return results;
+}
 
 async function getEthUsd(): Promise<number | null> {
   const ohlc = await fetchPoolOhlc('mainnet', ETH_REFERENCE_POOL, '4h', 2);
@@ -55,43 +80,67 @@ function priceFromOhlc(point: { close: number }, seed: TokenSeed, ethUsd: number
 
 async function buildSummary(seed: TokenSeed, ethUsd: number | null): Promise<TokenSummary> {
   const warnings: string[] = [];
-  // Parallelize the three Token API calls. The directory fan-out runs
-  // buildSummary for every seed at once, so each token's wall time is
-  // max(metadata, ohlc, holders) instead of the sum.
-  const [meta, ohlc, holdersForShare, logoUri] = await Promise.all([
+  // Parallelize the Token API calls. The directory fan-out runs buildSummary
+  // for every seed at once, so each token's wall time is max(metadata, ohlc,
+  // holders) instead of the sum.
+  //
+  // OHLC: two pages of 1d × 100. Token API caps `limit` at 100 *and* returns
+  // each datetime twice (verified empirically), so a single page yields only
+  // ~50 unique days. Two pages give ~100 unique days — enough for 90d
+  // performance with a small buffer.
+  const [meta, ohlcP1, ohlcP2, holdersForShare, logoUri] = await Promise.all([
     fetchTokenMetadata(seed.chain, seed.contract).catch((e) => {
       warnings.push(`metadata: ${(e as Error).message}`);
       return null;
     }),
-    // 4h interval × 100 limit ≈ 16 days at 4-hour granularity after de-dupe.
-    // The Token API caps `limit` at 100 (verified empirically: limit=100 returns
-    // 100 rows; limit>=101 returns 0 rows). The earlier "cap to 10" patch was
-    // based on a misread; the real cap is 100.
-    fetchPoolOhlc(seed.chain, seed.pool.address, '4h', 100).catch((e) => {
+    fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 100, 1).catch((e) => {
       warnings.push(`ohlc: ${(e as Error).message}`);
+      return [] as Awaited<ReturnType<typeof fetchPoolOhlc>>;
+    }),
+    fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 100, 2).catch(() => {
+      // Page 2 absence isn't worth a warning; fresh listings simply lack 90d
+      // history. Caller already has the page-1 fallback.
       return [] as Awaited<ReturnType<typeof fetchPoolOhlc>>;
     }),
     fetchHolders(seed.chain, seed.contract, 10).catch(() => []),
     getUniswapLogoUri(seed.chain, seed.contract).catch(() => null),
   ]);
+  // Merge the two pages by datetime; first occurrence wins (page 1 is fresher
+  // for any overlap).
+  const ohlcMap = new Map<string, (typeof ohlcP1)[number]>();
+  for (const page of [ohlcP1, ohlcP2]) {
+    for (const p of page) if (!ohlcMap.has(p.datetime)) ohlcMap.set(p.datetime, p);
+  }
+  const ohlc = [...ohlcMap.values()].sort((a, b) => a.datetime.localeCompare(b.datetime));
 
   const today = ohlc[ohlc.length - 1];
-  // Walk back to find the bar ~24h before the latest. With 4h bars that's
-  // ~6 candles, but we look up by timestamp to handle gaps and dedupe loss.
-  const cutoff24h = today ? Math.floor(new Date(today.datetime).getTime() / 1000) - 24 * 3600 : 0;
-  const yesterday = today
-    ? [...ohlc].reverse().find((p) => Math.floor(new Date(p.datetime).getTime() / 1000) <= cutoff24h)
-    : undefined;
+  // Locate historical bars by timestamp offset rather than fixed index, since
+  // the API can return gaps (and de-dupe shrinks the array). Walk back from
+  // `today` and pick the most recent bar at-or-before each cutoff.
+  const todayTs = today ? Math.floor(new Date(today.datetime).getTime() / 1000) : 0;
+  const reversed = [...ohlc].reverse();
+  function priceAtOffsetDays(days: number): number | null {
+    if (!today) return null;
+    const cutoff = todayTs - days * 86400;
+    const bar = reversed.find((p) => Math.floor(new Date(p.datetime).getTime() / 1000) <= cutoff);
+    return bar ? priceFromOhlc(bar, seed, ethUsd) : null;
+  }
 
   const priceUsd =
     seed.pegUsd != null ? seed.pegUsd : today ? priceFromOhlc(today, seed, ethUsd) : null;
-  const priceYesterday =
-    seed.pegUsd != null ? seed.pegUsd : yesterday ? priceFromOhlc(yesterday, seed, ethUsd) : null;
+  const priceYesterday = seed.pegUsd != null ? seed.pegUsd : priceAtOffsetDays(1);
+  const price7d = seed.pegUsd != null ? seed.pegUsd : priceAtOffsetDays(7);
+  const price30d = seed.pegUsd != null ? seed.pegUsd : priceAtOffsetDays(30);
+  const price90d = seed.pegUsd != null ? seed.pegUsd : priceAtOffsetDays(90);
 
-  const change24hPct =
-    priceUsd != null && priceYesterday != null && priceYesterday !== 0
-      ? ((priceUsd - priceYesterday) / priceYesterday) * 100
-      : null;
+  function pctChange(current: number | null, prior: number | null): number | null {
+    if (current == null || prior == null || prior === 0) return null;
+    return ((current - prior) / prior) * 100;
+  }
+  const change24hPct = pctChange(priceUsd, priceYesterday);
+  const change7dPct = pctChange(priceUsd, price7d);
+  const change30dPct = pctChange(priceUsd, price30d);
+  const change90dPct = pctChange(priceUsd, price90d);
 
   // Volume from OHLC is in pool-base-token units. Convert to USD via the
   // already-computed price when the volume side matches our token; otherwise
@@ -111,8 +160,10 @@ async function buildSummary(seed: TokenSeed, ethUsd: number | null): Promise<Tok
   }
 
   const circulatingSupply = meta?.circulating_supply ?? null;
+  const totalSupply = meta?.total_supply ?? null;
   const marketCapUsd =
     circulatingSupply != null && priceUsd != null ? circulatingSupply * priceUsd : null;
+  const fdvUsd = totalSupply != null && priceUsd != null ? totalSupply * priceUsd : null;
 
   // Sparkline: 4h close-price series, USD-converted, last ~30 points. For
   // stablecoins the seed's pool is a stable-vs-stable pool (e.g. USDC/DAI),
@@ -201,9 +252,14 @@ async function buildSummary(seed: TokenSeed, ethUsd: number | null): Promise<Tok
     logoUri: logoUri,
     priceUsd,
     change24hPct,
+    change7dPct,
+    change30dPct,
+    change90dPct,
     volume24hUsd,
     circulatingSupply,
+    totalSupply,
     marketCapUsd,
+    fdvUsd,
     holders: meta?.holders ?? null,
     website: seed.website ?? null,
     tags: seed.tags ?? [],
@@ -213,6 +269,7 @@ async function buildSummary(seed: TokenSeed, ethUsd: number | null): Promise<Tok
     top10ContractShare,
     dexVolume24hUsd: null,
     dexVolumeByVenue: {},
+    altContracts: seed.altContracts ?? {},
     warnings,
     quoteAsOf: Date.now(),
   };
@@ -226,10 +283,22 @@ export async function fetchTokenDirectory(): Promise<TokenSummary[]> {
   const mainnetContracts = TOKEN_SEEDS.filter((s) => s.chain === 'mainnet').map(
     (s) => s.contract
   );
-  const [summaries, volumes, spotPrices] = await Promise.all([
-    Promise.all(TOKEN_SEEDS.map((s) => buildSummary(s, ethUsd))),
+  // ERC-20 totalSupply via on-chain RPC. Token API and the V3 subgraph both
+  // return null/garbage for total supply, so we hit the contract directly.
+  // viem batches into a few large JSON-RPC calls per chain. Runs in parallel
+  // with the Token API fan-out — the seed list already carries `decimals`
+  // for non-existing tokens we'd default to 18 anyway.
+  // Decimals come from the same atomic RPC call that reads totalSupply, so
+  // we don't need to know them up front.
+  const totalSupplyInput = TOKEN_SEEDS.map((s) => ({
+    chain: s.chain,
+    contract: s.contract,
+  }));
+  const [summaries, volumes, spotPrices, totalSupplies] = await Promise.all([
+    mapWithConcurrency(TOKEN_SEEDS, 6, (s) => buildSummary(s, ethUsd)),
     fetchDexVolumes(TOKEN_SEEDS),
     fetchSpotPrices(mainnetContracts),
+    fetchTotalSupplies(totalSupplyInput),
   ]);
 
   for (const summary of summaries) {
@@ -237,6 +306,12 @@ export async function fetchTokenDirectory(): Promise<TokenSummary[]> {
     if (breakdown) {
       summary.dexVolume24hUsd = breakdown.totalUsd > 0 ? breakdown.totalUsd : null;
       summary.dexVolumeByVenue = breakdown.byVenue;
+    }
+    const supplyKey = `${summary.chain}:${summary.contract.toLowerCase()}`;
+    const ts = totalSupplies.get(supplyKey);
+    if (ts != null) {
+      summary.totalSupply = ts;
+      if (summary.priceUsd != null) summary.fdvUsd = ts * summary.priceUsd;
     }
     // Override priceUsd with live subgraph spot when available. The
     // matching seed determines whether to skip pegged stables — they
@@ -250,6 +325,9 @@ export async function fetchTokenDirectory(): Promise<TokenSummary[]> {
       summary.priceUsd = live;
       if (summary.circulatingSupply != null) {
         summary.marketCapUsd = summary.circulatingSupply * live;
+      }
+      if (summary.totalSupply != null) {
+        summary.fdvUsd = summary.totalSupply * live;
       }
     }
   }
@@ -307,6 +385,7 @@ export async function fetchTokenDetail(
     holdersRaw,
     poolsRaw,
     swapsRaw,
+    dexVolumes,
   ] = await Promise.all([
     buildSummary(seed, ethUsd),
     fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 100, 1),
@@ -325,7 +404,26 @@ export async function fetchTokenDetail(
       recordDeficiency('TOKEN_API_SWAPS_QUERY_FAILED', `swaps query failed for ${seed.symbol}: ${(e as Error).message}`);
       return [];
     }),
+    // DEX volume aggregation runs once per detail load. Same call shape the
+    // directory uses, just scoped to this single seed. Without it the detail
+    // page's "24h DEX Vol" card stays blank because `buildSummary` only
+    // initialises those fields to null.
+    fetchDexVolumes([seed]).catch(() => new Map<string, { totalUsd: number; byVenue: Record<string, number> }>()),
   ]);
+  // ETH daily-close benchmark for the volatility comparison. Two pages of
+  // 1d × 100 against the same WETH/USDC reference pool the spot lookup uses,
+  // de-duped to one row per UTC day. The chart receives an aligned
+  // `[timestamp, close][]` array and computes vol against it for the
+  // currently-selected window.
+  const ethBenchmark = await Promise.all([
+    fetchPoolOhlc('mainnet', ETH_REFERENCE_POOL, '1d', 100, 1).catch(() => []),
+    fetchPoolOhlc('mainnet', ETH_REFERENCE_POOL, '1d', 100, 2).catch(() => []),
+  ]);
+  const dexBreakdown = dexVolumes.get(seed.contract.toLowerCase());
+  if (dexBreakdown) {
+    summary.dexVolume24hUsd = dexBreakdown.totalUsd > 0 ? dexBreakdown.totalUsd : null;
+    summary.dexVolumeByVenue = dexBreakdown.byVenue;
+  }
 
   // Merge the four daily pages by datetime. Each page returns its own
   // dedup batch; we re-dedup across pages by timestamp, keeping the
@@ -337,7 +435,53 @@ export async function fetchTokenDetail(
       if (!dailyByTs.has(point.timestamp)) dailyByTs.set(point.timestamp, point);
     }
   }
-  const priceSeries: OhlcPoint[] = [...dailyByTs.values()].sort((a, b) => a.timestamp - b.timestamp);
+  // Build the ETH benchmark as `{ timestamp, close }` rows. The reference
+  // pool's ticker logic is the same as `getEthUsd`: a close < 0.01 means the
+  // pair returns USDC-per-WETH inverted, so flip it.
+  const ethDailyByTs = new Map<number, { timestamp: number; close: number }>();
+  for (const page of ethBenchmark) {
+    for (const p of page) {
+      const ts = Math.floor(new Date(p.datetime).getTime() / 1000);
+      const close = p.close < 0.01 ? 1 / p.close : p.close;
+      if (!ethDailyByTs.has(ts) && close > 0) ethDailyByTs.set(ts, { timestamp: ts, close });
+    }
+  }
+  const benchmarkSeries = [...ethDailyByTs.values()].sort((a, b) => a.timestamp - b.timestamp);
+  const priceSeriesRaw: OhlcPoint[] = [...dailyByTs.values()].sort((a, b) => a.timestamp - b.timestamp);
+  // Drop "spike-and-revert" bars: a single candle whose close is far from
+  // both neighbors while the neighbors themselves are close to each other.
+  // The Token API occasionally emits one bad candle from a mispriced
+  // indexer swap (e.g. RLUSD/USDC on 2026-02-09 reported a close of $1.125
+  // surrounded by $1.000 bars on either side), and that single bar wrecks
+  // the chart's y-axis on the 3M view. Threshold is relative — a bar is
+  // dropped if its close differs from the neighbors' average by more than
+  // 5x the gap between the neighbors themselves, with a 5% floor so calm
+  // periods don't flag tiny normal movements.
+  const priceSeries: OhlcPoint[] = priceSeriesRaw.filter((p, i) => {
+    if (p.close <= 0) return false;
+    if (i === 0 || i === priceSeriesRaw.length - 1) return true;
+    const prev = priceSeriesRaw[i - 1].close;
+    const next = priceSeriesRaw[i + 1].close;
+    if (prev <= 0 || next <= 0) return true;
+    const neighborAvg = (prev + next) / 2;
+    const neighborGap = Math.abs(prev - next);
+    const deviation = Math.abs(p.close - neighborAvg);
+    const threshold = Math.max(neighborGap * 5, neighborAvg * 0.05);
+    return deviation <= threshold;
+  });
+
+  // Pull on-chain totalSupply so FDV populates on the detail page even when
+  // the directory cache hasn't run yet (or this token is being viewed in
+  // isolation). Cheap (cached per-process after first hit).
+  const onChainSupply = await fetchTotalSupplies([
+    { chain: seed.chain, contract: seed.contract, decimals: summary.decimals },
+  ]);
+  const tsKey = `${seed.chain}:${seed.contract.toLowerCase()}`;
+  const ts = onChainSupply.get(tsKey);
+  if (ts != null) {
+    summary.totalSupply = ts;
+    if (summary.priceUsd != null) summary.fdvUsd = ts * summary.priceUsd;
+  }
 
   // Override the header price with the live subgraph spot. Token API's
   // OHLC caches hourly bars server-side so its `close` does not move
@@ -347,6 +491,9 @@ export async function fetchTokenDetail(
     summary.priceUsd = spotPrice;
     if (summary.circulatingSupply != null) {
       summary.marketCapUsd = summary.circulatingSupply * spotPrice;
+    }
+    if (summary.totalSupply != null) {
+      summary.fdvUsd = summary.totalSupply * spotPrice;
     }
   }
   // Refresh the as-of stamp now that we've blended in spot data.
@@ -389,17 +536,24 @@ export async function fetchTokenDetail(
     return { address: h.address, amount: scaled, valueUsd, isContract };
   });
 
-  const markets = buildMarkets(poolsRaw, seed.contract);
-  const recentSwaps = buildSwaps(swapsRaw, seed.contract, summary.priceUsd);
+  // Pool stats from the V3 subgraph. Fired after `poolsRaw` resolves because
+  // we need the pool ids to scope the query — non-V3 pools (Curve, CoW)
+  // simply won't be in the response and degrade to null.
+  const poolIds = poolsRaw.map((p) => p.pool);
+  const poolStats =
+    poolIds.length > 0 ? await fetchPoolStats(poolIds, seed.contract, ethUsd) : new Map();
+  const markets = buildMarkets(poolsRaw, seed.contract, poolStats);
+  const recentSwaps = buildSwaps(swapsRaw, seed.contract, summary.priceUsd, ethUsd);
   const performance = buildPerformance(priceSeries);
   const range24h = buildRange24h(priceSeries);
 
-  return { summary, priceSeries, topHolders, markets, recentSwaps, performance, range24h };
+  return { summary, priceSeries, benchmarkSeries, topHolders, markets, recentSwaps, performance, range24h };
 }
 
 function buildMarkets(
   pools: import('./api').ApiPool[],
-  seedContract: string
+  seedContract: string,
+  stats: Map<string, PoolStats>
 ): TokenMarket[] {
   // Filter out the CoW settlement contract (tracked deficiency: it shows up
   // as a "pool" but is actually a multi-pair settlement address).
@@ -423,14 +577,24 @@ function buildMarkets(
     const inSym = p.input_token?.symbol ?? '?';
     const outSym = p.output_token?.symbol ?? '?';
     const inIsSeed = inAddr === seedLower;
+    const s = stats.get(p.pool.toLowerCase());
+    // Token API frequently returns `fee: 0` on pools where the protocol has
+    // dynamic or non-tier-based fees (e.g. it labels Kyber Elastic / V3-fork
+    // pools with no fee at all). Subgraph `feeTier` is the authoritative
+    // value — fall back to it whenever the API value is missing or 0.
+    const apiFee = typeof p.fee === 'number' && p.fee > 0 ? p.fee : null;
+    const fee = apiFee ?? s?.feeBps ?? null;
     out.push({
       pool: p.pool,
       protocol: p.protocol,
-      feeBps: typeof p.fee === 'number' ? p.fee : null,
+      feeBps: fee,
       baseSymbol: inIsSeed ? inSym : outSym,
       baseContract: inIsSeed ? (inAddr ?? '') : (outAddr ?? ''),
       quoteSymbol: inIsSeed ? outSym : inSym,
       quoteContract: inIsSeed ? (outAddr ?? '') : (inAddr ?? ''),
+      tvlUsd: s?.tvlUsd ?? null,
+      volume24hUsd: s?.volume24hUsd ?? null,
+      priceUsd: s?.seedPriceUsd ?? null,
     });
   }
   if (leaked > 0) {
@@ -439,26 +603,68 @@ function buildMarkets(
       `pools?input_token=${seedContract.slice(0, 10)} returned ${leaked} unrelated pools (filter not enforced server-side)`
     );
   }
-  return out.slice(0, 12);
+  // Rank pools by TVL when known so the markets table leads with deepest
+  // liquidity. Drop pools that have neither TVL nor volume — Token API
+  // surfaces ancient pools (Uniswap V1, dead Bancor pairs) and out-of-scope
+  // ones (V4 before its subgraph indexes everything) where every stat
+  // resolves to null. Those rows just clutter the table.
+  const ranked = out
+    .filter((m) => m.tvlUsd != null || m.volume24hUsd != null)
+    .sort((a, b) => (b.tvlUsd ?? -1) - (a.tvlUsd ?? -1));
+  return ranked.slice(0, 12);
 }
+
+// Stablecoin counterparty symbols treated as $1.00 when computing execution
+// price. The list intentionally covers the breadth of seeds we support so
+// that any swap against one of them resolves to a USD price directly.
+const STABLE_SYMBOLS = new Set([
+  'USDC', 'USDT', 'DAI', 'FRAX', 'LUSD', 'GHO', 'USDe', 'USD0', 'USDS',
+  'crvUSD', 'PYUSD', 'TUSD', 'GUSD', 'AUSD', 'RLUSD', 'MIM', 'BOLD',
+]);
 
 function buildSwaps(
   swaps: import('./api').ApiSwap[],
   seedContract: string,
-  priceUsd: number | null
+  priceUsd: number | null,
+  ethUsd: number | null
 ): TokenSwap[] {
   const seedLower = seedContract.toLowerCase();
   return swaps.map((s) => {
     const inIsSeed = s.input_token?.address?.toLowerCase() === seedLower;
-    // input_value already comes back as token-units (not base-units), so we
-    // can use it directly. Sell = our token going in, Buy = our token coming out.
+    // input_value / output_value come back as decimal-adjusted token units
+    // (not USD, despite the suggestive `_value` name). Sell = our token
+    // going in, Buy = our token coming out.
     const tokenAmount = inIsSeed
       ? Number(s.input_value)
       : Number(s.output_value);
+    const counterpartyAmount = inIsSeed
+      ? Number(s.output_value)
+      : Number(s.input_value);
     const counterpartySymbol = inIsSeed
       ? s.output_token?.symbol ?? '?'
       : s.input_token?.symbol ?? '?';
     const amountUsd = priceUsd != null ? tokenAmount * priceUsd : null;
+    // Execution price in USD per seed token. Derived from the counterparty
+    // leg whenever we know the counterparty's USD value:
+    //   - Stable counterparty → 1 USD per token
+    //   - WETH counterparty → ethUsd per token
+    //   - Anything else → fall back to the spot priceUsd (no slippage signal,
+    //     but at least the column isn't blank)
+    let execPriceUsd: number | null = null;
+    if (tokenAmount > 0 && Number.isFinite(counterpartyAmount) && counterpartyAmount > 0) {
+      const cpSym = counterpartySymbol.toUpperCase();
+      let cpUsdPerUnit: number | null = null;
+      if (STABLE_SYMBOLS.has(counterpartySymbol) || cpSym === 'USDC' || cpSym === 'USDT' || cpSym === 'DAI') {
+        cpUsdPerUnit = 1;
+      } else if (cpSym === 'WETH' || cpSym === 'ETH') {
+        cpUsdPerUnit = ethUsd;
+      }
+      if (cpUsdPerUnit != null) {
+        execPriceUsd = (counterpartyAmount * cpUsdPerUnit) / tokenAmount;
+      } else if (priceUsd != null) {
+        execPriceUsd = priceUsd;
+      }
+    }
     return {
       timestamp: s.timestamp ?? Math.floor(new Date(s.datetime).getTime() / 1000),
       txHash: s.transaction_id,
@@ -468,6 +674,11 @@ function buildSwaps(
       amount: tokenAmount,
       amountUsd,
       counterpartySymbol,
+      // Token API exposes three address fields: `user` (originator), `sender`
+      // (immediate caller, often a router contract), and `recipient`. `user`
+      // is the meaningful "trader" column — the EOA that signed the trade.
+      trader: s.user || s.sender || s.recipient,
+      priceUsd: execPriceUsd,
     };
   });
 }

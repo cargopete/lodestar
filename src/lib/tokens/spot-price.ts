@@ -47,7 +47,7 @@ export async function fetchSpotPrices(contracts: string[]): Promise<Map<string, 
   const query = `
     query LiveSpot($ids: [ID!]!) {
       bundle(id: "1") { ethPriceUSD }
-      tokens(where: { id_in: $ids }) {
+      tokens(where: { id_in: $ids }, first: 1000) {
         id
         derivedETH
       }
