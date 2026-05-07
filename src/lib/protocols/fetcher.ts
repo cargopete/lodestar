@@ -1077,6 +1077,101 @@ function normalizeMessariPerp(slug: string, data: MessariPerpData): ProtocolDeta
   };
 }
 
+// --- Balancer V2 schema adapter ---
+//
+// Balancer Labs maintains a single team-native schema deployed across
+// Ethereum, Polygon, Arbitrum, Avalanche, and Gnosis. The top-level
+// `balancers` entity exposes cumulative liquidity/volume/fees, and
+// `balancerSnapshots` stores running cumulative totals per UTC day
+// (not deltas). This adapter converts the cumulative-snapshot shape
+// into the daily-delta convention used by every other DEX entry by
+// subtracting consecutive snapshots.
+//
+// Caveat: protocol-level `totalSwapVolume` and `totalSwapFee` are
+// unreliable across the Balancer fleet -- the Ethereum subgraph
+// overflowed to ~$1.6e16 in May 2026, Arbitrum sits at ~$4.4e13,
+// and bb-* pool rebasing has historically inflated counts on Polygon
+// too. The snapshot deltas, by contrast, agree with on-chain reality
+// (independently verified against $2.5M/day on Eth, $250K/day on
+// Polygon). This adapter therefore always exposes cumulative as the
+// 90-day snapshot-window sum -- honest about what we have rather than
+// optimistic about what the schema claims.
+
+interface BalancerV2Snapshot {
+  timestamp: string;
+  totalLiquidity: string;
+  totalSwapVolume: string;
+  totalSwapFee: string;
+}
+
+interface BalancerV2Protocol {
+  id: string;
+  totalLiquidity: string;
+  totalSwapVolume: string;
+  totalSwapFee: string;
+  poolCount: number;
+}
+
+interface BalancerV2Data {
+  balancers: BalancerV2Protocol[];
+  balancerSnapshots: BalancerV2Snapshot[];
+}
+
+const BALANCER_V2_QUERY = `{
+  balancers(first: 1) {
+    id
+    totalLiquidity
+    totalSwapVolume
+    totalSwapFee
+    poolCount
+  }
+  balancerSnapshots(first: 90, orderBy: timestamp, orderDirection: desc) {
+    timestamp
+    totalLiquidity
+    totalSwapVolume
+    totalSwapFee
+  }
+}`;
+
+function normalizeBalancerV2(slug: string, data: BalancerV2Data): ProtocolDetail {
+  const p = data.balancers[0];
+  const ascending = [...data.balancerSnapshots].sort(
+    (a, b) => parseInt(a.timestamp) - parseInt(b.timestamp),
+  );
+
+  // Snapshots store cumulative totals; convert to daily deltas. Skip
+  // the first snapshot (no prior anchor). Clamp negative deltas to 0
+  // so a one-off cumVolume regeneration doesn't poison the series.
+  const snapshots: ProtocolDaySnapshot[] = [];
+  for (let i = 1; i < ascending.length; i++) {
+    const curr = ascending[i];
+    const prev = ascending[i - 1];
+    const dailyVol = Math.max(0, parseF(curr.totalSwapVolume) - parseF(prev.totalSwapVolume));
+    const dailyFee = Math.max(0, parseF(curr.totalSwapFee) - parseF(prev.totalSwapFee));
+    snapshots.push({
+      timestamp: parseInt(curr.timestamp),
+      tvlUSD: parseF(curr.totalLiquidity),
+      volumeUSD: dailyVol,
+      feesUSD: dailyFee,
+    });
+  }
+
+  const clean = filterFeeOutliers(snapshots);
+  const snapshotVolumeSum = clean.reduce((acc, s) => acc + s.volumeUSD, 0);
+  const snapshotFeesSum = clean.reduce((acc, s) => acc + s.feesUSD, 0);
+
+  return {
+    summary: computeSummary(
+      slug,
+      parseF(p?.totalLiquidity),
+      snapshotVolumeSum,
+      snapshotFeesSum,
+      clean,
+    ),
+    snapshots: clean,
+  };
+}
+
 function normalizeUniswapV2(slug: string, data: UniswapV2Data): ProtocolDetail {
   const f = data.uniswapFactory;
   const totalVolume = parseF(f?.totalVolumeUSD);
@@ -1224,6 +1319,10 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
     case 'messari-perp': {
       const data = await queryProtocolSubgraph<MessariPerpData>(config.subgraphId, MESSARI_PERP_QUERY);
       return normalizeMessariPerp(config.slug, data);
+    }
+    case 'balancer-v2': {
+      const data = await queryProtocolSubgraph<BalancerV2Data>(config.subgraphId, BALANCER_V2_QUERY);
+      return normalizeBalancerV2(config.slug, data);
     }
     case 'uniswap-v2': {
       const data = await queryProtocolSubgraph<UniswapV2Data>(config.subgraphId, UNISWAP_V2_QUERY);

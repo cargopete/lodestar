@@ -6,6 +6,7 @@ export type SchemaType =
   | 'messari-yield'
   | 'messari-bridge'
   | 'messari-perp'
+  | 'balancer-v2'
   | 'uniswap-v2'
   | 'uniswap-v3'
   | 'algebra-v1'
@@ -183,6 +184,17 @@ export const PROTOCOLS: ProtocolConfig[] = [
     color: '#8247E5',
   },
   {
+    slug: 'liquity-v1',
+    name: 'Liquity V1',
+    category: 'Lending',
+    description: 'Trove-based decentralised borrowing protocol on Ethereum. Users open Troves backed by ETH collateral and mint LUSD against them at a fixed-fee, no-interest rate, with liquidations routed through a Stability Pool that absorbs bad debt in exchange for ETH redistribution. The original immutable V1 contracts, separate from the newer Liquity V2 (Bold) deployment.',
+    subgraphId: '2D2dFCLjUt3MfFgTKW8cBxiRQ3Adss7KUtYh2rTcFVY',
+    schemaType: 'messari-lending',
+    website: 'https://www.liquity.org',
+    chains: ['Ethereum'],
+    color: '#2EB6EA',
+  },
+  {
     slug: 'makerdao',
     name: 'MakerDAO',
     category: 'Lending',
@@ -305,6 +317,61 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://aerodrome.finance',
     chains: ['Base'],
     color: '#1A33FF',
+  },
+  {
+    slug: 'balancer-v2',
+    name: 'Balancer V2',
+    category: 'DEX',
+    description: 'Weighted-pool AMM on Ethereum with composable Stable, Boosted, and Linear pools. Pioneered the n-asset weighted-pool design and is the venue Aura/Convex routes BAL emissions through. The largest Balancer deployment by TVL.',
+    subgraphId: 'C4ayEZP2yTXRAB8vSaTrgN4m9anTe9Mdm2ViyiAuV9TV',
+    schemaType: 'balancer-v2',
+    website: 'https://balancer.fi',
+    chains: ['Ethereum'],
+    color: '#1E1E1E',
+  },
+  {
+    slug: 'balancer-v2-polygon',
+    name: 'Balancer V2 (Polygon)',
+    category: 'DEX',
+    description: 'Balancer V2 on Polygon PoS. Smaller than the Ethereum deployment but with a long tail of stable/weighted pools, particularly active around stMATIC and bb-yv-USD pools.',
+    subgraphId: 'H9oPAbXnobBRq1cB3HDmbZ1E8MWQyJYQjT1QDJMrdbNp',
+    schemaType: 'balancer-v2',
+    website: 'https://balancer.fi',
+    chains: ['Polygon'],
+    color: '#8247E5',
+  },
+  {
+    slug: 'balancer-v2-arbitrum',
+    name: 'Balancer V2 (Arbitrum)',
+    category: 'DEX',
+    description: 'Balancer V2 on Arbitrum One. Active around boosted USD stable pools and rETH/wstETH weighted pools that route the bulk of LST liquidity on Arbitrum.',
+    subgraphId: 'itkjv6Vdh22HtNEPQuk5c9M3T7VeGLQtXxcH8rFi1vc',
+    schemaType: 'balancer-v2',
+    website: 'https://balancer.fi',
+    chains: ['Arbitrum'],
+    color: '#28A0F0',
+  },
+  {
+    slug: 'balancer-v2-avalanche',
+    name: 'Balancer V2 (Avalanche)',
+    category: 'DEX',
+    description: 'Balancer V2 on Avalanche C-Chain. Smaller deployment focused on AVAX/sAVAX and stable-pool liquidity for Benqi-issued LSTs.',
+    subgraphId: '6n4PdKDbHaXFn85G3gY8HMhAGRFvY3adPsxS14oMV49L',
+    schemaType: 'balancer-v2',
+    website: 'https://balancer.fi',
+    chains: ['Avalanche'],
+    color: '#E84142',
+  },
+  {
+    slug: 'balancer-v2-gnosis',
+    name: 'Balancer V2 (Gnosis)',
+    category: 'DEX',
+    description: 'Balancer V2 on Gnosis Chain. Centred on xDAI stable pools and the GNO-paired weighted pools that anchor on-chain liquidity for the Gnosis ecosystem.',
+    subgraphId: 'EJezH1Cp31QkKPaBDerhVPRWsKVZLrDfzjrLqpmv6cGg',
+    schemaType: 'balancer-v2',
+    website: 'https://balancer.fi',
+    chains: ['Gnosis'],
+    color: '#04795B',
   },
   {
     slug: 'pancakeswap-v3',
