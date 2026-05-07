@@ -220,7 +220,7 @@ export function ProvisionsPanel({ provisions, isLoading, selfStakeGRT }: Provisi
 
         {/* Provisions list */}
         <div className="space-y-4">
-          {provisions.map((provision, i) => (
+          {provisions.filter(p => BigInt(p.tokensProvisioned) > 0n).map((provision, i) => (
             <ProvisionCard
               key={provision.id}
               provision={provision}
