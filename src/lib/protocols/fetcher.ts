@@ -1180,9 +1180,15 @@ function normalizeGmxV2Synthetics(slug: string, data: GmxV2SyntheticsData): Prot
     dailyFeeByTs.set(ts, (dailyFeeByTs.get(ts) ?? 0) + v);
   }
 
-  // Materialise the snapshot series, taking the union of volume+fee day keys.
-  const allDays = new Set<number>([...dailyVolByTs.keys(), ...dailyFeeByTs.keys()]);
-  const snapshots: ProtocolDaySnapshot[] = [...allDays]
+  // Materialise the snapshot series, taking the *intersection* of volume+fee
+  // day keys. The volume and fee paginated queries return rows in slightly
+  // different orderings across markets, so the leading edge of each window
+  // covers a different stretch -- earlier we took the union and ended up with
+  // 4 days near the beginning where vol=0 but fees>0 (or vice-versa), which
+  // surfaced as misleading flat-zero bars on the chart. Intersection drops
+  // those partial days so every rendered bar has both metrics.
+  const allDays = [...dailyVolByTs.keys()].filter((ts) => dailyFeeByTs.has(ts));
+  const snapshots: ProtocolDaySnapshot[] = allDays
     .sort((a, b) => a - b)
     .map((ts) => ({
       timestamp: ts,

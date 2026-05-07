@@ -769,7 +769,7 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://app.gmx.io',
     chains: ['Arbitrum'],
     color: '#4FA8DF',
-    knownIssues: 'TVL and Open Interest are not yet tracked: GMX V2 pool valuation requires summing per-market PoolAmountUpdate × TokenPrice, and OI requires deriving from positionIncrease/Decrease deltas. v1 of this adapter ships with cumulative volume + fees and the 90-day daily volume series; TVL and OI land in a follow-up.',
+    knownIssues: 'TVL and Open Interest are not surfaced via the synthetics-stats subgraph: it doesn\'t index GM market token prices or PoolAmountUpdate events, so per-market pool valuation isn\'t reachable from on-chain Graph data alone. Adding either requires a second external data source (gmxinfra.io stats API). Cumulative volume + fees and the 90-day daily series are accurate.',
     knownIssueAffects: 'fees',
   },
 ];
