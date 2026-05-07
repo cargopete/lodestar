@@ -32,12 +32,25 @@ async function get<T>(path: string, params: Record<string, string | number>): Pr
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) qs.set(k, String(v));
   const url = `${BASE_URL}${path}?${qs}`;
-  const res = await fetch(url, { headers: authHeaders() });
-  if (!res.ok) {
+  // Retry once on 5xx with short jittered backoff. Token API frequently
+  // returns transient 500s under fan-out load (especially the /pools and
+  // /tokens endpoints when 80+ requests fire in the same tick). One
+  // retry catches most of these and prevents the row from rendering as
+  // a warning + missing data.
+  let lastErr: Error | null = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch(url, { headers: authHeaders() });
+    if (res.ok) return (await res.json()) as ApiEnvelope<T>;
+    if (res.status >= 500 && attempt === 0) {
+      // Transient. Wait 200-500ms and retry once.
+      await new Promise((r) => setTimeout(r, 200 + Math.random() * 300));
+      continue;
+    }
     const body = await res.text().catch(() => '');
-    throw new Error(`Token API ${res.status} ${path}: ${body.slice(0, 200)}`);
+    lastErr = new Error(`Token API ${res.status} ${path}: ${body.slice(0, 200)}`);
+    break;
   }
-  return (await res.json()) as ApiEnvelope<T>;
+  throw lastErr ?? new Error(`Token API: unknown failure for ${path}`);
 }
 
 // --- Endpoint shapes ---
