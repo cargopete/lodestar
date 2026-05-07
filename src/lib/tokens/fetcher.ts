@@ -63,10 +63,8 @@ async function buildSummary(seed: TokenSeed, ethUsd: number | null): Promise<Tok
       warnings.push(`metadata: ${(e as Error).message}`);
       return null;
     }),
-    // 4h interval × 100 limit ≈ 16 days at 4-hour granularity after de-dupe.
-    // Gives 20-30 unique points for a smooth sparkline and enough resolution
-    // to compute 24h delta from the bar 6 candles back.
-    fetchPoolOhlc(seed.chain, seed.pool.address, '4h', 100).catch((e) => {
+    // 4h interval × 10 limit (API hard cap) ≈ a few days of sparkline points.
+    fetchPoolOhlc(seed.chain, seed.pool.address, '4h', 10).catch((e) => {
       warnings.push(`ohlc: ${(e as Error).message}`);
       return [] as Awaited<ReturnType<typeof fetchPoolOhlc>>;
     }),
@@ -290,18 +288,9 @@ export async function fetchTokenDetail(
 
   const ethUsd = await getEthUsd();
 
-  // OHLC `limit` is hard-capped at 100 (TOKEN_API_OHLC_LIMIT_CAP_100) AND
-  // returns same-day duplicates so heavily that 100 raw rows often collapse
-  // to ~25 unique datetimes (TOKEN_API_OHLC_DUPES). For the chart we paginate
-  // 4 pages of daily bars in parallel to span ~100 unique days. The live
-  // quote comes from the Uniswap V3 subgraph's per-block derivedETH, not
-  // from any OHLC bar (Token API caches hourly bars server-side so the
-  // header would otherwise look frozen).
-  //
-  // We deliberately DO NOT mix 4h or 1h bars into the chart series: smaller
-  // intervals on thin pools yield many flat (open=high=low=close) bars that
-  // render as dashes. The daily aggregate already carries real intraday
-  // range across all swaps in the day.
+  // OHLC `limit` is hard-capped at 10. We paginate 4 pages in parallel to
+  // get up to 40 raw rows; after de-duplication that typically yields
+  // ~20-30 unique daily bars for the chart.
   const [
     summary,
     priceDailyP1,
@@ -314,10 +303,10 @@ export async function fetchTokenDetail(
     swapsRaw,
   ] = await Promise.all([
     buildSummary(seed, ethUsd),
-    fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 100, 1),
-    fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 100, 2),
-    fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 100, 3),
-    fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 100, 4),
+    fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 10, 1),
+    fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 10, 2),
+    fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 10, 3),
+    fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 10, 4),
     seed.pegUsd == null
       ? fetchSpotPrices([seed.contract]).then((m) => m.get(seed.contract.toLowerCase()) ?? null)
       : Promise.resolve(null),
