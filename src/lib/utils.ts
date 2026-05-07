@@ -29,7 +29,7 @@ export function formatGRT(amount: number, decimals = 2): string {
   if (amount >= 1e3) {
     return `${(amount / 1e3).toFixed(decimals)}K`;
   }
-  return amount.toFixed(Math.max(decimals, 4));
+  return amount.toFixed(decimals);
 }
 
 /**

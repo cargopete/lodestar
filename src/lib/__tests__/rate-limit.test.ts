@@ -12,7 +12,11 @@ vi.mock('@upstash/redis', () => ({
   },
 }));
 
-// Import after mock is set up
+// Stub env vars so the module-level `redis` initialisation calls Redis.fromEnv()
+vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://fake.upstash.io');
+vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'fake-token');
+
+// Import after mocks and env stubs are set up
 const { rateLimit } = await import('../rate-limit');
 
 describe('rateLimit', () => {

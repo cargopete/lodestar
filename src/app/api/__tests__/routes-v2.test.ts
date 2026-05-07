@@ -68,9 +68,15 @@ vi.mock('@/lib/cron-runs', () => ({
 // @/lib/logger
 vi.mock('@/lib/logger', () => ({
   log: {
-    health: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    api: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     cron: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    health: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    ingest: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    amp: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    cache: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    refresh: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   },
+  default: { child: vi.fn().mockReturnThis(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
 // @pinax/graph-networks-registry
@@ -258,7 +264,7 @@ describe('/api/provisions', () => {
 
   it('returns 503 when no API key', async () => {
     mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/provisions?indexer=0x1234');
+    const req = makeRequest('/api/provisions?indexer=0x1234000000000000000000000000000000001234');
     const res = await GET(req);
     expect(res.status).toBe(503);
   });
@@ -270,7 +276,7 @@ describe('/api/provisions', () => {
       ],
     });
 
-    const req = makeRequest('/api/provisions?indexer=0x1234');
+    const req = makeRequest('/api/provisions?indexer=0x1234000000000000000000000000000000001234');
     const res = await GET(req);
     const json = await getJson(res);
 
@@ -286,7 +292,7 @@ describe('/api/provisions', () => {
       ],
     });
 
-    const req = makeRequest('/api/provisions?service=0xservice1');
+    const req = makeRequest('/api/provisions?service=0x1234000000000000000000000000000000002345');
     const res = await GET(req);
     const json = await getJson(res);
 
@@ -309,8 +315,8 @@ describe('/api/indexer-status/[address]', () => {
 
   it('returns 503 when no API key', async () => {
     mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/indexer-status/0x1234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234' }) });
+    const req = makeRequest('/api/indexer-status/0x1234000000000000000000000000000000001234');
+    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
     expect(res.status).toBe(503);
   });
 
@@ -321,8 +327,8 @@ describe('/api/indexer-status/[address]', () => {
       allocations: [],
     });
 
-    const req = makeRequest('/api/indexer-status/0x1234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234' }) });
+    const req = makeRequest('/api/indexer-status/0x1234000000000000000000000000000000001234');
+    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
     const json = await getJson(res);
 
     expect(res.status).toBe(200);
@@ -351,8 +357,8 @@ describe('/api/indexer-status/[address]', () => {
     // Second pagination call: empty = exits loop
     mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
 
-    const req = makeRequest('/api/indexer-status/0x1234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234' }) });
+    const req = makeRequest('/api/indexer-status/0x1234000000000000000000000000000000001234');
+    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
     const json = await getJson(res);
 
     expect(res.status).toBe(200);
@@ -525,7 +531,7 @@ describe('/api/parameter-history/[address]', () => {
   it('returns { data: [] } when DB not configured', async () => {
     // mockHasDbAccess returns false by default in beforeEach
     const req = makeRequest('/api/parameter-history/0x1234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234' }) });
+    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
     const json = await getJson(res);
 
     expect(res.status).toBe(200);
@@ -553,7 +559,7 @@ describe('/api/parameter-history/[address]', () => {
     ]);
 
     const req = makeRequest('/api/parameter-history/0x1234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234' }) });
+    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
     const json = await getJson(res);
 
     expect(res.status).toBe(200);
@@ -976,7 +982,7 @@ describe('/api/rewards-history', () => {
   });
 
   it('returns 503 when DB not configured', async () => {
-    const req = makeRequest('/api/rewards-history?address=0x1234');
+    const req = makeRequest('/api/rewards-history?address=0x1234000000000000000000000000000000001234');
     const res = await GET(req);
     expect(res.status).toBe(503);
   });
@@ -984,7 +990,7 @@ describe('/api/rewards-history', () => {
   it('returns 503 when no API key', async () => {
     mockHasDbAccess.mockReturnValue(true);
     mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/rewards-history?address=0x1234');
+    const req = makeRequest('/api/rewards-history?address=0x1234000000000000000000000000000000001234');
     const res = await GET(req);
     expect(res.status).toBe(503);
   });
@@ -993,7 +999,7 @@ describe('/api/rewards-history', () => {
     mockHasDbAccess.mockReturnValue(true);
     mockSubgraphQuery.mockResolvedValueOnce({ delegator: null });
 
-    const req = makeRequest('/api/rewards-history?address=0x1234');
+    const req = makeRequest('/api/rewards-history?address=0x1234000000000000000000000000000000001234');
     const res = await GET(req);
     const json = await getJson(res);
 
@@ -1014,7 +1020,7 @@ describe('/api/rewards-history', () => {
     // DB returns no snapshots
     mockDb.mockResolvedValueOnce([]);
 
-    const req = makeRequest('/api/rewards-history?address=0x1234');
+    const req = makeRequest('/api/rewards-history?address=0x1234000000000000000000000000000000001234');
     const res = await GET(req);
     const json = await getJson(res);
 
@@ -1039,7 +1045,7 @@ describe('/api/rewards-history', () => {
     // (Full computation path tested via the route returning non-empty data
     // requires a running Postgres — tested in integration.)
 
-    const req = makeRequest('/api/rewards-history?address=0x1234');
+    const req = makeRequest('/api/rewards-history?address=0x1234000000000000000000000000000000001234');
     const res = await GET(req);
     const json = await getJson(res);
 
@@ -1053,7 +1059,7 @@ describe('/api/rewards-history', () => {
     mockSubgraphQuery.mockResolvedValueOnce({ delegator: null });
 
     // days=1 should be clamped to 7
-    const req = makeRequest('/api/rewards-history?address=0x1234&days=1');
+    const req = makeRequest('/api/rewards-history?address=0x1234000000000000000000000000000000001234&days=1');
     const res = await GET(req);
     expect(res.status).toBe(200);
   });

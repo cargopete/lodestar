@@ -35,7 +35,7 @@ export async function GET() {
   const data = await cacheGet<ActivityEvent[]>(CACHE_KEY);
 
   if (!data) {
-    return NextResponse.json({ data: [] });
+    return NextResponse.json({ error: 'Activity data not yet available — cron has not run yet' }, { status: 503 });
   }
 
   return NextResponse.json({ data }, {

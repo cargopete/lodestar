@@ -443,8 +443,8 @@ describe('/api/subgraph-curation/[hash]', () => {
 
   it('returns 503 when no API key', async () => {
     mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/subgraph-curation/QmTest');
-    const res = await GET(req, { params: Promise.resolve({ hash: 'QmTest' }) });
+    const req = makeRequest('/api/subgraph-curation/QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT');
+    const res = await GET(req, { params: Promise.resolve({ hash: 'QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT' }) });
     expect(res.status).toBe(503);
   });
 
@@ -457,8 +457,8 @@ describe('/api/subgraph-curation/[hash]', () => {
       }],
     });
 
-    const req = makeRequest('/api/subgraph-curation/QmTest');
-    const res = await GET(req, { params: Promise.resolve({ hash: 'QmTest' }) });
+    const req = makeRequest('/api/subgraph-curation/QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT');
+    const res = await GET(req, { params: Promise.resolve({ hash: 'QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT' }) });
     const json = await getJson(res);
 
     expect(res.status).toBe(200);
@@ -482,8 +482,8 @@ describe('/api/subgraph-history/[hash]', () => {
 
   it('returns 503 when no API key', async () => {
     mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/subgraph-history/QmTest');
-    const res = await GET(req, { params: Promise.resolve({ hash: 'QmTest' }) });
+    const req = makeRequest('/api/subgraph-history/QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT');
+    const res = await GET(req, { params: Promise.resolve({ hash: 'QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT' }) });
     expect(res.status).toBe(503);
   });
 
@@ -494,8 +494,8 @@ describe('/api/subgraph-history/[hash]', () => {
       allocations: [],
     });
 
-    const req = makeRequest('/api/subgraph-history/QmTest123');
-    const res = await GET(req, { params: Promise.resolve({ hash: 'QmTest123' }) });
+    const req = makeRequest('/api/subgraph-history/QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT');
+    const res = await GET(req, { params: Promise.resolve({ hash: 'QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT' }) });
     const json = await getJson(res);
 
     expect(res.status).toBe(200);

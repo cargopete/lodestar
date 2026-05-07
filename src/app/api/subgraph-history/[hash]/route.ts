@@ -16,11 +16,17 @@ interface RawAllocation {
   closedAt: number | null;
 }
 
+const IPFS_HASH_RE = /^Qm[1-9A-HJ-NP-Za-km-z]{44}$/;
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ hash: string }> },
 ) {
   const { hash } = await params;
+
+  if (!IPFS_HASH_RE.test(hash)) {
+    return NextResponse.json({ error: 'Invalid deployment hash' }, { status: 400 });
+  }
 
   if (!hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });

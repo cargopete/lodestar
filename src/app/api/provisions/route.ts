@@ -18,6 +18,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'indexer or service parameter required' }, { status: 400 });
   }
 
+  const ETH_ADDRESS_RE = /^0x[0-9a-f]{40}$/;
+  if (indexer && !ETH_ADDRESS_RE.test(indexer.toLowerCase())) {
+    return NextResponse.json({ error: 'Invalid indexer address' }, { status: 400 });
+  }
+  if (service && !ETH_ADDRESS_RE.test(service.toLowerCase())) {
+    return NextResponse.json({ error: 'Invalid service address' }, { status: 400 });
+  }
+
   try {
     if (indexer) {
       const addr = indexer.toLowerCase();

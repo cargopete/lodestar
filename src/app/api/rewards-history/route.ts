@@ -28,6 +28,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'address parameter required' }, { status: 400 });
   }
 
+  if (!/^0x[0-9a-f]{40}$/.test(address)) {
+    return NextResponse.json({ error: 'Invalid address format' }, { status: 400 });
+  }
+
   if (!hasDbAccess() || !db) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
