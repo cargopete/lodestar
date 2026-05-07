@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 
 /**
  * Protocol / network logo with a graceful fallback chain. Pattern adapted
