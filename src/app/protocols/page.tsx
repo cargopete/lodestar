@@ -7,6 +7,7 @@ import { useProtocolsDirectory } from '@/hooks/useProtocols';
 import type { ProtocolSummary } from '@/lib/protocols/fetcher';
 import { formatUSD } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { ProtocolLogo, buildProtocolSources, buildNetworkSources } from '@/components/ProtocolLogo';
 
 const CATEGORY_STYLES: Record<string, string> = {
   'DEX': 'bg-[var(--accent)]/10 text-[var(--accent)]',
@@ -322,9 +323,11 @@ export default function ProtocolsPage() {
                                 <span className="text-[10px] text-[var(--text-faint)] w-3 inline-block">
                                   {isOpen ? '▼' : '▶'}
                                 </span>
-                                <span
-                                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                                  style={{ backgroundColor: row.color }}
+                                <ProtocolLogo
+                                  name={row.name}
+                                  color={row.color}
+                                  sources={buildProtocolSources(row.primary.config.family ?? row.primary.config.slug)}
+                                  size={20}
                                 />
                                 <span className="font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
                                   {row.name}
@@ -339,9 +342,11 @@ export default function ProtocolsPage() {
                                 className="flex items-center gap-2.5 group"
                               >
                                 <span className="text-[10px] w-3 inline-block" />
-                                <span
-                                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                                  style={{ backgroundColor: row.color }}
+                                <ProtocolLogo
+                                  name={row.name}
+                                  color={row.color}
+                                  sources={buildProtocolSources(row.primary.config.family ?? row.primary.config.slug)}
+                                  size={20}
                                 />
                                 <span className="font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
                                   {row.name}
@@ -380,9 +385,11 @@ export default function ProtocolsPage() {
                             href={`/protocols/${child.config.slug}`}
                             className="flex items-center gap-2.5 group"
                           >
-                            <span
-                              className="w-2 h-2 rounded-full shrink-0"
-                              style={{ backgroundColor: child.config.color }}
+                            <ProtocolLogo
+                              name={child.config.chains[0] ?? child.config.name}
+                              color={child.config.color}
+                              sources={buildNetworkSources(child.config.chains[0] ?? '')}
+                              size={16}
                             />
                             <span className="text-xs text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors">
                               {child.config.chains.join(' / ')}
