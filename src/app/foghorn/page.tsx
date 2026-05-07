@@ -43,22 +43,26 @@ interface FeedEvent {
 
 // ── Deployment metadata ───────────────────────────────────────────────────────
 
-const DEPLOYMENT_INFO: Record<string, { label: string; network: string }> = {
+const DEPLOYMENT_INFO: Record<string, { label: string; network: string; url?: string }> = {
   '0x45c636b73728d75a77b84c782e2a44624a294c1414326e59f12d60e0a6e58f51': {
     label: 'Graph Network',
     network: 'Arbitrum One',
+    url: 'https://thegraph.com/explorer/subgraphs/DZz4kDTdmzWLWsV373w2bSmoar3umKKH9y82SUKr5qmp',
   },
   '0xde0a7b5368f846f7d863d9f64949b688ad9818243151d488b4c6b206145b9ea3': {
     label: 'Premia Finance',
     network: 'Arbitrum One',
+    // url: '' — not found on Graph Explorer; add manually if known
   },
   '0xce57e4bc7b885a6255edd3e9d1617bb8819559f3903b84c18bb5db31afe17d06': {
     label: 'ENS',
     network: 'Ethereum',
+    url: 'https://thegraph.com/explorer/subgraphs/5XqPmWe6gjyrJtFn9cLy237i4cWw2j9HcUJEXsP5qGtH',
   },
   '0xe7b79e8051d136a6ab0ffd6016c7b7fd96dc63e220fe4071021844f36796398b': {
     label: 'Aave V2',
     network: 'Ethereum',
+    url: 'https://thegraph.com/explorer/subgraphs/84CvqQHYhydZzr2KSth8s1AFYpBRzUbVJXq6PWuZm9U9',
   },
 };
 
@@ -149,9 +153,20 @@ function DeploymentRow({ summary }: { summary: DeploymentSummary }) {
             <span className="text-sm font-medium text-[var(--text)]">{label}</span>
             <Badge variant="default" className="text-[10px]">{network}</Badge>
           </div>
-          <span className="font-mono text-[10px] text-[var(--text-faint)]">
-            {summary.deployment_id.slice(0, 18)}…
-          </span>
+          {info?.url ? (
+            <a
+              href={info.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[10px] text-[var(--accent)] hover:underline"
+            >
+              {summary.deployment_id.slice(0, 18)}…
+            </a>
+          ) : (
+            <span className="font-mono text-[10px] text-[var(--text-faint)]">
+              {summary.deployment_id.slice(0, 18)}…
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-6 shrink-0 text-right">
