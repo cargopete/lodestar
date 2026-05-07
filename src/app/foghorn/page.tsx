@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { cn, shortenAddress } from '@/lib/utils';
@@ -28,17 +27,6 @@ interface DeploymentSummary {
   p95_latency_ms: number | null;
   last_probe_at: string | null;
   unique_indexers: number;
-}
-
-interface IndexerQuality {
-  indexer_address: string;       // allocation key (ecrecover'd signer)
-  resolved_indexer: string | null; // real indexer address from network subgraph
-  indexer_url: string | null;
-  total_probes: number;
-  divergent_probes: number;
-  divergence_rate: number;
-  avg_latency_ms: number | null;
-  last_seen: string | null;
 }
 
 interface FeedEvent {
@@ -102,42 +90,6 @@ function useFoghornDeployments() {
   });
 }
 
-function useDeploymentQuality(deploymentId: string, enabled: boolean) {
-  return useQuery<{ deployment_id: string; indexers: IndexerQuality[] }>({
-    queryKey: ['foghorn-deployment-quality', deploymentId],
-    queryFn: async () => {
-      const r = await fetch(`/api/foghorn/deployment/${encodeURIComponent(deploymentId)}/quality?days=7`);
-      if (!r.ok) throw new Error(`${r.status}`);
-      return r.json();
-    },
-    enabled,
-    staleTime: 300_000,
-    retry: 1,
-  });
-}
-
-interface IndexerMeta {
-  id: string;
-  ensName: string | null;
-  name: string | null;
-  url: string | null;
-}
-
-function useIndexerEnsMap() {
-  return useQuery<Record<string, IndexerMeta>>({
-    queryKey: ['indexers-ens-map'],
-    queryFn: async () => {
-      const r = await fetch('/api/indexers-enriched');
-      if (!r.ok) return {};
-      const data = await r.json();
-      const items: IndexerMeta[] = Array.isArray(data) ? data : (data.indexers ?? []);
-      return Object.fromEntries(items.map((i) => [i.id.toLowerCase(), i]));
-    },
-    staleTime: 300_000,
-    retry: 1,
-  });
-}
-
 function useFoghornFeed() {
   return useQuery<{ events: FeedEvent[]; count: number }>({
     queryKey: ['foghorn-feed'],
@@ -184,38 +136,14 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 // ── Deployment row ────────────────────────────────────────────────────────────
 
-type SortKey = 'latency' | 'probes' | 'last_seen';
-
-function DeploymentRow({ summary, ensMap }: { summary: DeploymentSummary; ensMap: Record<string, IndexerMeta> }) {
-  const [expanded, setExpanded] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>('latency');
-  const { data, isLoading } = useDeploymentQuality(summary.deployment_id, expanded);
-
+function DeploymentRow({ summary }: { summary: DeploymentSummary }) {
   const info = DEPLOYMENT_INFO[summary.deployment_id];
   const label = info?.label ?? shortenAddress(summary.deployment_id);
   const network = info?.network ?? 'Unknown';
 
-  const sorted = [...(data?.indexers ?? [])].sort((a, b) => {
-    if (sortKey === 'latency') return (a.avg_latency_ms ?? 9999) - (b.avg_latency_ms ?? 9999);
-    if (sortKey === 'probes') return b.total_probes - a.total_probes;
-    if (sortKey === 'last_seen') return new Date(b.last_seen ?? 0).getTime() - new Date(a.last_seen ?? 0).getTime();
-    return 0;
-  });
-
   return (
     <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-      {/* Summary row */}
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center gap-4 px-4 py-3 bg-[var(--bg-elevated)] hover:bg-[var(--bg-card)] text-left transition-colors"
-      >
-        <svg
-          className={cn('w-4 h-4 text-[var(--text-faint)] shrink-0 transition-transform', expanded && 'rotate-90')}
-          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
-
+      <div className="flex items-center gap-4 px-4 py-3 bg-[var(--bg-elevated)]">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-[var(--text)]">{label}</span>
@@ -243,132 +171,14 @@ function DeploymentRow({ summary, ensMap }: { summary: DeploymentSummary; ensMap
             <div className="font-mono text-sm font-medium text-[var(--text)]">
               {summary.unique_indexers}
             </div>
-            <div className="text-[10px] text-[var(--text-faint)]">indexers</div>
+            <div className="text-[10px] text-[var(--text-faint)]">allocations</div>
           </div>
           <div>
             <div className="text-sm text-[var(--text-muted)]">{timeAgo(summary.last_probe_at)}</div>
             <div className="text-[10px] text-[var(--text-faint)]">last probe</div>
           </div>
         </div>
-      </button>
-
-      {/* Expanded indexer table */}
-      {expanded && (
-        <div className="border-t border-[var(--border)]">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[var(--border)]">
-                    <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">
-                      Indexer
-                    </th>
-                    <th
-                      className={cn(
-                        'px-4 py-2 text-right text-[11px] font-medium cursor-pointer select-none',
-                        sortKey === 'latency' ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
-                      )}
-                      onClick={() => setSortKey('latency')}
-                    >
-                      Avg latency {sortKey === 'latency' && '↑'}
-                    </th>
-                    <th
-                      className={cn(
-                        'px-4 py-2 text-right text-[11px] font-medium cursor-pointer select-none',
-                        sortKey === 'probes' ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
-                      )}
-                      onClick={() => setSortKey('probes')}
-                    >
-                      Probes {sortKey === 'probes' && '↓'}
-                    </th>
-                    <th
-                      className={cn(
-                        'px-4 py-2 text-right text-[11px] font-medium cursor-pointer select-none',
-                        sortKey === 'last_seen' ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
-                      )}
-                      onClick={() => setSortKey('last_seen')}
-                    >
-                      Last seen {sortKey === 'last_seen' && '↓'}
-                    </th>
-                    <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">
-                      Divergent
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border)]">
-                  {sorted.map((ix) => (
-                    <tr key={ix.indexer_address} className="hover:bg-[var(--bg-elevated)]">
-                      <td className="px-4 py-2">
-                        {(() => {
-                          const meta = ix.resolved_indexer ? ensMap[ix.resolved_indexer.toLowerCase()] : null;
-                          const displayUrl = meta?.url ?? ix.indexer_url;
-                          if (ix.resolved_indexer) {
-                            const label = meta?.ensName ?? meta?.name ?? null;
-                            return (
-                              <div>
-                                {label ? (
-                                  <span className="text-xs font-medium text-[var(--text)]">{label}</span>
-                                ) : (
-                                  <span className="font-mono text-xs text-[var(--text)]">
-                                    {ix.resolved_indexer.slice(0, 10)}…{ix.resolved_indexer.slice(-6)}
-                                  </span>
-                                )}
-                                {displayUrl && (
-                                  <a
-                                    href={displayUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block text-[10px] text-[var(--accent)] hover:underline truncate max-w-[180px]"
-                                  >
-                                    {displayUrl.replace(/^https?:\/\//, '')}
-                                  </a>
-                                )}
-                              </div>
-                            );
-                          }
-                          return (
-                            <span className="font-mono text-xs text-[var(--text-faint)]" title={ix.indexer_address}>
-                              {ix.indexer_address.slice(0, 10)}…{ix.indexer_address.slice(-6)}
-                              <span className="ml-1 text-[9px] opacity-50">alloc</span>
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-4 py-2 text-right">
-                        <span className={cn('font-mono text-xs font-medium', latencyColor(ix.avg_latency_ms))}>
-                          {latencyLabel(ix.avg_latency_ms)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-right">
-                        <span className="font-mono text-xs text-[var(--text-muted)]">
-                          {ix.total_probes}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-right">
-                        <span className="text-xs text-[var(--text-faint)]">
-                          {timeAgo(ix.last_seen)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-right">
-                        <span className={cn(
-                          'font-mono text-xs',
-                          ix.divergent_probes > 0 ? 'text-[var(--amber)] font-medium' : 'text-[var(--text-faint)]'
-                        )}>
-                          {ix.divergent_probes > 0 ? ix.divergent_probes : '—'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -379,7 +189,6 @@ export default function FoghornPage() {
   const { data: stats, isLoading: statsLoading } = useFoghornStats();
   const { data: deploymentsData, isLoading: deploymentsLoading } = useFoghornDeployments();
   const { data: feedData } = useFoghornFeed();
-  const { data: ensMap = {} } = useIndexerEnsMap();
 
   const isUnavailable = !statsLoading && !stats;
 
@@ -438,12 +247,7 @@ export default function FoghornPage() {
 
       {/* Deployments */}
       <div>
-        <h2 className="text-sm font-semibold text-[var(--text)] mb-3">
-          Deployments
-          <span className="ml-2 text-xs font-normal text-[var(--text-faint)]">
-            — click to expand per-indexer latency
-          </span>
-        </h2>
+        <h2 className="text-sm font-semibold text-[var(--text)] mb-3">Deployments</h2>
         {deploymentsLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
@@ -451,7 +255,7 @@ export default function FoghornPage() {
         ) : (
           <div className="space-y-2">
             {(deploymentsData?.deployments ?? []).map((d) => (
-              <DeploymentRow key={d.deployment_id} summary={d} ensMap={ensMap} />
+              <DeploymentRow key={d.deployment_id} summary={d} />
             ))}
             {!deploymentsData?.deployments.length && !deploymentsLoading && (
               <p className="text-sm text-[var(--text-faint)] text-center py-8">No probe data yet.</p>
