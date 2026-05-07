@@ -58,6 +58,14 @@ const PROTOCOL_TOKEN_TICKERS: Record<string, string> = {
   'stargate': 'STG',
   'axelar': 'AXL',
   'pendle': 'PENDLE',
+  'camelot-v3': 'GRAIL',
+  'inverse-finance': 'INV',
+  'abracadabra': 'SPELL',
+  'polymarket': 'POLY',
+  // Spark Lend uses DAI as its visual identity (the primary asset users
+  // interact with through the Sky / MakerDAO ecosystem). MKR also works
+  // but DAI is the asset most users associate with Spark.
+  'spark-lend': 'DAI',
   // Bridges: use the destination-chain icon when no native token exists.
   'arbitrum-one-bridge': 'ARB',
   'optimism-bridge-v2': 'OP',
@@ -67,6 +75,23 @@ const PROTOCOL_EXCHANGE_SLUGS: Record<string, string> = {
   'balancer-v2': 'balancer',
   'uniswap-v3': 'uniswap',
   'uniswap-v2': 'uniswap',
+};
+
+/**
+ * TrustWallet `assets` repo on GitHub stores token logos at
+ * `blockchains/<chain>/assets/<checksum>/logo.png`. Used for protocols whose
+ * tokens aren't in web3icons. Pattern matches lodestar-tokens-proto/TokenIcon.
+ */
+const PROTOCOL_TRUSTWALLET: Record<string, { chain: string; checksum: string }> = {
+  'badger-dao':       { chain: 'ethereum',   checksum: '0x3472A5A71965499acd81997a54BBA8D852C6E53d' },
+  'ether-fi':         { chain: 'ethereum',   checksum: '0xFe0c30065B384F05761f15d0CC899D4F9F9Cc0eB' },
+  'goldfinch':        { chain: 'ethereum',   checksum: '0xdab396cCF3d84Cf2D07C4454e10C8A6F5b008D2b' },
+  'benqi':            { chain: 'avalanchec', checksum: '0x8729438EB15e2C8B576fCc6AeCdA6A148776C0F5' },
+  // Morpho's newer governance token (0x9994E35...) isn't in TrustWallet yet;
+  // the legacy MORPHO contract logo is fine since the brand is identical.
+  'morpho-blue':      { chain: 'ethereum',   checksum: '0x58D97B57BB95320F9a05dC918Aef65434969c2B2' },
+  'aerodrome':        { chain: 'base',       checksum: '0x940181a94A35A4569E4529A3CDfB74e38FD98631' },
+  'truefi':           { chain: 'ethereum',   checksum: '0x57e114B691Db790C35207b2e685D4A43181e6061' },
 };
 
 /** Network slug aliases for chains whose web3icons folder name differs from the casual chain name. */
@@ -98,6 +123,10 @@ export function buildProtocolSources(slugOrFamily: string): string[] {
   const exchange = PROTOCOL_EXCHANGE_SLUGS[slugOrFamily];
   if (exchange) {
     out.push(`${CDN_BASE}/exchanges/branded/${exchange}.svg`);
+  }
+  const tw = PROTOCOL_TRUSTWALLET[slugOrFamily];
+  if (tw) {
+    out.push(`https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${tw.chain}/assets/${tw.checksum}/logo.png`);
   }
   // Last-ditch: try the first slug segment as both a ticker and an exchange
   // slug. Catches new entries that haven't been added to the maps yet.
