@@ -14,7 +14,7 @@ const BASE_URL = 'https://token-api.thegraph.com';
 function authHeaders(): HeadersInit {
   const key = process.env.TOKEN_API_KEY;
   if (!key) throw new Error('TOKEN_API_KEY not set');
-  return { Authorization: `Bearer ${key}` };
+  return { 'X-Api-Key': key };
 }
 
 interface ApiEnvelope<T> {
