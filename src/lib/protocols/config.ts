@@ -1,9 +1,11 @@
 export type SchemaType =
   | 'messari-dex'
   | 'messari-lending'
+  | 'messari-rwa'
   | 'messari-staking'
   | 'messari-yield'
   | 'messari-bridge'
+  | 'messari-perp'
   | 'uniswap-v2'
   | 'uniswap-v3'
   | 'algebra-v1'
@@ -16,7 +18,9 @@ export type ProtocolCategory =
   | 'Liquid Staking'
   | 'Yield Aggregator'
   | 'Prediction Markets'
-  | 'Bridge';
+  | 'Bridge'
+  | 'RWA'
+  | 'Perpetuals';
 
 export interface ProtocolConfig {
   slug: string;
@@ -149,6 +153,50 @@ export const PROTOCOLS: ProtocolConfig[] = [
     knownIssueAffects: 'volume',
   },
   {
+    slug: 'compound-v2',
+    name: 'Compound V2',
+    category: 'Lending',
+    description: 'The original cToken-based money market on Ethereum. Pioneered algorithmic interest rates and remains a deep-liquidity venue for ETH, USDC, USDT, and DAI lending.',
+    subgraphId: '4TbqVA8p2DoBd5qDbPMwmDZv3CsJjWtxo8nVSqF2tA9a',
+    schemaType: 'messari-lending',
+    website: 'https://app.compound.finance/markets/v2',
+    chains: ['Ethereum'],
+    color: '#00D395',
+  },
+  {
+    slug: 'abracadabra',
+    name: 'Abracadabra Money',
+    category: 'Lending',
+    description: 'Collateralised debt protocol issuing the MIM stablecoin against interest-bearing collateral (yvDAI, sUSD, lp tokens, etc.). Launched the early "magic internet money" framing in DeFi.',
+    subgraphId: 'GLAu42kvVs7ixfXcmkAsRiS7Xt1NCpgkKsnz3qiriuvV',
+    schemaType: 'messari-lending',
+    website: 'https://abracadabra.money',
+    chains: ['Ethereum'],
+    color: '#FF55B6',
+  },
+  {
+    slug: 'benqi',
+    name: 'BENQI',
+    category: 'Lending',
+    description: 'Largest lending protocol native to Avalanche, plus liquid AVAX staking via sAVAX. Compound-style market design with AVAX, USDC, USDT, BTC.b, and ETH.e supply markets.',
+    subgraphId: '8ZjJGsaKea7WwLJPJNdHXPGsvXDe3iq2231aRjgBPisi',
+    schemaType: 'messari-lending',
+    website: 'https://benqi.fi',
+    chains: ['Avalanche'],
+    color: '#FF1B6B',
+  },
+  {
+    slug: 'inverse-finance',
+    name: 'Inverse Finance',
+    category: 'Lending',
+    description: 'Issuer of DOLA, a debt-backed stablecoin, paired with the DBR fixed-rate borrowing right token. Borrowers stream DBR over time to hold open DOLA debt, decoupling the cost of credit from spot utilization-curve volatility.',
+    subgraphId: 'EXuutY6qkZbXjYeJZdiDBf2imJswTNdfm8YZCqhAthfW',
+    schemaType: 'messari-lending',
+    website: 'https://inverse.finance',
+    chains: ['Ethereum'],
+    color: '#00C2A8',
+  },
+  {
     slug: 'lido',
     name: 'Lido',
     category: 'Liquid Staking',
@@ -158,6 +206,17 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://lido.fi',
     chains: ['Ethereum'],
     color: '#00A3FF',
+  },
+  {
+    slug: 'rocket-pool',
+    name: 'Rocket Pool',
+    category: 'Liquid Staking',
+    description: 'Permissionless liquid staking protocol issuing rETH. Lets stakers run their own validator nodes with as little as 8 ETH (alongside RPL collateral) and earn fee revenue from staked-on-behalf-of pool capital, the second-largest LST after Lido.',
+    subgraphId: 'Dtj2HicXKpoUjNB7ffdBkMwt3L9Sz3cbENd67AdHu6Vb',
+    schemaType: 'messari-staking',
+    website: 'https://rocketpool.net',
+    chains: ['Ethereum'],
+    color: '#FF8852',
   },
   {
     slug: 'aerodrome',
@@ -248,6 +307,39 @@ export const PROTOCOLS: ProtocolConfig[] = [
     color: '#0657F9',
   },
   {
+    slug: 'badger-dao',
+    name: 'Badger DAO',
+    category: 'Yield Aggregator',
+    description: 'Bitcoin-on-Ethereum yield protocol. Sett vaults route wBTC, renBTC, and tBTC LP positions through automated strategies (Curve, Convex, Balancer) to compound yield while keeping exposure denominated in BTC.',
+    subgraphId: 'BchjnXAXXV5coiCBMQH4A8yCHXEFX9S88JFF6G3mfem4',
+    schemaType: 'messari-yield',
+    website: 'https://badger.com',
+    chains: ['Ethereum'],
+    color: '#F2A52B',
+  },
+  {
+    slug: 'goldfinch',
+    name: 'Goldfinch',
+    category: 'RWA',
+    description: 'Uncollateralised credit pools backing real-world borrowers, primarily emerging-market fintechs. Liquidity providers fund Senior and Junior pools that finance off-chain credit deals; backers underwrite Borrower Pools and absorb first-loss tranches. Currently in harvest mode, no new originations in 90+ days but $105M of outstanding loans accruing interest daily.',
+    subgraphId: 'GRwpFCPYyQPdz84sCnKemzrNvgFPuKkFLcRLR6jsRxHr',
+    schemaType: 'messari-rwa',
+    website: 'https://goldfinch.finance',
+    chains: ['Ethereum'],
+    color: '#FFCC55',
+  },
+  {
+    slug: 'truefi',
+    name: 'TrueFi',
+    category: 'RWA',
+    description: 'Uncollateralised institutional lending protocol. Capital pools fund credit lines to vetted borrowers (asset managers, market makers, crypto-native firms) on fixed terms. Originated $1.7B+ in lifetime credit and earned $41M+ in revenue with zero defaults to date.',
+    subgraphId: '39F8fYCvLYmutjqpzEwx3dcEJTtFFVupvBzJqkEzftA7',
+    schemaType: 'messari-rwa',
+    website: 'https://truefi.io',
+    chains: ['Ethereum'],
+    color: '#5673E0',
+  },
+  {
     slug: 'stargate-arbitrum',
     name: 'Stargate (Arbitrum)',
     category: 'Bridge',
@@ -281,6 +373,61 @@ export const PROTOCOLS: ProtocolConfig[] = [
     color: '#5BC2F6',
   },
   {
+    slug: 'arbitrum-one-bridge',
+    name: 'Arbitrum One Bridge',
+    category: 'Bridge',
+    description: 'Canonical bridge between Ethereum mainnet and Arbitrum One. Custodies the bulk of bridged ETH, USDC, USDT, ARB, and other ERC-20s flowing into the largest L2 by TVL.',
+    subgraphId: '6XazDBEjAVADSXbiBoXBBVwxTYf4PXRtucxn5vRQFLch',
+    schemaType: 'messari-bridge',
+    website: 'https://bridge.arbitrum.io',
+    chains: ['Ethereum'],
+    color: '#28A0F0',
+  },
+  {
+    slug: 'optimism-bridge-v2',
+    name: 'Optimism Bridge V2',
+    category: 'Bridge',
+    description: 'Canonical L1<->Optimism bridge. The official native deposit/withdrawal path; tracks bridged ETH, USDC, USDT, OP, and other ERC-20s held in the L1StandardBridge.',
+    subgraphId: 'DCKLUdmvmaX4eNSAouXjxt8yShp28dFKGD763Tb2KibH',
+    schemaType: 'messari-bridge',
+    website: 'https://app.optimism.io/bridge',
+    chains: ['Ethereum'],
+    color: '#FF0420',
+  },
+  {
+    slug: 'stargate-avalanche',
+    name: 'Stargate (Avalanche)',
+    category: 'Bridge',
+    description: 'LayerZero-powered Stargate liquidity transport on Avalanche C-Chain. Routes USDC, USDT, ETH.e, and other assets to and from Stargate pools across chains.',
+    subgraphId: '6XypMkQUovcohhVC2XeWgdXeDsBcnL9ynKdLXpXggoHd',
+    schemaType: 'messari-bridge',
+    website: 'https://stargate.finance',
+    chains: ['Avalanche'],
+    color: '#3CC9F2',
+  },
+  {
+    slug: 'stargate-bsc',
+    name: 'Stargate (BSC)',
+    category: 'Bridge',
+    description: 'Stargate liquidity transport on BNB Smart Chain. High-volume corridor for USDT, BUSD, and ETH bridging between BSC and other Stargate-enabled chains.',
+    subgraphId: '6sRx6JNkjz66id39jCK3GMiVnPVuyuv2ntwQVpDzmjRF',
+    schemaType: 'messari-bridge',
+    website: 'https://stargate.finance',
+    chains: ['BSC'],
+    color: '#3CC9F2',
+  },
+  {
+    slug: 'stargate-polygon',
+    name: 'Stargate (Polygon)',
+    category: 'Bridge',
+    description: 'Stargate liquidity transport on Polygon PoS. Cross-chain pools for USDC, USDT, and bridged stablecoins between Polygon and the wider Stargate network.',
+    subgraphId: 'SitmxEcPXXwo5cFK8Y2FSMZNZNQ4gXcGdWBDqo3A7K6',
+    schemaType: 'messari-bridge',
+    website: 'https://stargate.finance',
+    chains: ['Polygon'],
+    color: '#3CC9F2',
+  },
+  {
     slug: 'axelar',
     name: 'Axelar',
     category: 'Bridge',
@@ -307,6 +454,17 @@ export const PROTOCOLS: ProtocolConfig[] = [
     chains: ['Polygon'],
     color: '#2D9CDB',
     knownIssues: 'Headline TVL is total cumulative open interest (USDC locked into outstanding outcome tokens) and includes residual "dead money" from resolved markets where losing-side tokens were never burned. 30d windows are not currently computed for Polymarket as the orderbook subgraph has no daily aggregate entity; the directory shows lifetime totals instead.',
+  },
+  {
+    slug: 'kwenta',
+    name: 'Kwenta',
+    category: 'Perpetuals',
+    description: 'Synthetix-powered perpetual futures DEX on Optimism. Settles trades against the Synthetix debt pool with deep synthetic-asset liquidity, no order book counterparties needed. Cumulative trade volume over $170B across BTC, ETH, SOL, and dozens of other perp markets.',
+    subgraphId: '5sbJJTTJQQ4kYuVYNBVw9sX8C5juRpVJNLHg7uFugw2e',
+    schemaType: 'messari-perp',
+    website: 'https://kwenta.eth.limo',
+    chains: ['Optimism'],
+    color: '#ED1EFF',
   },
 ];
 

@@ -139,6 +139,36 @@ const CATEGORY_LABELS: Record<ProtocolCategory, CategoryLabels> = {
     cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
     cumulativeSub: 'all time',
   },
+  // RWA protocols (uncollateralised real-world credit pools) accrue interest
+  // continuously on outstanding principal but originate new loans only in
+  // discrete institutional drawdowns. The volume series therefore tracks
+  // daily interest earned rather than new borrow volume, which gives a
+  // meaningful daily picture for harvest-mode protocols. Drawn-balance,
+  // pool count, borrower count, and defaults are surfaced via getExtraStats.
+  'RWA': {
+    tvlLabel: 'Total Lent',
+    volumeLabel: '30d Interest',
+    volumeChartTitle: 'Daily Interest Earned (90 days)',
+    volumeTooltipLabel: 'Interest',
+    feesLabel: '30d Interest',
+    cumulativeLabel: 'Lifetime Interest',
+    cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
+    cumulativeSub: 'paid to LPs + protocol',
+  },
+  // Perpetuals venues' "TVL" is LP capital backing the venue, not user
+  // deposits. Headline activity is trade volume; the dominant state metric
+  // is open interest (notional value of all currently-open positions),
+  // surfaced as a separate hero stat via getExtraStats.
+  'Perpetuals': {
+    tvlLabel: 'LP Capital',
+    volumeLabel: '30d Trading Volume',
+    volumeChartTitle: 'Daily Trading Volume (90 days)',
+    volumeTooltipLabel: 'Volume',
+    feesLabel: '30d Fees',
+    cumulativeLabel: 'Lifetime Volume',
+    cumulativeValue: (s) => s?.cumulativeVolumeUSD ?? 0,
+    cumulativeSub: 'all time',
+  },
 };
 
 interface ExtraStat {
@@ -153,6 +183,38 @@ function getExtraStats(category: ProtocolCategory, summary?: ProtocolSummary): E
   }
   if (category === 'Yield Aggregator' && summary.stakingAPR) {
     return [{ label: 'Net APY (30d est.)', value: formatPercent(summary.stakingAPR) }];
+  }
+  if (category === 'RWA') {
+    const stats: ExtraStat[] = [];
+    if (typeof summary.rwaDrawnBalanceUSD === 'number') {
+      stats.push({ label: 'Drawn Balance', value: formatUSD(summary.rwaDrawnBalanceUSD) });
+    }
+    if (typeof summary.rwaPoolCount === 'number' && summary.rwaPoolCount > 0) {
+      stats.push({ label: 'Active Pools', value: summary.rwaPoolCount.toLocaleString() });
+    }
+    if (typeof summary.rwaUniqueBorrowers === 'number' && summary.rwaUniqueBorrowers > 0) {
+      stats.push({ label: 'Unique Borrowers', value: summary.rwaUniqueBorrowers.toLocaleString() });
+    }
+    if (typeof summary.rwaDefaultsUSD === 'number') {
+      stats.push({
+        label: 'Defaults',
+        value: summary.rwaDefaultsUSD === 0 ? 'None' : formatUSD(summary.rwaDefaultsUSD),
+      });
+    }
+    return stats;
+  }
+  if (category === 'Perpetuals') {
+    const stats: ExtraStat[] = [];
+    if (typeof summary.perpOpenInterestUSD === 'number' && summary.perpOpenInterestUSD > 0) {
+      stats.push({ label: 'Open Interest', value: formatUSD(summary.perpOpenInterestUSD) });
+    }
+    if (typeof summary.perpLongOpenInterestUSD === 'number' && summary.perpLongOpenInterestUSD > 0) {
+      stats.push({ label: 'Long OI', value: formatUSD(summary.perpLongOpenInterestUSD) });
+    }
+    if (typeof summary.perpShortOpenInterestUSD === 'number' && summary.perpShortOpenInterestUSD > 0) {
+      stats.push({ label: 'Short OI', value: formatUSD(summary.perpShortOpenInterestUSD) });
+    }
+    return stats;
   }
   return [];
 }

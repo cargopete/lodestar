@@ -15,10 +15,12 @@ const CATEGORY_STYLES: Record<string, string> = {
   'Yield Aggregator': 'bg-[#0657F9]/12 text-[#6E92FF]',
   'Prediction Markets': 'bg-[#A855F7]/12 text-[#C084FC]',
   'Bridge': 'bg-[#FFA94D]/12 text-[#FFB870]',
+  'RWA': 'bg-[#FFCC55]/12 text-[#FFD874]',
+  'Perpetuals': 'bg-[#ED1EFF]/12 text-[#E879F9]',
 };
 
 const CATEGORY_FILTERS: Array<'All' | ProtocolCategory> = [
-  'All', 'DEX', 'Lending', 'Liquid Staking', 'Yield Aggregator', 'Prediction Markets', 'Bridge',
+  'All', 'DEX', 'Lending', 'RWA', 'Liquid Staking', 'Yield Aggregator', 'Perpetuals', 'Prediction Markets', 'Bridge',
 ];
 
 type SortKey = 'category' | 'tvl' | 'volume' | 'fees';
@@ -27,10 +29,12 @@ type SortDir = 'asc' | 'desc';
 const CATEGORY_ORDER: Record<ProtocolCategory, number> = {
   'DEX': 0,
   'Lending': 1,
-  'Liquid Staking': 2,
-  'Yield Aggregator': 3,
-  'Bridge': 4,
-  'Prediction Markets': 5,
+  'RWA': 2,
+  'Liquid Staking': 3,
+  'Yield Aggregator': 4,
+  'Perpetuals': 5,
+  'Bridge': 6,
+  'Prediction Markets': 7,
 };
 
 function CategoryBadge({ category }: { category: string }) {
@@ -86,11 +90,21 @@ export default function ProtocolsPage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const rows: DirectoryRow[] = useMemo(() => {
-    const all: DirectoryRow[] = PROTOCOLS.map((config, i) => ({
-      config,
-      summary: summaries?.[i],
-      failed: !!summaries && !summaries[i],
-    }));
+    // Look up by slug, not array index. Index-coupling silently dashed any
+    // protocol whose slug post-dated the client's cached summaries array
+    // until staleTime expired, so we now key the API payload by slug and
+    // resolve here.
+    const all: DirectoryRow[] = PROTOCOLS.map((config) => {
+      const entry = summaries ? summaries[config.slug] : undefined;
+      return {
+        config,
+        summary: entry ?? undefined,
+        // `null` is an explicit fetch failure; `undefined` means the response
+        // simply doesn't have an entry for this slug yet (e.g. stale client
+        // cache before refetch) — treat as still loading rather than failed.
+        failed: !!summaries && entry === null,
+      };
+    });
 
     const filtered = category === 'All'
       ? all
