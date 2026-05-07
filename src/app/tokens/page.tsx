@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Sparkline } from '@/components/charts/Sparkline';
@@ -10,7 +10,7 @@ import { useTokenDirectory } from '@/hooks/useTokens';
 import { formatNumber, formatPrice, formatUSD } from '@/lib/utils';
 import type { TokenSummary } from '@/lib/tokens/types';
 
-type SortKey = 'mcap' | 'price' | 'change' | 'holders' | 'symbol' | 'concentration' | 'eoaConcentration' | 'volume';
+type SortKey = 'mcap' | 'price' | 'change' | 'change7d' | 'change30d' | 'change90d' | 'holders' | 'symbol' | 'concentration' | 'eoaConcentration' | 'volume';
 type SortDir = 'asc' | 'desc';
 
 
@@ -41,6 +41,9 @@ const COMPARATORS: Record<SortKey, (a: TokenSummary, b: TokenSummary) => number>
   mcap: (a, b) => (b.marketCapUsd ?? 0) - (a.marketCapUsd ?? 0),
   price: (a, b) => (b.priceUsd ?? 0) - (a.priceUsd ?? 0),
   change: (a, b) => (b.change24hPct ?? 0) - (a.change24hPct ?? 0),
+  change7d: (a, b) => (b.change7dPct ?? 0) - (a.change7dPct ?? 0),
+  change30d: (a, b) => (b.change30dPct ?? 0) - (a.change30dPct ?? 0),
+  change90d: (a, b) => (b.change90dPct ?? 0) - (a.change90dPct ?? 0),
   holders: (a, b) => (b.holders ?? 0) - (a.holders ?? 0),
   concentration: (a, b) => (b.top10Share ?? 0) - (a.top10Share ?? 0),
   eoaConcentration: (a, b) => (b.top10EoaShare ?? 0) - (a.top10EoaShare ?? 0),
@@ -97,12 +100,17 @@ function ConcentrationCell({
   );
 }
 
+const PAGE_SIZE = 50;
+
 export default function TokensPage() {
   const { data, isLoading, error } = useTokenDirectory();
   const [sortKey, setSortKey] = useState<SortKey>('mcap');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
 
+  // Filter + sort runs against the full directory (search remains global, not
+  // page-scoped). The result feeds both the page count and the slice we render.
   const rows = useMemo(() => {
     if (!data) return [] as TokenSummary[];
     const q = query.trim().toLowerCase();
@@ -118,10 +126,22 @@ export default function TokensPage() {
     return sortDir === 'asc' ? sorted.reverse() : sorted;
   }, [data, query, sortKey, sortDir]);
 
-  function header(label: string, key: SortKey, align: 'left' | 'right' = 'right', help?: string) {
+  // Reset to page 1 whenever the filtered result changes shape (search query
+  // or sort change). Without this, narrowing a search can leave the user
+  // stranded on an empty page 3.
+  useEffect(() => {
+    setPage(1);
+  }, [query, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pagedRows = rows.slice(pageStart, pageStart + PAGE_SIZE);
+
+  function header(label: string, key: SortKey, align: 'left' | 'right' = 'right', help?: string, extra?: string) {
     const active = sortKey === key;
     return (
-      <th className={`py-2 text-[11px] font-medium text-[var(--text-faint)] ${align === 'right' ? 'text-right' : 'text-left'}`}>
+      <th className={`py-2 text-[11px] font-medium text-[var(--text-faint)] ${align === 'right' ? 'text-right' : 'text-left'} ${extra ?? ''}`}>
         <span className="relative inline-flex items-center gap-1 group">
           <button
             type="button"
@@ -148,7 +168,7 @@ export default function TokensPage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6 max-w-[1200px] mx-auto">
+    <div className="px-4 sm:px-6 py-6 max-w-[1600px] mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--text)]" style={{ fontFamily: 'var(--font-display)' }}>
           Tokens
@@ -156,9 +176,6 @@ export default function TokensPage() {
         </h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
           Token analytics powered exclusively by The Graph. Prices and supply via Token API + canonical Uniswap V3 pools; DEX volume aggregated across Uniswap V2/V3 and Curve subgraphs on The Graph Network.
-        </p>
-        <p className="mt-1 text-xs text-[var(--text-faint)]">
-          51 tokens, mainnet primary with Arbitrum / Base / Polygon volume rolled in. Adding Sushi / Balancer / Aerodrome and the rest of the top 250 in subsequent iterations.
         </p>
       </div>
 
@@ -175,7 +192,7 @@ export default function TokensPage() {
         <div className="text-xs text-[var(--text-faint)]">{rows.length} of {data?.length ?? 0}</div>
       </div>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-x-clip overflow-y-visible">
         {error && (
           <div className="text-sm text-red-500 p-2">Failed to load: {(error as Error).message}</div>
         )}
@@ -187,21 +204,24 @@ export default function TokensPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  <th className="py-2 pl-2 text-left text-[11px] font-medium text-[var(--text-faint)]">#</th>
+                  <th className="py-2 pl-2 pr-3 text-left text-[11px] font-medium text-[var(--text-faint)]">#</th>
                   {header('Token', 'symbol', 'left')}
                   {header('Price', 'price')}
                   {header('24h %', 'change')}
-                  <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">7d</th>
+                  {header('7d %', 'change7d')}
+                  {header('30d %', 'change30d')}
+                  {header('90d %', 'change90d')}
+                  <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)] pl-4">30d</th>
                   {header('DEX Vol', 'volume', 'right', 'Latest day’s volume aggregated across the Uniswap V2 + V3 mainnet subgraphs. Hover any value for the per-venue breakdown.')}
                   {header('Mcap', 'mcap')}
                   {header('Holders', 'holders')}
-                  {header('Top 10 EOA', 'eoaConcentration', 'right', 'Share of circulating supply held by the 10 largest externally-owned accounts (likely-human wallets). Smart contract holders (bridges, staking modules, LP pools, vesting) are split out below the headline number. Contract status detected via on-chain eth_getCode; cached.')}
+                  {header('Top 10 EOA', 'eoaConcentration', 'right', 'Share of circulating supply held by the 10 largest externally-owned accounts (likely-human wallets). Smart contract holders (bridges, staking modules, LP pools, vesting) are split out below the headline number. Contract status detected via on-chain eth_getCode; cached.', 'pl-4')}
                 </tr>
               </thead>
               <tbody>
-                {rows.map((t, i) => (
+                {pagedRows.map((t, i) => (
                   <tr key={`${t.chain}-${t.contract}`} className="border-b border-[var(--border)]/40 hover:bg-[var(--bg-elevated)]/50">
-                    <td className="py-2 pl-2 text-[var(--text-faint)] tabular-nums">{i + 1}</td>
+                    <td className="py-2 pl-2 pr-3 text-[var(--text-faint)] tabular-nums">{pageStart + i + 1}</td>
                     <td className="py-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Link href={`/tokens/${t.chain}/${t.contract}`} className="flex items-center gap-2 hover:text-[var(--accent)]">
@@ -233,7 +253,10 @@ export default function TokensPage() {
                       {t.priceUsd != null ? formatPrice(t.priceUsd) : '—'}
                     </td>
                     <td className="py-2 text-right tabular-nums"><PctBadge value={t.change24hPct} /></td>
-                    <td className="py-2 text-right">
+                    <td className="py-2 text-right tabular-nums"><PctBadge value={t.change7dPct} /></td>
+                    <td className="py-2 text-right tabular-nums"><PctBadge value={t.change30dPct} /></td>
+                    <td className="py-2 text-right tabular-nums"><PctBadge value={t.change90dPct} /></td>
+                    <td className="py-2 text-right pl-4">
                       <div className="inline-flex justify-end"><Sparkline points={t.sparkline} id={t.contract.slice(2, 10)} /></div>
                     </td>
                     <td className="py-2 text-right tabular-nums">
@@ -245,18 +268,49 @@ export default function TokensPage() {
                     <td className="py-2 text-right tabular-nums">
                       {t.holders != null ? formatNumber(t.holders) : '—'}
                     </td>
-                    <td className="py-2 text-right tabular-nums pr-2">
+                    <td className="py-2 text-right tabular-nums pl-4 pr-2">
                       <ConcentrationCell eoaShare={t.top10EoaShare} contractShare={t.top10ContractShare} />
                     </td>
                   </tr>
                 ))}
                 {rows.length === 0 && data.length > 0 && (
                   <tr>
-                    <td colSpan={9} className="py-6 text-center text-sm text-[var(--text-faint)]">No tokens match &quot;{query}&quot;.</td>
+                    <td colSpan={12} className="py-6 text-center text-sm text-[var(--text-faint)]">No tokens match &quot;{query}&quot;.</td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+        {data && rows.length > 0 && (
+          <div className="flex items-center justify-between gap-3 px-2 py-2 border-t border-[var(--border)]/40 text-xs text-[var(--text-muted)]">
+            <span className="tabular-nums">
+              {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, rows.length)} of {rows.length}
+              {query.trim() && data.length !== rows.length && (
+                <span className="text-[var(--text-faint)]"> (filtered from {data.length})</span>
+              )}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={currentPage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="px-2 py-1 rounded border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+              <span className="px-2 tabular-nums">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="px-2 py-1 rounded border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </Card>
