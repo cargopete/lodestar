@@ -30,7 +30,7 @@ import type {
 const ETH_REFERENCE_POOL = '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640';
 
 async function getEthUsd(): Promise<number | null> {
-  const ohlc = await fetchPoolOhlc('mainnet', ETH_REFERENCE_POOL, '1h', 2);
+  const ohlc = await fetchPoolOhlc('mainnet', ETH_REFERENCE_POOL, '4h', 2);
   const last = ohlc[ohlc.length - 1];
   if (!last) {
     recordDeficiency('ETH_REFERENCE_POOL_EMPTY', 'WETH/USDC reference pool returned no OHLC');

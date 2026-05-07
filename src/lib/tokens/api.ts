@@ -105,7 +105,7 @@ export async function fetchPoolOhlc(
   pool: string,
   // Token API accepts '1h', '4h', and '1d' even though the OpenAPI doc only
   // lists '1h' / '1d'. We use '4h' for the directory sparkline.
-  interval: '1h' | '4h' | '1d' = '1d',
+  interval: '4h' | '1d' | '1w' = '1d',
   limit = 31,
   page = 1
 ): Promise<ApiOhlcPoint[]> {
