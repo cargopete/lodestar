@@ -33,6 +33,15 @@ export interface ProtocolConfig {
   website: string;
   chains: string[];
   color: string;
+  /**
+   * Optional grouping key for multi-chain deployments. Entries that share a
+   * `family` value are rendered as a single rolled-up row in the directory
+   * with chain children expandable beneath. Singletons (no family) render
+   * as standalone rows.
+   */
+  family?: string;
+  /** Display label for the family group (e.g. "Aave V3"). Required when `family` is set. */
+  familyLabel?: string;
   /** Known upstream data quality issue — surfaced as a notice on the detail page. */
   knownIssues?: string;
   /** Which 90-day chart the knownIssues message belongs to. Defaults to 'fees'. */
@@ -50,6 +59,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://uniswap.org',
     chains: ['Ethereum'],
     color: '#FF007A',
+    family: 'uniswap-v3',
+    familyLabel: 'Uniswap V3',
   },
   {
     slug: 'uniswap-v2',
@@ -72,6 +83,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://app.uniswap.org',
     chains: ['Polygon'],
     color: '#8247E5',
+    family: 'uniswap-v3',
+    familyLabel: 'Uniswap V3',
   },
   {
     slug: 'aave-v3',
@@ -83,6 +96,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://aave.com',
     chains: ['Ethereum'],
     color: '#B6509E',
+    family: 'aave-v3',
+    familyLabel: 'Aave V3',
   },
   {
     slug: 'aave-v3-arbitrum',
@@ -94,6 +109,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://app.aave.com',
     chains: ['Arbitrum'],
     color: '#28A0F0',
+    family: 'aave-v3',
+    familyLabel: 'Aave V3',
   },
   {
     slug: 'aave-v3-polygon',
@@ -105,6 +122,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://app.aave.com',
     chains: ['Polygon'],
     color: '#8247E5',
+    family: 'aave-v3',
+    familyLabel: 'Aave V3',
   },
   {
     slug: 'aave-v3-avalanche',
@@ -116,6 +135,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://app.aave.com',
     chains: ['Avalanche'],
     color: '#E84142',
+    family: 'aave-v3',
+    familyLabel: 'Aave V3',
   },
   {
     slug: 'aave-v2-ethereum',
@@ -127,6 +148,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://app.aave.com/?marketName=proto_mainnet',
     chains: ['Ethereum'],
     color: '#7E5DCF',
+    family: 'aave-v2',
+    familyLabel: 'Aave V2',
   },
   {
     slug: 'aave-v2-polygon',
@@ -138,6 +161,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://app.aave.com/?marketName=proto_polygon',
     chains: ['Polygon'],
     color: '#9C7FE0',
+    family: 'aave-v2',
+    familyLabel: 'Aave V2',
   },
   {
     slug: 'aave-v3-gnosis',
@@ -149,6 +174,21 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://app.aave.com',
     chains: ['Gnosis'],
     color: '#04795B',
+    family: 'aave-v3',
+    familyLabel: 'Aave V3',
+  },
+  {
+    slug: 'aave-v3-base',
+    name: 'Aave V3 (Base)',
+    category: 'Lending',
+    description: 'Aave V3 on Base, the Coinbase-incubated L2. The fastest-growing Aave V3 deployment by activity, with USDC and cbETH as the dominant supply-side assets and ETH the dominant borrow.',
+    subgraphId: 'D7mapexM5ZsQckLJai2FawTKXJ7CqYGKM8PErnS3cJi9',
+    schemaType: 'messari-lending',
+    website: 'https://app.aave.com',
+    chains: ['Base'],
+    color: '#0052FF',
+    family: 'aave-v3',
+    familyLabel: 'Aave V3',
   },
   {
     slug: 'compound-v3',
@@ -160,6 +200,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://compound.finance',
     chains: ['Ethereum'],
     color: '#00D395',
+    family: 'compound-v3',
+    familyLabel: 'Compound V3',
   },
   {
     slug: 'compound-v3-arbitrum',
@@ -171,6 +213,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://compound.finance',
     chains: ['Arbitrum'],
     color: '#28A0F0',
+    family: 'compound-v3',
+    familyLabel: 'Compound V3',
   },
   {
     slug: 'compound-v3-polygon',
@@ -182,6 +226,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://compound.finance',
     chains: ['Polygon'],
     color: '#8247E5',
+    family: 'compound-v3',
+    familyLabel: 'Compound V3',
   },
   {
     slug: 'liquity-v1',
@@ -227,6 +273,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://spark.fi',
     chains: ['Ethereum'],
     color: '#E07A52',
+    family: 'spark-lend',
+    familyLabel: 'Spark Lend',
   },
   {
     slug: 'spark-lend-gnosis',
@@ -238,6 +286,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://spark.fi',
     chains: ['Gnosis'],
     color: '#F58A65',
+    family: 'spark-lend',
+    familyLabel: 'Spark Lend',
     knownIssues: 'The upstream subgraph writes $0 to dailyBorrowUSD across all snapshots while the cumulative borrow figure remains correct. Daily borrowing chart shows no data until this is fixed upstream.',
     knownIssueAffects: 'volume',
   },
@@ -286,6 +336,28 @@ export const PROTOCOLS: ProtocolConfig[] = [
     color: '#00C2A8',
   },
   {
+    slug: 'venus-bsc',
+    name: 'Venus',
+    category: 'Lending',
+    description: 'BNB Chain\'s largest money market, issuing VAI as a native CDP-style stablecoin alongside isolated-pool money markets for BTCB, ETH, BNB, and the major BSC stablecoins. Long the dominant lending venue on BSC by deposits and borrows.',
+    subgraphId: 'CwswJ7sfENafqgAYU1upn3hQgoEV2CXXRZRJ7XtgJrKG',
+    schemaType: 'messari-lending',
+    website: 'https://venus.io',
+    chains: ['BSC'],
+    color: '#F7B928',
+  },
+  {
+    slug: 'moonwell-base',
+    name: 'Moonwell',
+    category: 'Lending',
+    description: 'The largest Base-native lending market. Compound-fork money markets covering USDC, ETH, cbETH, and wstETH with WELL emissions directing supply-side liquidity. Active borrower base of 350K+ unique addresses on Base alone.',
+    subgraphId: '33ex1ExmYQtwGVwri1AP3oMFPGSce6YbocBP7fWbsBrg',
+    schemaType: 'messari-lending',
+    website: 'https://moonwell.fi',
+    chains: ['Base'],
+    color: '#0FF09B',
+  },
+  {
     slug: 'lido',
     name: 'Lido',
     category: 'Liquid Staking',
@@ -328,6 +400,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://balancer.fi',
     chains: ['Ethereum'],
     color: '#1E1E1E',
+    family: 'balancer-v2',
+    familyLabel: 'Balancer V2',
   },
   {
     slug: 'balancer-v2-polygon',
@@ -339,6 +413,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://balancer.fi',
     chains: ['Polygon'],
     color: '#8247E5',
+    family: 'balancer-v2',
+    familyLabel: 'Balancer V2',
   },
   {
     slug: 'balancer-v2-arbitrum',
@@ -350,6 +426,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://balancer.fi',
     chains: ['Arbitrum'],
     color: '#28A0F0',
+    family: 'balancer-v2',
+    familyLabel: 'Balancer V2',
   },
   {
     slug: 'balancer-v2-avalanche',
@@ -361,6 +439,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://balancer.fi',
     chains: ['Avalanche'],
     color: '#E84142',
+    family: 'balancer-v2',
+    familyLabel: 'Balancer V2',
   },
   {
     slug: 'balancer-v2-gnosis',
@@ -372,6 +452,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://balancer.fi',
     chains: ['Gnosis'],
     color: '#04795B',
+    family: 'balancer-v2',
+    familyLabel: 'Balancer V2',
   },
   {
     slug: 'pancakeswap-v3',
@@ -394,6 +476,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://app.uniswap.org',
     chains: ['Arbitrum'],
     color: '#FF007A',
+    family: 'uniswap-v3',
+    familyLabel: 'Uniswap V3',
   },
   {
     slug: 'uniswap-v3-optimism',
@@ -405,6 +489,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://app.uniswap.org',
     chains: ['Optimism'],
     color: '#FF66B3',
+    family: 'uniswap-v3',
+    familyLabel: 'Uniswap V3',
   },
   {
     slug: 'velodrome-v2',
@@ -493,6 +579,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://stargate.finance',
     chains: ['Arbitrum'],
     color: '#3CC9F2',
+    family: 'stargate',
+    familyLabel: 'Stargate',
   },
   {
     slug: 'stargate-optimism',
@@ -504,6 +592,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://stargate.finance',
     chains: ['Optimism'],
     color: '#FF0420',
+    family: 'stargate',
+    familyLabel: 'Stargate',
   },
   {
     slug: 'cbridge',
@@ -548,6 +638,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://stargate.finance',
     chains: ['Avalanche'],
     color: '#3CC9F2',
+    family: 'stargate',
+    familyLabel: 'Stargate',
   },
   {
     slug: 'stargate-bsc',
@@ -559,6 +651,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://stargate.finance',
     chains: ['BSC'],
     color: '#3CC9F2',
+    family: 'stargate',
+    familyLabel: 'Stargate',
   },
   {
     slug: 'stargate-polygon',
@@ -570,6 +664,8 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://stargate.finance',
     chains: ['Polygon'],
     color: '#3CC9F2',
+    family: 'stargate',
+    familyLabel: 'Stargate',
   },
   {
     slug: 'axelar',
