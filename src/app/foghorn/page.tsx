@@ -105,7 +105,12 @@ function useFoghornFeed() {
     queryFn: async () => {
       const r = await fetch('/api/foghorn/feed');
       if (!r.ok) throw new Error(`${r.status}`);
-      return r.json();
+      const data = await r.json();
+      const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const events: FeedEvent[] = (data.events ?? [])
+        .filter((ev: FeedEvent) => new Date(ev.dispatched_at).getTime() >= cutoff)
+        .slice(0, 500);
+      return { ...data, events };
     },
     staleTime: 60_000,
     retry: 1,
