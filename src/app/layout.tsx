@@ -45,6 +45,11 @@ export const metadata: Metadata = {
     siteName: 'Lodestar',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Lodestar — Stay oriented.',
+    description: 'Analytics dashboard for The Graph Protocol ecosystem.',
+  },
   icons: {
     icon: '/lodestar.png',
     apple: '/lodestar.png',
