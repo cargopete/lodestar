@@ -379,6 +379,77 @@ const MESSARI_PERP_QUERY = `{
   }
 }`;
 
+// --- GMX V2 Synthetics schema adapter ---
+//
+// The gmx-io team publishes the canonical synthetics-stats subgraph for
+// GMX V2 with their own custom schema (positionVolumeInfo,
+// collectedMarketFeesInfo, etc.). Rather than running a competing
+// Messari-perp subgraph, this adapter aggregates synthetics-stats rows
+// client-side into the same ProtocolDetail shape lodestar uses for every
+// other Perpetuals protocol.
+//
+// USD scale: synthetics-stats encodes USD with 30 decimal places (1e30).
+// We rescale to plain USD floats at parse time.
+//
+// v1 limitations -- TVL and Open Interest both come back as 0:
+//   - TVL: GM market pool value isn't a single field on synthetics-stats.
+//     Computing it requires the latest PoolAmountUpdate per market times
+//     the latest TokenPrice, summed across all markets -- non-trivial,
+//     deferred.
+//   - Open Interest: synthetics-stats doesn't expose OI as a queryable
+//     scalar; deriving it from positionIncrease/Decrease deltas would
+//     require pagination across the full event history.
+// Volume, fees, and the 90-day daily series are accurate.
+
+const GMX_USD_SCALE = 1e30;
+
+interface GmxV2VolumeRow {
+  timestamp: string;
+  volumeUsd: string;
+}
+interface GmxV2FeeRow {
+  timestampGroup: string;
+  feeUsdForPool: string;
+}
+
+interface GmxV2SyntheticsData {
+  totalPosition: GmxV2VolumeRow[];
+  totalFees: GmxV2FeeRow[];
+  // 5 paged 1000-row windows of daily volume rows, 5000 total. With ~100
+  // market-day rows per UTC day on Arbitrum that resolves to roughly 50 days
+  // of coverage -- enough for a 30d window and the bulk of the 90-day chart.
+  dp0: GmxV2VolumeRow[];
+  dp1: GmxV2VolumeRow[];
+  dp2: GmxV2VolumeRow[];
+  dp3: GmxV2VolumeRow[];
+  dp4: GmxV2VolumeRow[];
+  df0: GmxV2FeeRow[];
+  df1: GmxV2FeeRow[];
+  df2: GmxV2FeeRow[];
+  df3: GmxV2FeeRow[];
+  df4: GmxV2FeeRow[];
+}
+
+// Synthetics-stats stores period rollups ("total", "1d", "1h"). Each row is
+// keyed per market or token pair, so we sum across rows in the normalizer.
+// Daily windows use 5 paginated 1000-row queries (`dp0..dp4`, `df0..df4`)
+// to bypass the 1000-row Graph page cap; without pagination the most-recent
+// 100 markets-per-day eat the whole window in ~10 days.
+const GMX_V2_SYNTHETICS_QUERY = `{
+  totalPosition: positionVolumeInfos(first: 1000, where: {period: "total"}) { timestamp volumeUsd }
+  totalFees: collectedMarketFeesInfos(first: 1000, where: {period: "total"}) { timestampGroup feeUsdForPool }
+  dp0: positionVolumeInfos(first: 1000, where: {period: "1d"}, orderBy: timestamp, orderDirection: desc) { timestamp volumeUsd }
+  dp1: positionVolumeInfos(first: 1000, where: {period: "1d"}, orderBy: timestamp, orderDirection: desc, skip: 1000) { timestamp volumeUsd }
+  dp2: positionVolumeInfos(first: 1000, where: {period: "1d"}, orderBy: timestamp, orderDirection: desc, skip: 2000) { timestamp volumeUsd }
+  dp3: positionVolumeInfos(first: 1000, where: {period: "1d"}, orderBy: timestamp, orderDirection: desc, skip: 3000) { timestamp volumeUsd }
+  dp4: positionVolumeInfos(first: 1000, where: {period: "1d"}, orderBy: timestamp, orderDirection: desc, skip: 4000) { timestamp volumeUsd }
+  df0: collectedMarketFeesInfos(first: 1000, where: {period: "1d"}, orderBy: timestampGroup, orderDirection: desc) { timestampGroup feeUsdForPool }
+  df1: collectedMarketFeesInfos(first: 1000, where: {period: "1d"}, orderBy: timestampGroup, orderDirection: desc, skip: 1000) { timestampGroup feeUsdForPool }
+  df2: collectedMarketFeesInfos(first: 1000, where: {period: "1d"}, orderBy: timestampGroup, orderDirection: desc, skip: 2000) { timestampGroup feeUsdForPool }
+  df3: collectedMarketFeesInfos(first: 1000, where: {period: "1d"}, orderBy: timestampGroup, orderDirection: desc, skip: 3000) { timestampGroup feeUsdForPool }
+  df4: collectedMarketFeesInfos(first: 1000, where: {period: "1d"}, orderBy: timestampGroup, orderDirection: desc, skip: 4000) { timestampGroup feeUsdForPool }
+}`;
+
 // --- Uniswap V2 native schema ---
 //
 // V2 has no fees field on either the factory or the daily snapshot. Every swap
@@ -1077,6 +1148,65 @@ function normalizeMessariPerp(slug: string, data: MessariPerpData): ProtocolDeta
   };
 }
 
+function normalizeGmxV2Synthetics(slug: string, data: GmxV2SyntheticsData): ProtocolDetail {
+  // Sum cumulative volume across every (collateral, index) market row.
+  let cumulativeVolume = 0;
+  for (const r of data.totalPosition) {
+    cumulativeVolume += parseF(r.volumeUsd) / GMX_USD_SCALE;
+  }
+  // Sum cumulative pool-side fees across every market.
+  let cumulativeFees = 0;
+  for (const r of data.totalFees) {
+    cumulativeFees += parseF(r.feeUsdForPool) / GMX_USD_SCALE;
+  }
+
+  // Concatenate the paginated daily windows (dp0..dp4, df0..df4) before
+  // bucketing by UTC day.
+  const dailyPositionRows = data.dp0
+    .concat(data.dp1, data.dp2, data.dp3, data.dp4);
+  const dailyFeeRows = data.df0
+    .concat(data.df1, data.df2, data.df3, data.df4);
+
+  const dailyVolByTs = new Map<number, number>();
+  for (const r of dailyPositionRows) {
+    const ts = parseInt(r.timestamp);
+    const v = parseF(r.volumeUsd) / GMX_USD_SCALE;
+    dailyVolByTs.set(ts, (dailyVolByTs.get(ts) ?? 0) + v);
+  }
+  const dailyFeeByTs = new Map<number, number>();
+  for (const r of dailyFeeRows) {
+    const ts = parseInt(r.timestampGroup);
+    const v = parseF(r.feeUsdForPool) / GMX_USD_SCALE;
+    dailyFeeByTs.set(ts, (dailyFeeByTs.get(ts) ?? 0) + v);
+  }
+
+  // Materialise the snapshot series, taking the union of volume+fee day keys.
+  const allDays = new Set<number>([...dailyVolByTs.keys(), ...dailyFeeByTs.keys()]);
+  const snapshots: ProtocolDaySnapshot[] = [...allDays]
+    .sort((a, b) => a - b)
+    .map((ts) => ({
+      timestamp: ts,
+      tvlUSD: 0, // v1 limitation -- see GMX V2 schema notes.
+      volumeUSD: dailyVolByTs.get(ts) ?? 0,
+      feesUSD: dailyFeeByTs.get(ts) ?? 0,
+    }));
+
+  const clean = filterFeeOutliers(snapshots);
+  const snapshotVolumeSum = clean.reduce((acc, s) => acc + s.volumeUSD, 0);
+  const snapshotFeesSum = clean.reduce((acc, s) => acc + s.feesUSD, 0);
+
+  return {
+    summary: computeSummary(
+      slug,
+      0, // v1: TVL deferred until per-market pool valuation lands.
+      sanitizeCumulative(cumulativeVolume, snapshotVolumeSum),
+      sanitizeCumulative(cumulativeFees, snapshotFeesSum),
+      clean,
+    ),
+    snapshots: clean,
+  };
+}
+
 // --- Balancer V2 schema adapter ---
 //
 // Balancer Labs maintains a single team-native schema deployed across
@@ -1319,6 +1449,10 @@ export async function fetchProtocolDetail(config: ProtocolConfig): Promise<Proto
     case 'messari-perp': {
       const data = await queryProtocolSubgraph<MessariPerpData>(config.subgraphId, MESSARI_PERP_QUERY);
       return normalizeMessariPerp(config.slug, data);
+    }
+    case 'gmx-v2-synthetics': {
+      const data = await queryProtocolSubgraph<GmxV2SyntheticsData>(config.subgraphId, GMX_V2_SYNTHETICS_QUERY);
+      return normalizeGmxV2Synthetics(config.slug, data);
     }
     case 'balancer-v2': {
       const data = await queryProtocolSubgraph<BalancerV2Data>(config.subgraphId, BALANCER_V2_QUERY);

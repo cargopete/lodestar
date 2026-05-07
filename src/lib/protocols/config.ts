@@ -6,6 +6,7 @@ export type SchemaType =
   | 'messari-yield'
   | 'messari-bridge'
   | 'messari-perp'
+  | 'gmx-v2-synthetics'
   | 'balancer-v2'
   | 'uniswap-v2'
   | 'uniswap-v3'
@@ -705,6 +706,19 @@ export const PROTOCOLS: ProtocolConfig[] = [
     website: 'https://kwenta.eth.limo',
     chains: ['Optimism'],
     color: '#ED1EFF',
+  },
+  {
+    slug: 'gmx-v2-arbitrum',
+    name: 'GMX V2',
+    category: 'Perpetuals',
+    description: 'GLV/GM-pool decentralised perpetuals on Arbitrum. V2 redesigned the original GMX architecture into per-market isolated GM pools, where each pool backs trades on a single index asset and earns fees from the trades it settles. Powered by the Chainlink-priced index, with cumulative position volume in the hundreds of billions across BTC, ETH, SOL, and other major markets. Sourced from the gmx-io maintained synthetics-stats subgraph.',
+    subgraphId: '2dQj1D4QmWS1Vgvm8QZeqKe6FHg9C9qUSe7FtGfkA5XJ',
+    schemaType: 'gmx-v2-synthetics',
+    website: 'https://app.gmx.io',
+    chains: ['Arbitrum'],
+    color: '#4FA8DF',
+    knownIssues: 'TVL and Open Interest are not yet tracked: GMX V2 pool valuation requires summing per-market PoolAmountUpdate × TokenPrice, and OI requires deriving from positionIncrease/Decrease deltas. v1 of this adapter ships with cumulative volume + fees and the 90-day daily volume series; TVL and OI land in a follow-up.',
+    knownIssueAffects: 'fees',
   },
 ];
 
