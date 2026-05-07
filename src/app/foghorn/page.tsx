@@ -44,6 +44,11 @@ interface FeedEvent {
 // ── Deployment metadata ───────────────────────────────────────────────────────
 
 const DEPLOYMENT_INFO: Record<string, { label: string; network: string; url?: string }> = {
+  '0x4d7cff900a9ea5d7882817e38736382243a409e68b627d01442922d19b39f54a': {
+    label: 'Uniswap V3',
+    network: 'Ethereum',
+    url: 'https://thegraph.com/explorer/subgraphs/5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV',
+  },
   '0x45c636b73728d75a77b84c782e2a44624a294c1414326e59f12d60e0a6e58f51': {
     label: 'Graph Network',
     network: 'Arbitrum One',
@@ -175,6 +180,12 @@ function DeploymentRow({ summary }: { summary: DeploymentSummary }) {
               {latencyLabel(summary.avg_latency_ms)}
             </div>
             <div className="text-[10px] text-[var(--text-faint)]">avg</div>
+          </div>
+          <div>
+            <div className={cn('font-mono text-sm font-medium', latencyColor(summary.p50_latency_ms))}>
+              {latencyLabel(summary.p50_latency_ms)}
+            </div>
+            <div className="text-[10px] text-[var(--text-faint)]">p50</div>
           </div>
           <div>
             <div className={cn('font-mono text-sm font-medium', latencyColor(summary.p95_latency_ms))}>
