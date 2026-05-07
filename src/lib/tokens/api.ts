@@ -1,0 +1,192 @@
+/**
+ * Low-level Token API client. Server-side only (the JWT must not be shipped
+ * to the browser).
+ *
+ * Network choices: the API exposes 10 mainnets via /v1/networks. v0 only
+ * targets `mainnet` (Ethereum). Add more chains by widening the `network`
+ * union in types.ts and the seed map.
+ */
+
+import { recordDeficiency } from './deficiencies';
+
+const BASE_URL = 'https://token-api.thegraph.com';
+
+function authHeaders(): HeadersInit {
+  const key = process.env.TOKEN_API_KEY;
+  if (!key) throw new Error('TOKEN_API_KEY not set');
+  return { Authorization: `Bearer ${key}` };
+}
+
+interface ApiEnvelope<T> {
+  data: T[];
+  statistics?: unknown;
+  pagination?: unknown;
+  request_time?: string;
+  duration_ms?: number;
+}
+
+async function get<T>(path: string, params: Record<string, string | number>): Promise<ApiEnvelope<T>> {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) qs.set(k, String(v));
+  const url = `${BASE_URL}${path}?${qs}`;
+  const res = await fetch(url, { headers: authHeaders() });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Token API ${res.status} ${path}: ${body.slice(0, 200)}`);
+  }
+  return (await res.json()) as ApiEnvelope<T>;
+}
+
+// --- Endpoint shapes ---
+
+export interface ApiTokenMetadata {
+  contract: string;
+  name: string | null;
+  symbol: string | null;
+  decimals: number | null;
+  circulating_supply: number | null;
+  total_supply: number | null;
+  holders: number | null;
+  total_transfers: number | null;
+  network: string;
+  icon: { web3icon?: string } | null;
+  last_update_timestamp?: number;
+}
+
+export interface ApiOhlcPoint {
+  datetime: string;
+  ticker: string;
+  pool: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  transactions: number;
+  network: string;
+}
+
+export interface ApiHolder {
+  address: string;
+  /** OpenAPI says number, API returns base-units string. See deficiency `TOKEN_API_HOLDERS_AMOUNT_STRING`. */
+  amount: number | string;
+  value: number | null;
+  symbol: string | null;
+  decimals: number | null;
+}
+
+export async function fetchTokenMetadata(
+  network: string,
+  contract: string
+): Promise<ApiTokenMetadata | null> {
+  const env = await get<ApiTokenMetadata>('/v1/evm/tokens', { network, contract });
+  const t = env.data?.[0];
+  if (!t) {
+    recordDeficiency('TOKEN_API_TOKENS_EMPTY', `tokens endpoint returned 0 rows for ${network}/${contract}`);
+    return null;
+  }
+  if (t.total_supply == null) {
+    recordDeficiency(
+      'TOKEN_API_NO_TOTAL_SUPPLY',
+      `total_supply is null for ${t.symbol ?? contract} on ${network} (FDV cannot be computed)`
+    );
+  }
+  if (t.icon == null || !t.icon.web3icon) {
+    recordDeficiency(
+      'TOKEN_API_MISSING_ICON',
+      `icon missing for ${t.symbol ?? contract} on ${network}`
+    );
+  }
+  return t;
+}
+
+export async function fetchPoolOhlc(
+  network: string,
+  pool: string,
+  // Token API accepts '1h', '4h', and '1d' even though the OpenAPI doc only
+  // lists '1h' / '1d'. We use '4h' for the directory sparkline.
+  interval: '1h' | '4h' | '1d' = '1d',
+  limit = 31,
+  page = 1
+): Promise<ApiOhlcPoint[]> {
+  const params: Record<string, string | number> = { network, pool, interval, limit };
+  if (page > 1) params.page = page;
+  const env = await get<ApiOhlcPoint>('/v1/evm/pools/ohlc', params);
+  // The API returns duplicate rows per datetime in some pools (observed on
+  // CoW settlement and on shared Uniswap V3 pools). De-dupe by datetime,
+  // keeping the row with the most transactions (likeliest the real bar).
+  const byDate = new Map<string, ApiOhlcPoint>();
+  for (const r of env.data ?? []) {
+    const cur = byDate.get(r.datetime);
+    if (!cur || (r.transactions ?? 0) > (cur.transactions ?? 0)) byDate.set(r.datetime, r);
+  }
+  if ((env.data?.length ?? 0) > byDate.size) {
+    recordDeficiency(
+      'TOKEN_API_OHLC_DUPES',
+      `OHLC returned ${env.data?.length} rows but only ${byDate.size} distinct datetimes for pool ${pool}`
+    );
+  }
+  return [...byDate.values()].sort((a, b) => a.datetime.localeCompare(b.datetime));
+}
+
+export async function fetchHolders(
+  network: string,
+  contract: string,
+  limit = 10
+): Promise<ApiHolder[]> {
+  const env = await get<ApiHolder>('/v1/evm/holders', { network, contract, limit });
+  return env.data ?? [];
+}
+
+export interface ApiPool {
+  pool: string;
+  factory: string;
+  protocol: string;
+  fee: number | null;
+  input_token: { address: string; symbol: string | null; decimals: number | null };
+  output_token: { address: string; symbol: string | null; decimals: number | null };
+  network: string;
+}
+
+export async function fetchPoolsForToken(
+  network: string,
+  contract: string,
+  limit = 25
+): Promise<ApiPool[]> {
+  const env = await get<ApiPool>('/v1/evm/pools', { network, input_token: contract, limit });
+  return env.data ?? [];
+}
+
+export interface ApiSwap {
+  datetime: string;
+  timestamp: number;
+  transaction_id: string;
+  pool: string;
+  protocol: string;
+  input_token: { address: string; symbol: string | null; decimals: number | null };
+  output_token: { address: string; symbol: string | null; decimals: number | null };
+  input_amount: string | number;
+  output_amount: string | number;
+  input_value: number;
+  output_value: number;
+  price: number | null;
+  user: string;
+  sender: string;
+  recipient: string;
+}
+
+export async function fetchSwapsForToken(
+  network: string,
+  contract: string,
+  limit = 20
+): Promise<ApiSwap[]> {
+  // The API has no OR filter, so we issue two calls in parallel and merge.
+  // Tracked: TOKEN_API_NO_OR_FILTER (recorded in fetcher when both succeed).
+  const [asInput, asOutput] = await Promise.all([
+    get<ApiSwap>('/v1/evm/swaps', { network, input_contract: contract, limit }),
+    get<ApiSwap>('/v1/evm/swaps', { network, output_contract: contract, limit }),
+  ]);
+  const all = [...(asInput.data ?? []), ...(asOutput.data ?? [])];
+  all.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+  return all.slice(0, limit);
+}

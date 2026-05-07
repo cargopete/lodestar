@@ -96,6 +96,24 @@ export function formatUSD(amount: number, decimals = 2): string {
 }
 
 /**
+ * Format a token price in full-decimal form with thousands separators.
+ * Decimal places auto-scale: more digits as price approaches zero.
+ * No compact suffixes (K/M/B) — explicit numbers only, with USD currency.
+ */
+export function formatPrice(amount: number): string {
+  let max = 2;
+  if (amount < 1) max = 4;
+  if (amount < 0.01) max = 6;
+  if (amount < 0.0001) max = 10;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: max,
+  }).format(amount);
+}
+
+/**
  * Shorten Ethereum address
  */
 export function shortenAddress(address: string, chars = 4): string {
