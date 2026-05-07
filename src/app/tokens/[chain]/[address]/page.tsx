@@ -7,7 +7,7 @@ import { TokenPriceChart } from '@/components/charts/TokenPriceChart';
 import { TagBadge } from '@/components/tokens/TagBadge';
 import { TokenIcon } from '@/components/tokens/TokenIcon';
 import { useTokenDetail } from '@/hooks/useTokens';
-import { formatNumber, formatPrice, formatUSD, shortenAddress } from '@/lib/utils';
+import { formatCompact, formatNumber, formatPrice, formatUSD, shortenAddress } from '@/lib/utils';
 import { getTradeUrl } from '@/lib/tokens/trade-urls';
 import type { TokenDetail } from '@/lib/tokens/types';
 
@@ -452,7 +452,7 @@ export default function TokenDetailPage({ params }: Props) {
             <Card>
               <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">Circulating</div>
               <div className="text-base tabular-nums mt-1">
-                {summary.circulatingSupply != null ? formatNumber(Math.round(summary.circulatingSupply)) : '—'}
+                {summary.circulatingSupply != null ? formatCompact(Math.round(summary.circulatingSupply)) : '—'}
               </div>
             </Card>
             <Card>
