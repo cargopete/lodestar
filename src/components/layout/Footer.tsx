@@ -22,6 +22,23 @@ export function Footer() {
 
           <p className="text-center max-w-md">
             Lodestar is an open-source public good. Development and maintenance relies entirely on community donations.
+            {' '}Consider{' '}
+            <a
+              href="https://github.com/sponsors/cargopete"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+            >
+              sponsoring
+            </a>
+            {' '}or{' '}
+            <a
+              href="/indexers/0xb43b2cccceada5292732a8c58ae134adefce09bb"
+              className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+            >
+              delegating to the Lodestar indexer
+            </a>
+            {' '}— that way you&apos;re not only helping us, you&apos;re helping the whole network.
           </p>
 
           <div className="flex items-center gap-4">
