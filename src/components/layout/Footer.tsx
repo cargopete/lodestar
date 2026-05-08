@@ -26,7 +26,7 @@ export function Footer() {
 
           <div className="flex items-center gap-4">
             <a
-              href="https://github.com/cargopete/lodestar"
+              href="https://github.com/lodestar-team/lodestar"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"

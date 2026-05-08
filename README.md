@@ -106,7 +106,7 @@ Each indexer receives a composite score (0–100) across eleven dimensions, comb
 - **Zero extra API calls** — scores are computed from data the enrichment pipeline already fetches
 - **Delegation-neutral self-stake** — attracting delegation is a sign of trust, not something to penalise
 - **Delegator-first** — the score explicitly penalises high cuts; an operationally excellent indexer that takes 100% of rewards still scores poorly because delegators earn nothing
-- **Feedback welcome** — if the weights or thresholds feel off, [open an issue](https://github.com/cargopete/lodestar/issues)
+- **Feedback welcome** — if the weights or thresholds feel off, [open an issue](https://github.com/lodestar-team/lodestar/issues)
 
 ## One-Click Delegation
 
@@ -262,7 +262,7 @@ src/
 
 ## Contributing
 
-Issues and feedback welcome at [github.com/cargopete/lodestar/issues](https://github.com/cargopete/lodestar/issues).
+Issues and feedback welcome at [github.com/cargopete/lodestar/issues](https://github.com/lodestar-team/lodestar/issues).
 
 ## License
 
