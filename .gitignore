@@ -22,6 +22,7 @@
 
 # misc
 .DS_Store
+TOKEN_API_DEFICIENCIES.md
 *.pem
 
 # debug
