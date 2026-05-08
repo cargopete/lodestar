@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/studio/auth';
 import { hasDbAccess } from '@/lib/db';
-import { deleteSubgraph, updateSubgraphMeta, setPublishedSubgraphId } from '@/lib/studio/db';
+import { deleteSubgraph, updateSubgraphMeta, setPublishedSubgraphId, updateVersionLabel } from '@/lib/studio/db';
 
 export async function PATCH(
   req: NextRequest,
@@ -18,7 +18,9 @@ export async function PATCH(
   const body = await req.json().catch(() => ({}));
 
   if ('published_subgraph_id' in body) {
-    await setPublishedSubgraphId(numId, auth.address, body.published_subgraph_id);
+    await setPublishedSubgraphId(numId, auth.address, body.published_subgraph_id, body.version_label ?? null);
+  } else if ('version_label' in body) {
+    await updateVersionLabel(numId, auth.address, body.version_label ?? null);
   } else {
     await updateSubgraphMeta(numId, auth.address, body.display_name ?? null, body.description ?? null);
   }

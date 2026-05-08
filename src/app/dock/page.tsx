@@ -212,6 +212,11 @@ function SubgraphCard({ sg, onClick }: { sg: StudioSubgraph; onClick: () => void
           )}>
             {isPublished ? 'Published' : 'Draft'}
           </span>
+          {sg.version_label && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-mono bg-[var(--bg-elevated)] text-[var(--text-faint)] border border-[var(--border)]">
+              {sg.version_label}
+            </span>
+          )}
           {sg.network && <Badge variant="default">{sg.network}</Badge>}
         </div>
         <p className="text-xs text-[var(--text-faint)] font-mono mt-0.5 truncate">{sg.slug}</p>
@@ -334,7 +339,7 @@ function PublishWizard({
 }: {
   sg: StudioSubgraph;
   onClose: () => void;
-  onPublished: (txHash: string) => void;
+  onPublished: (txHash: string, versionLabel: string) => void;
 }) {
   const [step, setStep] = useState<PublishStep>('confirm');
   const [errMsg, setErrMsg] = useState('');
@@ -369,7 +374,7 @@ function PublishWizard({
       const result = isNewVersion
         ? (minedTxHash ?? '')
         : (extractSubgraphId(receipt.logs, CONTRACTS.gns) ?? minedTxHash ?? '');
-      onPublished(result);
+      onPublished(result, versionLabel);
       setStep('done');
     }
   }, [txConfirmed, receipt, minedTxHash, onPublished, isNewVersion]);
@@ -706,7 +711,7 @@ function SubgraphDetailModal({
   const legacyTxHash = (
     sg.published_subgraph_id?.startsWith('0x') ? sg.published_subgraph_id as `0x${string}` : undefined
   );
-  const { data: legacyReceipt } = useWaitForTransactionReceipt({ hash: legacyTxHash, chainId: arbitrum.id });
+  const { data: legacyReceipt, isPending: isResolvingNftId } = useWaitForTransactionReceipt({ hash: legacyTxHash, chainId: arbitrum.id });
   useEffect(() => {
     if (!legacyReceipt) return;
     const nftId = extractSubgraphId(legacyReceipt.logs, CONTRACTS.gns);
@@ -760,18 +765,29 @@ function SubgraphDetailModal({
     onClose();
   };
 
-  const handlePublished = async (result: string) => {
-    // subgraphNftId is null before the first publish — always store the result then.
-    // For version updates (subgraphNftId already set) there's nothing new to store.
+  const handlePublished = async (result: string, versionLabel: string) => {
+    const trimLabel = versionLabel.trim() || null;
     if (subgraphNftId === null) {
+      // First publish — store NFT ID and version label together.
       await apiFetch(`/api/studio/subgraphs/${sg.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ published_subgraph_id: result }),
+        body: JSON.stringify({ published_subgraph_id: result, version_label: trimLabel }),
       });
-      const updated = { ...sg, published_subgraph_id: result };
+      const updated = { ...sg, published_subgraph_id: result, version_label: trimLabel };
       setSg(updated);
+      onUpdated(updated);
       onPublished(sg.id, result);
+    } else if (trimLabel) {
+      // Version update — just persist the new label.
+      await apiFetch(`/api/studio/subgraphs/${sg.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version_label: trimLabel }),
+      });
+      const updated = { ...sg, version_label: trimLabel };
+      setSg(updated);
+      onUpdated(updated);
     }
     // Don't close the wizard here — let the user read the done screen and click Done.
   };
@@ -801,12 +817,25 @@ function SubgraphDetailModal({
                   )}>
                     {isPublished ? 'Published' : 'Draft'}
                   </span>
+                  {sg.version_label && (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-mono flex-shrink-0 bg-[var(--bg-elevated)] text-[var(--text-faint)] border border-[var(--border)]">
+                      {sg.version_label}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-[var(--text-faint)] font-mono truncate">{sg.slug}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              {canPublish && (
+              {legacyTxHash && !subgraphNftId ? (
+                <button
+                  disabled
+                  title="Resolving on-chain subgraph ID — should complete in a few seconds"
+                  className="px-4 py-1.5 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white opacity-40 cursor-not-allowed"
+                >
+                  {isResolvingNftId ? 'Resolving…' : 'Update Version'}
+                </button>
+              ) : canPublish && (
                 <button
                   onClick={() => setShowPublish(true)}
                   className="px-4 py-1.5 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
@@ -926,6 +955,8 @@ function SubgraphDetailModal({
                       : isPublished
                       ? subgraphNftId !== null
                         ? 'Published ✓ — to release a new version, update your code, run graph deploy again (step 3), then click Update Version above.'
+                        : legacyTxHash
+                        ? 'Resolving on-chain subgraph ID — the Update Version button will unlock in a few seconds.'
                         : 'Your subgraph is published on The Graph Network.'
                       : 'Click the Publish button above to list your subgraph on The Graph Network.'}
                   </p>
