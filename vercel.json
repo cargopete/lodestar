@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/ingest-horizon-activity",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron/check-conversions",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

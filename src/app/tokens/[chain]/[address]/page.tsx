@@ -7,6 +7,7 @@ import { TokenPriceChart, type WindowId } from '@/components/charts/TokenPriceCh
 import { TagBadge } from '@/components/tokens/TagBadge';
 import { TokenIcon } from '@/components/tokens/TokenIcon';
 import { useTokenDetail } from '@/hooks/useTokens';
+import { useClickTracking, type TradeClickEvent } from '@/hooks/useClickTracking';
 import { formatCompact, formatNumber, formatPrice, formatUSD, shortenAddress } from '@/lib/utils';
 import { getTradeUrl } from '@/lib/tokens/trade-urls';
 import type { TokenDetail } from '@/lib/tokens/types';
@@ -170,7 +171,7 @@ function Range24h({ range, change }: { range: TokenDetail['range24h']; change: n
   );
 }
 
-function Markets({ markets, chain }: { markets: TokenDetail['markets']; chain: string }) {
+function Markets({ markets, chain, onTradeClick }: { markets: TokenDetail['markets']; chain: string; onTradeClick?: (e: TradeClickEvent) => void }) {
   // Concentration risk signal: how much of the indexed pool TVL sits in the
   // single deepest pool. Markets are already TVL-sorted, so [0] is the
   // headliner. A 90%-concentration token is one rug-pull away from
@@ -196,7 +197,7 @@ function Markets({ markets, chain }: { markets: TokenDetail['markets']; chain: s
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <CardTitle>Markets</CardTitle>
           <span className="text-[11px] text-[var(--text-faint)] flex items-center gap-2 flex-wrap">
-            <span>{markets.length} pools · click to trade</span>
+            <span>{markets.length} pools · click to trade · <span className="italic">clicks tracked anonymously</span></span>
             {topShare != null && (
               <>
                 <span>·</span>
@@ -250,7 +251,18 @@ function Markets({ markets, chain }: { markets: TokenDetail['markets']; chain: s
                 const trade = getTradeUrl(m.protocol, chain, m.baseContract, m.quoteContract);
                 const rowProps = trade
                   ? {
-                      onClick: () => window.open(trade.url, '_blank', 'noopener,noreferrer'),
+                      onClick: () => {
+                        onTradeClick?.({
+                          event_type: 'trade_click',
+                          token_address: m.baseContract,
+                          token_symbol: m.baseSymbol,
+                          venue: trade.venue,
+                          pool_address: m.pool,
+                          chain,
+                          destination_url: trade.url,
+                        });
+                        window.open(trade.url, '_blank', 'noopener,noreferrer');
+                      },
                       className: 'border-b border-[var(--border)]/40 cursor-pointer hover:bg-[var(--bg-elevated)]/50 transition-colors',
                     }
                   : { className: 'border-b border-[var(--border)]/40' };
@@ -438,10 +450,12 @@ function TradeCTA({
   markets,
   chain,
   symbol,
+  onTradeClick,
 }: {
   markets: TokenDetail['markets'];
   chain: string;
   symbol: string;
+  onTradeClick?: (e: TradeClickEvent) => void;
 }) {
   const top = markets[0];
   if (!top) return null;
@@ -452,6 +466,15 @@ function TradeCTA({
       href={trade.url}
       target="_blank"
       rel="noreferrer"
+      onClick={() => onTradeClick?.({
+        event_type: 'trade_click',
+        token_address: top.baseContract,
+        token_symbol: symbol,
+        venue: trade.venue,
+        pool_address: top.pool,
+        chain,
+        destination_url: trade.url,
+      })}
       title={`Swap ${symbol} on ${trade.venue} (top pool by TVL)`}
       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25 transition-colors text-sm font-medium"
     >
@@ -602,6 +625,7 @@ function Info({
 export default function TokenDetailPage({ params }: Props) {
   const { chain, address } = use(params);
   const { data, isLoading, error } = useTokenDetail(chain, address);
+  const { track } = useClickTracking();
   // Lifted chart timeframe so the performance pills can drive it. Hook must
   // sit above the early returns or React's hook-order check trips when the
   // loading branch unmounts the rest of the tree.
@@ -647,7 +671,7 @@ export default function TokenDetailPage({ params }: Props) {
             </svg>
           </a>
           {summary.priceUsd != null && <FlashingPrice value={summary.priceUsd} />}
-          <TradeCTA markets={markets} chain={summary.chain} symbol={summary.symbol} />
+          <TradeCTA markets={markets} chain={summary.chain} symbol={summary.symbol} onTradeClick={track} />
           {summary.change24hPct != null && (
             <span
               className={`text-sm tabular-nums ${
@@ -786,7 +810,7 @@ export default function TokenDetailPage({ params }: Props) {
 
           <RecentSwaps swaps={recentSwaps} symbol={summary.symbol} />
 
-          <Markets markets={markets} chain={summary.chain} />
+          <Markets markets={markets} chain={summary.chain} onTradeClick={track} />
         </div>
 
         <div className="space-y-4">

@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useCallback } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -15,6 +15,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { getProtocol, type ProtocolCategory, type ProtocolConfig } from '@/lib/protocols/config';
+import { useClickTracking } from '@/hooks/useClickTracking';
 import type { PredictionMarketsDetail, ProtocolSummary } from '@/lib/protocols/fetcher';
 import { useProtocolDetail } from '@/hooks/useProtocols';
 import { formatUSD } from '@/lib/utils';
@@ -220,7 +221,7 @@ function getExtraStats(category: ProtocolCategory, summary?: ProtocolSummary): E
   return [];
 }
 
-function ProtocolHeader({ config }: { config: ProtocolConfig }) {
+function ProtocolHeader({ config, onWebsiteClick }: { config: ProtocolConfig; onWebsiteClick?: () => void }) {
   return (
     <div className="pb-2 border-b border-[var(--border)]">
       <div className="flex items-center gap-2 text-xs text-[var(--text-faint)] mb-2">
@@ -249,6 +250,7 @@ function ProtocolHeader({ config }: { config: ProtocolConfig }) {
             href={config.website}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={onWebsiteClick}
             className="text-xs text-[var(--accent)] hover:underline"
           >
             {config.website.replace('https://', '')} ↗
@@ -278,16 +280,18 @@ function PredictionMarketsView({
   summary,
   detail,
   isLoading,
+  onWebsiteClick,
 }: {
   config: ProtocolConfig;
   summary?: ProtocolSummary;
   detail?: PredictionMarketsDetail;
   isLoading: boolean;
+  onWebsiteClick?: () => void;
 }) {
   const placeholder = isLoading || !detail;
   return (
     <div className="space-y-6">
-      <ProtocolHeader config={config} />
+      <ProtocolHeader config={config} onWebsiteClick={onWebsiteClick} />
 
       {/* Lifetime KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -474,6 +478,17 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
 
   const { data, isLoading } = useProtocolDetail(slug);
   const { summary, snapshots = [], predictionMarkets } = data ?? {};
+  const { track } = useClickTracking();
+
+  const handleWebsiteClick = useCallback(() => {
+    track({
+      event_type: 'protocol_visit',
+      protocol_slug: slug,
+      venue: config!.name,
+      chain: config!.chains[0] ?? 'mainnet',
+      destination_url: config!.website,
+    });
+  }, [track, slug, config]);
 
   // Prediction Markets get a domain-tailored layout (lifetime KPIs, ecosystem
   // stats, recent resolutions, top markets by OI) instead of the standard
@@ -485,6 +500,7 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
         summary={summary}
         detail={predictionMarkets}
         isLoading={isLoading}
+        onWebsiteClick={handleWebsiteClick}
       />
     );
   }
@@ -544,6 +560,7 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
               href={config.website}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleWebsiteClick}
               className="text-xs text-[var(--accent)] hover:underline"
             >
               {config.website.replace('https://', '')} ↗
