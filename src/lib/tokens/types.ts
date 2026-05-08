@@ -61,12 +61,18 @@ export type TokenTag =
   | 'DEX'
   | 'Lending'
   | 'LST'
+  | 'Restaking'
   | 'Governance'
   | 'Oracle'
   | 'Infrastructure'
   | 'Identity'
   | 'Memecoin'
-  | 'DeFi';
+  | 'DeFi'
+  | 'AI'
+  | 'RWA'
+  | 'DePIN'
+  | 'Gaming'
+  | 'Bridge';
 
 export interface TokenSummary {
   contract: string;
@@ -79,9 +85,14 @@ export interface TokenSummary {
   logoUri: string | null;
   priceUsd: number | null;
   change24hPct: number | null;
+  change7dPct: number | null;
+  change30dPct: number | null;
+  change90dPct: number | null;
   volume24hUsd: number | null;
   circulatingSupply: number | null;
+  totalSupply: number | null;
   marketCapUsd: number | null;
+  fdvUsd: number | null;
   holders: number | null;
   website: string | null;
   tags: TokenTag[];
@@ -99,6 +110,12 @@ export interface TokenSummary {
    */
   dexVolume24hUsd: number | null;
   dexVolumeByVenue: Record<string, number>;
+  /**
+   * Cross-chain deployments hand-curated in the seed. Same project, different
+   * chain, different contract. Empty when the token only exists on its
+   * primary chain.
+   */
+  altContracts: Partial<Record<'arbitrum' | 'base' | 'polygon' | 'optimism', string>>;
   /** Per-token deficiencies surfaced from the data layer (used by deficiency log + UI tooltips). */
   warnings: string[];
   /** Server timestamp (ms) when this summary was assembled — drives the "as of HH:MM:SS" indicator. */
@@ -130,6 +147,17 @@ export interface TokenMarket {
   baseContract: string;
   quoteSymbol: string;
   quoteContract: string;
+  /** Current pool TVL in USD, when discoverable via the Uniswap V3 subgraph. */
+  tvlUsd: number | null;
+  /** Most recent day's pool volume in USD, when discoverable. */
+  volume24hUsd: number | null;
+  /**
+   * Implied USD price of the seed token quoted by this specific pool. Only
+   * populated for V3 pools paired against a stablecoin or WETH (we don't
+   * carry USD references for arbitrary counterparties). Used to surface
+   * cross-pool spread on the Markets card.
+   */
+  priceUsd: number | null;
 }
 
 export interface TokenSwap {
@@ -143,6 +171,12 @@ export interface TokenSwap {
   /** USD value, when computable from priceUsd. */
   amountUsd: number | null;
   counterpartySymbol: string;
+  /** Originator of the swap — typically the EOA (or proxy) that signed.
+   *  Used for the swap row's "Trader" column linked to Etherscan. */
+  trader: string;
+  /** Execution price in USD for the seed token at swap time. Reveals
+   *  slippage / sandwich activity when it differs from the spot bar. */
+  priceUsd: number | null;
 }
 
 export interface TokenPerformance {
@@ -164,6 +198,12 @@ export interface TokenRange24h {
 export interface TokenDetail {
   summary: TokenSummary;
   priceSeries: OhlcPoint[];
+  /**
+   * Daily ETH/USD closes covering roughly the same window as `priceSeries`.
+   * Used to compute the "Nx ETH" volatility ratio in the chart card. May be
+   * empty when the WETH/USDC reference pool's OHLC fetch fails.
+   */
+  benchmarkSeries: { timestamp: number; close: number }[];
   topHolders: TokenHolder[];
   markets: TokenMarket[];
   recentSwaps: TokenSwap[];

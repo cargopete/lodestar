@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { TokenPriceChart } from '@/components/charts/TokenPriceChart';
+import { TokenPriceChart, type WindowId } from '@/components/charts/TokenPriceChart';
 import { TagBadge } from '@/components/tokens/TagBadge';
 import { TokenIcon } from '@/components/tokens/TokenIcon';
 import { useTokenDetail } from '@/hooks/useTokens';
@@ -90,37 +90,68 @@ function priceDecimals(p: number): number {
   return 8;
 }
 
-function PerformancePills({ perf }: { perf: TokenDetail['performance'] }) {
-  const items: Array<[string, number | null]> = [
-    ['24h', perf.d1],
-    ['7d', perf.d7],
-    ['14d', perf.d14],
-    ['30d', perf.d30],
+function PerformancePills({
+  summary,
+  activeWindow,
+  onSelect,
+}: {
+  summary: TokenDetail['summary'];
+  activeWindow: WindowId;
+  onSelect: (id: WindowId) => void;
+}) {
+  // Each pill maps to a chart window so clicking it focuses the chart on the
+  // matching timeframe. The 24h pill maps to 1W (the chart has no shorter
+  // window in v0; 1W still gives context with the latest bar in clear focus).
+  const items: Array<{ label: string; v: number | null; window: WindowId }> = [
+    { label: '24h', v: summary.change24hPct, window: '1W' },
+    { label: '7d', v: summary.change7dPct, window: '1W' },
+    { label: '30d', v: summary.change30dPct, window: '1M' },
+    { label: '90d', v: summary.change90dPct, window: '3M' },
   ];
   return (
     <div className="grid grid-cols-4 gap-2">
-      {items.map(([label, v]) => {
+      {items.map(({ label, v, window }) => {
         const positive = (v ?? 0) >= 0;
-        const color = v == null
-          ? 'text-[var(--text-faint)]'
-          : positive
-            ? 'text-[var(--green)]'
-            : 'text-red-500';
+        const color =
+          v == null
+            ? 'text-[var(--text-faint)]'
+            : positive
+              ? 'text-[var(--green)]'
+              : 'text-red-500';
+        const active = activeWindow === window;
         return (
-          <div key={label} className="rounded-md border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2">
+          <button
+            key={label}
+            type="button"
+            onClick={() => onSelect(window)}
+            className={`text-left rounded-md border bg-[var(--bg-surface)] px-3 py-2 transition-colors ${
+              active
+                ? 'border-[var(--accent)]/60 ring-1 ring-[var(--accent)]/30'
+                : 'border-[var(--border)] hover:border-[var(--accent)]/40'
+            }`}
+          >
             <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">{label}</div>
             <div className={`text-sm tabular-nums mt-0.5 ${color}`}>
               {v == null ? '—' : `${positive ? '+' : ''}${v.toFixed(2)}%`}
             </div>
-          </div>
+          </button>
         );
       })}
     </div>
   );
 }
 
-function Range24h({ range }: { range: TokenDetail['range24h'] }) {
+function Range24h({ range, change }: { range: TokenDetail['range24h']; change: number | null }) {
   if (!range) return null;
+  // Direction tint comes from the 24h % change. Position-on-the-track is a
+  // neutral signal (low and high are just bounds, not "good" / "bad"), so the
+  // track itself stays neutral and only the dot reflects momentum.
+  const dotColor =
+    change == null
+      ? 'bg-[var(--text)]'
+      : change >= 0
+        ? 'bg-[var(--green)]'
+        : 'bg-red-500';
   return (
     <Card>
       <div className="flex items-center justify-between gap-3 mb-2">
@@ -131,11 +162,7 @@ function Range24h({ range }: { range: TokenDetail['range24h'] }) {
       </div>
       <div className="relative h-2 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
         <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-red-500/40 via-amber-500/40 to-[var(--green)]/40"
-          style={{ width: '100%' }}
-        />
-        <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[var(--text)] border-2 border-[var(--bg-surface)] shadow"
+          className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full ${dotColor} border-2 border-[var(--bg-surface)] shadow`}
           style={{ left: `${(range.position * 100).toFixed(1)}%` }}
         />
       </div>
@@ -144,12 +171,63 @@ function Range24h({ range }: { range: TokenDetail['range24h'] }) {
 }
 
 function Markets({ markets, chain }: { markets: TokenDetail['markets']; chain: string }) {
+  // Concentration risk signal: how much of the indexed pool TVL sits in the
+  // single deepest pool. Markets are already TVL-sorted, so [0] is the
+  // headliner. A 90%-concentration token is one rug-pull away from
+  // illiquidity; a 30%-concentration token is well-distributed.
+  const tvlSum = markets.reduce((s, m) => s + (m.tvlUsd ?? 0), 0);
+  const topShare = tvlSum > 0 && markets[0]?.tvlUsd ? markets[0].tvlUsd / tvlSum : null;
+  // Cross-pool price spread: when multiple pools quote the seed token, the
+  // gap between max and min quotes signals fragmentation (or arb activity).
+  // We compute on the relative scale (`(max-min) / median`) so the number is
+  // unit-independent. Only counts pools that produced a USD price (V3 paired
+  // against stable/WETH) — Kyber Elastic / V2 / V4 pairs without quotes get
+  // skipped.
+  const priced = markets.map((m) => m.priceUsd).filter((p): p is number => p != null && p > 0);
+  let spreadPct: number | null = null;
+  if (priced.length >= 2) {
+    const sorted = [...priced].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    spreadPct = median > 0 ? ((sorted[sorted.length - 1] - sorted[0]) / median) * 100 : null;
+  }
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <CardTitle>Markets</CardTitle>
-          <span className="text-[11px] text-[var(--text-faint)]">{markets.length} pools · click to trade</span>
+          <span className="text-[11px] text-[var(--text-faint)] flex items-center gap-2 flex-wrap">
+            <span>{markets.length} pools · click to trade</span>
+            {topShare != null && (
+              <>
+                <span>·</span>
+                <span
+                  className={
+                    topShare >= 0.7
+                      ? 'text-amber-500'
+                      : 'text-[var(--text-faint)]'
+                  }
+                  title="Share of total indexed TVL held in the deepest single pool. Above 70% means liquidity is concentrated and the token is exposed to a single-pool failure."
+                >
+                  top pool {(topShare * 100).toFixed(0)}% of TVL
+                </span>
+              </>
+            )}
+            {spreadPct != null && (
+              <>
+                <span>·</span>
+                <span
+                  className={
+                    spreadPct >= 0.5
+                      ? 'text-amber-500'
+                      : 'text-[var(--text-faint)]'
+                  }
+                  title={`Spread between the highest and lowest USD price quoted across this token's pools, normalised by median. ${priced.length} pool${priced.length === 1 ? '' : 's'} contributed quotes. Above 0.5% suggests fragmented liquidity or live arbitrage opportunities.`}
+                >
+                  spread {spreadPct.toFixed(2)}%
+                </span>
+              </>
+            )}
+          </span>
         </div>
       </CardHeader>
       <CardContent>
@@ -162,6 +240,8 @@ function Markets({ markets, chain }: { markets: TokenDetail['markets']; chain: s
                 <th className="py-2 text-left text-[11px] font-medium text-[var(--text-faint)]">Venue</th>
                 <th className="py-2 text-left text-[11px] font-medium text-[var(--text-faint)]">Pair</th>
                 <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">Fee</th>
+                <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">TVL</th>
+                <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">24h Vol</th>
                 <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">Trade</th>
               </tr>
             </thead>
@@ -183,6 +263,12 @@ function Markets({ markets, chain }: { markets: TokenDetail['markets']; chain: s
                     </td>
                     <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">
                       {m.feeBps != null && m.feeBps > 0 ? `${(m.feeBps / 10000).toFixed(2)}%` : '—'}
+                    </td>
+                    <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">
+                      {m.tvlUsd != null ? formatUSD(m.tvlUsd) : <span className="text-[var(--text-faint)]">—</span>}
+                    </td>
+                    <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">
+                      {m.volume24hUsd != null ? formatUSD(m.volume24hUsd) : <span className="text-[var(--text-faint)]">—</span>}
                     </td>
                     <td className="py-2 text-right">
                       {trade ? (
@@ -218,10 +304,53 @@ function relativeTime(ts: number): string {
 }
 
 function RecentSwaps({ swaps, symbol }: { swaps: TokenDetail['recentSwaps']; symbol: string }) {
+  // "Last activity" indicator. A token whose most recent indexed swap was
+  // hours/days ago is dormant — useful flag at a glance, no need to scan
+  // the rows below to figure it out.
+  const latest = swaps[0]?.timestamp;
+  // Buy/sell pressure: how the recent window is leaning. The badge per row
+  // already shows side, but a header summary gives the at-a-glance momentum
+  // signal without the user having to count.
+  const buys = swaps.filter((s) => s.side === 'buy').length;
+  const sells = swaps.length - buys;
+  const buyPct = swaps.length > 0 ? (buys / swaps.length) * 100 : null;
+  // Average swap size in USD across the window. Reveals whether activity is
+  // a few whales or many retail trades — the chart can't show this.
+  const usdSwaps = swaps.filter((s) => s.amountUsd != null) as Array<
+    TokenDetail['recentSwaps'][number] & { amountUsd: number }
+  >;
+  const avgSize =
+    usdSwaps.length > 0 ? usdSwaps.reduce((s, x) => s + x.amountUsd, 0) / usdSwaps.length : null;
+  // Tint the buy-pressure label — > 65% buys is bullish-leaning, < 35% is
+  // bearish-leaning, the band in between stays neutral.
+  const pressureColor =
+    buyPct == null
+      ? 'text-[var(--text-faint)]'
+      : buyPct >= 65
+        ? 'text-[var(--green)]'
+        : buyPct <= 35
+          ? 'text-red-500'
+          : 'text-[var(--text-faint)]';
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent swaps</CardTitle>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <CardTitle>Recent swaps</CardTitle>
+          <div className="text-[11px] text-[var(--text-faint)] flex items-center gap-3 flex-wrap">
+            {buyPct != null && (
+              <span title={`${buys} buys / ${sells} sells in the last ${swaps.length} indexed swaps. > 65% buys tinted green, < 35% tinted red.`}>
+                <span className={pressureColor}>{buyPct.toFixed(0)}% buys</span>
+                <span className="text-[var(--text-faint)]"> ({buys}/{sells})</span>
+              </span>
+            )}
+            {avgSize != null && (
+              <span title="Average USD value per swap across the displayed window.">
+                avg {formatUSD(avgSize, avgSize < 100 ? 2 : 0)}
+              </span>
+            )}
+            {latest != null && <span>last activity {relativeTime(latest)}</span>}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {swaps.length === 0 ? (
@@ -234,6 +363,8 @@ function RecentSwaps({ swaps, symbol }: { swaps: TokenDetail['recentSwaps']; sym
                 <th className="py-2 text-left text-[11px] font-medium text-[var(--text-faint)]">Side</th>
                 <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">{symbol} amount</th>
                 <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">USD</th>
+                <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">Price</th>
+                <th className="py-2 text-left text-[11px] font-medium text-[var(--text-faint)] pl-3">Trader</th>
                 <th className="py-2 text-left text-[11px] font-medium text-[var(--text-faint)] pl-3">Pair</th>
                 <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">Tx</th>
               </tr>
@@ -257,6 +388,24 @@ function RecentSwaps({ swaps, symbol }: { swaps: TokenDetail['recentSwaps']; sym
                   <td className="py-2 text-right tabular-nums">
                     {s.amountUsd != null ? formatUSD(s.amountUsd, s.amountUsd < 100 ? 2 : 0) : '—'}
                   </td>
+                  <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">
+                    {s.priceUsd != null ? formatPrice(s.priceUsd) : '—'}
+                  </td>
+                  <td className="py-2 pl-3">
+                    {s.trader ? (
+                      <a
+                        href={`https://etherscan.io/address/${s.trader}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent)]"
+                        title={s.trader}
+                      >
+                        {shortenAddress(s.trader, 4)}
+                      </a>
+                    ) : (
+                      <span className="text-[var(--text-faint)]">—</span>
+                    )}
+                  </td>
                   <td className="py-2 pl-3 text-xs text-[var(--text-muted)]">
                     {symbol} / {s.counterpartySymbol}
                     <span className="ml-2 text-[10px] text-[var(--text-faint)] capitalize">{s.protocol.replace(/_/g, ' ')}</span>
@@ -278,6 +427,75 @@ function RecentSwaps({ swaps, symbol }: { swaps: TokenDetail['recentSwaps']; sym
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// Header trade button. Picks the deepest pool from the (TVL-sorted) markets
+// array and deep-links to its swap interface via `getTradeUrl`. The Markets
+// table below lets users pick a different pool; this CTA caters to the
+// dominant case where you just want to trade through the headline venue.
+function TradeCTA({
+  markets,
+  chain,
+  symbol,
+}: {
+  markets: TokenDetail['markets'];
+  chain: string;
+  symbol: string;
+}) {
+  const top = markets[0];
+  if (!top) return null;
+  const trade = getTradeUrl(top.protocol, chain, top.baseContract, top.quoteContract);
+  if (!trade) return null;
+  return (
+    <a
+      href={trade.url}
+      target="_blank"
+      rel="noreferrer"
+      title={`Swap ${symbol} on ${trade.venue} (top pool by TVL)`}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25 transition-colors text-sm font-medium"
+    >
+      Trade on {trade.venue}
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+      </svg>
+    </a>
+  );
+}
+
+// Cross-chain badge row. The seed list hand-curates `altContracts` per
+// chain — surface them here so users know the same project also lives on
+// Arbitrum / Base / Polygon. Each badge links to the explorer on that chain.
+const EXPLORERS: Record<string, { name: string; tx: string }> = {
+  arbitrum: { name: 'Arbitrum', tx: 'https://arbiscan.io/token/' },
+  base: { name: 'Base', tx: 'https://basescan.org/token/' },
+  polygon: { name: 'Polygon', tx: 'https://polygonscan.com/token/' },
+  optimism: { name: 'Optimism', tx: 'https://optimistic.etherscan.io/token/' },
+};
+
+function CrossChainRow({ alt }: { alt: TokenDetail['summary']['altContracts'] }) {
+  const entries = Object.entries(alt).filter(([, addr]) => !!addr) as Array<[string, string]>;
+  if (entries.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+      <span className="text-[var(--text-faint)]">Also on:</span>
+      {entries.map(([chain, addr]) => {
+        const ex = EXPLORERS[chain];
+        if (!ex) return null;
+        return (
+          <a
+            key={chain}
+            href={`${ex.tx}${addr}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+            title={`${ex.name}: ${addr}`}
+          >
+            {ex.name}
+          </a>
+        );
+      })}
+    </div>
   );
 }
 
@@ -384,6 +602,10 @@ function Info({
 export default function TokenDetailPage({ params }: Props) {
   const { chain, address } = use(params);
   const { data, isLoading, error } = useTokenDetail(chain, address);
+  // Lifted chart timeframe so the performance pills can drive it. Hook must
+  // sit above the early returns or React's hook-order check trips when the
+  // loading branch unmounts the rest of the tree.
+  const [chartWindow, setChartWindow] = useState<WindowId>('1M');
 
   if (isLoading && !data) return <div className="px-6 py-6 text-sm text-[var(--text-muted)]">Loading…</div>;
   if (error) return <div className="px-6 py-6 text-sm text-red-500">Error: {(error as Error).message}</div>;
@@ -394,7 +616,7 @@ export default function TokenDetailPage({ params }: Props) {
       </div>
     );
 
-  const { summary, priceSeries, topHolders, markets, recentSwaps, performance, range24h } = data;
+  const { summary, priceSeries, benchmarkSeries, topHolders, markets, recentSwaps, range24h } = data;
 
   return (
     <div className="px-4 sm:px-6 py-6 max-w-[1280px] mx-auto space-y-4">
@@ -413,7 +635,19 @@ export default function TokenDetailPage({ params }: Props) {
             {summary.name}
             <span className="ml-2 text-[var(--text-muted)]">{summary.symbol}</span>
           </h1>
+          <a
+            href={`https://etherscan.io/token/${summary.contract}`}
+            target="_blank"
+            rel="noreferrer"
+            title="View on Etherscan"
+            className="inline-flex items-center text-[var(--text-faint)] hover:text-[var(--accent)] transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+            </svg>
+          </a>
           {summary.priceUsd != null && <FlashingPrice value={summary.priceUsd} />}
+          <TradeCTA markets={markets} chain={summary.chain} symbol={summary.symbol} />
           {summary.change24hPct != null && (
             <span
               className={`text-sm tabular-nums ${
@@ -432,6 +666,8 @@ export default function TokenDetailPage({ params }: Props) {
             ))}
           </div>
         )}
+        <CrossChainRow alt={summary.altContracts} />
+
         {summary.warnings.length > 0 && (
           <div className="mt-2 text-xs text-amber-500">⚠ {summary.warnings.join(' / ')}</div>
         )}
@@ -439,15 +675,62 @@ export default function TokenDetailPage({ params }: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
         <div className="space-y-4">
-          <PerformancePills perf={performance} />
-          <Range24h range={range24h} />
+          <PerformancePills
+            summary={summary}
+            activeWindow={chartWindow}
+            onSelect={setChartWindow}
+          />
+          <Range24h range={range24h} change={summary.change24hPct} />
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <Card>
               <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">Market Cap</div>
               <div className="text-base tabular-nums mt-1">
                 {summary.marketCapUsd != null ? formatUSD(summary.marketCapUsd) : '—'}
               </div>
+            </Card>
+            <Card>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">FDV</span>
+                <span
+                  className="text-[10px] text-[var(--text-faint)] cursor-help"
+                  title="Fully-diluted valuation: total supply × price. Reveals the headline market cap if every token in existence (including locked / vesting / treasury) were circulating today. A large gap between Mcap and FDV signals heavy future dilution."
+                >
+                  ⓘ
+                </span>
+              </div>
+              <div className="text-base tabular-nums mt-1">
+                {summary.fdvUsd != null ? formatUSD(summary.fdvUsd) : '—'}
+              </div>
+              {summary.fdvUsd != null && summary.marketCapUsd != null && summary.marketCapUsd > 0 && (
+                <div className="text-[10px] text-[var(--text-faint)] mt-0.5">
+                  {(summary.fdvUsd / summary.marketCapUsd).toFixed(2)}× mcap
+                </div>
+              )}
+            </Card>
+            <Card>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">24h DEX Vol</span>
+                <span
+                  className="text-[10px] text-[var(--text-faint)] cursor-help"
+                  title="Latest-day decentralized-exchange volume aggregated across the Uniswap V2 + V3 mainnet subgraphs (and Uniswap V3 on Arbitrum / Base / Polygon when an alt-chain contract is configured), plus Curve Finance mainnet. CEX volume is intentionally excluded."
+                >
+                  ⓘ
+                </span>
+              </div>
+              <div className="text-base tabular-nums mt-1">
+                {summary.dexVolume24hUsd != null ? formatUSD(summary.dexVolume24hUsd) : '—'}
+              </div>
+              {/* Turnover = volume / mcap. A token with $1B mcap and $50M
+                  daily volume turns over 5%/day — meaningful trading. A
+                  token with 0.1% turnover is effectively held, not traded. */}
+              {summary.dexVolume24hUsd != null &&
+                summary.marketCapUsd != null &&
+                summary.marketCapUsd > 0 && (
+                  <div className="text-[10px] text-[var(--text-faint)] mt-0.5">
+                    {((summary.dexVolume24hUsd / summary.marketCapUsd) * 100).toFixed(2)}% turnover
+                  </div>
+                )}
             </Card>
             <Card>
               <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">Circulating</div>
@@ -492,7 +775,14 @@ export default function TokenDetailPage({ params }: Props) {
             </Card>
           </div>
 
-          <TokenPriceChart data={priceSeries} isLoading={isLoading && !data} />
+          <TokenPriceChart
+            data={priceSeries}
+            benchmark={benchmarkSeries}
+            isLoading={isLoading && !data}
+            pegged={summary.tags.includes('Stablecoin')}
+            windowId={chartWindow}
+            onWindowChange={setChartWindow}
+          />
 
           <RecentSwaps swaps={recentSwaps} symbol={summary.symbol} />
 
@@ -503,7 +793,7 @@ export default function TokenDetailPage({ params }: Props) {
           <Info
             contract={summary.contract}
             decimals={summary.decimals}
-            totalSupply={null}
+            totalSupply={summary.totalSupply}
             circulating={summary.circulatingSupply}
             website={summary.website}
             name={summary.name}
@@ -518,30 +808,44 @@ export default function TokenDetailPage({ params }: Props) {
                 <div className="text-xs text-[var(--text-faint)]">No holder data returned.</div>
               ) : (
                 <ol className="space-y-2 text-sm">
-                  {topHolders.slice(0, 10).map((h, i) => (
-                    <li key={h.address} className="flex items-baseline justify-between gap-2">
-                      <span className="text-[var(--text-faint)] text-xs tabular-nums w-5 shrink-0">{i + 1}</span>
-                      <a
-                        href={`https://etherscan.io/address/${h.address}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent)] flex-1 truncate"
-                      >
-                        {shortenAddress(h.address, 5)}
-                      </a>
-                      {h.isContract === true && (
-                        <span
-                          className="text-[9px] uppercase tracking-wider px-1 py-0.5 rounded bg-[var(--text-faint)]/10 text-[var(--text-faint)]"
-                          title="Address is a smart contract (bridge, staking module, LP pool, vesting, etc.)"
+                  {topHolders.slice(0, 10).map((h, i) => {
+                    // Share of circulating supply. The single most decision-
+                    // useful number on this list — without it the absolute
+                    // amounts are uninterpretable across tokens.
+                    const sharePct =
+                      summary.circulatingSupply != null && summary.circulatingSupply > 0
+                        ? (h.amount / summary.circulatingSupply) * 100
+                        : null;
+                    return (
+                      <li key={h.address} className="flex items-baseline justify-between gap-2">
+                        <span className="text-[var(--text-faint)] text-xs tabular-nums w-5 shrink-0">{i + 1}</span>
+                        <a
+                          href={`https://etherscan.io/address/${h.address}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent)] flex-1 truncate"
                         >
-                          contract
+                          {shortenAddress(h.address, 5)}
+                        </a>
+                        {h.isContract === true && (
+                          <span
+                            className="text-[9px] uppercase tracking-wider px-1 py-0.5 rounded bg-[var(--text-faint)]/10 text-[var(--text-faint)]"
+                            title="Address is a smart contract (bridge, staking module, LP pool, vesting, etc.)"
+                          >
+                            contract
+                          </span>
+                        )}
+                        {sharePct != null && (
+                          <span className="tabular-nums text-xs text-[var(--text)]">
+                            {sharePct >= 0.01 ? sharePct.toFixed(2) : sharePct.toFixed(3)}%
+                          </span>
+                        )}
+                        <span className="tabular-nums text-[10px] text-[var(--text-faint)]">
+                          {h.valueUsd != null ? formatUSD(h.valueUsd) : formatNumber(Math.round(h.amount))}
                         </span>
-                      )}
-                      <span className="tabular-nums text-xs text-[var(--text-muted)]">
-                        {h.valueUsd != null ? formatUSD(h.valueUsd) : formatNumber(Math.round(h.amount))}
-                      </span>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ol>
               )}
             </CardContent>

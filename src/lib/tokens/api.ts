@@ -14,7 +14,10 @@ const BASE_URL = 'https://token-api.thegraph.com';
 function authHeaders(): HeadersInit {
   const key = process.env.TOKEN_API_KEY;
   if (!key) throw new Error('TOKEN_API_KEY not set');
-  return { 'X-Api-Key': key };
+  // The API accepts the JWT via Authorization: Bearer. A post-PR-#7 cleanup
+  // switched to X-Api-Key but that scheme returns 401 against our existing
+  // JWT (verified 2026-05-07). Reverting locally; track upstream resolution.
+  return { Authorization: `Bearer ${key}` };
 }
 
 interface ApiEnvelope<T> {
@@ -25,16 +28,63 @@ interface ApiEnvelope<T> {
   duration_ms?: number;
 }
 
+// Token API rate limit on our plan: 500 requests/min. The directory fan-out
+// produces ~600 calls per cold load (154 tokens × ~4 calls), so we throttle
+// here at the request layer rather than tuning per-call concurrency. Token
+// bucket: refill one slot every 130ms (≈ 460 req/min, safely under the
+// ceiling) with a burst capacity of 6 to soak short bursts without back-
+// pressuring the caller.
+const RATE_LIMIT_INTERVAL_MS = 130;
+const RATE_LIMIT_BURST = 6;
+let rateBucketTokens = RATE_LIMIT_BURST;
+let rateLastRefillMs = Date.now();
+async function acquireRateSlot(): Promise<void> {
+  while (true) {
+    const now = Date.now();
+    const elapsed = now - rateLastRefillMs;
+    if (elapsed > 0) {
+      const refill = Math.floor(elapsed / RATE_LIMIT_INTERVAL_MS);
+      if (refill > 0) {
+        rateBucketTokens = Math.min(RATE_LIMIT_BURST, rateBucketTokens + refill);
+        rateLastRefillMs += refill * RATE_LIMIT_INTERVAL_MS;
+      }
+    }
+    if (rateBucketTokens > 0) {
+      rateBucketTokens -= 1;
+      return;
+    }
+    const wait = RATE_LIMIT_INTERVAL_MS - ((now - rateLastRefillMs) % RATE_LIMIT_INTERVAL_MS);
+    await new Promise((r) => setTimeout(r, wait));
+  }
+}
+
 async function get<T>(path: string, params: Record<string, string | number>): Promise<ApiEnvelope<T>> {
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) qs.set(k, String(v));
   const url = `${BASE_URL}${path}?${qs}`;
-  const res = await fetch(url, { headers: authHeaders() });
-  if (!res.ok) {
+  await acquireRateSlot();
+  // Retry on 5xx (transient under fan-out load) and 429 (rate-limited). The
+  // 429 path waits longer because the API surfaces a per-minute ceiling and
+  // immediate retries compound the problem; 800-1500ms gives the rate window
+  // a chance to drain. Cap at 3 attempts so a sustained outage still surfaces
+  // an error rather than stalling the request indefinitely.
+  let lastErr: Error | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(url, { headers: authHeaders() });
+    if (res.ok) return (await res.json()) as ApiEnvelope<T>;
+    if (res.status >= 500 && attempt < 2) {
+      await new Promise((r) => setTimeout(r, 200 + Math.random() * 300));
+      continue;
+    }
+    if (res.status === 429 && attempt < 2) {
+      await new Promise((r) => setTimeout(r, 800 + Math.random() * 700));
+      continue;
+    }
     const body = await res.text().catch(() => '');
-    throw new Error(`Token API ${res.status} ${path}: ${body.slice(0, 200)}`);
+    lastErr = new Error(`Token API ${res.status} ${path}: ${body.slice(0, 200)}`);
+    break;
   }
-  return (await res.json()) as ApiEnvelope<T>;
+  throw lastErr ?? new Error(`Token API: unknown failure for ${path}`);
 }
 
 // --- Endpoint shapes ---
