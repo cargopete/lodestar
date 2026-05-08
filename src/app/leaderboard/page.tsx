@@ -226,7 +226,7 @@ function LeaderboardContent() {
           <h1 className="text-xl font-semibold text-[var(--text)]">Indexer Leaderboard</h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
             Community favourites — recognising the indexers who contribute most to The Graph network.
-            Scored on subgraph coverage, query serving, trust, and protocol health.
+            Scored on subgraph coverage, query serving, trust, protocol health, and data services.
             For delegator-focused metrics like APR and effective cut, see the{' '}
             <Link href="/indexers" className="text-[var(--accent)] hover:underline">Indexer Directory</Link> scores.
           </p>
@@ -347,7 +347,7 @@ function LeaderboardContent() {
               percentile normalisation (p10/p90) across all active indexers, grouped into 4 components:
               Network Service (40pts — subgraph coverage, query fees, allocation efficiency),
               Trust &amp; Stability (20pts — cut stability, tenure, delegation retention),
-              Protocol Health (6pts — REO eligibility), and
+              Protocol Health (11pts — REO eligibility, data service coverage), and
               Economics (5pts — delegation capacity headroom).
               Indexers who serve more subgraphs score higher than those who concentrate on a few
               profitable deployments. For delegator-focused metrics like APR, effective cut, and

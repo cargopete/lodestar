@@ -37,8 +37,8 @@ const PAGE_TIPS: Record<string, { basic: string; deep?: string }> = {
     deep: "A POI is a cryptographic hash of an indexer's state at a given block. If two indexers produce different POIs for the same deployment and block, one is indexing incorrectly. Persistent divergence can lead to disputes and slashing.",
   },
   '/leaderboard': {
-    basic: "The monthly standings — community votes and protocol metrics, combined.",
-    deep: "The leaderboard score blends on-chain metrics with community votes. Delegators with active positions vote with 5× weight. Designed to reward consistent, transparent indexing over raw size.",
+    basic: "The monthly standings — who's doing the most for the network.",
+    deep: "The leaderboard score is built entirely from on-chain metrics: subgraph coverage, query fees, allocation efficiency, cut stability, tenure, delegation retention, REO eligibility, and data service coverage. Designed to reward consistent, transparent indexing over raw size.",
   },
   '/calculator': {
     basic: "Run the numbers before you move. Redelegation carries a cost.",
@@ -164,11 +164,10 @@ const PAGE_QUESTIONS: Record<string, string[]> = {
   ],
   '/leaderboard': [
     "How is the leaderboard score calculated?",
-    "How do community votes work?",
-    "Why do delegators vote with 5x weight?",
+    "Which component has the most points?",
     "Who are the top indexers this month?",
     "What rewards consistent indexers?",
-    "How does community voting affect rankings?",
+    "How does cut stability affect rankings?",
   ],
 };
 

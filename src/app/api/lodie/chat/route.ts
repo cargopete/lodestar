@@ -102,7 +102,7 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
       // Leaderboard: top 10 for latest scored period
       intents.includes('leaderboard')
         ? db`SELECT i.name, i.ens_name, s.final_score, s.rank,
-                    s.community_vote_score, s.query_fee_score,
+                    s.query_fee_score,
                     s.allocation_efficiency_score, s.is_eligible_for_badge
              FROM indexer_scores s JOIN indexers i ON i.address = s.indexer_address
              WHERE s.period_start = (SELECT MAX(period_start) FROM indexer_scores)
@@ -221,7 +221,7 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
     const lines = leaderboard.value.map(row => {
       const label = row.ens_name || row.name || '?';
       const badge = row.is_eligible_for_badge ? ' [BADGE]' : '';
-      return `#${row.rank} ${label}: score=${Number(row.final_score).toFixed(1)}, votes=${Number(row.community_vote_score).toFixed(1)}${badge}`;
+      return `#${row.rank} ${label}: score=${Number(row.final_score).toFixed(1)}${badge}`;
     });
     parts.push(`LEADERBOARD (current month, top 10):\n${lines.join('\n')}`);
   }
@@ -283,7 +283,7 @@ REO (Rewards Eligibility Oracle, GIP-0079): On-chain oracle on Arbitrum. Contrac
 
 POI (Proof of Indexing): Cryptographic hash of indexer state at a given block. If two indexers produce different POIs for the same deployment/block, one is wrong. Persistent divergence leads to disputes and potential slashing.
 
-LEADERBOARD SCORING (monthly, /leaderboard): Community favourites — not just most profitable. Components: subgraph coverage (20pts), query fees (10pts), allocation efficiency (10pts), community votes (10pts — delegators 5x weight), cut stability (12pts), tenure (5pts), delegation retention (3pts), REO eligibility (6pts), delegation capacity (5pts). Total 81pts normalised to 100. Penalties for slashing, high cut increases, zero fees, self-stake below 100K.
+LEADERBOARD SCORING (monthly, /leaderboard): Community favourites — not just most profitable. Pure on-chain metrics. Components: subgraph coverage (20pts), query fees (10pts), allocation efficiency (10pts), cut stability (12pts), tenure (5pts), delegation retention (3pts), REO eligibility (6pts), data service coverage (5pts), delegation capacity (5pts). Total 76pts normalised to 100. Penalties for slashing, high cut increases, zero fees, self-stake below 100K.
 
 ONE-CLICK DELEGATION (/delegate): Algorithmically selects best indexer. Hard filters: REO ineligible excluded, delegation capacity ≥90% excluded, reward cut ≥90% excluded. Then scores with preference-weighted system — four sliders: best returns, stability, safety, network contribution. Default=neutral (standard weights).
 

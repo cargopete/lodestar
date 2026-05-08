@@ -23,9 +23,8 @@ import {
 } from './components';
 import { calculatePenalties, type PenaltyInput } from './penalties';
 
-// Max achievable subtotal including community votes (10pts) and data service diversity (5pts)
-const MAX_SUBTOTAL = 86;
-const MAX_COMMUNITY_VOTE_SCORE = 10;
+// Max achievable subtotal: network (40) + trust (20) + REO (6) + capacity (5) + data service (5)
+const MAX_SUBTOTAL = 76;
 
 // Protocol team indexers excluded from the community leaderboard
 const LEADERBOARD_BLACKLIST = new Set([
@@ -253,17 +252,6 @@ export async function computeMonthlyScores(
     };
   });
 
-  // ── Fetch community vote tallies ─────────────────────
-  const periodStr = `${year}-${String(month).padStart(2, '0')}`;
-  const voteTallyRows = await sql`
-    SELECT indexer_address, SUM(vote_weight)::int as weighted_votes
-    FROM community_votes
-    WHERE period = ${periodStr}
-    GROUP BY indexer_address
-  `;
-  const voteMap = new Map(voteTallyRows.map((r) => [r.indexer_address, Number(r.weighted_votes)]));
-  const maxWeightedVotes = Math.max(0, ...voteMap.values());
-
   // ── Compute percentile bounds ─────────────────────────
 
   const feeBounds = computeBounds(metrics.map((m) => m.queryFees));
@@ -283,15 +271,8 @@ export async function computeMonthlyScores(
     const reoScore = scoreReo(m.reoStatus);
     const dataServiceScore = scoreDataServiceDiversity(m.distinctDataServices);
 
-    // Community vote score: proportional to max weighted votes (0-10)
-    const voterWeighted = voteMap.get(m.address) ?? 0;
-    const communityVoteScore = maxWeightedVotes > 0
-      ? (voterWeighted / maxWeightedVotes) * MAX_COMMUNITY_VOTE_SCORE
-      : 0;
-
     const subtotal =
       breadthScore + queryFeeScore + allocEffScore +
-      communityVoteScore +
       stabilityScore + tenureScore + retScore +
       reoScore +
       capScore +
@@ -299,7 +280,7 @@ export async function computeMonthlyScores(
 
     const { multiplier: penaltyMultiplier } = calculatePenalties(m.penalties);
 
-    // Normalise to 0–100 (max subtotal is 96 with community votes)
+    // Normalise to 0–100
     const penalised = subtotal * penaltyMultiplier;
     const finalScore = (penalised / MAX_SUBTOTAL) * 100;
 
@@ -319,7 +300,7 @@ export async function computeMonthlyScores(
       reo_score: round2(reoScore),
       poi_consensus_score: 0,
       allocation_breadth_score: round2(breadthScore),
-      community_vote_score: round2(communityVoteScore),
+      community_vote_score: 0,
       data_service_score: round2(dataServiceScore),
       subtotal: round2(subtotal),
       penalty_multiplier: round2(penaltyMultiplier),
