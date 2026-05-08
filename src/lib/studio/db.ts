@@ -1,0 +1,181 @@
+import { db } from '@/lib/db';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface StudioSubgraph {
+  id: number;
+  owner_address: string;
+  slug: string;
+  display_name: string | null;
+  deployment_id: string | null;
+  network: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DeployKey {
+  key_hash: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface SyncBounty {
+  id: number;
+  deployment_id: string;
+  subgraph_id: number | null;
+  developer_address: string;
+  amount_grt: string;
+  message: string | null;
+  status: 'open' | 'claimed' | 'cancelled' | 'expired';
+  claimed_by: string | null;
+  claimed_at: string | null;
+  created_at: string;
+  expires_at: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Subgraphs
+// ---------------------------------------------------------------------------
+
+export async function listSubgraphs(owner: string): Promise<StudioSubgraph[]> {
+  return db!<StudioSubgraph[]>`
+    SELECT * FROM studio_subgraphs
+    WHERE owner_address = ${owner.toLowerCase()}
+    ORDER BY created_at DESC
+  `;
+}
+
+export async function getSubgraphBySlug(slug: string): Promise<StudioSubgraph | null> {
+  const rows = await db!<StudioSubgraph[]>`
+    SELECT * FROM studio_subgraphs WHERE slug = ${slug}
+  `;
+  return rows[0] ?? null;
+}
+
+export async function createSubgraph(
+  owner: string,
+  slug: string,
+  displayName: string | null,
+): Promise<StudioSubgraph> {
+  const [row] = await db!<StudioSubgraph[]>`
+    INSERT INTO studio_subgraphs (owner_address, slug, display_name)
+    VALUES (${owner.toLowerCase()}, ${slug}, ${displayName})
+    RETURNING *
+  `;
+  return row;
+}
+
+export async function updateSubgraphDeployment(
+  slug: string,
+  deploymentId: string,
+  network: string | null,
+): Promise<void> {
+  await db!`
+    UPDATE studio_subgraphs
+    SET deployment_id = ${deploymentId}, network = ${network}, updated_at = NOW()
+    WHERE slug = ${slug}
+  `;
+}
+
+export async function deleteSubgraph(id: number, owner: string): Promise<void> {
+  await db!`
+    DELETE FROM studio_subgraphs
+    WHERE id = ${id} AND owner_address = ${owner.toLowerCase()}
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// Deploy keys
+// ---------------------------------------------------------------------------
+
+export async function getDeployKey(owner: string): Promise<DeployKey | null> {
+  const rows = await db!<DeployKey[]>`
+    SELECT key_hash, created_at, last_used_at
+    FROM studio_deploy_keys
+    WHERE owner_address = ${owner.toLowerCase()}
+  `;
+  return rows[0] ?? null;
+}
+
+export async function upsertDeployKey(owner: string, keyHash: string): Promise<void> {
+  await db!`
+    INSERT INTO studio_deploy_keys (owner_address, key_hash)
+    VALUES (${owner.toLowerCase()}, ${keyHash})
+    ON CONFLICT (owner_address)
+    DO UPDATE SET key_hash = EXCLUDED.key_hash, created_at = NOW(), last_used_at = NULL
+  `;
+}
+
+export async function findOwnerByKeyHash(keyHash: string): Promise<string | null> {
+  const rows = await db!<{ owner_address: string }[]>`
+    SELECT owner_address FROM studio_deploy_keys WHERE key_hash = ${keyHash}
+  `;
+  if (!rows[0]) return null;
+  await db!`UPDATE studio_deploy_keys SET last_used_at = NOW() WHERE key_hash = ${keyHash}`;
+  return rows[0].owner_address;
+}
+
+// ---------------------------------------------------------------------------
+// Bounties
+// ---------------------------------------------------------------------------
+
+export async function listBounties(deploymentId?: string): Promise<SyncBounty[]> {
+  if (deploymentId) {
+    return db!<SyncBounty[]>`
+      SELECT * FROM sync_bounties
+      WHERE deployment_id = ${deploymentId}
+      ORDER BY created_at DESC
+    `;
+  }
+  return db!<SyncBounty[]>`
+    SELECT * FROM sync_bounties
+    WHERE status = 'open'
+    ORDER BY amount_grt::numeric DESC, created_at DESC
+    LIMIT 100
+  `;
+}
+
+export async function createBounty(data: {
+  deployment_id: string;
+  subgraph_id?: number | null;
+  developer_address: string;
+  amount_grt: string;
+  message?: string | null;
+  expires_at?: string | null;
+}): Promise<SyncBounty> {
+  const [row] = await db!<SyncBounty[]>`
+    INSERT INTO sync_bounties (deployment_id, subgraph_id, developer_address, amount_grt, message, expires_at)
+    VALUES (
+      ${data.deployment_id},
+      ${data.subgraph_id ?? null},
+      ${data.developer_address.toLowerCase()},
+      ${data.amount_grt},
+      ${data.message ?? null},
+      ${data.expires_at ?? null}
+    )
+    RETURNING *
+  `;
+  return row;
+}
+
+export async function getBounty(id: number): Promise<SyncBounty | null> {
+  const rows = await db!<SyncBounty[]>`SELECT * FROM sync_bounties WHERE id = ${id}`;
+  return rows[0] ?? null;
+}
+
+export async function updateBountyStatus(
+  id: number,
+  status: string,
+  claimedBy?: string,
+): Promise<void> {
+  await db!`
+    UPDATE sync_bounties
+    SET
+      status     = ${status},
+      claimed_by = ${claimedBy ?? null},
+      claimed_at = ${status === 'claimed' ? new Date().toISOString() : null}
+    WHERE id = ${id}
+  `;
+}
