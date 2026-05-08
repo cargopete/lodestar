@@ -7,8 +7,8 @@ const SESSION_TTL = 60 * 60 * 24 * 7; // 7 days
 const AUTH_WINDOW = 300; // 5 minutes — max age of sign-in message
 
 function secret(): string {
-  const s = process.env.STUDIO_SECRET;
-  if (!s) throw new Error('STUDIO_SECRET env var not set');
+  const s = process.env.SESSION_SECRET;
+  if (!s) throw new Error('SESSION_SECRET env var not set');
   return s;
 }
 
