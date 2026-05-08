@@ -419,14 +419,14 @@ function DiscoverTab() {
     queryKey: ['curate-discover'],
     queryFn: async () => {
       const res = await fetch('/api/subgraph-deployments?first=100&orderBy=queryFeesAmount&orderDirection=desc');
-      return res.json() as Promise<{ deployments: Deployment[] }>;
+      return res.json() as Promise<{ data: Deployment[] }>;
     },
     staleTime: 5 * 60 * 1000,
   });
 
   const ranked = useMemo(() => {
-    if (!data?.deployments) return [];
-    return data.deployments
+    if (!data?.data) return [];
+    return data.data
       .map((d) => ({
         ...d,
         score: computeOpportunityScore(d.queryFeesAmount, d.signalledTokens),
