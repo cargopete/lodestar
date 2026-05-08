@@ -841,9 +841,9 @@ function SubgraphDetailModal({
                     Update Version
                   </button>
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs text-[var(--text)] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    {subgraphNftId === null
-                      ? 'Resolving on-chain subgraph ID — try again in a moment'
-                      : 'No new deployment — run graph deploy again (step 3) first'}
+                    {!hasNewDeployment
+                      ? 'No new deployment — run graph deploy again (step 3) first'
+                      : 'Resolving on-chain subgraph ID — try again in a moment'}
                     <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[var(--border)]" />
                   </div>
                 </div>
