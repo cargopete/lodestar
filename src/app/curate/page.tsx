@@ -490,10 +490,15 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
 
   // Once the specific lookup resolves (from Dock routing), auto-open signal modal
   useEffect(() => {
-    if (!highlightDeployment || !specificData?.data?.length || signalTarget) return;
-    const d = specificData.data[0];
-    setSignalTarget({ id: d.id, name: (d as { displayName?: string | null }).displayName ?? shortenAddress(d.ipfsHash, 6) });
-  }, [highlightDeployment, specificData, signalTarget]);
+    if (!highlightDeployment || signalTarget) return;
+    if (specificData?.data?.length) {
+      const d = specificData.data[0];
+      setSignalTarget({ id: d.id, name: (d as { displayName?: string | null }).displayName ?? shortenAddress(d.ipfsHash, 6) });
+    } else if (specificData !== undefined && !specificFetching) {
+      // Deployment not in protocol data yet (no signal/stake) — signal directly via hash
+      setSignalTarget({ id: ipfsHashToBytes32(highlightDeployment), name: shortenAddress(highlightDeployment, 6) });
+    }
+  }, [highlightDeployment, specificData, specificFetching, signalTarget]);
 
   return (
     <>
@@ -524,6 +529,21 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
             {specificFetching ? (
               <div className="flex justify-center">
                 <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+              </div>
+            ) : highlightDeployment && search === highlightDeployment ? (
+              <div className="flex flex-col items-center gap-4">
+                <p className="text-sm text-[var(--text-muted)]">
+                  This deployment isn&apos;t in the protocol yet — it likely has no signal or allocations. You can still be the first to signal it.
+                </p>
+                <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] max-w-lg w-full">
+                  <code className="flex-1 text-xs font-mono text-[var(--text-faint)] truncate">{highlightDeployment}</code>
+                  <button
+                    onClick={() => setSignalTarget({ id: ipfsHashToBytes32(highlightDeployment), name: shortenAddress(highlightDeployment, 6) })}
+                    className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent-dim)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors flex-shrink-0"
+                  >
+                    Signal GRT
+                  </button>
+                </div>
               </div>
             ) : (
               <p className="text-sm text-[var(--text-muted)]">No deployment found for that hash.</p>

@@ -701,6 +701,27 @@ function SubgraphDetailModal({
   const [showPublish, setShowPublish] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Auto-resolve legacy tx hash → on-chain subgraph NFT ID
+  const legacyTxHash = (
+    sg.published_subgraph_id?.startsWith('0x') ? sg.published_subgraph_id as `0x${string}` : undefined
+  );
+  const { data: legacyReceipt } = useWaitForTransactionReceipt({ hash: legacyTxHash });
+  useEffect(() => {
+    if (!legacyReceipt) return;
+    const nftId = extractSubgraphId(legacyReceipt.logs, CONTRACTS.gns);
+    if (!nftId) return;
+    apiFetch(`/api/studio/subgraphs/${sg.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ published_subgraph_id: nftId }),
+    }).then(() => {
+      const updated = { ...sg, published_subgraph_id: nftId };
+      setSg(updated);
+      onUpdated(updated);
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [legacyReceipt]);
+
   const isPublished = Boolean(sg.published_subgraph_id);
   // A proper subgraphID is a decimal number string; an old tx hash starts with '0x'
   const subgraphNftId = sg.published_subgraph_id && !sg.published_subgraph_id.startsWith('0x')
