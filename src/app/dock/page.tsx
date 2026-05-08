@@ -828,13 +828,18 @@ function SubgraphDetailModal({
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {legacyTxHash && !subgraphNftId ? (
-                <button
-                  disabled
-                  title="Resolving on-chain subgraph ID — should complete in a few seconds"
-                  className="px-4 py-1.5 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white opacity-40 cursor-not-allowed"
-                >
-                  {isResolvingNftId ? 'Resolving…' : 'Update Version'}
-                </button>
+                <div className="relative group">
+                  <button
+                    disabled
+                    className="px-4 py-1.5 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white opacity-40 cursor-not-allowed"
+                  >
+                    {isResolvingNftId ? 'Resolving…' : 'Update Version'}
+                  </button>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs text-[var(--text)] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    Resolving on-chain subgraph ID — unlocks in a few seconds
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[var(--border)]" />
+                  </div>
+                </div>
               ) : canPublish && (
                 <button
                   onClick={() => setShowPublish(true)}
