@@ -443,23 +443,9 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
       .slice(0, 25);
   }, [data]);
 
-  // When a deployment is passed from the Dock, pre-fill search and auto-open its Signal modal.
-  useEffect(() => {
-    if (!highlightDeployment || isLoading) return;
-    setSearch(highlightDeployment);
-    const match = ranked.find((d) => d.ipfsHash === highlightDeployment);
-    if (match) {
-      setSignalTarget({ id: match.id, name: match.displayName ?? shortenAddress(match.ipfsHash, 6) });
-    } else {
-      // Subgraph not yet indexed in top 100 — open modal directly via bytes32 conversion.
-      try {
-        const bytes32 = ipfsHashToBytes32(highlightDeployment);
-        setSignalTarget({ id: bytes32, name: shortenAddress(highlightDeployment, 6) });
-      } catch {}
-    }
-  }, [highlightDeployment, isLoading, ranked]);
-
-  const filtered = useMemo(() => {
+  // Fetch a specific deployment by hash when not found in the top-N list
+  const isExactHash = (search.startsWith('Qm') || search.startsWith('baf')) && search.length > 30;
+  const filteredBeforeFetch = useMemo(() => {
     if (!search) return ranked;
     const q = search.toLowerCase();
     return ranked.filter((d) =>
@@ -467,6 +453,47 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
       (d.displayName ?? '').toLowerCase().includes(q),
     );
   }, [ranked, search]);
+
+  const { data: specificData, isFetching: specificFetching } = useQuery({
+    queryKey: ['deployment-lookup', search],
+    queryFn: async () => {
+      const res = await fetch(`/api/subgraph-deployments?hash=${encodeURIComponent(search)}`);
+      return res.json() as Promise<{ data: Deployment[] }>;
+    },
+    enabled: isExactHash && filteredBeforeFetch.length === 0 && !isLoading,
+    staleTime: 60_000,
+  });
+
+  const filtered = useMemo(() => {
+    if (filteredBeforeFetch.length > 0) return filteredBeforeFetch;
+    if (specificData?.data?.length) return specificData.data.map((d) => ({
+      ...d,
+      score: computeOpportunityScore(d.queryFeesAmount, d.signalledTokens),
+      queryFeesGRT: weiToGRT(d.queryFeesAmount),
+      signalledGRT: weiToGRT(d.signalledTokens),
+      stakedGRT: weiToGRT(d.stakedTokens),
+      displayName: (d as { displayName?: string | null }).displayName ?? null,
+      activeIndexers: d.indexerAllocations.length,
+    }));
+    return filteredBeforeFetch;
+  }, [filteredBeforeFetch, specificData]);
+
+  // When a deployment is passed from the Dock, pre-fill search and auto-open its Signal modal.
+  useEffect(() => {
+    if (!highlightDeployment || isLoading) return;
+    setSearch(highlightDeployment);
+    const match = ranked.find((d) => d.ipfsHash === highlightDeployment);
+    if (match) {
+      setSignalTarget({ id: match.id, name: match.displayName ?? shortenAddress(match.ipfsHash, 6) });
+    }
+  }, [highlightDeployment, isLoading, ranked]);
+
+  // Once the specific lookup resolves (from Dock routing), auto-open signal modal
+  useEffect(() => {
+    if (!highlightDeployment || !specificData?.data?.length || signalTarget) return;
+    const d = specificData.data[0];
+    setSignalTarget({ id: d.id, name: (d as { displayName?: string | null }).displayName ?? shortenAddress(d.ipfsHash, 6) });
+  }, [highlightDeployment, specificData, signalTarget]);
 
   return (
     <>
@@ -494,19 +521,12 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
           </div>
         ) : filtered.length === 0 && search ? (
           <div className="py-10 text-center space-y-3">
-            <p className="text-sm text-[var(--text-muted)]">No results in top 100.</p>
-            {search.startsWith('Qm') && (
-              <button
-                onClick={() => {
-                  try {
-                    const bytes32 = ipfsHashToBytes32(search);
-                    setSignalTarget({ id: bytes32, name: shortenAddress(search, 6) });
-                  } catch {}
-                }}
-                className="px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
-              >
-                Signal this deployment directly →
-              </button>
+            {specificFetching ? (
+              <div className="flex justify-center">
+                <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--text-muted)]">No deployment found for that hash.</p>
             )}
           </div>
         ) : (

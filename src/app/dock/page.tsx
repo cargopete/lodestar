@@ -717,9 +717,9 @@ function SubgraphDetailModal({
   };
 
   const handlePublished = async (result: string) => {
-    // result is the numeric subgraphID for a new publish, or the tx hash for a version update.
-    // Only store to DB when we have a real subgraphID (not a tx hash).
-    if (!result.startsWith('0x')) {
+    // subgraphNftId is null before the first publish — always store the result then.
+    // For version updates (subgraphNftId already set) there's nothing new to store.
+    if (subgraphNftId === null) {
       await apiFetch(`/api/studio/subgraphs/${sg.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

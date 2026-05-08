@@ -26,6 +26,38 @@ export async function GET(request: NextRequest) {
   }
 
   const params = request.nextUrl.searchParams;
+  const hashParam = params.get('hash') ?? '';
+
+  // Direct lookup by IPFS hash — bypasses top-N ordering
+  if (hashParam.startsWith('Qm') || hashParam.startsWith('baf')) {
+    const query = `{
+      subgraphDeployments(where: { ipfsHash: "${hashParam}" }, first: 1) {
+        id
+        ipfsHash
+        signalledTokens
+        stakedTokens
+        queryFeesAmount
+        indexerAllocations(where: { status: Active }) { id }
+        curatorSignals { id }
+        versions(first: 1, orderBy: createdAt, orderDirection: desc) {
+          subgraph { metadata { displayName } }
+        }
+      }
+    }`;
+    try {
+      const result = await subgraphQuery<{ subgraphDeployments: DeploymentRaw[] }>(query);
+      const data = result.subgraphDeployments.map((d) => ({
+        ...d,
+        displayName: d.versions?.[0]?.subgraph?.metadata?.displayName ?? null,
+        versions: undefined,
+      }));
+      return NextResponse.json({ data });
+    } catch (error) {
+      log.api.error({ err: error }, 'Subgraph deployment lookup error');
+      return NextResponse.json({ error: 'Failed to fetch deployment' }, { status: 500 });
+    }
+  }
+
   const first = Math.min(Number(params.get('first')) || 25, 500);
   const skip = Math.max(Number(params.get('skip')) || 0, 0);
   const orderBy = ALLOWED_ORDER_BY.has(params.get('orderBy') ?? '')
