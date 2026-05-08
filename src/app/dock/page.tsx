@@ -27,7 +27,38 @@ const GNS_ABI = [
     ],
     outputs: [],
   },
+  {
+    name: 'publishNewVersion',
+    type: 'function' as const,
+    stateMutability: 'nonpayable' as const,
+    inputs: [
+      { name: 'subgraphID', type: 'uint256' },
+      { name: 'subgraphDeploymentID', type: 'bytes32' },
+      { name: 'versionMetadata', type: 'bytes32' },
+    ],
+    outputs: [],
+  },
 ] as const;
+
+// ERC721 Transfer(from=0x0, to, tokenId) — emitted by GNS when minting a new subgraph NFT
+const ERC721_TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+const ZERO_TOPIC = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+function extractSubgraphId(
+  logs: readonly { address: string; topics: readonly string[] }[],
+  gnsAddress: string,
+): string | null {
+  for (const log of logs) {
+    if (
+      log.address.toLowerCase() === gnsAddress.toLowerCase() &&
+      log.topics[0] === ERC721_TRANSFER &&
+      log.topics[1] === ZERO_TOPIC // from=0 means mint
+    ) {
+      return BigInt(log.topics[3]).toString();
+    }
+  }
+  return null;
+}
 
 const NODE_URL = 'https://www.lodestar-dashboard.com/api/studio/node';
 
@@ -325,14 +356,21 @@ function PublishWizard({
     },
   });
 
-  const { isSuccess: txConfirmed } = useWaitForTransactionReceipt({ hash: minedTxHash });
+  const isNewVersion = Boolean(sg.published_subgraph_id && !sg.published_subgraph_id.startsWith('0x'));
+
+  const { isSuccess: txConfirmed, data: receipt } = useWaitForTransactionReceipt({ hash: minedTxHash });
 
   useEffect(() => {
-    if (txConfirmed && minedTxHash) {
-      onPublished(minedTxHash);
+    if (txConfirmed && receipt) {
+      // For a new publish, extract the subgraph NFT token ID from the ERC721 mint event.
+      // For a version update the subgraphID doesn't change, pass the tx hash as signal.
+      const result = isNewVersion
+        ? (minedTxHash ?? '')
+        : (extractSubgraphId(receipt.logs, CONTRACTS.gns) ?? minedTxHash ?? '');
+      onPublished(result);
       setStep('done');
     }
-  }, [txConfirmed, minedTxHash, onPublished]);
+  }, [txConfirmed, receipt, minedTxHash, onPublished, isNewVersion]);
 
   const handleUpload = async () => {
     setStep('uploading');
@@ -358,16 +396,29 @@ function PublishWizard({
 
   const handleWriteContract = () => {
     if (!metaHashes || !sg.deployment_id) return;
-    writeContract({
-      address: CONTRACTS.gns,
-      abi: GNS_ABI,
-      functionName: 'publishNewSubgraph',
-      args: [
-        ipfsHashToBytes32(sg.deployment_id),
-        metaHashes.versionMetaBytes32,
-        metaHashes.subgraphMetaBytes32,
-      ],
-    });
+    if (isNewVersion && sg.published_subgraph_id) {
+      writeContract({
+        address: CONTRACTS.gns,
+        abi: GNS_ABI,
+        functionName: 'publishNewVersion',
+        args: [
+          BigInt(sg.published_subgraph_id),
+          ipfsHashToBytes32(sg.deployment_id),
+          metaHashes.versionMetaBytes32,
+        ],
+      });
+    } else {
+      writeContract({
+        address: CONTRACTS.gns,
+        abi: GNS_ABI,
+        functionName: 'publishNewSubgraph',
+        args: [
+          ipfsHashToBytes32(sg.deployment_id),
+          metaHashes.versionMetaBytes32,
+          metaHashes.subgraphMetaBytes32,
+        ],
+      });
+    }
   };
 
   const canClose = step !== 'uploading' && step !== 'mining';
@@ -392,7 +443,7 @@ function PublishWizard({
               <p className="text-sm text-[var(--text-muted)]">
                 This uploads your metadata to IPFS and calls{' '}
                 <code className="font-mono text-xs bg-[var(--bg-elevated)] px-1 rounded">
-                  GNS.publishNewSubgraph
+                  GNS.{isNewVersion ? 'publishNewVersion' : 'publishNewSubgraph'}
                 </code>{' '}
                 on Arbitrum One.
               </p>
@@ -485,9 +536,13 @@ function PublishWizard({
                 </svg>
               </div>
               <div>
-                <p className="font-semibold text-[var(--text)]">Published!</p>
+                <p className="font-semibold text-[var(--text)]">
+                  {isNewVersion ? 'New version published!' : 'Published!'}
+                </p>
                 <p className="text-sm text-[var(--text-muted)] mt-1">
-                  Your subgraph is now live on The Graph Network.
+                  {isNewVersion
+                    ? 'Indexers will migrate to the new deployment.'
+                    : 'Your subgraph is now live on The Graph Network.'}
                 </p>
               </div>
               <div className="w-full p-3 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent)]/20 text-left">
@@ -625,7 +680,12 @@ function SubgraphDetailModal({
   const [deleting, setDeleting] = useState(false);
 
   const isPublished = Boolean(sg.published_subgraph_id);
-  const canPublish = Boolean(sg.deployment_id) && !isPublished;
+  // A proper subgraphID is a decimal number string; an old tx hash starts with '0x'
+  const subgraphNftId = sg.published_subgraph_id && !sg.published_subgraph_id.startsWith('0x')
+    ? sg.published_subgraph_id : null;
+  // Can publish if deployed and either not yet published, or we have the NFT ID for versioning
+  const canPublish = Boolean(sg.deployment_id) && (!isPublished || subgraphNftId !== null);
+  const publishLabel = subgraphNftId ? 'Update Version' : 'Publish';
 
   const handleSave = async () => {
     setSaving(true);
@@ -656,16 +716,20 @@ function SubgraphDetailModal({
     onClose();
   };
 
-  const handlePublished = async (txHash: string) => {
-    await apiFetch(`/api/studio/subgraphs/${sg.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ published_subgraph_id: txHash }),
-    });
-    const updated = { ...sg, published_subgraph_id: txHash };
-    setSg(updated);
-    onPublished(sg.id, txHash);
-    setShowPublish(false);
+  const handlePublished = async (result: string) => {
+    // result is the numeric subgraphID for a new publish, or the tx hash for a version update.
+    // Only store to DB when we have a real subgraphID (not a tx hash).
+    if (!result.startsWith('0x')) {
+      await apiFetch(`/api/studio/subgraphs/${sg.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ published_subgraph_id: result }),
+      });
+      const updated = { ...sg, published_subgraph_id: result };
+      setSg(updated);
+      onPublished(sg.id, result);
+    }
+    // Don't close the wizard here — let the user read the done screen and click Done.
   };
 
   return (
@@ -703,7 +767,7 @@ function SubgraphDetailModal({
                   onClick={() => setShowPublish(true)}
                   className="px-4 py-1.5 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
                 >
-                  Publish
+                  {publishLabel}
                 </button>
               )}
               <button onClick={onClose} className="p-1 text-[var(--text-faint)] hover:text-[var(--text)]">
