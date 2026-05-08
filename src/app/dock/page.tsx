@@ -732,9 +732,13 @@ function SubgraphDetailModal({
   // A proper subgraphID is a decimal number string; an old tx hash starts with '0x'
   const subgraphNftId = sg.published_subgraph_id && !sg.published_subgraph_id.startsWith('0x')
     ? sg.published_subgraph_id : null;
-  // Can publish if deployed and either not yet published, or we have the NFT ID for versioning
-  const canPublish = Boolean(sg.deployment_id) && (!isPublished || subgraphNftId !== null);
-  const publishLabel = subgraphNftId ? 'Update Version' : 'Publish';
+  // There's a new deployment to push when deployment_id differs from what was last published
+  const hasNewDeployment = Boolean(
+    sg.deployment_id && sg.deployment_id !== sg.last_published_deployment_id,
+  );
+  // Can publish first time, or update version when NFT ID is resolved and there's a new deployment
+  const canPublish = Boolean(sg.deployment_id) && (!isPublished || (subgraphNftId !== null && hasNewDeployment));
+  const publishLabel = isPublished ? 'Update Version' : 'Publish';
 
   const handleSave = async () => {
     setSaving(true);
@@ -768,24 +772,24 @@ function SubgraphDetailModal({
   const handlePublished = async (result: string, versionLabel: string) => {
     const trimLabel = versionLabel.trim() || null;
     if (subgraphNftId === null) {
-      // First publish — store NFT ID and version label together.
+      // First publish — store NFT ID, version label, and snapshot the deployed version.
       await apiFetch(`/api/studio/subgraphs/${sg.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ published_subgraph_id: result, version_label: trimLabel }),
+        body: JSON.stringify({ published_subgraph_id: result, version_label: trimLabel, last_published_deployment_id: sg.deployment_id }),
       });
-      const updated = { ...sg, published_subgraph_id: result, version_label: trimLabel };
+      const updated = { ...sg, published_subgraph_id: result, version_label: trimLabel, last_published_deployment_id: sg.deployment_id };
       setSg(updated);
       onUpdated(updated);
       onPublished(sg.id, result);
-    } else if (trimLabel) {
-      // Version update — just persist the new label.
+    } else {
+      // Version update — persist new label and snapshot the deployed version.
       await apiFetch(`/api/studio/subgraphs/${sg.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ version_label: trimLabel }),
+        body: JSON.stringify({ version_label: trimLabel, last_published_deployment_id: sg.deployment_id }),
       });
-      const updated = { ...sg, version_label: trimLabel };
+      const updated = { ...sg, version_label: trimLabel, last_published_deployment_id: sg.deployment_id };
       setSg(updated);
       onUpdated(updated);
     }
@@ -827,16 +831,18 @@ function SubgraphDetailModal({
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              {legacyTxHash && !subgraphNftId ? (
+              {isPublished && !canPublish && sg.deployment_id ? (
                 <div className="relative group">
                   <button
                     disabled
                     className="px-4 py-1.5 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white opacity-40 cursor-not-allowed"
                   >
-                    {isResolvingNftId ? 'Resolving…' : 'Update Version'}
+                    Update Version
                   </button>
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs text-[var(--text)] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    Resolving on-chain subgraph ID — unlocks in a few seconds
+                    {!hasNewDeployment
+                      ? 'No new deployment — run graph deploy again (step 3) first'
+                      : 'Resolving on-chain subgraph ID — try again in a moment'}
                     <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[var(--border)]" />
                   </div>
                 </div>
@@ -958,11 +964,9 @@ function SubgraphDetailModal({
                     {!sg.deployment_id
                       ? 'Deploy first, then click Publish to make your subgraph discoverable on The Graph Network.'
                       : isPublished
-                      ? subgraphNftId !== null
-                        ? 'Published ✓ — to release a new version, update your code, run graph deploy again (step 3), then click Update Version above.'
-                        : legacyTxHash
-                        ? 'Resolving on-chain subgraph ID — the Update Version button will unlock in a few seconds.'
-                        : 'Your subgraph is published on The Graph Network.'
+                      ? hasNewDeployment
+                        ? 'New deployment detected — click Update Version above to publish it on-chain.'
+                        : 'Published ✓ — update your code, run graph deploy again (step 3), then click Update Version above.'
                       : 'Click the Publish button above to list your subgraph on The Graph Network.'}
                   </p>
                 </div>

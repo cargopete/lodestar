@@ -14,6 +14,7 @@ export interface StudioSubgraph {
   network: string | null;
   published_subgraph_id: string | null;
   version_label: string | null;
+  last_published_deployment_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -100,10 +101,14 @@ export async function setPublishedSubgraphId(
   owner: string,
   publishedId: string,
   versionLabel?: string | null,
+  lastPublishedDeploymentId?: string | null,
 ): Promise<void> {
   await db!`
     UPDATE studio_subgraphs
-    SET published_subgraph_id = ${publishedId}, version_label = ${versionLabel ?? null}, updated_at = NOW()
+    SET published_subgraph_id = ${publishedId},
+        version_label = ${versionLabel ?? null},
+        last_published_deployment_id = ${lastPublishedDeploymentId ?? null},
+        updated_at = NOW()
     WHERE id = ${id} AND owner_address = ${owner.toLowerCase()}
   `;
 }
@@ -112,10 +117,13 @@ export async function updateVersionLabel(
   id: number,
   owner: string,
   versionLabel: string | null,
+  lastPublishedDeploymentId?: string | null,
 ): Promise<void> {
   await db!`
     UPDATE studio_subgraphs
-    SET version_label = ${versionLabel}, updated_at = NOW()
+    SET version_label = ${versionLabel},
+        last_published_deployment_id = ${lastPublishedDeploymentId ?? null},
+        updated_at = NOW()
     WHERE id = ${id} AND owner_address = ${owner.toLowerCase()}
   `;
 }

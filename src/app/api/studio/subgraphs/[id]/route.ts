@@ -18,9 +18,9 @@ export async function PATCH(
   const body = await req.json().catch(() => ({}));
 
   if ('published_subgraph_id' in body) {
-    await setPublishedSubgraphId(numId, auth.address, body.published_subgraph_id, body.version_label ?? null);
+    await setPublishedSubgraphId(numId, auth.address, body.published_subgraph_id, body.version_label ?? null, body.last_published_deployment_id ?? null);
   } else if ('version_label' in body) {
-    await updateVersionLabel(numId, auth.address, body.version_label ?? null);
+    await updateVersionLabel(numId, auth.address, body.version_label ?? null, body.last_published_deployment_id ?? null);
   } else {
     await updateSubgraphMeta(numId, auth.address, body.display_name ?? null, body.description ?? null);
   }
