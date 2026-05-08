@@ -902,7 +902,9 @@ function SubgraphDetailModal({
                     {!sg.deployment_id
                       ? 'Deploy first, then click Publish to make your subgraph discoverable on The Graph Network.'
                       : isPublished
-                      ? 'Your subgraph is published on The Graph Network.'
+                      ? subgraphNftId !== null
+                        ? 'Published ✓ — to release a new version, update your code, run graph deploy again (step 3), then click Update Version above.'
+                        : 'Your subgraph is published on The Graph Network.'
                       : 'Click the Publish button above to list your subgraph on The Graph Network.'}
                   </p>
                 </div>
