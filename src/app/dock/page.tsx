@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useSignMessage, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { arbitrum } from 'wagmi/chains';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
@@ -705,7 +706,7 @@ function SubgraphDetailModal({
   const legacyTxHash = (
     sg.published_subgraph_id?.startsWith('0x') ? sg.published_subgraph_id as `0x${string}` : undefined
   );
-  const { data: legacyReceipt } = useWaitForTransactionReceipt({ hash: legacyTxHash });
+  const { data: legacyReceipt } = useWaitForTransactionReceipt({ hash: legacyTxHash, chainId: arbitrum.id });
   useEffect(() => {
     if (!legacyReceipt) return;
     const nftId = extractSubgraphId(legacyReceipt.logs, CONTRACTS.gns);
