@@ -1212,7 +1212,7 @@ export default function StudioPage() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[var(--text)]">Subgraph Developer Hub</h1>
+            <h1 className="text-2xl font-bold text-[var(--text)]">Subgraph Dock</h1>
             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-500 border border-amber-500/30">
               Experimental
             </span>
