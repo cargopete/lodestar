@@ -25,13 +25,11 @@ export async function GET(_req: Request, { params }: Ctx) {
       return NextResponse.json({ error: 'invalid contract address' }, { status: 400 });
     }
     const key = `lodestar:tokens:detail:v0:${chain}:${address.toLowerCase()}`;
-    // 30s server-side TTL — matches the client poll interval and the
-    // V3 spot-price refresh cadence.
-    const data = await cached(key, 30, () => fetchTokenDetail(chain, address));
+    const data = await cached(key, 120, () => fetchTokenDetail(chain, address));
     if (!data) return NextResponse.json({ error: 'token not in v0 seed list' }, { status: 404 });
     return NextResponse.json(
       { data },
-      { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' } }
+      { headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=240' } }
     );
   } catch (error) {
     console.error('[tokens detail]', error);
