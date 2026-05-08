@@ -2,18 +2,14 @@
  * IPFS API proxy for `graph deploy`.
  *
  * graph-cli uploads subgraph artifacts (WASM, manifest) here before calling
- * subgraph_deploy. We validate the deploy key then forward to GRAPH_IPFS_URL.
+ * subgraph_deploy. We validate the deploy key then forward to GRAPH_IPFS_URL
+ * (defaults to The Graph's public IPFS: https://api.thegraph.com/ipfs).
  */
 import { type NextRequest, NextResponse } from 'next/server';
 import { hashKey } from '@/lib/studio/auth';
 import { hasDbAccess } from '@/lib/db';
 import { findOwnerByKeyHash } from '@/lib/studio/db';
-
-function ipfsUrl(): string {
-  const u = process.env.GRAPH_IPFS_URL;
-  if (!u) throw new Error('GRAPH_IPFS_URL not configured');
-  return u.replace(/\/$/, '');
-}
+import { ipfsEndpoint } from '@/lib/studio/ipfs';
 
 async function extractBearerKey(req: NextRequest): Promise<string | null> {
   const auth = req.headers.get('authorization') ?? '';
@@ -32,7 +28,7 @@ async function proxy(req: NextRequest, pathSegments: string[]) {
 
   const path = pathSegments.join('/');
   const qs = req.nextUrl.search;
-  const target = `${ipfsUrl()}/${path}${qs}`;
+  const target = `${ipfsEndpoint()}/${path}${qs}`;
 
   const headers = new Headers(req.headers);
   headers.delete('host');

@@ -9,8 +9,10 @@ export interface StudioSubgraph {
   owner_address: string;
   slug: string;
   display_name: string | null;
+  description: string | null;
   deployment_id: string | null;
   network: string | null;
+  published_subgraph_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -76,6 +78,31 @@ export async function updateSubgraphDeployment(
     UPDATE studio_subgraphs
     SET deployment_id = ${deploymentId}, network = ${network}, updated_at = NOW()
     WHERE slug = ${slug}
+  `;
+}
+
+export async function updateSubgraphMeta(
+  id: number,
+  owner: string,
+  displayName: string | null,
+  description: string | null,
+): Promise<void> {
+  await db!`
+    UPDATE studio_subgraphs
+    SET display_name = ${displayName}, description = ${description}, updated_at = NOW()
+    WHERE id = ${id} AND owner_address = ${owner.toLowerCase()}
+  `;
+}
+
+export async function setPublishedSubgraphId(
+  id: number,
+  owner: string,
+  publishedId: string,
+): Promise<void> {
+  await db!`
+    UPDATE studio_subgraphs
+    SET published_subgraph_id = ${publishedId}, updated_at = NOW()
+    WHERE id = ${id} AND owner_address = ${owner.toLowerCase()}
   `;
 }
 

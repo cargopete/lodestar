@@ -1,20 +1,39 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useSignMessage } from 'wagmi';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAccount, useSignMessage, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { cn, shortenAddress } from '@/lib/utils';
 import { buildSignInMessage } from '@/lib/studio/auth';
+import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
+import { CONTRACTS } from '@/lib/wallet';
 import type { StudioSubgraph, SyncBounty } from '@/lib/studio/db';
+
+// ---------------------------------------------------------------------------
+// GNS ABI (minimal — publishNewSubgraph only)
+// ---------------------------------------------------------------------------
+
+const GNS_ABI = [
+  {
+    name: 'publishNewSubgraph',
+    type: 'function' as const,
+    stateMutability: 'nonpayable' as const,
+    inputs: [
+      { name: 'subgraphDeploymentID', type: 'bytes32' },
+      { name: 'versionMetadata', type: 'bytes32' },
+      { name: 'subgraphMetadata', type: 'bytes32' },
+    ],
+    outputs: [],
+  },
+] as const;
+
+const NODE_URL = 'https://www.lodestar-dashboard.com/api/studio/node';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-type Tab = 'subgraphs' | 'bounties' | 'guide';
 
 async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, credentials: 'include' });
@@ -46,14 +65,26 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
   );
 }
 
+function CodeBlock({ children }: { children: string }) {
+  return (
+    <div className="relative group mt-1.5">
+      <pre className="p-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] text-xs font-mono text-[var(--text)] overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
+        {children}
+      </pre>
+      <div className="absolute top-2 right-2">
+        <CopyButton text={children} />
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
-// Connect / Sign-in gate
+// Connect gate
 // ---------------------------------------------------------------------------
 
 function ConnectGate({ children }: { children: React.ReactNode }) {
-  const { address, isConnected } = useAccount();
-
-  if (!isConnected || !address) {
+  const { isConnected } = useAccount();
+  if (!isConnected) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center gap-6">
         <div className="w-16 h-16 rounded-2xl bg-[var(--accent-dim)] flex items-center justify-center">
@@ -64,18 +95,17 @@ function ConnectGate({ children }: { children: React.ReactNode }) {
         <div>
           <h2 className="text-xl font-semibold text-[var(--text)] mb-2">Connect your wallet</h2>
           <p className="text-[var(--text-muted)] text-sm max-w-sm">
-            Use the wallet button in the top bar to connect, then sign in to access Lodestar Studio.
+            Connect via the button in the top bar, then sign in to manage your subgraphs.
           </p>
         </div>
       </div>
     );
   }
-
   return <>{children}</>;
 }
 
 // ---------------------------------------------------------------------------
-// Auth state + sign-in
+// Session hook
 // ---------------------------------------------------------------------------
 
 function useStudioSession() {
@@ -85,7 +115,6 @@ function useStudioSession() {
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check existing session on mount
   useEffect(() => {
     fetch('/api/studio/auth', { credentials: 'include' })
       .then((r) => r.json())
@@ -123,81 +152,47 @@ function useStudioSession() {
 }
 
 // ---------------------------------------------------------------------------
-// Subgraph card
+// Subgraph card (clickable)
 // ---------------------------------------------------------------------------
 
-function SubgraphCard({
-  sg,
-  onDelete,
-  onBounty,
-}: {
-  sg: StudioSubgraph;
-  onDelete: (id: number) => void;
-  onBounty: (sg: StudioSubgraph) => void;
-}) {
-  const [deleting, setDeleting] = useState(false);
-
-  const handleDelete = async () => {
-    if (!confirm(`Remove "${sg.slug}" from Studio? This does not affect on-chain data.`)) return;
-    setDeleting(true);
-    await fetch(`/api/studio/subgraphs/${sg.id}`, { method: 'DELETE', credentials: 'include' });
-    onDelete(sg.id);
-    setDeleting(false);
-  };
-
+function SubgraphCard({ sg, onClick }: { sg: StudioSubgraph; onClick: () => void }) {
+  const isPublished = Boolean(sg.published_subgraph_id);
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent-hover)] transition-colors">
-      {/* Info */}
+    <button
+      onClick={onClick}
+      className="w-full text-left flex items-center gap-4 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent-hover)] hover:bg-[var(--bg-surface)] transition-all"
+    >
+      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center">
+        <svg className="w-5 h-5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        </svg>
+      </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-mono text-sm font-medium text-[var(--text)]">{sg.slug}</span>
+          <span className="font-semibold text-sm text-[var(--text)]">
+            {sg.display_name || sg.slug.split('/').pop()}
+          </span>
+          <span className={cn(
+            'text-xs px-2 py-0.5 rounded-full font-medium',
+            isPublished
+              ? 'bg-[var(--accent-dim)] text-[var(--accent)]'
+              : 'bg-[var(--bg-surface)] text-[var(--text-faint)] border border-[var(--border)]',
+          )}>
+            {isPublished ? 'Published' : 'Draft'}
+          </span>
           {sg.network && <Badge variant="default">{sg.network}</Badge>}
         </div>
-        {sg.deployment_id ? (
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-[var(--text-faint)] font-mono">
-              {shortenAddress(sg.deployment_id)}
-            </span>
-            <CopyButton text={sg.deployment_id} />
-            <Link
-              href={`/subgraphs/${sg.deployment_id}`}
-              className="text-xs text-[var(--accent)] hover:underline"
-            >
-              View
-            </Link>
-          </div>
-        ) : (
-          <p className="text-xs text-[var(--text-faint)] mt-1 italic">Not yet deployed</p>
-        )}
+        <p className="text-xs text-[var(--text-faint)] font-mono mt-0.5 truncate">{sg.slug}</p>
       </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {sg.deployment_id && (
-          <button
-            onClick={() => onBounty(sg)}
-            className={cn(
-              'px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] transition-colors',
-              'bg-[var(--accent-dim)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white',
-            )}
-          >
-            Offer Bounty
-          </button>
-        )}
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="px-2 py-1.5 text-xs text-[var(--text-faint)] hover:text-[var(--red)] transition-colors rounded"
-        >
-          {deleting ? '...' : 'Remove'}
-        </button>
-      </div>
-    </div>
+      <svg className="w-4 h-4 text-[var(--text-faint)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Register subgraph modal
+// Register modal
 // ---------------------------------------------------------------------------
 
 function RegisterModal({ onClose, onCreated }: { onClose: () => void; onCreated: (sg: StudioSubgraph) => void }) {
@@ -219,7 +214,7 @@ function RegisterModal({ onClose, onCreated }: { onClose: () => void; onCreated:
       onCreated(data.subgraph);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to register');
+      setError(err instanceof Error ? err.message : 'Failed to create');
     } finally {
       setLoading(false);
     }
@@ -229,7 +224,7 @@ function RegisterModal({ onClose, onCreated }: { onClose: () => void; onCreated:
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-md bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
-          <h3 className="font-semibold text-[var(--text)]">Register Subgraph</h3>
+          <h3 className="font-semibold text-[var(--text)]">Create Subgraph</h3>
           <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -238,7 +233,9 @@ function RegisterModal({ onClose, onCreated }: { onClose: () => void; onCreated:
         </div>
         <form onSubmit={submit} className="p-5 space-y-4">
           <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Slug <span className="text-[var(--red)]">*</span></label>
+            <label className="block text-xs text-[var(--text-muted)] mb-1.5">
+              Slug <span className="text-[var(--red)]">*</span>
+            </label>
             <input
               type="text"
               placeholder="org/my-subgraph"
@@ -251,7 +248,9 @@ function RegisterModal({ onClose, onCreated }: { onClose: () => void; onCreated:
                 'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
               )}
             />
-            <p className="text-xs text-[var(--text-faint)] mt-1">Lowercase letters, numbers, and hyphens only. e.g. <code>acme/uniswap-v3</code></p>
+            <p className="text-xs text-[var(--text-faint)] mt-1">
+              e.g. <code>acme/uniswap-v3</code>
+            </p>
           </div>
           <div>
             <label className="block text-xs text-[var(--text-muted)] mb-1.5">Display name (optional)</label>
@@ -269,7 +268,11 @@ function RegisterModal({ onClose, onCreated }: { onClose: () => void; onCreated:
           </div>
           {error && <p className="text-xs text-[var(--red)]">{error}</p>}
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+            >
               Cancel
             </button>
             <button
@@ -277,7 +280,7 @@ function RegisterModal({ onClose, onCreated }: { onClose: () => void; onCreated:
               disabled={loading}
               className="flex-1 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {loading ? 'Registering...' : 'Register'}
+              {loading ? 'Creating...' : 'Create'}
             </button>
           </div>
         </form>
@@ -287,17 +290,555 @@ function RegisterModal({ onClose, onCreated }: { onClose: () => void; onCreated:
 }
 
 // ---------------------------------------------------------------------------
-// Offer bounty modal
+// Publish wizard
+// ---------------------------------------------------------------------------
+
+type PublishStep = 'confirm' | 'uploading' | 'wallet' | 'mining' | 'done' | 'error';
+
+function PublishWizard({
+  sg,
+  onClose,
+  onPublished,
+}: {
+  sg: StudioSubgraph;
+  onClose: () => void;
+  onPublished: (txHash: string) => void;
+}) {
+  const [step, setStep] = useState<PublishStep>('confirm');
+  const [errMsg, setErrMsg] = useState('');
+  const [metaHashes, setMetaHashes] = useState<{
+    subgraphMetaBytes32: `0x${string}`;
+    versionMetaBytes32: `0x${string}`;
+  } | null>(null);
+  const [minedTxHash, setMinedTxHash] = useState<`0x${string}` | undefined>();
+
+  const { writeContract, isPending: walletPending } = useWriteContract({
+    mutation: {
+      onSuccess: (hash) => {
+        setMinedTxHash(hash);
+        setStep('mining');
+      },
+      onError: (e) => {
+        setErrMsg(e.message.slice(0, 300));
+        setStep('error');
+      },
+    },
+  });
+
+  const { isSuccess: txConfirmed } = useWaitForTransactionReceipt({ hash: minedTxHash });
+
+  useEffect(() => {
+    if (txConfirmed && minedTxHash) {
+      onPublished(minedTxHash);
+      setStep('done');
+    }
+  }, [txConfirmed, minedTxHash, onPublished]);
+
+  const handleUpload = async () => {
+    setStep('uploading');
+    try {
+      const data = await apiFetch<{
+        subgraphMetaBytes32: `0x${string}`;
+        versionMetaBytes32: `0x${string}`;
+      }>('/api/studio/metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          displayName: sg.display_name,
+          description: sg.description,
+        }),
+      });
+      setMetaHashes(data);
+      setStep('wallet');
+    } catch (err) {
+      setErrMsg(err instanceof Error ? err.message : 'IPFS upload failed');
+      setStep('error');
+    }
+  };
+
+  const handleWriteContract = () => {
+    if (!metaHashes || !sg.deployment_id) return;
+    writeContract({
+      address: CONTRACTS.gns,
+      abi: GNS_ABI,
+      functionName: 'publishNewSubgraph',
+      args: [
+        ipfsHashToBytes32(sg.deployment_id),
+        metaHashes.versionMetaBytes32,
+        metaHashes.subgraphMetaBytes32,
+      ],
+    });
+  };
+
+  const canClose = step !== 'uploading' && step !== 'mining';
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-md bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
+          <h3 className="font-semibold text-[var(--text)]">Publish on The Graph</h3>
+          {canClose && (
+            <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        <div className="p-5 space-y-4">
+          {step === 'confirm' && (
+            <>
+              <p className="text-sm text-[var(--text-muted)]">
+                This uploads your metadata to IPFS and calls{' '}
+                <code className="font-mono text-xs bg-[var(--bg-elevated)] px-1 rounded">
+                  GNS.publishNewSubgraph
+                </code>{' '}
+                on Arbitrum One.
+              </p>
+              <div className="space-y-0 text-sm divide-y divide-[var(--border)] border border-[var(--border)] rounded-lg overflow-hidden">
+                <div className="flex gap-3 px-4 py-2.5">
+                  <span className="text-[var(--text-faint)] w-28 flex-shrink-0 text-xs">Subgraph</span>
+                  <span className="text-[var(--text)] font-mono text-xs truncate">{sg.slug}</span>
+                </div>
+                <div className="flex gap-3 px-4 py-2.5">
+                  <span className="text-[var(--text-faint)] w-28 flex-shrink-0 text-xs">Deployment ID</span>
+                  <span className="text-[var(--text)] font-mono text-xs truncate">{sg.deployment_id}</span>
+                </div>
+                {sg.display_name && (
+                  <div className="flex gap-3 px-4 py-2.5">
+                    <span className="text-[var(--text-faint)] w-28 flex-shrink-0 text-xs">Display name</span>
+                    <span className="text-[var(--text)] text-sm">{sg.display_name}</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-[var(--text-faint)]">
+                A wallet transaction is required. Gas on Arbitrum is usually &lt;$0.01.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  className="flex-1 px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpload}
+                  className="flex-1 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
+                >
+                  Continue
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 'uploading' && (
+            <div className="flex flex-col items-center py-8 gap-3">
+              <div className="w-10 h-10 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+              <p className="text-sm text-[var(--text-muted)]">Uploading metadata to IPFS...</p>
+            </div>
+          )}
+
+          {step === 'wallet' && metaHashes && (
+            <>
+              <div className="flex items-center gap-2 text-sm text-[var(--accent)]">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Metadata uploaded to IPFS
+              </div>
+              <p className="text-sm text-[var(--text-muted)]">
+                Confirm the transaction in your wallet to publish on The Graph Network.
+              </p>
+              <button
+                onClick={handleWriteContract}
+                disabled={walletPending}
+                className="w-full px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {walletPending ? 'Waiting for wallet...' : 'Confirm in Wallet'}
+              </button>
+            </>
+          )}
+
+          {step === 'mining' && (
+            <div className="flex flex-col items-center py-8 gap-3">
+              <div className="w-10 h-10 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+              <p className="text-sm text-[var(--text-muted)]">Transaction submitted — waiting for confirmation...</p>
+              {minedTxHash && (
+                <a
+                  href={`https://arbiscan.io/tx/${minedTxHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-[var(--accent)] hover:underline font-mono"
+                >
+                  {minedTxHash.slice(0, 20)}...
+                </a>
+              )}
+            </div>
+          )}
+
+          {step === 'done' && (
+            <div className="flex flex-col items-center py-8 gap-4 text-center">
+              <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] flex items-center justify-center">
+                <svg className="w-7 h-7 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold text-[var(--text)]">Published!</p>
+                <p className="text-sm text-[var(--text-muted)] mt-1">
+                  Your subgraph is now live on The Graph Network.
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="px-6 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
+              >
+                Done
+              </button>
+            </div>
+          )}
+
+          {step === 'error' && (
+            <div className="space-y-4">
+              <p className="text-sm text-[var(--red)]">{errMsg || 'Something went wrong.'}</p>
+              <button
+                onClick={() => setStep('confirm')}
+                className="w-full px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Deploy key panel (inline, used in detail modal)
+// ---------------------------------------------------------------------------
+
+function DeployKeyPanel() {
+  const [keyInfo, setKeyInfo] = useState<{
+    hasKey: boolean;
+    createdAt: string | null;
+    lastUsedAt: string | null;
+  } | null>(null);
+  const [plainKey, setPlainKey] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/studio/deploy-key', { credentials: 'include' })
+      .then((r) => r.json())
+      .then(setKeyInfo)
+      .catch(() => {});
+  }, []);
+
+  const generate = async () => {
+    if (keyInfo?.hasKey && !confirm('This will invalidate your existing deploy key. Continue?')) return;
+    setLoading(true);
+    try {
+      const data = await apiFetch<{ key: string }>('/api/studio/deploy-key', { method: 'POST' });
+      setPlainKey(data.key);
+      setKeyInfo({ hasKey: true, createdAt: new Date().toISOString(), lastUsedAt: null });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-[var(--text-muted)]">Deploy Key</p>
+      {plainKey ? (
+        <div>
+          <p className="text-xs text-amber-500 mb-2">Save this — it won&apos;t be shown again.</p>
+          <div className="flex items-center gap-2 p-3 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border)]">
+            <code className="flex-1 text-xs font-mono text-[var(--text)] break-all">{plainKey}</code>
+            <CopyButton text={plainKey} />
+          </div>
+        </div>
+      ) : keyInfo?.hasKey ? (
+        <div className="flex items-center gap-2 p-3 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border)]">
+          <code className="flex-1 text-xs font-mono text-[var(--text-faint)]">{'•'.repeat(64)}</code>
+        </div>
+      ) : (
+        <p className="text-xs text-[var(--text-muted)]">No deploy key yet.</p>
+      )}
+      <button
+        onClick={generate}
+        disabled={loading}
+        className={cn(
+          'w-full px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] transition-opacity disabled:opacity-50',
+          keyInfo?.hasKey
+            ? 'border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]'
+            : 'bg-[var(--accent)] text-white hover:opacity-90',
+        )}
+      >
+        {loading ? 'Generating...' : keyInfo?.hasKey ? 'Regenerate Key' : 'Generate Deploy Key'}
+      </button>
+      {keyInfo?.lastUsedAt && (
+        <p className="text-xs text-[var(--text-faint)]">
+          Last used: {new Date(keyInfo.lastUsedAt).toLocaleDateString()}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Subgraph detail modal
+// ---------------------------------------------------------------------------
+
+function SubgraphDetailModal({
+  sg: initialSg,
+  onClose,
+  onUpdated,
+  onPublished,
+  onDelete,
+}: {
+  sg: StudioSubgraph;
+  onClose: () => void;
+  onUpdated: (sg: StudioSubgraph) => void;
+  onPublished: (id: number, txHash: string) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [sg, setSg] = useState(initialSg);
+  const [displayName, setDisplayName] = useState(sg.display_name ?? '');
+  const [description, setDescription] = useState(sg.description ?? '');
+  const [saving, setSaving] = useState(false);
+  const [saveOk, setSaveOk] = useState(false);
+  const [showPublish, setShowPublish] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const isPublished = Boolean(sg.published_subgraph_id);
+  const canPublish = Boolean(sg.deployment_id) && !isPublished;
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveOk(false);
+    try {
+      await apiFetch(`/api/studio/subgraphs/${sg.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display_name: displayName || null, description: description || null }),
+      });
+      const updated = { ...sg, display_name: displayName || null, description: description || null };
+      setSg(updated);
+      onUpdated(updated);
+      setSaveOk(true);
+      setTimeout(() => setSaveOk(false), 2000);
+    } catch {
+      // silent
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Remove "${sg.slug}"? This does not affect on-chain data.`)) return;
+    setDeleting(true);
+    await fetch(`/api/studio/subgraphs/${sg.id}`, { method: 'DELETE', credentials: 'include' });
+    onDelete(sg.id);
+    onClose();
+  };
+
+  const handlePublished = async (txHash: string) => {
+    await apiFetch(`/api/studio/subgraphs/${sg.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ published_subgraph_id: txHash }),
+    });
+    const updated = { ...sg, published_subgraph_id: txHash };
+    setSg(updated);
+    onPublished(sg.id, txHash);
+    setShowPublish(false);
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="w-full max-w-3xl bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] shadow-2xl max-h-[90vh] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] flex-shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center">
+                <svg className="w-4 h-4 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-[var(--text)] truncate">
+                    {sg.display_name || sg.slug.split('/').pop()}
+                  </span>
+                  <span className={cn(
+                    'text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0',
+                    isPublished
+                      ? 'bg-[var(--accent-dim)] text-[var(--accent)]'
+                      : 'bg-[var(--bg-elevated)] text-[var(--text-faint)] border border-[var(--border)]',
+                  )}>
+                    {isPublished ? 'Published' : 'Draft'}
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--text-faint)] font-mono truncate">{sg.slug}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {canPublish && (
+                <button
+                  onClick={() => setShowPublish(true)}
+                  className="px-4 py-1.5 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
+                >
+                  Publish
+                </button>
+              )}
+              <button onClick={onClose} className="p-1 text-[var(--text-faint)] hover:text-[var(--text)]">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[var(--border)]">
+              {/* Left: metadata + key */}
+              <div className="p-6 space-y-5">
+                <h4 className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Details</h4>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs text-[var(--text-muted)] mb-1.5">Display name</label>
+                    <input
+                      type="text"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder={sg.slug.split('/').pop()}
+                      className={cn(
+                        'w-full px-3 py-2 text-sm rounded-[var(--radius-button)]',
+                        'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
+                        'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
+                      )}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[var(--text-muted)] mb-1.5">Description</label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="What does this subgraph index?"
+                      rows={3}
+                      className={cn(
+                        'w-full px-3 py-2 text-sm rounded-[var(--radius-button)] resize-none',
+                        'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
+                        'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
+                      )}
+                    />
+                  </div>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                  >
+                    {saving ? 'Saving...' : saveOk ? 'Saved ✓' : 'Save'}
+                  </button>
+                </div>
+
+                {sg.deployment_id && (
+                  <div className="pt-4 border-t border-[var(--border)] space-y-1.5">
+                    <p className="text-xs text-[var(--text-muted)]">Deployment ID</p>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs font-mono text-[var(--text-faint)] truncate flex-1">
+                        {sg.deployment_id}
+                      </code>
+                      <CopyButton text={sg.deployment_id} />
+                    </div>
+                    <Link
+                      href={`/subgraphs/${sg.deployment_id}`}
+                      className="text-xs text-[var(--accent)] hover:underline"
+                    >
+                      View indexing status →
+                    </Link>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-[var(--border)]">
+                  <DeployKeyPanel />
+                </div>
+
+                <div className="pt-4 border-t border-[var(--border)]">
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="text-xs text-[var(--red)] hover:opacity-70 transition-opacity"
+                  >
+                    {deleting ? 'Removing...' : 'Remove subgraph'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: getting started */}
+              <div className="p-6 space-y-5">
+                <h4 className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                  Getting Started
+                </h4>
+
+                <div>
+                  <p className="text-xs text-[var(--text-muted)] mb-0.5">1. Install graph-cli</p>
+                  <CodeBlock>npm install -g @graphprotocol/graph-cli</CodeBlock>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--text-muted)] mb-0.5">2. Build</p>
+                  <CodeBlock>graph codegen && graph build</CodeBlock>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--text-muted)] mb-0.5">3. Authenticate</p>
+                  <CodeBlock>{`graph auth --node ${NODE_URL} <YOUR_DEPLOY_KEY>`}</CodeBlock>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--text-muted)] mb-0.5">4. Deploy</p>
+                  <CodeBlock>{`graph deploy --node ${NODE_URL} ${sg.slug}`}</CodeBlock>
+                </div>
+                <div className="pt-2 border-t border-[var(--border)]">
+                  <p className="text-xs text-[var(--text-muted)] mb-1">5. Publish on-chain</p>
+                  <p className="text-xs text-[var(--text-faint)]">
+                    {!sg.deployment_id
+                      ? 'Deploy first, then click Publish to make your subgraph discoverable on The Graph Network.'
+                      : isPublished
+                      ? 'Your subgraph is published on The Graph Network.'
+                      : 'Click the Publish button above to list your subgraph on The Graph Network.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showPublish && (
+        <PublishWizard
+          sg={sg}
+          onClose={() => setShowPublish(false)}
+          onPublished={handlePublished}
+        />
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bounty modal
 // ---------------------------------------------------------------------------
 
 function BountyModal({
   sg,
   onClose,
-  onCreated,
 }: {
   sg: StudioSubgraph;
   onClose: () => void;
-  onCreated: (b: SyncBounty) => void;
 }) {
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
@@ -311,9 +852,9 @@ function BountyModal({
     setLoading(true);
     try {
       const expires_at = expiryDays
-        ? new Date(Date.now() + parseInt(expiryDays) * 86400_000).toISOString()
+        ? new Date(Date.now() + parseInt(expiryDays) * 86_400_000).toISOString()
         : null;
-      const data = await apiFetch<{ bounty: SyncBounty }>('/api/studio/bounties', {
+      await apiFetch('/api/studio/bounties', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -324,7 +865,6 @@ function BountyModal({
           expires_at,
         }),
       });
-      onCreated(data.bounty);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to post bounty');
@@ -334,7 +874,7 @@ function BountyModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-md bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
           <div>
@@ -349,7 +889,9 @@ function BountyModal({
         </div>
         <form onSubmit={submit} className="p-5 space-y-4">
           <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Bounty amount (GRT) <span className="text-[var(--red)]">*</span></label>
+            <label className="block text-xs text-[var(--text-muted)] mb-1.5">
+              Bounty amount (GRT) <span className="text-[var(--red)]">*</span>
+            </label>
             <input
               type="number"
               min="1"
@@ -398,11 +940,15 @@ function BountyModal({
             </select>
           </div>
           <p className="text-xs text-[var(--text-faint)] bg-[var(--bg-elevated)] rounded p-2.5 border border-[var(--border)]">
-            This bounty is currently off-chain — it signals your intent to pay. GRT settlement happens directly between you and the indexer. On-chain escrow is coming soon.
+            Bounties are currently off-chain — they signal your intent to pay. On-chain escrow coming soon.
           </p>
           {error && <p className="text-xs text-[var(--red)]">{error}</p>}
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+            >
               Cancel
             </button>
             <button
@@ -420,87 +966,13 @@ function BountyModal({
 }
 
 // ---------------------------------------------------------------------------
-// Deploy key panel
-// ---------------------------------------------------------------------------
-
-function DeployKeyPanel() {
-  const [keyInfo, setKeyInfo] = useState<{ hasKey: boolean; createdAt: string | null; lastUsedAt: string | null } | null>(null);
-  const [plainKey, setPlainKey] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/studio/deploy-key', { credentials: 'include' })
-      .then((r) => r.json())
-      .then(setKeyInfo)
-      .catch(() => {});
-  }, []);
-
-  const generate = async () => {
-    if (keyInfo?.hasKey && !confirm('This will invalidate your existing deploy key. Continue?')) return;
-    setLoading(true);
-    try {
-      const data = await apiFetch<{ key: string }>('/api/studio/deploy-key', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      setPlainKey(data.key);
-      setKeyInfo({ hasKey: true, createdAt: new Date().toISOString(), lastUsedAt: null });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Deploy Key</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {plainKey ? (
-          <div>
-            <p className="text-xs text-[var(--amber)] mb-2">Save this key — it will only be shown once.</p>
-            <div className="flex items-center gap-2 p-3 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border)]">
-              <code className="flex-1 text-xs font-mono text-[var(--text)] break-all">{plainKey}</code>
-              <CopyButton text={plainKey} />
-            </div>
-          </div>
-        ) : keyInfo?.hasKey ? (
-          <div className="flex items-center gap-2 p-3 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border)]">
-            <code className="flex-1 text-xs font-mono text-[var(--text-faint)]">{'•'.repeat(64)}</code>
-          </div>
-        ) : (
-          <p className="text-sm text-[var(--text-muted)]">No deploy key generated yet.</p>
-        )}
-        <button
-          onClick={generate}
-          disabled={loading}
-          className={cn(
-            'w-full px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] transition-opacity disabled:opacity-50',
-            keyInfo?.hasKey
-              ? 'border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]'
-              : 'bg-[var(--accent)] text-white hover:opacity-90',
-          )}
-        >
-          {loading ? 'Generating...' : keyInfo?.hasKey ? 'Regenerate Key' : 'Generate Deploy Key'}
-        </button>
-        {keyInfo?.lastUsedAt && (
-          <p className="text-xs text-[var(--text-faint)]">
-            Last used: {new Date(keyInfo.lastUsedAt).toLocaleDateString()}
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // My Subgraphs tab
 // ---------------------------------------------------------------------------
 
 function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
   const qc = useQueryClient();
   const [showRegister, setShowRegister] = useState(false);
-  const [bountyTarget, setBountyTarget] = useState<StudioSubgraph | null>(null);
+  const [activeSubgraph, setActiveSubgraph] = useState<StudioSubgraph | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['studio-subgraphs', sessionAddress],
@@ -509,16 +981,32 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
 
   const subgraphs = data?.subgraphs ?? [];
 
-  const handleDelete = (id: number) => {
+  const handleCreated = (sg: StudioSubgraph) => {
+    qc.setQueryData(['studio-subgraphs', sessionAddress], (old: typeof data) => ({
+      subgraphs: [sg, ...(old?.subgraphs ?? [])],
+    }));
+  };
+
+  const handleUpdated = (sg: StudioSubgraph) => {
+    qc.setQueryData(['studio-subgraphs', sessionAddress], (old: typeof data) => ({
+      subgraphs: old?.subgraphs.map((s) => (s.id === sg.id ? sg : s)) ?? [],
+    }));
+  };
+
+  const handleDeleted = (id: number) => {
     qc.setQueryData(['studio-subgraphs', sessionAddress], (old: typeof data) => ({
       subgraphs: old?.subgraphs.filter((s) => s.id !== id) ?? [],
     }));
   };
 
-  const handleCreated = (sg: StudioSubgraph) => {
+  const handlePublished = (id: number, txHash: string) => {
     qc.setQueryData(['studio-subgraphs', sessionAddress], (old: typeof data) => ({
-      subgraphs: [sg, ...(old?.subgraphs ?? [])],
+      subgraphs:
+        old?.subgraphs.map((s) => (s.id === id ? { ...s, published_subgraph_id: txHash } : s)) ?? [],
     }));
+    setActiveSubgraph((prev) =>
+      prev?.id === id ? { ...prev, published_subgraph_id: txHash } : prev,
+    );
   };
 
   return (
@@ -535,13 +1023,15 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            Register Subgraph
+            New Subgraph
           </button>
         </div>
 
         {isLoading ? (
           <div className="space-y-2">
-            {[1, 2].map((i) => <div key={i} className="h-16 rounded-lg shimmer" />)}
+            {[1, 2].map((i) => (
+              <div key={i} className="h-16 rounded-lg shimmer" />
+            ))}
           </div>
         ) : subgraphs.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center gap-4 border border-dashed border-[var(--border)] rounded-xl">
@@ -552,41 +1042,37 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
             </div>
             <div>
               <p className="text-[var(--text)] font-medium">No subgraphs yet</p>
-              <p className="text-sm text-[var(--text-muted)] mt-1">Register a slug to get your deploy endpoint and key.</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1">
+                Create a subgraph to get your deploy endpoint and key.
+              </p>
             </div>
             <button
               onClick={() => setShowRegister(true)}
               className="px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
             >
-              Register your first subgraph
+              Create your first subgraph
             </button>
           </div>
         ) : (
           <div className="space-y-2">
             {subgraphs.map((sg) => (
-              <SubgraphCard
-                key={sg.id}
-                sg={sg}
-                onDelete={handleDelete}
-                onBounty={setBountyTarget}
-              />
+              <SubgraphCard key={sg.id} sg={sg} onClick={() => setActiveSubgraph(sg)} />
             ))}
           </div>
         )}
-
-        <div className="pt-4">
-          <DeployKeyPanel />
-        </div>
       </div>
 
       {showRegister && (
         <RegisterModal onClose={() => setShowRegister(false)} onCreated={handleCreated} />
       )}
-      {bountyTarget && (
-        <BountyModal
-          sg={bountyTarget}
-          onClose={() => setBountyTarget(null)}
-          onCreated={() => {}}
+
+      {activeSubgraph && (
+        <SubgraphDetailModal
+          sg={activeSubgraph}
+          onClose={() => setActiveSubgraph(null)}
+          onUpdated={handleUpdated}
+          onPublished={handlePublished}
+          onDelete={handleDeleted}
         />
       )}
     </>
@@ -594,7 +1080,7 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Bounty Board tab
+// Bounty board tab
 // ---------------------------------------------------------------------------
 
 function BountyBoardTab({ sessionAddress }: { sessionAddress: string | null }) {
@@ -603,6 +1089,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string | null }) {
     queryFn: () => apiFetch<{ bounties: SyncBounty[] }>('/api/studio/bounties'),
   });
   const qc = useQueryClient();
+  const [bountyTarget, setBountyTarget] = useState<StudioSubgraph | null>(null);
 
   const bounties = data?.bounties ?? [];
 
@@ -620,133 +1107,79 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string | null }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--accent-dim)]">
-        <p className="text-sm text-[var(--text)]">
-          <strong>Indexers:</strong> developers post GRT bounties for subgraphs they need synced. Allocate to the deployment, sync it, then claim the bounty. Settlement is currently off-chain — contact the developer directly.
-        </p>
-      </div>
+    <>
+      <div className="space-y-4">
+        <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--accent-dim)]">
+          <p className="text-sm text-[var(--text)]">
+            <strong>Indexers:</strong> developers post GRT bounties for subgraphs they need synced.
+            Allocate to the deployment, sync it, then claim the bounty. Settlement is currently
+            off-chain — contact the developer directly.
+          </p>
+        </div>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => <div key={i} className="h-16 rounded-lg shimmer" />)}
-        </div>
-      ) : bounties.length === 0 ? (
-        <div className="py-16 text-center">
-          <p className="text-[var(--text-muted)] text-sm">No open bounties right now.</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {bounties.map((b) => (
-            <div key={b.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-[var(--text)] truncate">{b.deployment_id}</span>
-                  <CopyButton text={b.deployment_id} />
-                  <Link href={`/subgraphs/${b.deployment_id}`} className="text-xs text-[var(--accent)] hover:underline flex-shrink-0">
-                    View
-                  </Link>
-                </div>
-                {b.message && (
-                  <p className="text-xs text-[var(--text-muted)] mt-1 italic">&ldquo;{b.message}&rdquo;</p>
-                )}
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-xs text-[var(--text-faint)]">
-                    by {shortenAddress(b.developer_address)}
-                  </span>
-                  {b.expires_at && (
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 rounded-lg shimmer" />
+            ))}
+          </div>
+        ) : bounties.length === 0 ? (
+          <div className="py-16 text-center">
+            <p className="text-[var(--text-muted)] text-sm">No open bounties right now.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {bounties.map((b) => (
+              <div
+                key={b.id}
+                className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-[var(--text)] truncate">{b.deployment_id}</span>
+                    <CopyButton text={b.deployment_id} />
+                    <Link
+                      href={`/subgraphs/${b.deployment_id}`}
+                      className="text-xs text-[var(--accent)] hover:underline flex-shrink-0"
+                    >
+                      View
+                    </Link>
+                  </div>
+                  {b.message && (
+                    <p className="text-xs text-[var(--text-muted)] mt-1 italic">&ldquo;{b.message}&rdquo;</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-1">
                     <span className="text-xs text-[var(--text-faint)]">
-                      expires {new Date(b.expires_at).toLocaleDateString()}
+                      by {shortenAddress(b.developer_address)}
                     </span>
+                    {b.expires_at && (
+                      <span className="text-xs text-[var(--text-faint)]">
+                        expires {new Date(b.expires_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="text-base font-semibold text-[var(--accent)]">{b.amount_grt} GRT</span>
+                  {sessionAddress && sessionAddress !== b.developer_address && (
+                    <button
+                      onClick={() => claim(b.id)}
+                      className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
+                    >
+                      Claim
+                    </button>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <span className="text-base font-semibold text-[var(--accent)]">{b.amount_grt} GRT</span>
-                {sessionAddress && sessionAddress !== b.developer_address && (
-                  <button
-                    onClick={() => claim(b.id)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
-                  >
-                    Claim
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Deploy Guide tab
-// ---------------------------------------------------------------------------
-
-function DeployGuideTab() {
-  const NODE_URL = typeof window !== 'undefined' ? `${window.location.origin}/api/studio/node` : 'https://lodestar-dashboard.com/api/studio/node';
-  const IPFS_URL = typeof window !== 'undefined' ? `${window.location.origin}/api/studio/ipfs` : 'https://lodestar-dashboard.com/api/studio/ipfs';
-
-  const step = (n: number, title: string, children: React.ReactNode) => (
-    <div className="flex gap-4">
-      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center text-xs font-bold">{n}</div>
-      <div className="flex-1 pb-6">
-        <p className="font-medium text-[var(--text)] mb-2">{title}</p>
-        {children}
-      </div>
-    </div>
-  );
-
-  const Code = ({ children }: { children: string }) => (
-    <div className="relative group">
-      <pre className="p-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] text-xs font-mono text-[var(--text)] overflow-x-auto whitespace-pre-wrap break-all">
-        {children}
-      </pre>
-      <div className="absolute top-2 right-2">
-        <CopyButton text={children} />
-      </div>
-    </div>
-  );
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Getting Started</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="divide-y divide-[var(--border)]">
-          <div className="pb-6 space-y-4">
-            {step(1, 'Install graph-cli', (
-              <Code>npm install -g @graphprotocol/graph-cli</Code>
-            ))}
-            {step(2, 'Build your subgraph locally', (
-              <Code>graph codegen && graph build</Code>
-            ))}
-            {step(3, 'Register a slug in Studio and generate a deploy key', (
-              <p className="text-sm text-[var(--text-muted)]">Use the <strong>My Subgraphs</strong> tab above to register a slug (e.g. <code className="font-mono text-xs bg-[var(--bg-elevated)] px-1 py-0.5 rounded">acme/uniswap-v3</code>) and generate your deploy key.</p>
-            ))}
-            {step(4, 'Deploy to Lodestar', (
-              <Code>{`graph deploy \\
-  --node ${NODE_URL} \\
-  --ipfs ${IPFS_URL} \\
-  --deploy-key YOUR_DEPLOY_KEY \\
-  your-org/your-subgraph`}</Code>
-            ))}
-            {step(5, 'Track sync progress', (
-              <p className="text-sm text-[var(--text-muted)]">
-                Once deployed, your subgraph appears under <strong>My Subgraphs</strong> with a link to its live indexing status. Lodestar indexes it immediately — no limits, no waiting for E&amp;N approval.
-              </p>
-            ))}
-            {step(6, 'Publish on-chain (optional)', (
-              <p className="text-sm text-[var(--text-muted)]">
-                To make your subgraph discoverable on The Graph Network and attract additional indexers, publish it on-chain via the SubgraphService contract. On-chain publish wizard coming soon.
-              </p>
             ))}
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+
+      {bountyTarget && (
+        <BountyModal sg={bountyTarget} onClose={() => setBountyTarget(null)} />
+      )}
+    </>
   );
 }
 
@@ -754,15 +1187,15 @@ function DeployGuideTab() {
 // Main page
 // ---------------------------------------------------------------------------
 
+type Tab = 'subgraphs' | 'bounties';
+
 export default function StudioPage() {
-  const { address, isConnected } = useAccount();
   const { sessionAddress, signing, error: authError, signIn, signOut } = useStudioSession();
   const [tab, setTab] = useState<Tab>('subgraphs');
 
   const TABS: { id: Tab; label: string }[] = [
     { id: 'subgraphs', label: 'My Subgraphs' },
     { id: 'bounties', label: 'Bounty Board' },
-    { id: 'guide', label: 'Deploy Guide' },
   ];
 
   return (
@@ -770,9 +1203,9 @@ export default function StudioPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Lodestar Studio</h1>
+          <h1 className="text-2xl font-bold text-[var(--text)]">Subgraph Developer Hub</h1>
           <p className="text-[var(--text-muted)] text-sm mt-1">
-            Build on The Graph. Deploy subgraphs instantly — no limits, no gatekeepers.
+            Deploy subgraphs to The Graph Network — no limits, no gatekeepers.
           </p>
         </div>
         {sessionAddress && (
@@ -817,10 +1250,9 @@ export default function StudioPage() {
           </div>
         )}
 
-        {/* Main portal — signed in */}
+        {/* Signed-in view */}
         {sessionAddress && (
           <>
-            {/* Tabs */}
             <div className="flex gap-1 border-b border-[var(--border)]">
               {TABS.map((t) => (
                 <button
@@ -837,21 +1269,11 @@ export default function StudioPage() {
                 </button>
               ))}
             </div>
-
             <div className="pt-2">
               {tab === 'subgraphs' && <MySubgraphsTab sessionAddress={sessionAddress} />}
               {tab === 'bounties' && <BountyBoardTab sessionAddress={sessionAddress} />}
-              {tab === 'guide' && <DeployGuideTab />}
             </div>
           </>
-        )}
-
-        {/* Bounty Board is public — show even without sign-in */}
-        {!sessionAddress && (
-          <div className="mt-8">
-            <h2 className="text-sm font-medium text-[var(--text-muted)] mb-3">Open Bounties</h2>
-            <BountyBoardTab sessionAddress={null} />
-          </div>
         )}
       </ConnectGate>
     </div>
