@@ -67,11 +67,11 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
 
 function CodeBlock({ children }: { children: string }) {
   return (
-    <div className="relative group mt-1.5">
-      <pre className="p-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] text-xs font-mono text-[var(--text)] overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
+    <div className="mt-1.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] overflow-hidden">
+      <pre className="px-3 pt-3 pb-2 text-xs font-mono text-[var(--text)] overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
         {children}
       </pre>
-      <div className="absolute top-2 right-2">
+      <div className="flex justify-end px-2 pb-2">
         <CopyButton text={children} />
       </div>
     </div>
