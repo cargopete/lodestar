@@ -548,7 +548,7 @@ function PublishWizard({
               <div className="w-full p-3 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent)]/20 text-left">
                 <p className="text-xs font-medium text-[var(--accent)] mb-1">Next: attract indexers</p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  Signal GRT on your subgraph to show indexers it&apos;s worth syncing.
+                  Signal GRT on your subgraph to show indexers it&apos;s worth syncing. It may take a few minutes to appear in Curate after publishing.
                 </p>
                 <a
                   href={`/curate?deployment=${sg.deployment_id ?? ''}`}
@@ -1259,7 +1259,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string | null }) {
 // Main page
 // ---------------------------------------------------------------------------
 
-type Tab = 'subgraphs' | 'bounties';
+type Tab = 'subgraphs';
 
 export default function StudioPage() {
   const { sessionAddress, signing, error: authError, signIn, signOut } = useStudioSession();
@@ -1267,7 +1267,6 @@ export default function StudioPage() {
 
   const TABS: { id: Tab; label: string }[] = [
     { id: 'subgraphs', label: 'My Subgraphs' },
-    { id: 'bounties', label: 'Bounty Board' },
   ];
 
   return (
@@ -1348,7 +1347,6 @@ export default function StudioPage() {
             </div>
             <div className="pt-2">
               {tab === 'subgraphs' && <MySubgraphsTab sessionAddress={sessionAddress} />}
-              {tab === 'bounties' && <BountyBoardTab sessionAddress={sessionAddress} />}
             </div>
           </>
         )}
