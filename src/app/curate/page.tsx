@@ -81,11 +81,12 @@ function SignalModal({
   const { isSuccess: approveSuccess } = useWaitForTransactionReceipt({ hash: approveTxHash });
   const { isSuccess: signalSuccess } = useWaitForTransactionReceipt({ hash: signalTxHash });
 
-  if (approveSuccess && step === 'approve') {
-    refetchAllowance();
-    setStep('signal');
-  }
-  if (signalSuccess && step === 'signal') setStep('done');
+  useEffect(() => {
+    if (approveSuccess) { refetchAllowance(); setStep('signal'); }
+  }, [approveSuccess]);
+  useEffect(() => {
+    if (signalSuccess) setStep('done');
+  }, [signalSuccess]);
 
   const balanceGRT = weiToGRT(balance?.toString() ?? '0');
   const insufficient = tokensIn > 0n && balance !== undefined && tokensIn > balance;
@@ -203,7 +204,7 @@ function UnsignalModal({
 
   const { writeContract, data: txHash, isPending } = useWriteContract();
   const { isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
-  if (isSuccess && !done) setDone(true);
+  useEffect(() => { if (isSuccess) setDone(true); }, [isSuccess]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
