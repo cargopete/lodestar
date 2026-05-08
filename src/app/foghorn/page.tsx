@@ -370,6 +370,13 @@ export default function FoghornPage() {
         </Card>
       )}
 
+      {/* Definition */}
+      <p className="text-[11px] text-[var(--text-faint)] italic px-1">
+        <span className="not-italic font-medium text-[var(--text-muted)]">foghorn</span> /ˈfɒɡhɔːn/ <span className="not-italic">n.</span>{' '}
+        a horn sounding a loud warning signal in fog or poor visibility; any signal used to alert or
+        orientate those who cannot see clearly ahead.
+      </p>
+
       {/* Methodology */}
       <div className="text-[11px] text-[var(--text-faint)] leading-relaxed space-y-1 px-1">
         <p>
