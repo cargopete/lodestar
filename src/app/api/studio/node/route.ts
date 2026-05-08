@@ -54,9 +54,16 @@ export async function POST(req: NextRequest) {
     if (ipfsHash) {
       await updateSubgraphDeployment(name, ipfsHash, network).catch(() => {});
     }
+    const explorerBase = 'https://thegraph.com/explorer/subgraphs';
     return NextResponse.json({
       jsonrpc: '2.0',
-      result: { errors: [], warnings: [] },
+      result: {
+        errors: [],
+        warnings: [],
+        playground: `${explorerBase}/${name}`,
+        queries: `${explorerBase}/${name}`,
+        subscriptions: `${explorerBase}/${name}`,
+      },
       id: body.id ?? null,
     });
   }

@@ -490,6 +490,18 @@ function PublishWizard({
                   Your subgraph is now live on The Graph Network.
                 </p>
               </div>
+              <div className="w-full p-3 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent)]/20 text-left">
+                <p className="text-xs font-medium text-[var(--accent)] mb-1">Next: attract indexers</p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Signal GRT on your subgraph to show indexers it&apos;s worth syncing.
+                </p>
+                <a
+                  href="/curate"
+                  className="inline-block mt-2 text-xs font-medium text-[var(--accent)] hover:underline"
+                >
+                  Go to Curate →
+                </a>
+              </div>
               <button
                 onClick={onClose}
                 className="px-6 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
@@ -795,12 +807,8 @@ function SubgraphDetailModal({
                   <CodeBlock>graph codegen && graph build</CodeBlock>
                 </div>
                 <div>
-                  <p className="text-xs text-[var(--text-muted)] mb-0.5">3. Authenticate</p>
-                  <CodeBlock>{`graph auth --node ${NODE_URL} <YOUR_DEPLOY_KEY>`}</CodeBlock>
-                </div>
-                <div>
-                  <p className="text-xs text-[var(--text-muted)] mb-0.5">4. Deploy</p>
-                  <CodeBlock>{`graph deploy --node ${NODE_URL} ${sg.slug}`}</CodeBlock>
+                  <p className="text-xs text-[var(--text-muted)] mb-0.5">3. Deploy</p>
+                  <CodeBlock>{`graph deploy \\\n  --node ${NODE_URL} \\\n  --deploy-key <YOUR_DEPLOY_KEY> \\\n  --ipfs https://api.thegraph.com/ipfs \\\n  ${sg.slug}`}</CodeBlock>
                 </div>
                 <div className="pt-2 border-t border-[var(--border)]">
                   <p className="text-xs text-[var(--text-muted)] mb-1">5. Publish on-chain</p>
