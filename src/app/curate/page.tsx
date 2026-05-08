@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseAbi, parseUnits, formatUnits } from 'viem';
 import { arbitrum } from 'wagmi/chains';
@@ -416,6 +416,7 @@ interface Deployment {
 function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | null }) {
   const [signalTarget, setSignalTarget] = useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = useState('');
+  const autoOpened = useRef(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['curate-discover'],
@@ -482,23 +483,26 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
   useEffect(() => {
     if (!highlightDeployment || isLoading) return;
     setSearch(highlightDeployment);
+    if (autoOpened.current) return;
     const match = ranked.find((d) => d.ipfsHash === highlightDeployment);
     if (match) {
+      autoOpened.current = true;
       setSignalTarget({ id: match.id, name: match.displayName ?? shortenAddress(match.ipfsHash, 6) });
     }
   }, [highlightDeployment, isLoading, ranked]);
 
   // Once the specific lookup resolves (from Dock routing), auto-open signal modal
   useEffect(() => {
-    if (!highlightDeployment || signalTarget) return;
+    if (!highlightDeployment || autoOpened.current) return;
     if (specificData?.data?.length) {
+      autoOpened.current = true;
       const d = specificData.data[0];
       setSignalTarget({ id: d.id, name: (d as { displayName?: string | null }).displayName ?? shortenAddress(d.ipfsHash, 6) });
     } else if (specificData !== undefined && !specificFetching) {
-      // Deployment not in protocol data yet (no signal/stake) — signal directly via hash
+      autoOpened.current = true;
       setSignalTarget({ id: ipfsHashToBytes32(highlightDeployment), name: shortenAddress(highlightDeployment, 6) });
     }
-  }, [highlightDeployment, specificData, specificFetching, signalTarget]);
+  }, [highlightDeployment, specificData, specificFetching]);
 
   return (
     <>
