@@ -5,7 +5,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { parseAbi, parseUnits, formatUnits } from 'viem';
 import { arbitrum } from 'wagmi/chains';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCuratorPortfolio } from '@/hooks/useNetworkStats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -56,6 +56,7 @@ function SignalModal({
   onClose: () => void;
 }) {
   const { address } = useAccount();
+  const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
   const [step, setStep] = useState<'approve' | 'signal' | 'done'>('approve');
 
@@ -85,7 +86,10 @@ function SignalModal({
     if (approveSuccess) { refetchAllowance(); setStep('signal'); }
   }, [approveSuccess]);
   useEffect(() => {
-    if (signalSuccess) setStep('done');
+    if (signalSuccess) {
+      setStep('done');
+      queryClient.invalidateQueries({ queryKey: ['curatorPortfolio'] });
+    }
   }, [signalSuccess]);
 
   const balanceGRT = weiToGRT(balance?.toString() ?? '0');
