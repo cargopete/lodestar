@@ -145,7 +145,7 @@ export async function computeMonthlyScores(
       COUNT(*) FILTER (WHERE new_value > old_value) as increase_count
     FROM parameter_changes
     WHERE param_name = 'reward_cut'
-      AND detected_at >= NOW() - INTERVAL '12 months'
+      AND created_at >= NOW() - INTERVAL '12 months'
     GROUP BY indexer_address
   `;
   const cutMap = new Map(cutChanges.map((r) => [r.indexer_address, {

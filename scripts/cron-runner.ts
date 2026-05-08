@@ -139,7 +139,7 @@ async function main() {
           month: now.getUTCMonth() + 1,
         });
         // Push to Redis so the Vercel frontend can read it
-        if (process.env.UPSTASH_REDIS_REST_URL) {
+        if (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) {
           const { cacheSet } = await import('../src/lib/cache.js');
           await cacheSet('lodestar:leaderboard:latest', {
             periodStart: result.entries[0]?.period_start,
