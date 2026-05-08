@@ -39,6 +39,10 @@
     {
       "path": "/api/cron/check-conversions",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/warm-tokens",
+      "schedule": "*/4 * * * *"
     }
   ]
 }

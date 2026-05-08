@@ -48,7 +48,7 @@ export function ProvisionsPanel({ provisions, isLoading, selfStakeGRT }: Provisi
         provisioned,
         allocated,
         thawing,
-        available: provisioned - thawing,
+        available: Math.max(0, provisioned - allocated - thawing),
         percent: total > 0 ? (provisioned / total) * 100 : 0,
         color: SERVICE_COLORS[i % SERVICE_COLORS.length],
       };
@@ -67,7 +67,7 @@ export function ProvisionsPanel({ provisions, isLoading, selfStakeGRT }: Provisi
           provisioned: acc.provisioned + tokens,
           allocated: acc.allocated + allocated,
           thawing: acc.thawing + thawing,
-          available: acc.available + (tokens - thawing),
+          available: acc.available + Math.max(0, tokens - allocated - thawing),
         };
       },
       { provisioned: 0, allocated: 0, thawing: 0, available: 0 }
@@ -242,7 +242,7 @@ function ProvisionCard({ provision, color }: ProvisionCardProps) {
   const tokens = weiToGRT(provision.tokensProvisioned);
   const allocated = weiToGRT(provision.tokensAllocated);
   const thawing = weiToGRT(provision.tokensThawing);
-  const available = tokens - thawing;
+  const available = Math.max(0, tokens - allocated - thawing);
   const allocPercent = tokens > 0 ? (allocated / tokens) * 100 : 0;
   const thawingPercent = tokens > 0 ? (thawing / tokens) * 100 : 0;
 

@@ -133,4 +133,81 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   return getRedis().get<T>(key);
 }
 
+// ---------------------------------------------------------------------------
+// Stale-while-revalidate cache (Redis-backed)
+//
+// Stores { data, freshUntil } envelopes. A request after the soft TTL expires
+// gets the stale value immediately while a background refresh runs. The Redis
+// key itself is kept alive for 4× the soft TTL so stale data is available
+// during a slow refresh cycle or a cron hiccup.
+// ---------------------------------------------------------------------------
+
+interface SwrEntry<T> {
+  data: T;
+  freshUntil: number; // epoch ms
+}
+
+const swrInflight = new Set<string>();
+
+export async function cachedSwr<T>(
+  key: string,
+  ttlSeconds: number,
+  fetcher: () => Promise<T>
+): Promise<T> {
+  const hardTtl = ttlSeconds * 4;
+
+  if (hasRedis()) {
+    try {
+      const entry = await getRedis().get<SwrEntry<T>>(key);
+      if (entry != null) {
+        if (entry.freshUntil > Date.now()) return entry.data;
+        // Stale — serve immediately, kick off background refresh
+        if (!swrInflight.has(key)) {
+          swrInflight.add(key);
+          (async () => {
+            try {
+              const fresh = await fetcher();
+              await getRedis().set(
+                key,
+                { data: fresh, freshUntil: Date.now() + ttlSeconds * 1000 },
+                { ex: hardTtl }
+              );
+            } catch (e) {
+              log.cache.warn({ err: e, key }, 'SWR background refresh failed');
+            } finally {
+              swrInflight.delete(key);
+            }
+          })();
+        }
+        return entry.data;
+      }
+    } catch (e) {
+      log.cache.warn({ err: e, key }, 'Redis SWR read failed');
+    }
+    // Cold miss — block and compute
+    const fresh = await fetcher();
+    try {
+      await getRedis().set(
+        key,
+        { data: fresh, freshUntil: Date.now() + ttlSeconds * 1000 },
+        { ex: hardTtl }
+      );
+    } catch (e) {
+      log.cache.warn({ err: e, key }, 'Redis SWR write failed');
+    }
+    return fresh;
+  }
+
+  // No Redis — fall back to the in-memory cached() which already has SWR
+  return cached(key, ttlSeconds, fetcher);
+}
+
+/**
+ * Write a SWR-formatted entry directly to Redis (used by warmup cron jobs).
+ */
+export async function cacheSetSwr<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
+  const entry: SwrEntry<T> = { data: value, freshUntil: Date.now() + ttlSeconds * 1000 };
+  await getRedis().set(key, entry, { ex: ttlSeconds * 4 });
+}
+
 export { getRedis, hasRedis };

@@ -732,9 +732,10 @@ function SubgraphDetailModal({
   // A proper subgraphID is a decimal number string; an old tx hash starts with '0x'
   const subgraphNftId = sg.published_subgraph_id && !sg.published_subgraph_id.startsWith('0x')
     ? sg.published_subgraph_id : null;
-  // There's a new deployment to push when deployment_id differs from what was last published
+  // There's a new deployment to push when deployment_id differs from what was last published.
+  // If last_published_deployment_id is null (pre-feature), we have no baseline — treat as no new deployment.
   const hasNewDeployment = Boolean(
-    sg.deployment_id && sg.deployment_id !== sg.last_published_deployment_id,
+    sg.deployment_id && sg.last_published_deployment_id !== null && sg.deployment_id !== sg.last_published_deployment_id,
   );
   // Can publish first time, or update version when NFT ID is resolved and there's a new deployment
   const canPublish = Boolean(sg.deployment_id) && (!isPublished || (subgraphNftId !== null && hasNewDeployment));
@@ -840,9 +841,9 @@ function SubgraphDetailModal({
                     Update Version
                   </button>
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs text-[var(--text)] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    {!hasNewDeployment
-                      ? 'No new deployment — run graph deploy again (step 3) first'
-                      : 'Resolving on-chain subgraph ID — try again in a moment'}
+                    {subgraphNftId === null
+                      ? 'Resolving on-chain subgraph ID — try again in a moment'
+                      : 'No new deployment — run graph deploy again (step 3) first'}
                     <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[var(--border)]" />
                   </div>
                 </div>

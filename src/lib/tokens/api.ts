@@ -14,10 +14,7 @@ const BASE_URL = 'https://token-api.thegraph.com';
 function authHeaders(): HeadersInit {
   const key = process.env.TOKEN_API_KEY;
   if (!key) throw new Error('TOKEN_API_KEY not set');
-  // The API accepts the JWT via Authorization: Bearer. A post-PR-#7 cleanup
-  // switched to X-Api-Key but that scheme returns 401 against our existing
-  // JWT (verified 2026-05-07). Reverting locally; track upstream resolution.
-  return { Authorization: `Bearer ${key}` };
+  return { 'X-Api-Key': key };
 }
 
 interface ApiEnvelope<T> {
