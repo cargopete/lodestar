@@ -342,6 +342,7 @@ function PublishWizard({
     versionMetaBytes32: `0x${string}`;
   } | null>(null);
   const [minedTxHash, setMinedTxHash] = useState<`0x${string}` | undefined>();
+  const [versionLabel, setVersionLabel] = useState('');
 
   const { writeContract, isPending: walletPending } = useWriteContract({
     mutation: {
@@ -384,6 +385,7 @@ function PublishWizard({
         body: JSON.stringify({
           displayName: sg.display_name,
           description: sg.description,
+          versionLabel: versionLabel.trim() || undefined,
         }),
       });
       setMetaHashes(data);
@@ -441,19 +443,23 @@ function PublishWizard({
           {step === 'confirm' && (
             <>
               <p className="text-sm text-[var(--text-muted)]">
-                This uploads your metadata to IPFS and calls{' '}
-                <code className="font-mono text-xs bg-[var(--bg-elevated)] px-1 rounded">
-                  GNS.{isNewVersion ? 'publishNewVersion' : 'publishNewSubgraph'}
-                </code>{' '}
-                on Arbitrum One.
+                {isNewVersion
+                  ? <>Publishing a new version — calls <code className="font-mono text-xs bg-[var(--bg-elevated)] px-1 rounded">GNS.publishNewVersion</code> on Arbitrum One.</>
+                  : <>Uploads metadata to IPFS and calls <code className="font-mono text-xs bg-[var(--bg-elevated)] px-1 rounded">GNS.publishNewSubgraph</code> on Arbitrum One.</>}
               </p>
               <div className="space-y-0 text-sm divide-y divide-[var(--border)] border border-[var(--border)] rounded-lg overflow-hidden">
                 <div className="flex gap-3 px-4 py-2.5">
                   <span className="text-[var(--text-faint)] w-28 flex-shrink-0 text-xs">Subgraph</span>
                   <span className="text-[var(--text)] font-mono text-xs truncate">{sg.slug}</span>
                 </div>
+                {isNewVersion && sg.published_subgraph_id && (
+                  <div className="flex gap-3 px-4 py-2.5">
+                    <span className="text-[var(--text-faint)] w-28 flex-shrink-0 text-xs">Subgraph #</span>
+                    <span className="text-[var(--text)] font-mono text-xs truncate">{sg.published_subgraph_id}</span>
+                  </div>
+                )}
                 <div className="flex gap-3 px-4 py-2.5">
-                  <span className="text-[var(--text-faint)] w-28 flex-shrink-0 text-xs">Deployment ID</span>
+                  <span className="text-[var(--text-faint)] w-28 flex-shrink-0 text-xs">New deployment</span>
                   <span className="text-[var(--text)] font-mono text-xs truncate">{sg.deployment_id}</span>
                 </div>
                 {sg.display_name && (
@@ -462,6 +468,22 @@ function PublishWizard({
                     <span className="text-[var(--text)] text-sm">{sg.display_name}</span>
                   </div>
                 )}
+              </div>
+              <div>
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
+                  Version label <span className="text-[var(--text-faint)]">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="v0.0.1"
+                  value={versionLabel}
+                  onChange={(e) => setVersionLabel(e.target.value)}
+                  className={cn(
+                    'w-full px-3 py-2 text-sm font-mono rounded-[var(--radius-button)]',
+                    'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
+                    'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
+                  )}
+                />
               </div>
               <p className="text-xs text-[var(--text-faint)]">
                 A wallet transaction is required. Gas on Arbitrum is usually &lt;$0.01.
@@ -875,7 +897,7 @@ function SubgraphDetailModal({
                   <CodeBlock>{`graph deploy \\\n  --node ${NODE_URL} \\\n  --deploy-key <YOUR_DEPLOY_KEY> \\\n  --ipfs https://api.thegraph.com/ipfs \\\n  ${sg.slug}`}</CodeBlock>
                 </div>
                 <div className="pt-2 border-t border-[var(--border)]">
-                  <p className="text-xs text-[var(--text-muted)] mb-1">5. Publish on-chain</p>
+                  <p className="text-xs text-[var(--text-muted)] mb-1">4. Publish on-chain</p>
                   <p className="text-xs text-[var(--text-faint)]">
                     {!sg.deployment_id
                       ? 'Deploy first, then click Publish to make your subgraph discoverable on The Graph Network.'

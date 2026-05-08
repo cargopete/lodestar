@@ -391,11 +391,17 @@ function IndexingHealthSection({ hash }: { hash: string }) {
           <CardTitle>Indexing Health</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-[var(--text-muted)] py-4">
-            {error instanceof Error && error.message.includes('404')
-              ? 'No active allocations found for this deployment.'
-              : 'Unable to fetch indexing status. The deployment may not have active allocations.'}
-          </p>
+          <div className="py-4 space-y-2">
+            <p className="text-sm text-[var(--text-muted)]">
+              {error instanceof Error && error.message.includes('404')
+                ? 'No active allocations found for this deployment.'
+                : 'Unable to fetch indexing status. The deployment may not have active allocations.'}
+            </p>
+            <p className="text-sm text-[var(--text-muted)]">
+              Signal GRT to this subgraph to get Indexers to pick it up and start allocating to it.{' '}
+              <a href={`/curate?deployment=${hash}`} className="text-[var(--accent)] hover:underline">Go to Curate →</a>
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
@@ -434,7 +440,13 @@ function IndexingHealthSection({ hash }: { hash: string }) {
         </CardHeader>
         <CardContent>
           {data.indexers.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)] py-4">No indexers have active allocations on this deployment.</p>
+            <div className="py-4 space-y-2">
+              <p className="text-sm text-[var(--text-muted)]">No indexers have active allocations on this deployment.</p>
+              <p className="text-sm text-[var(--text-muted)]">
+                Signal GRT to this subgraph to get Indexers to pick it up and start allocating to it.{' '}
+                <a href={`/curate?deployment=${hash}`} className="text-[var(--accent)] hover:underline">Go to Curate →</a>
+              </p>
+            </div>
           ) : (
             <>
               <div className="hidden md:block overflow-x-auto">
