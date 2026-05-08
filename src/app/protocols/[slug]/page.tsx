@@ -20,6 +20,7 @@ import { useProtocolDetail } from '@/hooks/useProtocols';
 import { formatUSD } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
+import { ProtocolLogo, buildProtocolSources } from '@/components/ProtocolLogo';
 
 const TOOLTIP_STYLE = {
   contentStyle: {
@@ -229,7 +230,12 @@ function ProtocolHeader({ config }: { config: ProtocolConfig }) {
       </div>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: config.color }} />
+          <ProtocolLogo
+            name={config.name}
+            color={config.color}
+            sources={buildProtocolSources(config.family ?? config.slug)}
+            size={36}
+          />
           <div>
             <h1 className="text-2xl font-semibold text-[var(--text)]">{config.name}</h1>
             <p className="text-sm text-[var(--text-muted)] mt-0.5 max-w-2xl">{config.description}</p>
@@ -519,7 +525,12 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
         </div>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: config.color }} />
+            <ProtocolLogo
+            name={config.name}
+            color={config.color}
+            sources={buildProtocolSources(config.family ?? config.slug)}
+            size={36}
+          />
             <div>
               <h1 className="text-2xl font-semibold text-[var(--text)]">{config.name}</h1>
               <p className="text-sm text-[var(--text-muted)] mt-0.5 max-w-2xl">{config.description}</p>

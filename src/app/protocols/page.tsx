@@ -7,6 +7,7 @@ import { useProtocolsDirectory } from '@/hooks/useProtocols';
 import type { ProtocolSummary } from '@/lib/protocols/fetcher';
 import { formatUSD } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { ProtocolLogo, buildProtocolSources, buildNetworkSources } from '@/components/ProtocolLogo';
 
 const CATEGORY_STYLES: Record<string, string> = {
   'DEX': 'bg-[var(--accent)]/10 text-[var(--accent)]',
@@ -71,16 +72,44 @@ function SortableHeader({ label, active, dir, onClick, className }: SortableHead
   );
 }
 
-interface DirectoryRow {
+interface ChildEntry {
   config: ProtocolConfig;
   summary: ProtocolSummary | null | undefined;
   failed: boolean;
 }
 
-const METRIC_SORT_VALUE: Record<Exclude<SortKey, 'category'>, (s: ProtocolSummary) => number> = {
-  tvl: (s) => s.tvlUSD,
-  volume: (s) => s.volume30dUSD,
-  fees: (s) => s.fees30dUSD,
+interface DirectoryRow {
+  /** Stable key — slug for singletons, family slug for families. */
+  key: string;
+  /** True when this row aggregates multiple per-chain entries. */
+  isFamily: boolean;
+  /** Display name (familyLabel for families, protocol name otherwise). */
+  name: string;
+  category: ProtocolCategory;
+  color: string;
+  /**
+   * For singletons, this is the single child. For families, the
+   * representative child (highest TVL) — used for the dot color and
+   * primary navigation target.
+   */
+  primary: ChildEntry;
+  children: ChildEntry[];
+  /** Aggregated TVL for the row (sum across children, or single value). */
+  tvlUSD: number;
+  volume30dUSD: number;
+  fees30dUSD: number;
+  /** True when at least one child has data; false if every child failed/loading. */
+  hasData: boolean;
+  /** Number of children that explicitly failed. Singletons: 0 or 1. */
+  failedCount: number;
+  /** True when every child explicitly failed. */
+  allFailed: boolean;
+}
+
+const METRIC_SORT_VALUE: Record<Exclude<SortKey, 'category'>, (r: DirectoryRow) => number> = {
+  tvl: (r) => r.tvlUSD,
+  volume: (r) => r.volume30dUSD,
+  fees: (r) => r.fees30dUSD,
 };
 
 export default function ProtocolsPage() {
@@ -88,38 +117,78 @@ export default function ProtocolsPage() {
   const [category, setCategory] = useState<'All' | ProtocolCategory>('All');
   const [sortKey, setSortKey] = useState<SortKey>('category');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const rows: DirectoryRow[] = useMemo(() => {
-    // Look up by slug, not array index. Index-coupling silently dashed any
-    // protocol whose slug post-dated the client's cached summaries array
-    // until staleTime expired, so we now key the API payload by slug and
-    // resolve here.
-    const all: DirectoryRow[] = PROTOCOLS.map((config) => {
+    // Build per-config child entries first.
+    const allChildren: ChildEntry[] = PROTOCOLS.map((config) => {
       const entry = summaries ? summaries[config.slug] : undefined;
       return {
         config,
         summary: entry ?? undefined,
-        // `null` is an explicit fetch failure; `undefined` means the response
-        // simply doesn't have an entry for this slug yet (e.g. stale client
-        // cache before refetch) — treat as still loading rather than failed.
         failed: !!summaries && entry === null,
       };
     });
 
-    const filtered = category === 'All'
-      ? all
-      : all.filter((r) => r.config.category === category);
+    // Bucket children by family (or by slug for singletons).
+    const buckets = new Map<string, ChildEntry[]>();
+    for (const child of allChildren) {
+      const key = child.config.family ?? child.config.slug;
+      const arr = buckets.get(key);
+      if (arr) arr.push(child);
+      else buckets.set(key, [child]);
+    }
 
-    const sorted = [...filtered].sort((a, b) => {
+    // Apply category filter at the bucket level — a family row passes if
+    // any child matches. (All children of a family share a category in
+    // practice, but we don't enforce it here.)
+    const directoryRows: DirectoryRow[] = [];
+    for (const [key, children] of buckets) {
+      const filtered = category === 'All'
+        ? children
+        : children.filter((c) => c.config.category === category);
+      if (filtered.length === 0) continue;
+
+      const isFamily = filtered.length > 1 || (filtered[0].config.family != null && filtered.length > 0);
+      // Pick the highest-TVL child (with data) as the primary representative.
+      const sortedChildren = [...filtered].sort((a, b) => {
+        const at = a.summary?.tvlUSD ?? -1;
+        const bt = b.summary?.tvlUSD ?? -1;
+        return bt - at;
+      });
+      const primary = sortedChildren[0];
+
+      const withData = filtered.filter((c) => !c.failed && c.summary);
+      const tvlUSD = withData.reduce((s, c) => s + (c.summary?.tvlUSD ?? 0), 0);
+      const volume30dUSD = withData.reduce((s, c) => s + (c.summary?.volume30dUSD ?? 0), 0);
+      const fees30dUSD = withData.reduce((s, c) => s + (c.summary?.fees30dUSD ?? 0), 0);
+      const failedCount = filtered.filter((c) => c.failed).length;
+
+      directoryRows.push({
+        key,
+        isFamily: isFamily && filtered.length > 1,
+        name: isFamily && filtered.length > 1 ? (primary.config.familyLabel ?? primary.config.name) : primary.config.name,
+        category: primary.config.category,
+        color: primary.config.color,
+        primary,
+        children: sortedChildren,
+        tvlUSD,
+        volume30dUSD,
+        fees30dUSD,
+        hasData: withData.length > 0,
+        failedCount,
+        allFailed: !!summaries && failedCount === filtered.length && filtered.length > 0,
+      });
+    }
+
+    const sorted = [...directoryRows].sort((a, b) => {
       if (sortKey === 'category') {
-        const catDelta = CATEGORY_ORDER[a.config.category] - CATEGORY_ORDER[b.config.category];
+        const catDelta = CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category];
         if (catDelta !== 0) return catDelta;
-        const av = a.summary?.tvlUSD ?? -1;
-        const bv = b.summary?.tvlUSD ?? -1;
-        return bv - av;
+        return b.tvlUSD - a.tvlUSD;
       }
-      const av = a.summary ? METRIC_SORT_VALUE[sortKey](a.summary) : -1;
-      const bv = b.summary ? METRIC_SORT_VALUE[sortKey](b.summary) : -1;
+      const av = a.hasData ? METRIC_SORT_VALUE[sortKey](a) : -1;
+      const bv = b.hasData ? METRIC_SORT_VALUE[sortKey](b) : -1;
       return sortDir === 'desc' ? bv - av : av - bv;
     });
     return sorted;
@@ -133,6 +202,30 @@ export default function ProtocolsPage() {
       setSortDir('desc');
     }
   }
+
+  function toggleExpand(key: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  // Flatten rows into render order: family rows followed by their children
+  // when expanded. Singletons render as plain rows.
+  const renderRows: Array<
+    | { kind: 'row'; row: DirectoryRow; index: number }
+    | { kind: 'child'; child: ChildEntry; familyKey: string }
+  > = [];
+  rows.forEach((row, i) => {
+    renderRows.push({ kind: 'row', row, index: i });
+    if (row.isFamily && expanded.has(row.key)) {
+      for (const child of row.children) {
+        renderRows.push({ kind: 'child', child, familyKey: row.key });
+      }
+    }
+  });
 
   return (
     <div className="space-y-6">
@@ -208,43 +301,116 @@ export default function ProtocolsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map(({ config: protocol, summary, failed }, i) => (
-                    <tr
-                      key={protocol.slug}
-                      className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-elevated)] transition-colors"
-                    >
-                      <td className="py-3 pr-4 text-[var(--text-faint)] font-mono text-xs">{i + 1}</td>
-                      <td className="py-3 pr-4">
-                        <Link
-                          href={`/protocols/${protocol.slug}`}
-                          className="flex items-center gap-2.5 group"
+                  {renderRows.map((entry) => {
+                    if (entry.kind === 'row') {
+                      const { row, index } = entry;
+                      const isOpen = expanded.has(row.key);
+                      const showDash = row.allFailed;
+                      return (
+                        <tr
+                          key={row.key}
+                          className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-elevated)] transition-colors"
                         >
-                          <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                            style={{ backgroundColor: protocol.color }}
-                          />
-                          <span className="font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
-                            {protocol.name}
-                          </span>
-                          <span className="text-[10px] text-[var(--text-faint)] hidden sm:inline">
-                            {protocol.chains.join(', ')}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="py-3 pr-4">
-                        <CategoryBadge category={protocol.category} />
-                      </td>
-                      <td className="py-3 pr-4 text-right font-mono text-[var(--text)] whitespace-nowrap">
-                        {failed ? '—' : summary ? formatUSD(summary.tvlUSD) : <span className="text-[var(--text-faint)]">—</span>}
-                      </td>
-                      <td className="py-3 pr-4 text-right font-mono text-[var(--text-muted)] text-xs whitespace-nowrap">
-                        {failed ? '—' : summary ? formatUSD(summary.volume30dUSD) : '—'}
-                      </td>
-                      <td className="py-3 text-right font-mono text-[var(--accent)] text-xs whitespace-nowrap">
-                        {failed ? '—' : summary ? formatUSD(summary.fees30dUSD) : '—'}
-                      </td>
-                    </tr>
-                  ))}
+                          <td className="py-3 pr-4 text-[var(--text-faint)] font-mono text-xs">{index + 1}</td>
+                          <td className="py-3 pr-4">
+                            {row.isFamily ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpand(row.key)}
+                                className="flex items-center gap-2.5 group w-full text-left"
+                                aria-expanded={isOpen}
+                              >
+                                <span className="text-[10px] text-[var(--text-faint)] w-3 inline-block">
+                                  {isOpen ? '▼' : '▶'}
+                                </span>
+                                <ProtocolLogo
+                                  name={row.name}
+                                  color={row.color}
+                                  sources={buildProtocolSources(row.primary.config.family ?? row.primary.config.slug)}
+                                  size={20}
+                                />
+                                <span className="font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                                  {row.name}
+                                </span>
+                                <span className="text-[10px] text-[var(--text-faint)] hidden sm:inline">
+                                  {row.children.length} chains
+                                </span>
+                              </button>
+                            ) : (
+                              <Link
+                                href={`/protocols/${row.primary.config.slug}`}
+                                className="flex items-center gap-2.5 group"
+                              >
+                                <span className="text-[10px] w-3 inline-block" />
+                                <ProtocolLogo
+                                  name={row.name}
+                                  color={row.color}
+                                  sources={buildProtocolSources(row.primary.config.family ?? row.primary.config.slug)}
+                                  size={20}
+                                />
+                                <span className="font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                                  {row.name}
+                                </span>
+                                <span className="text-[10px] text-[var(--text-faint)] hidden sm:inline">
+                                  {row.primary.config.chains.join(', ')}
+                                </span>
+                              </Link>
+                            )}
+                          </td>
+                          <td className="py-3 pr-4">
+                            <CategoryBadge category={row.category} />
+                          </td>
+                          <td className="py-3 pr-4 text-right font-mono text-[var(--text)] whitespace-nowrap">
+                            {showDash ? '—' : row.hasData ? formatUSD(row.tvlUSD) : <span className="text-[var(--text-faint)]">—</span>}
+                          </td>
+                          <td className="py-3 pr-4 text-right font-mono text-[var(--text-muted)] text-xs whitespace-nowrap">
+                            {showDash ? '—' : row.hasData ? formatUSD(row.volume30dUSD) : '—'}
+                          </td>
+                          <td className="py-3 text-right font-mono text-[var(--accent)] text-xs whitespace-nowrap">
+                            {showDash ? '—' : row.hasData ? formatUSD(row.fees30dUSD) : '—'}
+                          </td>
+                        </tr>
+                      );
+                    }
+                    const { child } = entry;
+                    const summary = child.summary ?? null;
+                    return (
+                      <tr
+                        key={`${entry.familyKey}-${child.config.slug}`}
+                        className="border-b border-[var(--border)] last:border-0 bg-[var(--bg-elevated)]/40 hover:bg-[var(--bg-elevated)] transition-colors"
+                      >
+                        <td className="py-2.5 pr-4" />
+                        <td className="py-2.5 pr-4 pl-9">
+                          <Link
+                            href={`/protocols/${child.config.slug}`}
+                            className="flex items-center gap-2.5 group"
+                          >
+                            <ProtocolLogo
+                              name={child.config.chains[0] ?? child.config.name}
+                              color={child.config.color}
+                              sources={buildNetworkSources(child.config.chains[0] ?? '')}
+                              size={16}
+                            />
+                            <span className="text-xs text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors">
+                              {child.config.chains.join(' / ')}
+                            </span>
+                          </Link>
+                        </td>
+                        <td className="py-2.5 pr-4">
+                          <CategoryBadge category={child.config.category} />
+                        </td>
+                        <td className="py-2.5 pr-4 text-right font-mono text-[var(--text-muted)] text-xs whitespace-nowrap">
+                          {child.failed ? '—' : summary ? formatUSD(summary.tvlUSD) : '—'}
+                        </td>
+                        <td className="py-2.5 pr-4 text-right font-mono text-[var(--text-faint)] text-[11px] whitespace-nowrap">
+                          {child.failed ? '—' : summary ? formatUSD(summary.volume30dUSD) : '—'}
+                        </td>
+                        <td className="py-2.5 text-right font-mono text-[var(--accent)]/70 text-[11px] whitespace-nowrap">
+                          {child.failed ? '—' : summary ? formatUSD(summary.fees30dUSD) : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {rows.length === 0 && (
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-xs text-[var(--text-faint)]">
