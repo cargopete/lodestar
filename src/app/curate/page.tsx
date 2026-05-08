@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseAbi, parseUnits, formatUnits } from 'viem';
 import { arbitrum } from 'wagmi/chains';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { CONTRACTS } from '@/lib/wallet';
 import { weiToGRT, formatGRT, formatNumber, shortenAddress, cn } from '@/lib/utils';
+import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import type { Signal } from '@/lib/queries';
 
 // ---------------------------------------------------------------------------
@@ -412,8 +413,9 @@ interface Deployment {
   versions: { subgraph: { metadata: { displayName: string } | null } }[];
 }
 
-function DiscoverTab() {
+function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | null }) {
   const [signalTarget, setSignalTarget] = useState<{ id: string; name: string } | null>(null);
+  const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['curate-discover'],
@@ -441,20 +443,75 @@ function DiscoverTab() {
       .slice(0, 25);
   }, [data]);
 
+  // When a deployment is passed from the Dock, pre-fill search and auto-open its Signal modal.
+  useEffect(() => {
+    if (!highlightDeployment || isLoading) return;
+    setSearch(highlightDeployment);
+    const match = ranked.find((d) => d.ipfsHash === highlightDeployment);
+    if (match) {
+      setSignalTarget({ id: match.id, name: match.displayName ?? shortenAddress(match.ipfsHash, 6) });
+    } else {
+      // Subgraph not yet indexed in top 100 — open modal directly via bytes32 conversion.
+      try {
+        const bytes32 = ipfsHashToBytes32(highlightDeployment);
+        setSignalTarget({ id: bytes32, name: shortenAddress(highlightDeployment, 6) });
+      } catch {}
+    }
+  }, [highlightDeployment, isLoading, ranked]);
+
+  const filtered = useMemo(() => {
+    if (!search) return ranked;
+    const q = search.toLowerCase();
+    return ranked.filter((d) =>
+      d.ipfsHash.toLowerCase().includes(q) ||
+      (d.displayName ?? '').toLowerCase().includes(q),
+    );
+  }, [ranked, search]);
+
   return (
     <>
       <div className="space-y-3">
-        <p className="text-sm text-[var(--text-muted)]">
-          Ranked by query fees generated relative to current signal — higher ratio means more fees earned per GRT curated.
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <p className="text-sm text-[var(--text-muted)] flex-1">
+            Ranked by query fees generated relative to current signal — higher ratio means more fees earned per GRT curated.
+          </p>
+          <input
+            type="text"
+            placeholder="Search by Qm hash or name…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={cn(
+              'w-full sm:w-64 px-3 py-1.5 text-sm rounded-[var(--radius-button)]',
+              'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
+              'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
+            )}
+          />
+        </div>
 
         {isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-14 rounded-lg shimmer" />)}
           </div>
+        ) : filtered.length === 0 && search ? (
+          <div className="py-10 text-center space-y-3">
+            <p className="text-sm text-[var(--text-muted)]">No results in top 100.</p>
+            {search.startsWith('Qm') && (
+              <button
+                onClick={() => {
+                  try {
+                    const bytes32 = ipfsHashToBytes32(search);
+                    setSignalTarget({ id: bytes32, name: shortenAddress(search, 6) });
+                  } catch {}
+                }}
+                className="px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
+              >
+                Signal this deployment directly →
+              </button>
+            )}
+          </div>
         ) : (
           <div className="space-y-2">
-            {ranked.map((d, idx) => (
+            {filtered.map((d, idx) => (
               <div key={d.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent-hover)] transition-colors">
                 <span className="text-xs font-mono text-[var(--text-faint)] w-6 flex-shrink-0">#{idx + 1}</span>
                 <div className="flex-1 min-w-0">
@@ -515,6 +572,16 @@ function DiscoverTab() {
 export default function CuratePage() {
   const { address, isConnected } = useAccount();
   const [tab, setTab] = useState<Tab>('positions');
+  const [highlightDeployment, setHighlightDeployment] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const d = params.get('deployment');
+    if (d) {
+      setHighlightDeployment(d);
+      setTab('discover');
+    }
+  }, []);
 
   const TABS = [
     { id: 'positions' as Tab, label: 'My Positions' },
@@ -588,7 +655,7 @@ export default function CuratePage() {
 
           <div className="pt-2">
             {tab === 'positions' && <MyPositionsTab address={address!} />}
-            {tab === 'discover' && <DiscoverTab />}
+            {tab === 'discover' && <DiscoverTab highlightDeployment={highlightDeployment} />}
           </div>
         </>
       )}
@@ -597,7 +664,7 @@ export default function CuratePage() {
       {!isConnected && (
         <div className="mt-4">
           <h2 className="text-sm font-medium text-[var(--text-muted)] mb-3">Top Curation Opportunities</h2>
-          <DiscoverTab />
+          <DiscoverTab highlightDeployment={highlightDeployment} />
         </div>
       )}
     </div>

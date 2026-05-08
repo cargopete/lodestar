@@ -551,7 +551,7 @@ function PublishWizard({
                   Signal GRT on your subgraph to show indexers it&apos;s worth syncing.
                 </p>
                 <a
-                  href="/curate"
+                  href={`/curate?deployment=${sg.deployment_id ?? ''}`}
                   className="inline-block mt-2 text-xs font-medium text-[var(--accent)] hover:underline"
                 >
                   Go to Curate →
