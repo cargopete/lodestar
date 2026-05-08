@@ -160,7 +160,7 @@ function SubgraphCard({ sg, onClick }: { sg: StudioSubgraph; onClick: () => void
   return (
     <button
       onClick={onClick}
-      className="w-full text-left flex items-center gap-4 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent-hover)] hover:bg-[var(--bg-surface)] transition-all"
+      className="w-full text-left flex items-center gap-4 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent-hover)] hover:bg-[var(--bg-surface)] transition-all cursor-pointer"
     >
       <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center">
         <svg className="w-5 h-5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
