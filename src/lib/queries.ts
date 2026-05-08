@@ -143,7 +143,7 @@ export const INDEXER_DETAILS_QUERY = gql`
           stakedTokens
         }
       }
-      delegators(first: 100) {
+      delegators(first: 100, orderBy: stakedTokens, orderDirection: desc) {
         id
         stakedTokens
         shareAmount

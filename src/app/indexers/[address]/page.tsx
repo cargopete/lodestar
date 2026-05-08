@@ -1008,7 +1008,7 @@ export default function IndexerDetailPage({
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {indexer.delegators.slice(0, 10).map((del, i) => {
+              {[...indexer.delegators].sort((a, b) => { const ba = BigInt(b.stakedTokens), aa = BigInt(a.stakedTokens); return ba > aa ? 1 : ba < aa ? -1 : 0; }).slice(0, 10).map((del, i) => {
                 const delStake = weiToGRT(del.stakedTokens);
                 const sharePercent = delegated > 0 ? (delStake / delegated) * 100 : 0;
 

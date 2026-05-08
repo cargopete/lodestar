@@ -56,7 +56,7 @@ export async function GET(
           delegatedStakeRatio
           indexerRewardsOwnGenerationRatio
           provisionedTokens
-          delegators(first: 100) {
+          delegators(first: 100, orderBy: stakedTokens, orderDirection: desc) {
             id
             stakedTokens
             shareAmount

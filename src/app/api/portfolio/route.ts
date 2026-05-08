@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { subgraphQuery, ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { DelegatorPortfolioResponse, CuratorPortfolioResponse } from '@/lib/queries';
 import { log } from '@/lib/logger';
 
@@ -66,6 +66,35 @@ export async function GET(request: NextRequest) {
           }
         }`)
       );
+
+      // ENS enrichment: fill in names for indexers the subgraph has no metadata for
+      const nameless = (data?.delegator?.stakes ?? [])
+        .map((s) => s.indexer)
+        .filter((ix) => !ix.account?.defaultDisplayName && !ix.account?.metadata?.displayName);
+
+      if (nameless.length > 0) {
+        const ensResults = await Promise.allSettled(
+          nameless.map((ix) =>
+            cached(`ens:${ix.id}`, 86400, async () => {
+              const result = await ensQuery<{ domains: Array<{ name: string }> }>(`{
+                domains(first: 5, where: { resolvedAddress: "${ix.id}", name_not: null }) {
+                  name
+                }
+              }`);
+              const names = result.domains.map((d) => d.name).sort((a, b) => a.length - b.length);
+              return { ensName: names[0] ?? null };
+            })
+          )
+        );
+
+        nameless.forEach((ix, i) => {
+          const result = ensResults[i];
+          if (result.status === 'fulfilled' && result.value?.ensName) {
+            if (!ix.account) ix.account = { id: ix.id, defaultDisplayName: null };
+            ix.account.defaultDisplayName = result.value.ensName;
+          }
+        });
+      }
 
       return NextResponse.json({ data }, {
         headers: {
