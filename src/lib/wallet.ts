@@ -1,6 +1,7 @@
 import { http, createConfig } from 'wagmi';
 import { arbitrum } from 'wagmi/chains';
 import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors';
+import { getAddress } from 'viem';
 
 // WalletConnect project ID - users should set their own in .env
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo';
@@ -30,8 +31,8 @@ export const CONTRACTS = {
   gateway: '0x2F5e2E19A91d53Aa17f1F1D9B5C5C5dF5E92A508' as const,
   // Rewards Eligibility Oracle (GIP-0079)
   reo: '0x8ec2767a9d9ba02b4e09e8ff4fac2e14a340f304' as const,
-  // GNS — curation signal (mintSignal / burnSignal)
-  gns: '0xec9A7fb6CbC2E41926127929051735a88C4BB286' as const,
+  // GNS — curation signal (mintSignal / burnSignal) + publishNewSubgraph
+  gns: getAddress('0xec9a7fb6cbc2e41926127929051735a88c4bb286'),
 } as const;
 
 // Graph Network Subgraph ID on Arbitrum

@@ -572,8 +572,8 @@ function DeployKeyPanel() {
           </div>
         </div>
       ) : keyInfo?.hasKey ? (
-        <div className="flex items-center gap-2 p-3 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border)]">
-          <code className="flex-1 text-xs font-mono text-[var(--text-faint)]">{'•'.repeat(64)}</code>
+        <div className="p-3 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border)] overflow-hidden">
+          <code className="block text-xs font-mono text-[var(--text-faint)] truncate">{'•'.repeat(64)}</code>
         </div>
       ) : (
         <p className="text-xs text-[var(--text-muted)]">No deploy key yet.</p>
@@ -785,7 +785,7 @@ function SubgraphDetailModal({
                   <button
                     onClick={handleDelete}
                     disabled={deleting}
-                    className="text-xs text-[var(--red)] hover:opacity-70 transition-opacity"
+                    className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--red)] text-white hover:opacity-80 transition-opacity disabled:opacity-50"
                   >
                     {deleting ? 'Removing...' : 'Remove subgraph'}
                   </button>
