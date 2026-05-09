@@ -1191,6 +1191,18 @@ function SubgraphDetailModal({
   const [showBountyWizard, setShowBountyWizard] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const { data: activeBounties } = useQuery<SyncBounty[]>({
+    queryKey: ['bounties', sg.deployment_id],
+    queryFn: async () => {
+      if (!sg.deployment_id) return [];
+      const res = await fetch(`/api/studio/bounties?deployment=${sg.deployment_id}`);
+      const json = await res.json();
+      return (json.bounties ?? []).filter((b: SyncBounty) => b.status === 'open');
+    },
+    enabled: Boolean(sg.deployment_id),
+    staleTime: 30_000,
+  });
+
   // Auto-resolve legacy tx hash → on-chain subgraph NFT ID
   const legacyTxHash = (
     sg.published_subgraph_id?.startsWith('0x') ? sg.published_subgraph_id as `0x${string}` : undefined
@@ -1410,6 +1422,28 @@ function SubgraphDetailModal({
                     >
                       View indexing status →
                     </Link>
+                  </div>
+                )}
+
+                {activeBounties && activeBounties.length > 0 && (
+                  <div className="pt-4 border-t border-[var(--border)] space-y-2">
+                    <p className="text-xs font-medium text-amber-400">Active Bounties</p>
+                    {activeBounties.map((b) => (
+                      <div key={b.id} className="rounded-[var(--radius)] bg-amber-500/10 border border-amber-500/20 px-3 py-2 space-y-0.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-amber-300">{b.amount_grt} GRT</span>
+                          {b.chain_bounty_id && (
+                            <span className="text-xs text-[var(--text-faint)] font-mono">#{b.chain_bounty_id}</span>
+                          )}
+                        </div>
+                        {b.message && <p className="text-xs text-[var(--text-muted)] italic">&quot;{b.message}&quot;</p>}
+                        {b.expires_at && (
+                          <p className="text-xs text-[var(--text-faint)]">
+                            expires {new Date(b.expires_at).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
 
