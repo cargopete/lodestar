@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!hasDbAccess()) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
 
   const body = await req.json().catch(() => null);
-  const { deployment_id, slug, amount_grt, message, expires_at } = body ?? {};
+  const { deployment_id, slug, amount_grt, message, expires_at, chain_bounty_id, post_tx_hash } = body ?? {};
 
   if (!deployment_id || !amount_grt) {
     return NextResponse.json({ error: 'deployment_id and amount_grt are required' }, { status: 400 });
@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
     amount_grt: String(amount),
     message: message ?? null,
     expires_at: expires_at ?? null,
+    chain_bounty_id: chain_bounty_id ? String(chain_bounty_id) : null,
+    post_tx_hash: post_tx_hash ?? null,
   });
 
   return NextResponse.json({ bounty }, { status: 201 });

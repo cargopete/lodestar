@@ -33,6 +33,8 @@ export const CONTRACTS = {
   reo: '0x8ec2767a9d9ba02b4e09e8ff4fac2e14a340f304' as const,
   // GNS — curation signal (mintSignal / burnSignal) + publishNewSubgraph
   gns: getAddress('0xec9a7fb6cbc2e41926127929051735a88c4bb286'),
+  // BountyBoard — experimental sync bounty escrow (set NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS after deployment)
+  bountyBoard: (process.env.NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS ?? '0x0000000000000000000000000000000000000000') as `0x${string}`,
 } as const;
 
 // Graph Network Subgraph ID on Arbitrum

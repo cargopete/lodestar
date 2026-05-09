@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useSignMessage, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useAccount, useSignMessage, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { arbitrum } from 'wagmi/chains';
+import { parseEther } from 'viem';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
@@ -10,10 +11,11 @@ import { cn, shortenAddress } from '@/lib/utils';
 import { buildSignInMessage } from '@/lib/studio/auth';
 import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import { CONTRACTS } from '@/lib/wallet';
+import { BOUNTY_BOARD_ABI, GRT_ABI, extractBountyId } from '@/lib/bountyBoard';
 import type { StudioSubgraph, SyncBounty } from '@/lib/studio/db';
 
 // ---------------------------------------------------------------------------
-// GNS ABI (minimal — publishNewSubgraph only)
+// GNS ABI (minimal — publishNewSubgraph / publishNewVersion)
 // ---------------------------------------------------------------------------
 
 const GNS_ABI = [
@@ -53,7 +55,7 @@ function extractSubgraphId(
     if (
       log.address.toLowerCase() === gnsAddress.toLowerCase() &&
       log.topics[0] === ERC721_TRANSFER &&
-      log.topics[1] === ZERO_TOPIC // from=0 means mint
+      log.topics[1] === ZERO_TOPIC
     ) {
       return BigInt(log.topics[3]).toString();
     }
@@ -62,6 +64,9 @@ function extractSubgraphId(
 }
 
 const NODE_URL = 'https://www.lodestar-dashboard.com/api/studio/node';
+
+const BOUNTY_BOARD_DEPLOYED =
+  CONTRACTS.bountyBoard !== '0x0000000000000000000000000000000000000000';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -369,8 +374,6 @@ function PublishWizard({
 
   useEffect(() => {
     if (txConfirmed && receipt) {
-      // For a new publish, extract the subgraph NFT token ID from the ERC721 mint event.
-      // For a version update the subgraphID doesn't change, pass the tx hash as signal.
       const result = isNewVersion
         ? (minedTxHash ?? '')
         : (extractSubgraphId(receipt.logs, CONTRACTS.gns) ?? minedTxHash ?? '');
@@ -612,7 +615,7 @@ function PublishWizard({
 }
 
 // ---------------------------------------------------------------------------
-// Deploy key panel (inline, used in detail modal)
+// Deploy key panel
 // ---------------------------------------------------------------------------
 
 function DeployKeyPanel() {
@@ -683,17 +686,497 @@ function DeployKeyPanel() {
 }
 
 // ---------------------------------------------------------------------------
+// Post bounty wizard (on-chain GRT escrow)
+// ---------------------------------------------------------------------------
+
+type BountyWizardStep = 'form' | 'approve' | 'approving' | 'post' | 'posting' | 'done' | 'error';
+
+function PostBountyWizard({
+  sg,
+  sessionAddress,
+  onClose,
+}: {
+  sg: StudioSubgraph;
+  sessionAddress: string;
+  onClose: () => void;
+}) {
+  const { address } = useAccount();
+  const qc = useQueryClient();
+  const [step, setStep] = useState<BountyWizardStep>('form');
+  const [amountGrt, setAmountGrt] = useState('');
+  const [expiresInDays, setExpiresInDays] = useState('30');
+  const [message, setMessage] = useState('');
+  const [errMsg, setErrMsg] = useState('');
+  const [bountyId, setBountyId] = useState<string | null>(null);
+  const [approveTxHash, setApproveTxHash] = useState<`0x${string}` | undefined>();
+  const [postTxHash, setPostTxHash] = useState<`0x${string}` | undefined>();
+
+  const amountWei = useMemo(() => {
+    try { return parseEther(amountGrt || '0'); } catch { return 0n; }
+  }, [amountGrt]);
+
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: CONTRACTS.grt,
+    abi: GRT_ABI,
+    functionName: 'allowance',
+    args: address ? [address, CONTRACTS.bountyBoard] : undefined,
+    query: { enabled: BOUNTY_BOARD_DEPLOYED && !!address },
+  });
+
+  const { writeContract: writeApprove, isPending: approvePending } = useWriteContract({
+    mutation: {
+      onSuccess: (hash) => { setApproveTxHash(hash); setStep('approving'); },
+      onError: (e) => { setErrMsg(e.message.slice(0, 300)); setStep('error'); },
+    },
+  });
+
+  const { writeContract: writePost, isPending: postPending } = useWriteContract({
+    mutation: {
+      onSuccess: (hash) => { setPostTxHash(hash); setStep('posting'); },
+      onError: (e) => { setErrMsg(e.message.slice(0, 300)); setStep('error'); },
+    },
+  });
+
+  const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({ hash: approveTxHash });
+  const { isSuccess: postConfirmed, data: postReceipt } = useWaitForTransactionReceipt({ hash: postTxHash });
+
+  useEffect(() => {
+    if (approveConfirmed) { refetchAllowance(); setStep('post'); }
+  }, [approveConfirmed, refetchAllowance]);
+
+  useEffect(() => {
+    if (!postConfirmed || !postReceipt) return;
+    const id = extractBountyId(postReceipt.logs, CONTRACTS.bountyBoard);
+    setBountyId(id?.toString() ?? null);
+    // Save to DB for discoverability (best-effort)
+    if (sg.deployment_id) {
+      const expiresAt = expiresInDays
+        ? new Date(Date.now() + parseInt(expiresInDays) * 86_400_000).toISOString()
+        : null;
+      apiFetch('/api/studio/bounties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deployment_id: sg.deployment_id,
+          slug: sg.slug,
+          amount_grt: amountGrt,
+          message: message || null,
+          expires_at: expiresAt,
+          chain_bounty_id: id?.toString() ?? null,
+          post_tx_hash: postTxHash ?? null,
+        }),
+      }).then(() => {
+        qc.invalidateQueries({ queryKey: ['studio-bounties-public'] });
+      }).catch(() => {});
+    }
+    setStep('done');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postConfirmed, postReceipt]);
+
+  const handleContinue = () => {
+    if (!amountGrt || parseFloat(amountGrt) <= 0) return;
+    const needsApproval = allowance === undefined || allowance < amountWei;
+    setStep(needsApproval ? 'approve' : 'post');
+  };
+
+  const handleApprove = () => {
+    writeApprove({
+      address: CONTRACTS.grt,
+      abi: GRT_ABI,
+      functionName: 'approve',
+      args: [CONTRACTS.bountyBoard, amountWei],
+    });
+  };
+
+  const handlePost = () => {
+    if (!sg.deployment_id) return;
+    const deploymentId = ipfsHashToBytes32(sg.deployment_id);
+    const expiresAt = expiresInDays
+      ? BigInt(Math.floor(Date.now() / 1000) + parseInt(expiresInDays) * 86400)
+      : 0n;
+    writePost({
+      address: CONTRACTS.bountyBoard,
+      abi: BOUNTY_BOARD_ABI,
+      functionName: 'post',
+      args: [deploymentId, amountWei, expiresAt],
+    });
+  };
+
+  const canClose = !['approving', 'posting'].includes(step);
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-md bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
+          <div>
+            <h3 className="font-semibold text-[var(--text)]">Post Sync Bounty</h3>
+            <p className="text-xs text-amber-500 mt-0.5">Experimental — on-chain GRT escrow</p>
+          </div>
+          {canClose && (
+            <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        <div className="p-5 space-y-4">
+          {step === 'form' && (
+            <>
+              <p className="text-sm text-[var(--text-muted)]">
+                GRT is locked on-chain. First indexer to sync and present a POI for this deployment wins.
+              </p>
+              <div>
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
+                  Bounty amount (GRT) <span className="text-[var(--red)]">*</span>
+                </label>
+                <input
+                  type="number" min="1" step="any" placeholder="100"
+                  value={amountGrt}
+                  onChange={(e) => setAmountGrt(e.target.value)}
+                  className={cn(
+                    'w-full px-3 py-2 text-sm rounded-[var(--radius-button)]',
+                    'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
+                    'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
+                  )}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">Expires after</label>
+                <select
+                  value={expiresInDays}
+                  onChange={(e) => setExpiresInDays(e.target.value)}
+                  className={cn(
+                    'w-full px-3 py-2 text-sm rounded-[var(--radius-button)]',
+                    'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
+                    'focus:outline-none focus:border-[var(--accent)]',
+                  )}
+                >
+                  <option value="7">7 days</option>
+                  <option value="14">14 days</option>
+                  <option value="30">30 days</option>
+                  <option value="90">90 days</option>
+                  <option value="">Never (cancel anytime after 72h)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">Message to indexers (optional)</label>
+                <textarea
+                  placeholder="Please sync ASAP — production depends on this."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={2}
+                  className={cn(
+                    'w-full px-3 py-2 text-sm rounded-[var(--radius-button)] resize-none',
+                    'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
+                    'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
+                  )}
+                />
+              </div>
+              <p className="text-xs text-[var(--text-faint)] bg-[var(--bg-elevated)] rounded p-2.5 border border-[var(--border)]">
+                GRT is locked for 72h before you can cancel. The contract verifies the POI on-chain — no admin can interfere.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  className="flex-1 px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleContinue}
+                  disabled={!amountGrt || parseFloat(amountGrt) <= 0}
+                  className="flex-1 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  Continue
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 'approve' && (
+            <>
+              <p className="text-sm text-[var(--text-muted)]">
+                Approve the BountyBoard contract to spend <strong>{amountGrt} GRT</strong>.
+              </p>
+              <button
+                onClick={handleApprove}
+                disabled={approvePending}
+                className="w-full px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {approvePending ? 'Waiting for wallet...' : 'Approve GRT'}
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+              >
+                Cancel
+              </button>
+            </>
+          )}
+
+          {step === 'approving' && (
+            <div className="flex flex-col items-center py-8 gap-3">
+              <div className="w-10 h-10 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+              <p className="text-sm text-[var(--text-muted)]">Waiting for approval confirmation...</p>
+              {approveTxHash && (
+                <a href={`https://arbiscan.io/tx/${approveTxHash}`} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-[var(--accent)] hover:underline font-mono">
+                  {approveTxHash.slice(0, 20)}...
+                </a>
+              )}
+            </div>
+          )}
+
+          {step === 'post' && (
+            <>
+              <div className="flex items-center gap-2 text-sm text-[var(--accent)]">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                GRT approved
+              </div>
+              <p className="text-sm text-[var(--text-muted)]">
+                Lock <strong>{amountGrt} GRT</strong> in the BountyBoard contract on Arbitrum One.
+              </p>
+              <button
+                onClick={handlePost}
+                disabled={postPending}
+                className="w-full px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {postPending ? 'Waiting for wallet...' : 'Post Bounty'}
+              </button>
+            </>
+          )}
+
+          {step === 'posting' && (
+            <div className="flex flex-col items-center py-8 gap-3">
+              <div className="w-10 h-10 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+              <p className="text-sm text-[var(--text-muted)]">Locking GRT on-chain...</p>
+              {postTxHash && (
+                <a href={`https://arbiscan.io/tx/${postTxHash}`} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-[var(--accent)] hover:underline font-mono">
+                  {postTxHash.slice(0, 20)}...
+                </a>
+              )}
+            </div>
+          )}
+
+          {step === 'done' && (
+            <div className="flex flex-col items-center py-8 gap-4 text-center">
+              <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] flex items-center justify-center">
+                <svg className="w-7 h-7 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold text-[var(--text)]">Bounty posted!</p>
+                <p className="text-sm text-[var(--text-muted)] mt-1">
+                  {amountGrt} GRT locked on-chain. First indexer to sync and present a POI wins.
+                </p>
+                {bountyId !== null && (
+                  <p className="text-xs text-[var(--text-faint)] font-mono mt-2">Bounty #{bountyId}</p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                {postTxHash && (
+                  <a href={`https://arbiscan.io/tx/${postTxHash}`} target="_blank" rel="noopener noreferrer"
+                    className="px-4 py-2 text-sm border border-[var(--border)] rounded-[var(--radius-button)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
+                    View on Arbiscan
+                  </a>
+                )}
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'error' && (
+            <div className="space-y-4">
+              <p className="text-sm text-[var(--red)]">{errMsg || 'Something went wrong.'}</p>
+              <button
+                onClick={() => setStep('form')}
+                className="w-full px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Claim modal (for indexers)
+// ---------------------------------------------------------------------------
+
+function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => void }) {
+  const [allocationId, setAllocationId] = useState('');
+  const [step, setStep] = useState<'form' | 'claiming' | 'done' | 'error'>('form');
+  const [claimTxHash, setClaimTxHash] = useState<`0x${string}` | undefined>();
+  const [errMsg, setErrMsg] = useState('');
+
+  const { writeContract, isPending } = useWriteContract({
+    mutation: {
+      onSuccess: (hash) => { setClaimTxHash(hash); setStep('claiming'); },
+      onError: (e) => { setErrMsg(e.message.slice(0, 600)); setStep('error'); },
+    },
+  });
+
+  const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimTxHash });
+  useEffect(() => { if (claimConfirmed) setStep('done'); }, [claimConfirmed]);
+
+  const handleClaim = () => {
+    if (!bounty.chain_bounty_id || !allocationId.startsWith('0x')) return;
+    writeContract({
+      address: CONTRACTS.bountyBoard,
+      abi: BOUNTY_BOARD_ABI,
+      functionName: 'claim',
+      args: [BigInt(bounty.chain_bounty_id), allocationId as `0x${string}`],
+    });
+  };
+
+  const validAddress = allocationId.startsWith('0x') && allocationId.length === 42;
+  const canClose = step !== 'claiming';
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-md bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
+          <div>
+            <h3 className="font-semibold text-[var(--text)]">Claim Bounty #{bounty.chain_bounty_id}</h3>
+            <p className="text-xs text-[var(--text-faint)] font-mono mt-0.5">{bounty.amount_grt} GRT</p>
+          </div>
+          {canClose && (
+            <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        <div className="p-5 space-y-4">
+          {step === 'form' && (
+            <>
+              <p className="text-sm text-[var(--text-muted)]">
+                The contract verifies on-chain that you have an open allocation for this deployment with a POI submitted after the bounty was posted.
+              </p>
+              <div>
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">
+                  Allocation ID <span className="text-[var(--red)]">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="0x..."
+                  value={allocationId}
+                  onChange={(e) => setAllocationId(e.target.value)}
+                  className={cn(
+                    'w-full px-3 py-2 text-sm font-mono rounded-[var(--radius-button)]',
+                    'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
+                    'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
+                  )}
+                />
+                <p className="text-xs text-[var(--text-faint)] mt-1">
+                  The address used in <code>SubgraphService.startService()</code>. Find it in your indexer-agent logs or on{' '}
+                  <a href={`https://arbiscan.io/address/${CONTRACTS.subgraphService}#events`} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
+                    Arbiscan
+                  </a>.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  className="flex-1 px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleClaim}
+                  disabled={isPending || !validAddress}
+                  className="flex-1 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {isPending ? 'Waiting for wallet...' : 'Claim GRT'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 'claiming' && (
+            <div className="flex flex-col items-center py-8 gap-3">
+              <div className="w-10 h-10 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+              <p className="text-sm text-[var(--text-muted)]">Transaction submitted...</p>
+              {claimTxHash && (
+                <a href={`https://arbiscan.io/tx/${claimTxHash}`} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-[var(--accent)] hover:underline font-mono">
+                  {claimTxHash.slice(0, 20)}...
+                </a>
+              )}
+            </div>
+          )}
+
+          {step === 'done' && (
+            <div className="flex flex-col items-center py-8 gap-4 text-center">
+              <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] flex items-center justify-center">
+                <svg className="w-7 h-7 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold text-[var(--text)]">Bounty claimed!</p>
+                <p className="text-sm text-[var(--text-muted)] mt-1">{bounty.amount_grt} GRT sent to your wallet.</p>
+              </div>
+              <div className="flex gap-3">
+                {claimTxHash && (
+                  <a href={`https://arbiscan.io/tx/${claimTxHash}`} target="_blank" rel="noopener noreferrer"
+                    className="px-4 py-2 text-sm border border-[var(--border)] rounded-[var(--radius-button)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
+                    View on Arbiscan
+                  </a>
+                )}
+                <button onClick={onClose} className="px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity">
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'error' && (
+            <div className="space-y-4">
+              <p className="text-xs text-[var(--red)] font-mono whitespace-pre-wrap break-all">{errMsg}</p>
+              <button
+                onClick={() => setStep('form')}
+                className="w-full px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Subgraph detail modal
 // ---------------------------------------------------------------------------
 
 function SubgraphDetailModal({
   sg: initialSg,
+  sessionAddress,
   onClose,
   onUpdated,
   onPublished,
   onDelete,
 }: {
   sg: StudioSubgraph;
+  sessionAddress: string;
   onClose: () => void;
   onUpdated: (sg: StudioSubgraph) => void;
   onPublished: (id: number, txHash: string) => void;
@@ -705,6 +1188,7 @@ function SubgraphDetailModal({
   const [saving, setSaving] = useState(false);
   const [saveOk, setSaveOk] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
+  const [showBountyWizard, setShowBountyWizard] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // Auto-resolve legacy tx hash → on-chain subgraph NFT ID
@@ -729,15 +1213,11 @@ function SubgraphDetailModal({
   }, [legacyReceipt]);
 
   const isPublished = Boolean(sg.published_subgraph_id);
-  // A proper subgraphID is a decimal number string; an old tx hash starts with '0x'
   const subgraphNftId = sg.published_subgraph_id && !sg.published_subgraph_id.startsWith('0x')
     ? sg.published_subgraph_id : null;
-  // There's a new deployment to push when deployment_id differs from what was last published.
-  // If last_published_deployment_id is null (pre-feature), we have no baseline — treat as no new deployment.
   const hasNewDeployment = Boolean(
     sg.deployment_id && sg.last_published_deployment_id !== null && sg.deployment_id !== sg.last_published_deployment_id,
   );
-  // Can publish first time, or update version when NFT ID is resolved and there's a new deployment
   const canPublish = Boolean(sg.deployment_id) && (!isPublished || (subgraphNftId !== null && hasNewDeployment));
   const publishLabel = isPublished ? 'Update Version' : 'Publish';
 
@@ -773,7 +1253,6 @@ function SubgraphDetailModal({
   const handlePublished = async (result: string, versionLabel: string) => {
     const trimLabel = versionLabel.trim() || null;
     if (subgraphNftId === null) {
-      // First publish — store NFT ID, version label, and snapshot the deployed version.
       await apiFetch(`/api/studio/subgraphs/${sg.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -784,7 +1263,6 @@ function SubgraphDetailModal({
       onUpdated(updated);
       onPublished(sg.id, result);
     } else {
-      // Version update — persist new label and snapshot the deployed version.
       await apiFetch(`/api/studio/subgraphs/${sg.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -794,7 +1272,6 @@ function SubgraphDetailModal({
       setSg(updated);
       onUpdated(updated);
     }
-    // Don't close the wizard here — let the user read the done screen and click Done.
   };
 
   return (
@@ -832,6 +1309,16 @@ function SubgraphDetailModal({
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Post Bounty button */}
+              {sg.deployment_id && BOUNTY_BOARD_DEPLOYED && (
+                <button
+                  onClick={() => setShowBountyWizard(true)}
+                  className="px-3 py-1.5 text-sm font-medium rounded-[var(--radius-button)] border border-amber-500/40 text-amber-500 hover:bg-amber-500/10 transition-colors"
+                >
+                  Post Bounty
+                </button>
+              )}
+              {/* Publish / Update Version */}
               {isPublished && !canPublish && sg.deployment_id ? (
                 <div className="relative group">
                   <button
@@ -984,143 +1471,15 @@ function SubgraphDetailModal({
           onPublished={handlePublished}
         />
       )}
+
+      {showBountyWizard && (
+        <PostBountyWizard
+          sg={sg}
+          sessionAddress={sessionAddress}
+          onClose={() => setShowBountyWizard(false)}
+        />
+      )}
     </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Bounty modal
-// ---------------------------------------------------------------------------
-
-function BountyModal({
-  sg,
-  onClose,
-}: {
-  sg: StudioSubgraph;
-  onClose: () => void;
-}) {
-  const [amount, setAmount] = useState('');
-  const [message, setMessage] = useState('');
-  const [expiryDays, setExpiryDays] = useState('30');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const expires_at = expiryDays
-        ? new Date(Date.now() + parseInt(expiryDays) * 86_400_000).toISOString()
-        : null;
-      await apiFetch('/api/studio/bounties', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deployment_id: sg.deployment_id,
-          slug: sg.slug,
-          amount_grt: amount,
-          message: message || null,
-          expires_at,
-        }),
-      });
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to post bounty');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] shadow-2xl">
-        <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
-          <div>
-            <h3 className="font-semibold text-[var(--text)]">Offer Sync Bounty</h3>
-            <p className="text-xs text-[var(--text-faint)] mt-0.5 font-mono">{sg.slug}</p>
-          </div>
-          <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <form onSubmit={submit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5">
-              Bounty amount (GRT) <span className="text-[var(--red)]">*</span>
-            </label>
-            <input
-              type="number"
-              min="1"
-              step="any"
-              placeholder="100"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-              className={cn(
-                'w-full px-3 py-2 text-sm rounded-[var(--radius-button)]',
-                'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
-                'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
-              )}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Message to indexers (optional)</label>
-            <textarea
-              placeholder="Please sync ASAP — production launch depends on this."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={3}
-              className={cn(
-                'w-full px-3 py-2 text-sm rounded-[var(--radius-button)] resize-none',
-                'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
-                'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
-              )}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Expires after</label>
-            <select
-              value={expiryDays}
-              onChange={(e) => setExpiryDays(e.target.value)}
-              className={cn(
-                'w-full px-3 py-2 text-sm rounded-[var(--radius-button)]',
-                'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
-                'focus:outline-none focus:border-[var(--accent)]',
-              )}
-            >
-              <option value="7">7 days</option>
-              <option value="14">14 days</option>
-              <option value="30">30 days</option>
-              <option value="90">90 days</option>
-              <option value="">Never</option>
-            </select>
-          </div>
-          <p className="text-xs text-[var(--text-faint)] bg-[var(--bg-elevated)] rounded p-2.5 border border-[var(--border)]">
-            Bounties are currently off-chain — they signal your intent to pay. On-chain escrow coming soon.
-          </p>
-          {error && <p className="text-xs text-[var(--red)]">{error}</p>}
-          <div className="flex gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {loading ? 'Posting...' : 'Post Bounty'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }
 
@@ -1228,6 +1587,7 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
       {activeSubgraph && (
         <SubgraphDetailModal
           sg={activeSubgraph}
+          sessionAddress={sessionAddress}
           onClose={() => setActiveSubgraph(null)}
           onUpdated={handleUpdated}
           onPublished={handlePublished}
@@ -1242,102 +1602,163 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
 // Bounty board tab
 // ---------------------------------------------------------------------------
 
-function BountyBoardTab({ sessionAddress }: { sessionAddress: string | null }) {
+function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
   const { data, isLoading } = useQuery({
     queryKey: ['studio-bounties-public'],
     queryFn: () => apiFetch<{ bounties: SyncBounty[] }>('/api/studio/bounties'),
   });
-  const qc = useQueryClient();
-  const [bountyTarget, setBountyTarget] = useState<StudioSubgraph | null>(null);
+  const [claimTarget, setClaimTarget] = useState<SyncBounty | null>(null);
+  const [cancelHashes, setCancelHashes] = useState<Record<string, `0x${string}`>>({});
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  const { writeContract: writeCancel } = useWriteContract({
+    mutation: {
+      onSuccess: (hash) => {
+        if (cancellingId) setCancelHashes((prev) => ({ ...prev, [cancellingId]: hash }));
+        setCancellingId(null);
+      },
+      onError: (e) => {
+        setCancellingId(null);
+        alert(e.message.slice(0, 200));
+      },
+    },
+  });
+
+  const handleCancel = (bounty: SyncBounty) => {
+    if (!bounty.chain_bounty_id) return;
+    if (!confirm(`Cancel bounty #${bounty.chain_bounty_id}? GRT will be returned to your wallet.`)) return;
+    setCancellingId(bounty.chain_bounty_id);
+    writeCancel({
+      address: CONTRACTS.bountyBoard,
+      abi: BOUNTY_BOARD_ABI,
+      functionName: 'cancel',
+      args: [BigInt(bounty.chain_bounty_id)],
+    });
+  };
 
   const bounties = data?.bounties ?? [];
 
-  const claim = async (id: number) => {
-    try {
-      await apiFetch(`/api/studio/bounties/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'claim' }),
-      });
-      qc.invalidateQueries({ queryKey: ['studio-bounties-public'] });
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to claim');
-    }
-  };
+  if (!BOUNTY_BOARD_DEPLOYED) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-[var(--text-muted)] text-sm">On-chain bounty contract not yet deployed.</p>
+        <p className="text-xs text-[var(--text-faint)] mt-1">Set <code>NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS</code> after deployment.</p>
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="space-y-4">
-        <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--accent-dim)]">
-          <p className="text-sm text-[var(--text)]">
-            <strong>Indexers:</strong> developers post GRT bounties for subgraphs they need synced.
-            Allocate to the deployment, sync it, then claim the bounty. Settlement is currently
-            off-chain — contact the developer directly.
+        <div className="p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            <strong>Experimental.</strong> GRT is locked on-chain in the BountyBoard contract — fully trustless, no admin.
+            The contract verifies on-chain that the indexer has an open allocation with a POI submitted after the bounty was posted.
+            First valid claim wins.
           </p>
         </div>
 
         {isLoading ? (
           <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 rounded-lg shimmer" />
-            ))}
+            {[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-lg shimmer" />)}
           </div>
         ) : bounties.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-[var(--text-muted)] text-sm">No open bounties right now.</p>
+            <p className="text-[var(--text-muted)] text-sm">No bounties posted yet.</p>
+            <p className="text-xs text-[var(--text-faint)] mt-1">
+              Open a subgraph from the My Subgraphs tab and click Post Bounty.
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
-            {bounties.map((b) => (
-              <div
-                key={b.id}
-                className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-[var(--text)] truncate">{b.deployment_id}</span>
-                    <CopyButton text={b.deployment_id} />
-                    <Link
-                      href={`/subgraphs/${b.deployment_id}`}
-                      className="text-xs text-[var(--accent)] hover:underline flex-shrink-0"
-                    >
-                      View
-                    </Link>
-                  </div>
-                  {b.message && (
-                    <p className="text-xs text-[var(--text-muted)] mt-1 italic">&ldquo;{b.message}&rdquo;</p>
-                  )}
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-xs text-[var(--text-faint)]">
-                      by {shortenAddress(b.developer_address)}
-                    </span>
-                    {b.expires_at && (
-                      <span className="text-xs text-[var(--text-faint)]">
-                        expires {new Date(b.expires_at).toLocaleDateString()}
-                      </span>
-                    )}
+            {bounties.map((b) => {
+              const isOwn = sessionAddress.toLowerCase() === b.developer_address?.toLowerCase();
+              const cancelTxHash = b.chain_bounty_id ? cancelHashes[b.chain_bounty_id] : undefined;
+              const cancelUnlockAt = new Date(new Date(b.created_at).getTime() + 72 * 60 * 60 * 1000);
+              const cancelUnlocked = Date.now() >= cancelUnlockAt.getTime();
+              const isCancelling = cancellingId === b.chain_bounty_id;
+
+              return (
+                <div key={b.id} className="p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs text-[var(--text)] truncate">{b.deployment_id}</span>
+                        <CopyButton text={b.deployment_id} />
+                        <Link href={`/subgraphs/${b.deployment_id}`} className="text-xs text-[var(--accent)] hover:underline flex-shrink-0">
+                          View
+                        </Link>
+                        {b.chain_bounty_id && (
+                          <a
+                            href={`https://arbiscan.io/address/${CONTRACTS.bountyBoard}#readContract`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-[var(--text-faint)] hover:text-[var(--accent)] transition-colors"
+                          >
+                            #{b.chain_bounty_id} ↗
+                          </a>
+                        )}
+                      </div>
+                      {b.message && (
+                        <p className="text-xs text-[var(--text-muted)] mt-1 italic">&ldquo;{b.message}&rdquo;</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                        <span className="text-xs text-[var(--text-faint)]">by {shortenAddress(b.developer_address)}</span>
+                        {b.expires_at && (
+                          <span className="text-xs text-[var(--text-faint)]">
+                            expires {new Date(b.expires_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className="text-base font-semibold text-[var(--accent)]">{b.amount_grt} GRT</span>
+                      {isOwn && b.chain_bounty_id ? (
+                        cancelTxHash ? (
+                          <a
+                            href={`https://arbiscan.io/tx/${cancelTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-[var(--text-faint)] hover:underline"
+                          >
+                            Cancelling...
+                          </a>
+                        ) : cancelUnlocked ? (
+                          <button
+                            onClick={() => handleCancel(b)}
+                            disabled={isCancelling}
+                            className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--red)] hover:border-[var(--red)] transition-colors disabled:opacity-50"
+                          >
+                            {isCancelling ? 'Waiting...' : 'Cancel'}
+                          </button>
+                        ) : (
+                          <div className="relative group">
+                            <button disabled className="px-3 py-1.5 text-xs rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-faint)] opacity-50 cursor-not-allowed">
+                              Cancel
+                            </button>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs whitespace-nowrap bg-[var(--bg-elevated)] border border-[var(--border)] rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none z-10">
+                              Unlocks {cancelUnlockAt.toLocaleString()}
+                            </div>
+                          </div>
+                        )
+                      ) : !isOwn && b.chain_bounty_id ? (
+                        <button
+                          onClick={() => setClaimTarget(b)}
+                          className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
+                        >
+                          Claim
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-base font-semibold text-[var(--accent)]">{b.amount_grt} GRT</span>
-                  {sessionAddress && sessionAddress !== b.developer_address && (
-                    <button
-                      onClick={() => claim(b.id)}
-                      className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
-                    >
-                      Claim
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {bountyTarget && (
-        <BountyModal sg={bountyTarget} onClose={() => setBountyTarget(null)} />
-      )}
+      {claimTarget && <ClaimModal bounty={claimTarget} onClose={() => setClaimTarget(null)} />}
     </>
   );
 }
@@ -1346,7 +1767,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string | null }) {
 // Main page
 // ---------------------------------------------------------------------------
 
-type Tab = 'subgraphs';
+type Tab = 'subgraphs' | 'bounties';
 
 export default function StudioPage() {
   const { sessionAddress, signing, error: authError, signIn, signOut } = useStudioSession();
@@ -1354,6 +1775,7 @@ export default function StudioPage() {
 
   const TABS: { id: Tab; label: string }[] = [
     { id: 'subgraphs', label: 'My Subgraphs' },
+    { id: 'bounties', label: 'Bounty Board' },
   ];
 
   return (
@@ -1434,6 +1856,7 @@ export default function StudioPage() {
             </div>
             <div className="pt-2">
               {tab === 'subgraphs' && <MySubgraphsTab sessionAddress={sessionAddress} />}
+              {tab === 'bounties' && <BountyBoardTab sessionAddress={sessionAddress} />}
             </div>
           </>
         )}

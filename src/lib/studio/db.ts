@@ -37,6 +37,8 @@ export interface SyncBounty {
   claimed_at: string | null;
   created_at: string;
   expires_at: string | null;
+  chain_bounty_id: string | null;
+  post_tx_hash: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -193,16 +195,21 @@ export async function createBounty(data: {
   amount_grt: string;
   message?: string | null;
   expires_at?: string | null;
+  chain_bounty_id?: string | null;
+  post_tx_hash?: string | null;
 }): Promise<SyncBounty> {
   const [row] = await db!<SyncBounty[]>`
-    INSERT INTO sync_bounties (deployment_id, subgraph_id, developer_address, amount_grt, message, expires_at)
+    INSERT INTO sync_bounties
+      (deployment_id, subgraph_id, developer_address, amount_grt, message, expires_at, chain_bounty_id, post_tx_hash)
     VALUES (
       ${data.deployment_id},
       ${data.subgraph_id ?? null},
       ${data.developer_address.toLowerCase()},
       ${data.amount_grt},
       ${data.message ?? null},
-      ${data.expires_at ?? null}
+      ${data.expires_at ?? null},
+      ${data.chain_bounty_id ?? null},
+      ${data.post_tx_hash ?? null}
     )
     RETURNING *
   `;
