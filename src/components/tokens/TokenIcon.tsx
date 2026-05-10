@@ -23,6 +23,10 @@ interface Props {
   chain?: 'mainnet' | 'arbitrum' | 'base' | 'polygon' | 'optimism';
   size?: number;
   className?: string;
+  /** Override the circle's background. Used when rendering as a protocol icon
+   *  on top of a dark page background — passing `#fff` keeps dark glyphs
+   *  (Aave dome, Uniswap shield) visible. Defaults to var(--bg-elevated). */
+  bg?: string;
 }
 
 const TRUSTWALLET_CHAIN: Record<string, string> = {
@@ -31,6 +35,16 @@ const TRUSTWALLET_CHAIN: Record<string, string> = {
   base: 'base',
   polygon: 'polygon',
   optimism: 'optimism',
+};
+
+// EVM chain IDs for the CDNs that key by numeric chain (DefiLlama, 1inch).
+// Keep this aligned with TRUSTWALLET_CHAIN above.
+const CHAIN_ID: Record<string, number> = {
+  mainnet: 1,
+  arbitrum: 42161,
+  base: 8453,
+  polygon: 137,
+  optimism: 10,
 };
 
 const FALLBACK_PALETTE = [
@@ -62,27 +76,44 @@ function buildSourceChain(
     out.push(`https://cdn.jsdelivr.net/gh/0xa3k5/web3icons@main/raw-svgs/tokens/branded/${slug.toUpperCase()}.svg`);
   }
   if (contract) {
+    const lower = contract.toLowerCase();
     try {
       const checksum = getAddress(contract);
       const tw = TRUSTWALLET_CHAIN[chain ?? 'mainnet'] ?? 'ethereum';
       out.push(`https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${tw}/assets/${checksum}/logo.png`);
     } catch {}
+    // DefiLlama's token-icons CDN keys by chain-id + lowercase address. Has
+    // very wide coverage of tradable ERC-20s — useful as a fallback for
+    // counterparty tokens we encounter via Recent Swaps but don't carry
+    // in our 154-token seed set.
+    const chainId = CHAIN_ID[chain ?? 'mainnet'];
+    if (chainId) {
+      out.push(`https://token-icons.llamao.fi/icons/tokens/${chainId}/${lower}?h=64`);
+    }
+    // 1inch's CDN — mainnet-only but extensive. Last resort before falling
+    // back to the deterministic gradient initials.
+    if ((chain ?? 'mainnet') === 'mainnet') {
+      out.push(`https://tokens-data.1inch.io/images/${lower}.png`);
+    }
   }
   return out;
 }
 
-export function TokenIcon({ symbol, contract, logoUri, slug, chain = 'mainnet', size = 28, className }: Props) {
+export function TokenIcon({ symbol, contract, logoUri, slug, chain = 'mainnet', size = 28, className, bg: bgOverride }: Props) {
   const sources = useMemo(() => buildSourceChain(logoUri, slug, contract, chain), [logoUri, slug, contract, chain]);
   const [sourceIdx, setSourceIdx] = useState(0);
   const exhausted = sourceIdx >= sources.length;
 
   const [bg, fg] = FALLBACK_PALETTE[symbolHash(symbol) % FALLBACK_PALETTE.length];
   const initials = symbol.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase();
+  const background = exhausted
+    ? `linear-gradient(135deg, ${bg}, ${fg})`
+    : bgOverride ?? 'var(--bg-elevated)';
 
   return (
     <div
       className={`relative rounded-full overflow-hidden border-[0.5px] border-[var(--border)] flex items-center justify-center shrink-0 ${className ?? ''}`}
-      style={{ width: size, height: size, background: exhausted ? `linear-gradient(135deg, ${bg}, ${fg})` : 'var(--bg-elevated)' }}
+      style={{ width: size, height: size, background }}
     >
       {exhausted ? (
         <span

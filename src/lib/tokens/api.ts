@@ -55,7 +55,16 @@ async function acquireRateSlot(): Promise<void> {
   }
 }
 
-async function get<T>(path: string, params: Record<string, string | number>): Promise<ApiEnvelope<T>> {
+/**
+ * Shared low-level Token API GET. Exported so adjacent modules
+ * (e.g. `hyperliquid.ts`) can hit `/v1/*` paths through the same auth +
+ * rate-limit + 5xx/429 retry path used everywhere else. Path is the
+ * leading-slash route (`/v1/...`); params become the query string.
+ */
+export async function tokenApiGet<T>(
+  path: string,
+  params: Record<string, string | number>
+): Promise<ApiEnvelope<T>> {
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) qs.set(k, String(v));
   const url = `${BASE_URL}${path}?${qs}`;
@@ -126,7 +135,7 @@ export async function fetchTokenMetadata(
   network: string,
   contract: string
 ): Promise<ApiTokenMetadata | null> {
-  const env = await get<ApiTokenMetadata>('/v1/evm/tokens', { network, contract });
+  const env = await tokenApiGet<ApiTokenMetadata>('/v1/evm/tokens', { network, contract });
   const t = env.data?.[0];
   if (!t) {
     recordDeficiency('TOKEN_API_TOKENS_EMPTY', `tokens endpoint returned 0 rows for ${network}/${contract}`);
@@ -158,7 +167,7 @@ export async function fetchPoolOhlc(
 ): Promise<ApiOhlcPoint[]> {
   const params: Record<string, string | number> = { network, pool, interval, limit };
   if (page > 1) params.page = page;
-  const env = await get<ApiOhlcPoint>('/v1/evm/pools/ohlc', params);
+  const env = await tokenApiGet<ApiOhlcPoint>('/v1/evm/pools/ohlc', params);
   // The API returns duplicate rows per datetime in some pools (observed on
   // CoW settlement and on shared Uniswap V3 pools). De-dupe by datetime,
   // keeping the row with the most transactions (likeliest the real bar).
@@ -181,7 +190,7 @@ export async function fetchHolders(
   contract: string,
   limit = 10
 ): Promise<ApiHolder[]> {
-  const env = await get<ApiHolder>('/v1/evm/holders', { network, contract, limit });
+  const env = await tokenApiGet<ApiHolder>('/v1/evm/holders', { network, contract, limit });
   return env.data ?? [];
 }
 
@@ -200,7 +209,7 @@ export async function fetchPoolsForToken(
   contract: string,
   limit = 25
 ): Promise<ApiPool[]> {
-  const env = await get<ApiPool>('/v1/evm/pools', { network, input_token: contract, limit });
+  const env = await tokenApiGet<ApiPool>('/v1/evm/pools', { network, input_token: contract, limit });
   return env.data ?? [];
 }
 
@@ -230,8 +239,8 @@ export async function fetchSwapsForToken(
   // The API has no OR filter, so we issue two calls in parallel and merge.
   // Tracked: TOKEN_API_NO_OR_FILTER (recorded in fetcher when both succeed).
   const [asInput, asOutput] = await Promise.all([
-    get<ApiSwap>('/v1/evm/swaps', { network, input_contract: contract, limit }),
-    get<ApiSwap>('/v1/evm/swaps', { network, output_contract: contract, limit }),
+    tokenApiGet<ApiSwap>('/v1/evm/swaps', { network, input_contract: contract, limit }),
+    tokenApiGet<ApiSwap>('/v1/evm/swaps', { network, output_contract: contract, limit }),
   ]);
   const all = [...(asInput.data ?? []), ...(asOutput.data ?? [])];
   all.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));

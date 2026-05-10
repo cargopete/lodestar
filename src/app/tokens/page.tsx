@@ -10,7 +10,7 @@ import { useTokenDirectory } from '@/hooks/useTokens';
 import { formatNumber, formatPrice, formatUSD } from '@/lib/utils';
 import type { TokenSummary } from '@/lib/tokens/types';
 
-type SortKey = 'mcap' | 'price' | 'change' | 'change7d' | 'change30d' | 'change90d' | 'holders' | 'symbol' | 'concentration' | 'eoaConcentration' | 'volume';
+type SortKey = 'mcap' | 'price' | 'change' | 'change7d' | 'change30d' | 'holders' | 'symbol' | 'concentration' | 'volume' | 'hlOi';
 type SortDir = 'asc' | 'desc';
 
 
@@ -43,11 +43,10 @@ const COMPARATORS: Record<SortKey, (a: TokenSummary, b: TokenSummary) => number>
   change: (a, b) => (b.change24hPct ?? 0) - (a.change24hPct ?? 0),
   change7d: (a, b) => (b.change7dPct ?? 0) - (a.change7dPct ?? 0),
   change30d: (a, b) => (b.change30dPct ?? 0) - (a.change30dPct ?? 0),
-  change90d: (a, b) => (b.change90dPct ?? 0) - (a.change90dPct ?? 0),
   holders: (a, b) => (b.holders ?? 0) - (a.holders ?? 0),
   concentration: (a, b) => (b.top10Share ?? 0) - (a.top10Share ?? 0),
-  eoaConcentration: (a, b) => (b.top10EoaShare ?? 0) - (a.top10EoaShare ?? 0),
   volume: (a, b) => (b.dexVolume24hUsd ?? 0) - (a.dexVolume24hUsd ?? 0),
+  hlOi: (a, b) => (b.hyperliquidOiUsd ?? 0) - (a.hyperliquidOiUsd ?? 0),
   symbol: (a, b) => a.symbol.localeCompare(b.symbol),
 };
 
@@ -74,28 +73,110 @@ function VolumeCell({ total, byVenue }: { total: number | null; byVenue: Record<
   );
 }
 
-function ConcentrationCell({
+// Holders cell with a hover popover that surfaces the top-10 EOA
+// concentration we used to dedicate a column to. Replaces the standalone
+// ConcentrationCell now that we've reclaimed its slot for HL OI.
+function HoldersCell({
+  count,
   eoaShare,
   contractShare,
 }: {
+  count: number | null;
   eoaShare: number | null;
   contractShare: number | null;
 }) {
-  if (eoaShare == null && contractShare == null) {
-    return <span className="text-[var(--text-faint)]">—</span>;
-  }
+  if (count == null) return <span className="text-[var(--text-faint)]">—</span>;
+  const hasConcentration = eoaShare != null || contractShare != null;
   const eoaPct = (eoaShare ?? 0) * 100;
   const contractPct = (contractShare ?? 0) * 100;
-  const color =
-    eoaPct >= 60 ? 'text-red-500' : eoaPct >= 30 ? 'text-amber-500' : 'text-[var(--text-muted)]';
+  const eoaColor =
+    eoaPct >= 60 ? 'text-red-500' : eoaPct >= 30 ? 'text-amber-500' : 'text-[var(--text)]';
   return (
-    <span className="inline-flex flex-col items-end leading-tight">
-      <span className={color}>{eoaPct.toFixed(1)}%</span>
-      {contractPct >= 0.1 && (
-        <span className="text-[10px] text-[var(--text-faint)]">
-          +{contractPct.toFixed(1)}% contracts
+    <span className="relative inline-flex group">
+      <span className={hasConcentration ? 'cursor-help underline decoration-dotted decoration-[var(--text-faint)] underline-offset-2' : ''}>
+        {formatNumber(count)}
+      </span>
+      {hasConcentration && (
+        <span className="invisible group-hover:visible absolute right-0 top-5 z-30 w-56 rounded border border-[var(--border)] bg-[var(--bg-elevated)] p-2 text-[11px] text-[var(--text-muted)] shadow-lg pointer-events-none text-left">
+          <span className="block font-semibold text-[var(--text)] mb-1">Top-10 holder concentration</span>
+          <span className="flex items-center justify-between gap-2 mt-0.5 tabular-nums">
+            <span>EOA share</span>
+            <span className={eoaColor}>{eoaPct.toFixed(1)}%</span>
+          </span>
+          {contractPct >= 0.01 && (
+            <span className="flex items-center justify-between gap-2 mt-0.5 tabular-nums">
+              <span>Contract share</span>
+              <span className="text-[var(--text)]">{contractPct.toFixed(1)}%</span>
+            </span>
+          )}
+          <span className="block mt-2 text-[10px] text-[var(--text-faint)]">
+            Higher EOA % means a few wallets dominate circulating supply. Contract
+            holders (bridges, staking, LP) are split out via on-chain eth_getCode.
+          </span>
         </span>
       )}
+    </span>
+  );
+}
+
+// Cell for the new "HL OI" column. Renders a sortable USD figure plus a
+// tiny inline funding-direction marker. Empty for tokens without an HL
+// perp listing — that's most of the catalog.
+function HlOiCell({
+  oiUsd,
+  fundingHourly,
+  coin,
+}: {
+  oiUsd: number | null;
+  fundingHourly: number | null;
+  coin: string | null;
+}) {
+  // Distinguish "no perp market on HL" from "data failed to load". A bare
+  // dash reads as the latter; explicit "not listed" copy with a faint
+  // italic style signals "this token doesn't trade as a perp on HL"
+  // without implying a fetch failure.
+  if (oiUsd == null) {
+    return (
+      <span
+        className="text-[var(--text-faint)] italic text-[10px] font-normal"
+        title="No Hyperliquid perp market for this token"
+      >
+        not listed
+      </span>
+    );
+  }
+  // Direction marker: ↑ when long-pay funding (longs paying shorts to hold,
+  // i.e. long-biased venue), ↓ when short-pay, • when at HL's baseline
+  // floor (no directional skew).
+  const HL_BASELINE = 1.25e-5;
+  const atFloor =
+    fundingHourly != null &&
+    Math.abs(Math.abs(fundingHourly) - HL_BASELINE) < HL_BASELINE * 0.05;
+  const arrow =
+    fundingHourly == null
+      ? null
+      : atFloor
+        ? { glyph: '·', cls: 'text-[var(--text-faint)]', label: 'baseline' }
+        : fundingHourly > 0
+          ? { glyph: '↑', cls: 'text-[var(--green)]', label: 'long-pay funding' }
+          : { glyph: '↓', cls: 'text-red-500', label: 'short-pay funding' };
+  return (
+    <span className="inline-flex items-baseline gap-1 tabular-nums" title={coin ? `${coin} on Hyperliquid` : undefined}>
+      <span>{formatUSD(oiUsd)}</span>
+      {arrow && <span className={`text-[10px] ${arrow.cls}`} title={arrow.label}>{arrow.glyph}</span>}
+    </span>
+  );
+}
+
+// Small "Perps" pill rendered next to the token tags when an HL perp
+// market exists for this seed. Cheap visual signal at the catalog level.
+function PerpsBadge({ coin }: { coin: string }) {
+  return (
+    <span
+      title={`${coin} has a Hyperliquid perp market — click into the detail page for OI, funding, liquidations, and positioning.`}
+      className="inline-flex items-center text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30"
+    >
+      Perps
     </span>
   );
 }
@@ -210,12 +291,11 @@ export default function TokensPage() {
                   {header('24h %', 'change')}
                   {header('7d %', 'change7d')}
                   {header('30d %', 'change30d')}
-                  {header('90d %', 'change90d')}
                   <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)] pl-4">30d</th>
                   {header('DEX Vol', 'volume', 'right', 'Latest day’s volume aggregated across the Uniswap V2 + V3 mainnet subgraphs. Hover any value for the per-venue breakdown.')}
                   {header('Mcap', 'mcap')}
-                  {header('Holders', 'holders')}
-                  {header('Top 10 EOA', 'eoaConcentration', 'right', 'Share of circulating supply held by the 10 largest externally-owned accounts (likely-human wallets). Smart contract holders (bridges, staking modules, LP pools, vesting) are split out below the headline number. Contract status detected via on-chain eth_getCode; cached.', 'pl-4')}
+                  {header('Holders', 'holders', 'right', 'Token API holder count. Hover the value to see top-10 holder concentration split into EOA vs contract share — a higher EOA share is a tighter wallet distribution.')}
+                  {header('HL OI', 'hlOi', 'right', 'Hyperliquid open interest in USD. ↑ = long-pay funding (longs paying shorts to hold). ↓ = short-pay funding. · = at HL\'s per-asset baseline (no directional skew). Click any row to drill into the perps card on the detail page.', 'pl-4')}
                 </tr>
               </thead>
               <tbody>
@@ -232,6 +312,7 @@ export default function TokensPage() {
                         {t.tags.map((tag) => (
                           <TagBadge key={tag} tag={tag} />
                         ))}
+                        {t.hyperliquidCoin && <PerpsBadge coin={t.hyperliquidCoin} />}
                         {t.website && (
                           <a
                             href={t.website}
@@ -255,7 +336,6 @@ export default function TokensPage() {
                     <td className="py-2 text-right tabular-nums"><PctBadge value={t.change24hPct} /></td>
                     <td className="py-2 text-right tabular-nums"><PctBadge value={t.change7dPct} /></td>
                     <td className="py-2 text-right tabular-nums"><PctBadge value={t.change30dPct} /></td>
-                    <td className="py-2 text-right tabular-nums"><PctBadge value={t.change90dPct} /></td>
                     <td className="py-2 text-right pl-4">
                       <div className="inline-flex justify-end"><Sparkline points={t.sparkline} id={t.contract.slice(2, 10)} /></div>
                     </td>
@@ -266,16 +346,16 @@ export default function TokensPage() {
                       {t.marketCapUsd != null ? formatUSD(t.marketCapUsd) : '—'}
                     </td>
                     <td className="py-2 text-right tabular-nums">
-                      {t.holders != null ? formatNumber(t.holders) : '—'}
+                      <HoldersCell count={t.holders} eoaShare={t.top10EoaShare} contractShare={t.top10ContractShare} />
                     </td>
                     <td className="py-2 text-right tabular-nums pl-4 pr-2">
-                      <ConcentrationCell eoaShare={t.top10EoaShare} contractShare={t.top10ContractShare} />
+                      <HlOiCell oiUsd={t.hyperliquidOiUsd} fundingHourly={t.hyperliquidFundingHourly} coin={t.hyperliquidCoin} />
                     </td>
                   </tr>
                 ))}
                 {rows.length === 0 && data.length > 0 && (
                   <tr>
-                    <td colSpan={12} className="py-6 text-center text-sm text-[var(--text-faint)]">No tokens match &quot;{query}&quot;.</td>
+                    <td colSpan={11} className="py-6 text-center text-sm text-[var(--text-faint)]">No tokens match &quot;{query}&quot;.</td>
                   </tr>
                 )}
               </tbody>

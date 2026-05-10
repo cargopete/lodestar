@@ -110,6 +110,16 @@ export interface TokenSummary {
    */
   dexVolume24hUsd: number | null;
   dexVolumeByVenue: Record<string, number>;
+  /** Hyperliquid perp coin id (e.g. "BTC", "kPEPE"). Non-null when the
+   *  seed maps to a live HL perp market — drives the "Perps" badge and
+   *  the HL OI column on the directory. */
+  hyperliquidCoin: string | null;
+  /** HL open interest in USD (token notional × mark). Null when no
+   *  perp market or OI is unreported. */
+  hyperliquidOiUsd: number | null;
+  /** HL hourly funding rate as a decimal. Sign + magnitude drive the
+   *  inline direction indicator on the directory's HL OI column. */
+  hyperliquidFundingHourly: number | null;
   /**
    * Cross-chain deployments hand-curated in the seed. Same project, different
    * chain, different contract. Empty when the token only exists on its
@@ -171,6 +181,9 @@ export interface TokenSwap {
   /** USD value, when computable from priceUsd. */
   amountUsd: number | null;
   counterpartySymbol: string;
+  /** Counterparty token contract — drives the inline icon in the swap row's
+   *  Pair column (otherwise we'd only have a symbol fallback). */
+  counterpartyContract: string | null;
   /** Originator of the swap — typically the EOA (or proxy) that signed.
    *  Used for the swap row's "Trader" column linked to Etherscan. */
   trader: string;
@@ -209,4 +222,13 @@ export interface TokenDetail {
   recentSwaps: TokenSwap[];
   performance: TokenPerformance;
   range24h: TokenRange24h | null;
+  /** Aggregated lending-market data when the token is listed in any
+   *  supported protocol (currently Aave V3 Core across Ethereum +
+   *  Arbitrum + Base + Polygon + Optimism, rolled up to a single
+   *  cross-chain summary). Null when the token isn't a lending-market
+   *  asset. */
+  lending: import('./lending').TokenLending | null;
+  /** Hyperliquid perps-market summary when a corresponding perp exists.
+   *  Null when no HL market matches the seed (most of the catalog). */
+  hyperliquid: import('./hyperliquid').TokenHyperliquid | null;
 }

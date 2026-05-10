@@ -1,21 +1,24 @@
 /**
- * DEX volume aggregation across native Uniswap V2 + V3 deployments on
- * The Graph Network (Arbitrum gateway). One batched query per subgraph
+ * DEX volume aggregation across native Uniswap V2 + V3 + V3-fork deployments
+ * on The Graph Network (Arbitrum gateway). One batched query per subgraph
  * for all seeds at once, so cost is O(subgraphs) not O(seeds).
  *
  * Coverage today:
  *   - Uniswap V3 mainnet, V2 mainnet (subgraph IDs)
  *   - Uniswap V3 Arbitrum, Base, Polygon (deployment IPFS hashes)
+ *   - PancakeSwap V3 mainnet (V3-schema-compatible)
+ *   - Aerodrome Base (V3-schema-compatible)
+ *   - Curve mainnet (Messari schema, pool-walk)
+ *
+ * Deferred: SushiSwap and Balancer mainnet — Sushi's current published
+ * subgraph IDs on the Graph Network aren't ones I could verify under the
+ * gateway, and Balancer's `TokenSnapshot` exposes only cumulative volume
+ * (would need a two-snapshot delta to derive 24h). Both warrant a separate
+ * iteration.
  *
  * Why subgraph queries instead of Token API: Token API has no per-token
  * aggregate volume, only per-pool OHLC. Tracked as deficiency
  * `TOKEN_API_NO_TOKEN_LEVEL_VOLUME`.
- *
- * Schemas: native Uniswap V3 exposes `Token.volumeUSD` + `tokenDayData`.
- * Uniswap V2 exposes `tradeVolumeUSD` + `tokenDayData.dailyVolumeUSD`.
- * Sushi/Curve/Balancer all use the Messari standardized schema which has
- * no per-token day volume; aggregating volume there requires walking pool
- * entities and is deferred to a follow-on iteration.
  */
 
 import type { TokenSeed } from './types';
@@ -93,6 +96,21 @@ const SPECS: SubgraphSpec[] = [
     venue: 'Uniswap V3',
     chain: 'polygon',
     endpoint: { kind: 'deployment', hash: 'QmdAaDAUDCypVB85eFUkQMkS5DE1HV4s7WJb6iSiygNvAw' },
+    ...v3Schema,
+  },
+  // V3-fork deployments on The Graph Network. Both expose the same
+  // `Token.tokenDayData.volumeUSD` shape as native Uniswap V3, so they
+  // slot into v3Schema unchanged.
+  {
+    venue: 'PancakeSwap V3',
+    chain: 'mainnet',
+    endpoint: { kind: 'subgraph', id: 'CJYGNhb7RvnhfBDjqpRnD3oxgyhibzc7fkAMa38YV3oS' },
+    ...v3Schema,
+  },
+  {
+    venue: 'Aerodrome',
+    chain: 'base',
+    endpoint: { kind: 'subgraph', id: 'GENunSHWLBXm59mBSgPzQ8metBEp9YDfdqwFr91Av1UM' },
     ...v3Schema,
   },
 ];
