@@ -1025,6 +1025,40 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
 
   const validAddress = allocationId.startsWith('0x') && allocationId.length === 42;
 
+  // POI presentation state
+  const [agentUrl, setAgentUrl] = useState('http://localhost:8000');
+  const [agentToken, setAgentToken] = useState('');
+  const [poiQueuing, setPoiQueuing] = useState(false);
+  const [poiQueued, setPoiQueued] = useState(false);
+  const [poiQueueError, setPoiQueueError] = useState('');
+
+  const handlePresentPoi = async () => {
+    if (!validAddress || !bounty.deployment_id) return;
+    setPoiQueuing(true);
+    setPoiQueueError('');
+    setPoiQueued(false);
+    try {
+      const res = await fetch('/api/indexer/present-poi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deploymentId: bounty.deployment_id,
+          allocationId,
+          agentUrl: agentUrl.trim(),
+          agentToken: agentToken.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Request failed');
+      if (data.errors?.length) throw new Error(data.errors[0].message);
+      setPoiQueued(true);
+    } catch (e) {
+      setPoiQueueError((e as Error).message);
+    } finally {
+      setPoiQueuing(false);
+    }
+  };
+
   // Poll allocation state from SubgraphService every 10s once an address is entered
   const { data: allocState } = useReadContract({
     address: CONTRACTS.subgraphService,
@@ -1187,16 +1221,58 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
                 </div>
               )}
 
-              {/* POI instructions — shown when allocation is open but POI not yet confirmed */}
+              {/* POI — interactive form when allocation open but POI not yet confirmed */}
               {validAddress && allocState && !allocationClosed && !poiReady && (
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3 space-y-2">
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3 space-y-3">
                   <p className="text-xs font-medium text-[var(--text-muted)]">Step 3 — Present a POI</p>
-                  <p className="text-xs text-[var(--text-faint)]">
-                    Run this mutation against your management API (<code>POST http://localhost:8000/</code>), then wait for the status above to update:
-                  </p>
-                  <pre className="text-[10px] font-mono text-[var(--text-faint)] whitespace-pre-wrap break-all leading-relaxed">
-                    {poiMutation}
-                  </pre>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-xs text-[var(--text-faint)] mb-1">Management API URL</label>
+                      <input
+                        type="text"
+                        value={agentUrl}
+                        onChange={(e) => setAgentUrl(e.target.value)}
+                        placeholder="http://localhost:8000"
+                        className={cn(
+                          'w-full px-2.5 py-1.5 text-xs font-mono rounded-[var(--radius-button)]',
+                          'bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text)]',
+                          'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
+                        )}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[var(--text-faint)] mb-1">Basic auth <span className="opacity-60">(user:password, optional)</span></label>
+                      <input
+                        type="password"
+                        value={agentToken}
+                        onChange={(e) => setAgentToken(e.target.value)}
+                        placeholder="user:password"
+                        className={cn(
+                          'w-full px-2.5 py-1.5 text-xs font-mono rounded-[var(--radius-button)]',
+                          'bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text)]',
+                          'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
+                        )}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={handlePresentPoi}
+                    disabled={poiQueuing || poiQueued || !agentUrl.trim()}
+                    className="w-full px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+                  >
+                    {poiQueuing ? 'Queuing...' : poiQueued ? 'Queued ✓ — waiting for chain confirmation' : 'Queue POI Action'}
+                  </button>
+                  {poiQueueError && (
+                    <p className="text-xs text-[var(--red)]">{poiQueueError}</p>
+                  )}
+                  {!poiQueued && (
+                    <details className="text-xs">
+                      <summary className="text-[var(--text-faint)] cursor-pointer hover:text-[var(--text-muted)]">Do it manually instead</summary>
+                      <pre className="mt-2 text-[10px] font-mono text-[var(--text-faint)] whitespace-pre-wrap break-all leading-relaxed">
+                        {poiMutation}
+                      </pre>
+                    </details>
+                  )}
                 </div>
               )}
 
@@ -1636,9 +1712,10 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
   const [showRegister, setShowRegister] = useState(false);
   const [activeSubgraph, setActiveSubgraph] = useState<StudioSubgraph | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['studio-subgraphs', sessionAddress],
     queryFn: () => apiFetch<{ subgraphs: StudioSubgraph[] }>('/api/studio/subgraphs'),
+    retry: 1,
   });
 
   const subgraphs = data?.subgraphs ?? [];
@@ -1695,6 +1772,8 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
               <div key={i} className="h-16 rounded-lg shimmer" />
             ))}
           </div>
+        ) : isError ? (
+          <p className="text-sm text-[var(--red)] py-4">Failed to load subgraphs. Please refresh.</p>
         ) : subgraphs.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center gap-4 border border-dashed border-[var(--border)] rounded-xl">
             <div className="w-12 h-12 rounded-xl bg-[var(--accent-dim)] flex items-center justify-center">
@@ -1747,9 +1826,10 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
 // ---------------------------------------------------------------------------
 
 function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['studio-bounties-public'],
     queryFn: () => apiFetch<{ bounties: SyncBounty[] }>('/api/studio/bounties'),
+    retry: 1,
   });
   const [claimTarget, setClaimTarget] = useState<SyncBounty | null>(null);
   const [cancelHashes, setCancelHashes] = useState<Record<string, `0x${string}`>>({});
@@ -1862,6 +1942,8 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
           <div className="space-y-2">
             {[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-lg shimmer" />)}
           </div>
+        ) : isError ? (
+          <p className="text-sm text-[var(--red)] py-4">Failed to load bounties. Please refresh.</p>
         ) : bounties.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-[var(--text-muted)] text-sm">No bounties posted yet.</p>
