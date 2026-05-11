@@ -1118,9 +1118,32 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
         <div className="p-5 space-y-4">
           {step === 'form' && (
             <>
-              <p className="text-sm text-[var(--text-muted)]">
-                The contract verifies you have an open allocation with a POI submitted after the bounty was posted. Submit your POI via your own indexer-agent, then claim here.
+              {/* Steps checklist */}
+              <ol className="space-y-2 text-xs text-[var(--text-muted)]">
+                <li className="flex gap-2">
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[10px]">1</span>
+                  <span>Deploy the subgraph to your graph-node and wait for it to sync</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[10px]">2</span>
+                  <span>Allocate to this deployment via your indexer-agent (<code>setIndexingRule</code> or <code>queueActions</code>)</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[10px]">3</span>
+                  <span>Present a POI via your management API (port 8000) — see below</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[10px]">4</span>
+                  <span>Enter your allocation ID here — both checks must be green before the Claim button enables</span>
+                </li>
+              </ol>
+              <p className="text-xs text-[var(--text-faint)]">
+                New to this?{' '}
+                <a href="/blog/sync-bounty-indexer-guide" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
+                  Full guide for indexers →
+                </a>
               </p>
+
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5">
                   Allocation ID <span className="text-[var(--red)]">*</span>
@@ -1137,7 +1160,9 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
                   )}
                 />
                 <p className="text-xs text-[var(--text-faint)] mt-1">
-                  Your active allocation address for this deployment. Find it in your indexer-agent logs or on{' '}
+                  The <code>0x</code> address created when you allocated — not your indexer address.
+                  Query <code>{'{ allocations(filter: {}) { id subgraphDeployment } }'}</code> on your management API, or find a{' '}
+                  <code>ServiceStarted</code> event on{' '}
                   <a href={`https://arbiscan.io/address/${CONTRACTS.subgraphService}#events`} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
                     Arbiscan
                   </a>.
@@ -1165,8 +1190,9 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
               {/* POI instructions — shown when allocation is open but POI not yet confirmed */}
               {validAddress && allocState && !allocationClosed && !poiReady && (
                 <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3 space-y-2">
-                  <p className="text-xs text-[var(--text-muted)]">
-                    Run this against your indexer-agent management API (port 8000), then wait for the status above to update:
+                  <p className="text-xs font-medium text-[var(--text-muted)]">Step 3 — Present a POI</p>
+                  <p className="text-xs text-[var(--text-faint)]">
+                    Run this mutation against your management API (<code>POST http://localhost:8000/</code>), then wait for the status above to update:
                   </p>
                   <pre className="text-[10px] font-mono text-[var(--text-faint)] whitespace-pre-wrap break-all leading-relaxed">
                     {poiMutation}
@@ -1727,6 +1753,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
   });
   const [claimTarget, setClaimTarget] = useState<SyncBounty | null>(null);
   const [cancelHashes, setCancelHashes] = useState<Record<string, `0x${string}`>>({});
+  const [howToOpen, setHowToOpen] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const { writeContract: writeCancel } = useWriteContract({
@@ -1774,6 +1801,61 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
             The contract verifies on-chain that the indexer has an open allocation with a POI submitted after the bounty was posted.
             First valid claim wins.
           </p>
+        </div>
+
+        {/* How indexers claim — collapsible */}
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden">
+          <button
+            onClick={() => setHowToOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-[var(--text)] hover:bg-[var(--bg-surface)] transition-colors text-left"
+          >
+            <span>How do indexers claim?</span>
+            <svg className={cn('w-4 h-4 text-[var(--text-faint)] transition-transform', howToOpen && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {howToOpen && (
+            <div className="px-4 pb-4 space-y-3 border-t border-[var(--border)]">
+              <ol className="mt-3 space-y-3 text-sm text-[var(--text-muted)]">
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[11px] mt-0.5">1</span>
+                  <div>
+                    <p className="font-medium text-[var(--text)]">Deploy the subgraph to your graph-node</p>
+                    <p className="text-xs mt-0.5">Use the deployment ID shown on the bounty. Call <code>subgraph_create</code> then <code>subgraph_deploy</code> on your graph-node admin API (port 8020). Wait for <code>synced: true</code>.</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[11px] mt-0.5">2</span>
+                  <div>
+                    <p className="font-medium text-[var(--text)]">Allocate to the deployment</p>
+                    <p className="text-xs mt-0.5">Use <code>setIndexingRule</code> with <code>decisionBasis: always</code> or queue an <code>allocate</code> action via your indexer-agent management API (port 8000). Note your allocation ID — it&apos;s a <code>0x</code> address, not your indexer address.</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[11px] mt-0.5">3</span>
+                  <div>
+                    <p className="font-medium text-[var(--text)]">Present a POI</p>
+                    <p className="text-xs mt-0.5">Queue a <code>presentPOI</code> action via your management API. This calls <code>SubgraphService.collect()</code> and sets <code>lastPOIPresentedAt</code> on-chain — the timestamp the contract checks. Keep your allocation <strong>open</strong> until after claiming.</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[11px] mt-0.5">4</span>
+                  <div>
+                    <p className="font-medium text-[var(--text)]">Click Claim and sign</p>
+                    <p className="text-xs mt-0.5">Open the claim modal, enter your allocation ID. The status panel polls the chain every 10s. Once both checks are green, click <strong>Claim GRT</strong> and sign with your indexer wallet. GRT is paid out immediately.</p>
+                  </div>
+                </li>
+              </ol>
+              <a
+                href="/blog/sync-bounty-indexer-guide"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-xs text-[var(--accent)] hover:underline mt-1"
+              >
+                Full step-by-step guide with code snippets →
+              </a>
+            </div>
+          )}
         </div>
 
         {isLoading ? (
