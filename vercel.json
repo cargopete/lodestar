@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/warm-tokens",
       "schedule": "*/4 * * * *"
+    },
+    {
+      "path": "/api/cron/warm-protocols",
+      "schedule": "*/45 * * * *"
     }
   ]
 }
