@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, Suspense } from 'react';
+import { use, useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -26,13 +26,14 @@ import type { NetworkInfo } from '@/app/api/networks/route';
 // Tab configuration
 // ---------------------------------------------------------------------------
 
-type Tab = 'overview' | 'schema' | 'curators' | 'history' | 'manifest';
+type Tab = 'overview' | 'schema' | 'curators' | 'history' | 'manifest' | 'playground';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'schema', label: 'Schema' },
   { id: 'curators', label: 'Curators' },
   { id: 'history', label: 'History' },
   { id: 'manifest', label: 'Manifest' },
+  { id: 'playground', label: 'Playground' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -924,6 +925,108 @@ function ManifestSection({ hash }: { hash: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Playground tab
+// ---------------------------------------------------------------------------
+
+const STARTER_QUERY = '{\n  _meta {\n    block { number hash }\n    deployment\n  }\n}';
+
+function PlaygroundSection({ hash }: { hash: string }) {
+  const [query, setQuery] = useState(STARTER_QUERY);
+  const [response, setResponse] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
+  const endpointPath = `/api/subgraph-playground/${hash}`;
+
+  async function runQuery() {
+    setLoading(true);
+    setRunError(null);
+    try {
+      const res = await fetch(endpointPath, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      setResponse(JSON.stringify(data, null, 2));
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle>GraphQL Playground</CardTitle>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs text-[var(--text-faint)] font-mono truncate hidden sm:block">{endpointPath}</span>
+              <button
+                onClick={() => navigator.clipboard.writeText(`${window.location.origin}${endpointPath}`)}
+                className="text-[var(--accent)] hover:text-[var(--text)] transition-colors flex-shrink-0"
+                title="Copy endpoint URL"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <textarea
+              className="w-full h-40 font-mono text-sm p-3 rounded-[var(--radius-card)] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)] resize-y focus:outline-none focus:border-[var(--accent)]"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              spellCheck={false}
+            />
+            <button
+              onClick={runQuery}
+              disabled={loading}
+              className="px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+            >
+              {loading ? 'Running…' : 'Run Query'}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {runError && (
+        <Card>
+          <CardContent>
+            <p className="text-sm font-mono text-[var(--red)] py-2">{runError}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {response && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Response</CardTitle>
+              <button
+                onClick={() => navigator.clipboard.writeText(response)}
+                className="text-xs text-[var(--accent)] hover:underline"
+              >
+                Copy
+              </button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-xs font-mono text-[var(--text)] bg-[var(--bg-elevated)] p-4 rounded-[var(--radius-card)] overflow-auto max-h-[500px] whitespace-pre-wrap break-all">
+              {response}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Inner page (needs useSearchParams — wrapped in Suspense by outer component)
 // ---------------------------------------------------------------------------
 
@@ -1040,6 +1143,7 @@ function DeploymentPageInner({ hash }: { hash: string }) {
         {activeTab === 'curators' && <CurationSection hash={hash} />}
         {activeTab === 'history' && <HistorySection hash={hash} />}
         {activeTab === 'manifest' && <ManifestSection hash={hash} />}
+        {activeTab === 'playground' && <PlaygroundSection hash={hash} />}
       </div>
     </div>
   );
