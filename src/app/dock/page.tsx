@@ -1853,6 +1853,15 @@ function BountyQueryPanel({ bounty }: { bounty: SyncBounty }) {
       const data = await res.json();
       if (!res.ok) {
         setResponseError(data.error ?? `HTTP ${res.status}`);
+      } else if (Array.isArray(data.errors) && data.errors.length > 0) {
+        const msg: string = data.errors[0]?.message ?? 'GraphQL error';
+        if (msg.includes('not found') || msg.includes('not available')) {
+          setResponseError(
+            'Subgraph not available via gateway — the indexer who claimed this bounty may have closed their allocation after syncing. Try querying the indexer directly, or wait for another indexer to pick it up.',
+          );
+        } else {
+          setResponseError(msg);
+        }
       } else {
         setResponse(JSON.stringify(data, null, 2));
       }

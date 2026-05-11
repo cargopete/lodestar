@@ -947,7 +947,18 @@ function PlaygroundSection({ hash }: { hash: string }) {
         body: JSON.stringify({ query }),
       });
       const data = await res.json();
-      setResponse(JSON.stringify(data, null, 2));
+      if (Array.isArray(data.errors) && data.errors.length > 0) {
+        const msg: string = data.errors[0]?.message ?? 'GraphQL error';
+        if (msg.includes('not found') || msg.includes('not available')) {
+          setRunError(
+            'Subgraph not available via gateway — no indexer is currently serving this deployment through the public gateway. Signal GRT to attract indexers, or try again later.',
+          );
+        } else {
+          setRunError(msg);
+        }
+      } else {
+        setResponse(JSON.stringify(data, null, 2));
+      }
     } catch (err) {
       setRunError(err instanceof Error ? err.message : String(err));
     } finally {
