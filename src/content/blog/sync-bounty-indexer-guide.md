@@ -195,4 +195,4 @@ The BountyBoard contract doesn't check GNS — it only talks to SubgraphService.
 
 ---
 
-If you hit any issues, the Lodestar claim modal shows the GraphQL mutation pre-filled with your deployment ID. The [Lodestar Discord](https://discord.gg/graphprotocol) is also a reasonable place to ask — most active indexers are in the Graph Protocol server.
+If you hit any issues, the Lodestar claim modal shows the GraphQL mutation pre-filled with your deployment ID. Feel free to [open an issue on GitHub](https://github.com/lodestar-team/lodestar/issues) or reach out to **@cargopete** (Petko) directly on Discord.
