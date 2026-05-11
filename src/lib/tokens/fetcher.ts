@@ -12,6 +12,8 @@ import {
 import { classifyAddresses } from './contract-detection';
 import { recordDeficiency } from './deficiencies';
 import { fetchDexVolumes } from './dex-volume';
+import { fetchAllHyperliquidPerps, fetchHyperliquidForSeed, seedToHyperliquidCoin } from './hyperliquid';
+import { fetchAaveV3MultiChain, summariseLending, type LendingChain } from './lending';
 import { TOKEN_SEEDS } from './seed';
 import { fetchPoolStats, type PoolStats } from './pool-stats';
 import { fetchSpotPrices } from './spot-price';
@@ -269,6 +271,9 @@ async function buildSummary(seed: TokenSeed, ethUsd: number | null): Promise<Tok
     top10ContractShare,
     dexVolume24hUsd: null,
     dexVolumeByVenue: {},
+    hyperliquidCoin: null,
+    hyperliquidOiUsd: null,
+    hyperliquidFundingHourly: null,
     altContracts: seed.altContracts ?? {},
     warnings,
     quoteAsOf: Date.now(),
@@ -294,11 +299,15 @@ export async function fetchTokenDirectory(): Promise<TokenSummary[]> {
     chain: s.chain,
     contract: s.contract,
   }));
-  const [summaries, volumes, spotPrices, totalSupplies] = await Promise.all([
+  const [summaries, volumes, spotPrices, totalSupplies, hlPerps] = await Promise.all([
     mapWithConcurrency(TOKEN_SEEDS, 6, (s) => buildSummary(s, ethUsd)),
     fetchDexVolumes(TOKEN_SEEDS),
     fetchSpotPrices(mainnetContracts),
     fetchTotalSupplies(totalSupplyInput),
+    // One paginated sweep of `/v1/hyperliquid/markets` builds a coin →
+    // snapshot map; per-seed lookup is then O(1). Far cheaper than
+    // calling the snapshot endpoint once per seed.
+    fetchAllHyperliquidPerps().catch(() => new Map()),
   ]);
 
   for (const summary of summaries) {
@@ -313,12 +322,29 @@ export async function fetchTokenDirectory(): Promise<TokenSummary[]> {
       summary.totalSupply = ts;
       if (summary.priceUsd != null) summary.fdvUsd = ts * summary.priceUsd;
     }
-    // Override priceUsd with live subgraph spot when available. The
-    // matching seed determines whether to skip pegged stables — they
-    // already short-circuit pricing in buildSummary.
     const seed = TOKEN_SEEDS.find(
       (s) => s.chain === summary.chain && s.contract.toLowerCase() === summary.contract.toLowerCase()
     );
+    // Hyperliquid perps lookup. The mapping function short-circuits for
+    // stablecoins and tokens that don't fit the wrapped/k-prefix patterns,
+    // so this is a cheap O(1) hit on the prebuilt map for ~134 of 153
+    // seeds and a no-op for the rest.
+    if (seed) {
+      const hlCoin = seedToHyperliquidCoin(seed);
+      if (hlCoin) {
+        const market = hlPerps.get(hlCoin);
+        if (market && Number.isFinite(market.price) && market.price > 0) {
+          summary.hyperliquidCoin = hlCoin;
+          const oiTokens = Number(market.open_interest ?? 0);
+          summary.hyperliquidOiUsd = oiTokens > 0 ? oiTokens * market.price : null;
+          summary.hyperliquidFundingHourly =
+            market.funding_rate != null ? Number(market.funding_rate) : null;
+        }
+      }
+    }
+    // Override priceUsd with live subgraph spot when available. The
+    // matching seed determines whether to skip pegged stables — they
+    // already short-circuit pricing in buildSummary.
     if (seed?.pegUsd != null) continue;
     const live = spotPrices.get(summary.contract.toLowerCase());
     if (live != null && live > 0) {
@@ -386,6 +412,8 @@ export async function fetchTokenDetail(
     poolsRaw,
     swapsRaw,
     dexVolumes,
+    aaveReserves,
+    hyperliquid,
   ] = await Promise.all([
     buildSummary(seed, ethUsd),
     fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 100, 1),
@@ -409,6 +437,14 @@ export async function fetchTokenDetail(
     // page's "24h DEX Vol" card stays blank because `buildSummary` only
     // initialises those fields to null.
     fetchDexVolumes([seed]).catch(() => new Map<string, { totalUsd: number; byVenue: Record<string, number> }>()),
+    // Lending market data — Aave V3 across mainnet + Arbitrum + Base +
+    // Polygon + Optimism. Built from the seed's primary contract plus its
+    // `altContracts` map; chains without a known address are skipped.
+    fetchAaveV3MultiChain(buildLendingChainContracts(seed)).catch(() => []),
+    // Hyperliquid perps snapshot. Returns null for any seed without a
+    // matching HL coin (most of the catalog) and silently degrades when
+    // the API is unavailable.
+    fetchHyperliquidForSeed(seed).catch(() => null),
   ]);
   // ETH daily-close benchmark for the volatility comparison. Two pages of
   // 1d × 100 against the same WETH/USDC reference pool the spot lookup uses,
@@ -546,8 +582,23 @@ export async function fetchTokenDetail(
   const recentSwaps = buildSwaps(swapsRaw, seed.contract, summary.priceUsd, ethUsd);
   const performance = buildPerformance(priceSeries);
   const range24h = buildRange24h(priceSeries);
+  const lending = summariseLending(aaveReserves, summary.priceUsd);
 
-  return { summary, priceSeries, benchmarkSeries, topHolders, markets, recentSwaps, performance, range24h };
+  return { summary, priceSeries, benchmarkSeries, topHolders, markets, recentSwaps, performance, range24h, lending, hyperliquid };
+}
+
+// Map a seed's contracts onto the chain keys that the lending module
+// understands. The primary `seed.contract` is the mainnet identifier;
+// `altContracts` covers the four L2s. Chains without a known address
+// fall through (the lending module skips them).
+function buildLendingChainContracts(seed: TokenSeed): Partial<Record<LendingChain, string>> {
+  const out: Partial<Record<LendingChain, string>> = {};
+  if (seed.chain === 'mainnet') out.mainnet = seed.contract;
+  if (seed.altContracts?.arbitrum) out.arbitrum = seed.altContracts.arbitrum;
+  if (seed.altContracts?.base) out.base = seed.altContracts.base;
+  if (seed.altContracts?.polygon) out.polygon = seed.altContracts.polygon;
+  if (seed.altContracts?.optimism) out.optimism = seed.altContracts.optimism;
+  return out;
 }
 
 function buildMarkets(
@@ -643,6 +694,9 @@ function buildSwaps(
     const counterpartySymbol = inIsSeed
       ? s.output_token?.symbol ?? '?'
       : s.input_token?.symbol ?? '?';
+    const counterpartyContract = inIsSeed
+      ? s.output_token?.address ?? null
+      : s.input_token?.address ?? null;
     const amountUsd = priceUsd != null ? tokenAmount * priceUsd : null;
     // Execution price in USD per seed token. Derived from the counterparty
     // leg whenever we know the counterparty's USD value:
@@ -674,6 +728,7 @@ function buildSwaps(
       amount: tokenAmount,
       amountUsd,
       counterpartySymbol,
+      counterpartyContract,
       // Token API exposes three address fields: `user` (originator), `sender`
       // (immediate caller, often a router contract), and `recipient`. `user`
       // is the meaningful "trader" column — the EOA that signed the trade.

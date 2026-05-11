@@ -4,8 +4,10 @@ import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { TokenPriceChart, type WindowId } from '@/components/charts/TokenPriceChart';
+import { ProtocolIcon, defiLlamaSlugFor } from '@/components/tokens/ProtocolIcon';
 import { TagBadge } from '@/components/tokens/TagBadge';
 import { TokenIcon } from '@/components/tokens/TokenIcon';
+import { ChainIcon } from '@/components/tokens/ChainIcon';
 import { useTokenDetail } from '@/hooks/useTokens';
 import { useClickTracking, type TradeClickEvent } from '@/hooks/useClickTracking';
 import { formatCompact, formatNumber, formatPrice, formatUSD, shortenAddress } from '@/lib/utils';
@@ -171,7 +173,856 @@ function Range24h({ range, change }: { range: TokenDetail['range24h']; change: n
   );
 }
 
-function Markets({ markets, chain, onTradeClick }: { markets: TokenDetail['markets']; chain: string; onTradeClick?: (e: TradeClickEvent) => void }) {
+// Inline help tooltip. Wraps a label with a small ⓘ glyph that shows a
+// styled popover on hover — replaces native `title=` attributes, which
+// have a 1+ second delay and don't theme to the rest of the surface.
+// CSS-only (no JS state); positioned below the trigger and capped width.
+function HelpTooltip({
+  label,
+  children,
+  className = '',
+}: {
+  label: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <span className={`group relative inline-flex items-center gap-1 cursor-help ${className}`}>
+      {label}
+      <span aria-hidden className="text-[var(--text-faint)] text-[10px]">ⓘ</span>
+      <span
+        role="tooltip"
+        className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity absolute z-30 top-full left-1/2 -translate-x-1/2 mt-1 w-60 rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-muted)] normal-case tracking-normal font-normal text-left pointer-events-none shadow-lg"
+      >
+        {children}
+      </span>
+    </span>
+  );
+}
+
+// Sticky identity strip — pinned to the top of the viewport on scroll so
+// the user never loses track of which token they're looking at. Shows
+// just the essentials: back link, logo, symbol, live price, 24h change.
+// Always visible, slim by design (~32px); the full header below it
+// carries the rest of the surface area.
+function StickyTokenBar({ summary }: { summary: TokenDetail['summary'] }) {
+  return (
+    <div className="sticky top-0 z-20 px-4 sm:px-6 py-1.5 bg-[var(--bg)]/85 backdrop-blur border-b border-[var(--border)]">
+      <div className="max-w-[1280px] mx-auto flex items-center gap-2.5 text-sm">
+        <Link
+          href="/tokens"
+          className="text-xs text-[var(--text-faint)] hover:text-[var(--text)]"
+          title="Back to tokens"
+        >
+          ←
+        </Link>
+        <TokenIcon
+          symbol={summary.symbol}
+          slug={summary.icon}
+          logoUri={summary.logoUri}
+          contract={summary.contract}
+          chain={summary.chain}
+          size={20}
+        />
+        <span className="font-medium">{summary.symbol}</span>
+        <span className="text-xs text-[var(--text-faint)] hidden sm:inline">{summary.name}</span>
+        {summary.priceUsd != null && (
+          <span className="ml-auto tabular-nums text-[var(--text)]">{formatPrice(summary.priceUsd)}</span>
+        )}
+        {summary.change24hPct != null && (
+          <span
+            className={`tabular-nums text-xs ${
+              summary.change24hPct >= 0 ? 'text-[var(--green)]' : 'text-red-500'
+            }`}
+          >
+            {summary.change24hPct >= 0 ? '+' : ''}{summary.change24hPct.toFixed(2)}%
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Compact info row under the header — replaces the old standalone Info
+// card now that the layout is single-column. Surfaces the contract
+// address (linked + copyable), token decimals, and the project website
+// inline with the rest of the header metadata. Circulating / total
+// supply intentionally not duplicated here — they're already visible in
+// the stat cards (Mcap is `priceUsd × circulating`, FDV is `× totalSupply`).
+function HeaderInfoRow({
+  contract,
+  decimals,
+  website,
+  name,
+  alt,
+}: {
+  contract: string;
+  decimals: number;
+  website: string | null;
+  name: string;
+  alt: TokenDetail['summary']['altContracts'];
+}) {
+  let host: string | null = null;
+  if (website) {
+    try { host = new URL(website).host.replace(/^www\./, ''); } catch {}
+  }
+  const altEntries = Object.entries(alt).filter(([, addr]) => !!addr) as Array<[string, string]>;
+  return (
+    <div className="mt-2 flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--text-faint)]">
+      <span className="inline-flex items-center gap-1.5">
+        <span className="uppercase tracking-wider text-[10px]">Contract</span>
+        <a
+          href={`https://etherscan.io/token/${contract}`}
+          target="_blank"
+          rel="noreferrer"
+          className="font-mono text-[var(--text-muted)] hover:text-[var(--accent)]"
+        >
+          {shortenAddress(contract, 6)}
+        </a>
+        <CopyButton text={contract} />
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="uppercase tracking-wider text-[10px]">Decimals</span>
+        <span className="tabular-nums text-[var(--text-muted)]">{decimals}</span>
+      </span>
+      {altEntries.length > 0 && (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="uppercase tracking-wider text-[10px]">Also on</span>
+          {altEntries.map(([chain, addr]) => {
+            const ex = EXPLORERS[chain];
+            if (!ex) return null;
+            return (
+              <a
+                key={chain}
+                href={`${ex.tx}${addr}`}
+                target="_blank"
+                rel="noreferrer"
+                title={`${ex.name}: ${addr}`}
+                className="inline-flex items-center px-1.5 py-0 rounded border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+              >
+                {ex.name}
+              </a>
+            );
+          })}
+        </span>
+      )}
+      {website && (
+        <a
+          href={website}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--accent)]"
+        >
+          <span>Visit {name}</span>
+          {host && <span className="text-[var(--text-faint)]">· {host}</span>}
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+          </svg>
+        </a>
+      )}
+    </div>
+  );
+}
+
+// Anchor-chip strip that doubles as a quick TOC and a feature index.
+// Renders a chip per section actually present on this token's detail
+// page, each scrolling smoothly to a `<section id>` further down.
+// Sections that aren't applicable (e.g. no Hyperliquid market) drop out
+// — the chip itself signals which protocols/venues this token touches.
+function SectionNav({ data }: { data: TokenDetail }) {
+  type Chip = { id: string; label: string; meta?: string };
+  const chips: Chip[] = [{ id: 'chart', label: 'Chart' }];
+  if (data.recentSwaps.length > 0) {
+    chips.push({ id: 'swaps', label: 'Swaps', meta: String(data.recentSwaps.length) });
+  }
+  if (data.markets.length > 0) {
+    chips.push({ id: 'markets', label: 'Spot pools', meta: String(data.markets.length) });
+  }
+  if (data.lending && data.lending.markets.length > 0) {
+    const n = data.lending.markets.length;
+    chips.push({ id: 'lending', label: 'Aave V3', meta: `${n} ${n === 1 ? 'chain' : 'chains'}` });
+  }
+  if (data.hyperliquid) {
+    chips.push({ id: 'perps', label: 'Hyperliquid', meta: data.hyperliquid.coin });
+  }
+  if (data.topHolders.length > 0) {
+    chips.push({ id: 'holders', label: 'Holders' });
+  }
+  if (chips.length <= 1) return null;
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {chips.map((c) => (
+        <a
+          key={c.id}
+          href={`#${c.id}`}
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--border)] bg-[var(--bg-elevated)]/40 text-xs text-[var(--text-muted)] hover:border-[var(--accent)] hover:bg-[var(--accent)]/10 hover:text-[var(--text)] transition-colors"
+        >
+          <span>{c.label}</span>
+          {c.meta && (
+            <span className="text-[10px] tabular-nums text-[var(--text-faint)]">{c.meta}</span>
+          )}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+// Tiny inline sparkline. SVG-only, no library; maps the input array to a
+// polyline normalized over the range. Used inside Hyperliquid stat cells.
+function Sparkline({
+  data,
+  width = 60,
+  height = 16,
+  className = '',
+  zeroLine = false,
+}: {
+  data: number[];
+  width?: number;
+  height?: number;
+  className?: string;
+  zeroLine?: boolean;
+}) {
+  if (data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const dx = width / (data.length - 1);
+  const points = data
+    .map((v, i) => `${(i * dx).toFixed(1)},${(height - ((v - min) / range) * height).toFixed(1)}`)
+    .join(' ');
+  // When `zeroLine` is true, draw a dashed midline for series that
+  // straddle zero (funding rates, where positive vs negative is the
+  // bullish/bearish signal).
+  const zeroY = min < 0 && max > 0 ? height - ((0 - min) / range) * height : null;
+  return (
+    <svg width={width} height={height} className={className} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      {zeroLine && zeroY != null && (
+        <line x1={0} x2={width} y1={zeroY} y2={zeroY} stroke="currentColor" strokeWidth={0.5} strokeDasharray="2 2" opacity={0.4} />
+      )}
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth={1.2} />
+    </svg>
+  );
+}
+
+// Hyperliquid perps card. Renders open interest, funding, 24h volume,
+// and 24h liquidation activity for tokens with a corresponding HL perp
+// market (BTC, ETH, SOL, LINK, AAVE, UNI, …). Returns null otherwise.
+function HyperliquidCard({
+  hyperliquid,
+  summary,
+}: {
+  hyperliquid: TokenDetail['hyperliquid'];
+  summary: TokenDetail['summary'];
+}) {
+  if (!hyperliquid) return null;
+  const symbol = summary.symbol;
+  const fundingPct = hyperliquid.fundingAnnualized * 100;
+  const fundingClass =
+    Math.abs(fundingPct) < 0.5
+      ? 'text-[var(--text-muted)]'
+      : fundingPct > 0
+        ? 'text-[var(--green)]'
+        : 'text-red-500';
+  const liq = hyperliquid.liquidations24h;
+  // Long/short bar fill ratio. The bar is rendered (further down) only
+  // when total notional > 0, and the proportional split fills the full
+  // bar — a perfectly balanced day shows half-red / half-green, not an
+  // empty track. Days with zero liquidations omit the strip entirely.
+  const liqTotal = liq?.totalNotionalUsd ?? 0;
+  const longPct = liq && liqTotal > 0 ? (liq.longNotionalUsd / liqTotal) * 100 : 0;
+  // OI 24h delta — color the subline by sign so the eye picks up
+  // accumulation vs unwinding without reading the number.
+  const oiChange = hyperliquid.openInterestChange24h;
+  const oiChangeClass =
+    oiChange == null
+      ? 'text-[var(--text-faint)]'
+      : oiChange > 0.001
+        ? 'text-[var(--green)]'
+        : oiChange < -0.001
+          ? 'text-red-500'
+          : 'text-[var(--text-faint)]';
+  // Trader-positioning split. Counts (number of accounts on each side)
+  // are a sentiment proxy distinct from notional balance — useful when
+  // a few whales tilt the dollars but most traders sit the other way.
+  const pos = hyperliquid.positioning;
+  const posTotal = pos ? pos.longCount + pos.shortCount : 0;
+  const longCountPct = pos && posTotal > 0 ? (pos.longCount / posTotal) * 100 : 0;
+  // Volume buy/sell split — surfaces directional flow that's already in
+  // the snapshot but wasn't being exposed.
+  const volBuy = hyperliquid.volume24hBuyUsd;
+  const volSell = hyperliquid.volume24hSellUsd;
+  // Perp 24h price change — colored signed pill next to the title.
+  const perpChange = hyperliquid.priceChange24h * 100;
+  const perpChangeClass =
+    perpChange > 0.05 ? 'text-[var(--green)]' : perpChange < -0.05 ? 'text-red-500' : 'text-[var(--text-muted)]';
+  // Perp-vs-spot premium / discount. Compares the HL mark price to our
+  // canonical spot. Larger magnitudes signal aggressive directional
+  // pressure on the venue (longs lifting offers / shorts hitting bids).
+  // For HL's k-prefixed memes (kPEPE, kSHIB, kFLOKI), the perp's mark
+  // price is quoted per 1000 underlying tokens; scale the spot
+  // reference up by 1000 so the comparison is apples-to-apples.
+  const kContract = hyperliquid.coin.startsWith('k');
+  const spotRef =
+    summary.priceUsd != null && summary.priceUsd > 0
+      ? summary.priceUsd * (kContract ? 1000 : 1)
+      : null;
+  const premium =
+    spotRef != null && spotRef > 0 ? (hyperliquid.priceUsd - spotRef) / spotRef : null;
+  const premiumPct = premium != null ? premium * 100 : null;
+  // Regime read — a one-line synthesis above the stat grid that does
+  // the interpretation a trader would otherwise have to do by scanning
+  // four cells. Keeps the card oriented around "what's the signal" not
+  // "here's a bunch of inventory."
+  const regimeParts: string[] = [];
+  if (hyperliquid.fundingAtBaseline) {
+    regimeParts.push('Funding at HL baseline (no skew)');
+  } else if (Math.abs(hyperliquid.fundingAnnualized) >= 0.30) {
+    regimeParts.push(
+      `${hyperliquid.fundingAnnualized > 0 ? 'Heavy long-pay' : 'Heavy short-pay'} funding`
+    );
+  } else if (Math.abs(hyperliquid.fundingAnnualized) >= 0.15) {
+    regimeParts.push(
+      `${hyperliquid.fundingAnnualized > 0 ? 'Long-biased' : 'Short-biased'} funding`
+    );
+  }
+  if (oiChange != null) {
+    if (oiChange >= 0.05) regimeParts.push(`OI accumulating (+${(oiChange * 100).toFixed(1)}% 24h)`);
+    else if (oiChange <= -0.05) regimeParts.push(`OI unwinding (${(oiChange * 100).toFixed(1)}% 24h)`);
+  }
+  if (premiumPct != null && Math.abs(premiumPct) >= 0.20) {
+    regimeParts.push(`perp ${premiumPct >= 0 ? 'premium' : 'discount'} ${premiumPct >= 0 ? '+' : ''}${premiumPct.toFixed(2)}% vs spot`);
+  }
+  // Trader positioning — single-color dominance gauge instead of a
+  // long/short split. The split-color version conflicted with the
+  // liquidation row, where opposite colors mean opposite things; a
+  // one-sided fill against a midline avoids that visual collision.
+  // longCountPct ∈ [0,100] above; we render a 50% midline as the
+  // "neutral" reference and fill from 50% out toward the dominant side.
+  const dominantSide: 'long' | 'short' = longCountPct >= 50 ? 'long' : 'short';
+  const dominantPct = dominantSide === 'long' ? longCountPct : 100 - longCountPct;
+  const fundingPersistent = hyperliquid.fundingHistory24h.length >= 6;
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3 flex-wrap">
+          <TokenIcon
+            symbol={summary.symbol}
+            slug={summary.icon}
+            logoUri={summary.logoUri}
+            contract={summary.contract}
+            chain={summary.chain}
+            size={24}
+          />
+          <CardTitle>{symbol} perps on Hyperliquid</CardTitle>
+          <span
+            className={`tabular-nums text-sm ${perpChangeClass}`}
+            title="24h price change on the Hyperliquid perp itself, separate from the spot price shown in the page header."
+          >
+            {perpChange >= 0 ? '+' : ''}{perpChange.toFixed(2)}%
+          </span>
+          <a
+            href={hyperliquid.marketUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-auto inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--accent)] whitespace-nowrap"
+          >
+            <ProtocolIcon slug="hyperliquid" size={18} />
+            Open {hyperliquid.coin} market
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+            </svg>
+          </a>
+        </div>
+        {regimeParts.length > 0 && (
+          <p className="mt-1 text-xs text-[var(--text-muted)] leading-snug">
+            <span className="text-[var(--text-faint)]">Regime: </span>
+            {regimeParts.join(' · ')}
+          </p>
+        )}
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">
+              <HelpTooltip label="Open Interest">
+                Total notional value of open perpetual contracts on Hyperliquid for this asset. A proxy for trader exposure / leverage in the venue. The line below shows 24h delta + a sparkline of hourly OI.
+              </HelpTooltip>
+            </div>
+            <div className="tabular-nums mt-0.5">{formatUSD(hyperliquid.openInterestUsd)}</div>
+            <div className="text-[10px] text-[var(--text-faint)] tabular-nums mt-0.5">
+              {formatNumber(Math.round(hyperliquid.openInterestTokens))} {hyperliquid.coin}
+            </div>
+            {oiChange != null && (
+              <div className={`flex items-center gap-1.5 mt-0.5 ${oiChangeClass}`}>
+                <span className="text-[10px] tabular-nums">
+                  {oiChange >= 0 ? '+' : ''}{(oiChange * 100).toFixed(2)}% (24h)
+                </span>
+                {hyperliquid.openInterestHistory24h.length >= 2 && (
+                  <Sparkline data={hyperliquid.openInterestHistory24h} width={48} height={12} />
+                )}
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">24h Volume</div>
+            <div className="tabular-nums mt-0.5">{formatUSD(hyperliquid.volume24hUsd)}</div>
+            {(volBuy > 0 || volSell > 0) && (
+              <div className="text-[10px] text-[var(--text-faint)] tabular-nums mt-0.5">
+                <span className="text-[var(--green)]">B {formatUSD(volBuy)}</span>
+                {' · '}
+                <span className="text-red-500">S {formatUSD(volSell)}</span>
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">
+              <HelpTooltip label="Funding (ann.)">
+                Annualized funding rate (hourly funding × 24 × 365). Positive = longs pay shorts (long-biased venue). Negative = shorts pay longs. The sparkline below shows the last 24h of hourly rates with a dashed midline at zero. "At floor" means HL's per-asset baseline; not a directional signal.
+              </HelpTooltip>
+            </div>
+            <div className={`tabular-nums mt-0.5 ${fundingClass}`}>
+              {fundingPct >= 0 ? '+' : ''}{fundingPct.toFixed(2)}%
+            </div>
+            {fundingPersistent && (
+              <div className={`flex items-center gap-1.5 mt-0.5 ${fundingClass}`}>
+                <Sparkline data={hyperliquid.fundingHistory24h} width={56} height={14} zeroLine />
+                {hyperliquid.fundingAtBaseline && (
+                  <span className="text-[10px] text-[var(--text-faint)]">at floor</span>
+                )}
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">
+              <HelpTooltip label="Liqs (UTC day)">
+                Notional USD value of liquidation events accumulated so far in the current UTC day, summed across long and short closeouts. Resets at 00:00 UTC. The bar below splits long vs short notional.
+              </HelpTooltip>
+            </div>
+            <div className="tabular-nums mt-0.5">{liq ? formatUSD(liq.totalNotionalUsd) : '—'}</div>
+            {liq && (
+              <div className="text-[10px] text-[var(--text-faint)] tabular-nums mt-0.5">
+                {liq.events} {liq.events === 1 ? 'event' : 'events'} · {liq.uniqueUsers} users
+              </div>
+            )}
+          </div>
+        </div>
+        {pos && posTotal > 0 && (
+          <div className="mt-3 space-y-1">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-[var(--text-muted)]">
+                Longs · {formatNumber(pos.longCount)} ({longCountPct.toFixed(0)}%)
+              </span>
+              <span
+                className="text-[var(--text-faint)]"
+                title="Open positions right now on this market, by account count. Useful as a sentiment proxy distinct from the notional dollar split."
+              >
+                Trader positioning · {dominantPct.toFixed(0)}% {dominantSide}
+              </span>
+              <span className="text-[var(--text-muted)]">
+                ({(100 - longCountPct).toFixed(0)}%) Shorts · {formatNumber(pos.shortCount)}
+              </span>
+            </div>
+            {/* Single-color dominance gauge with a midline marker. The
+               left/right colors that previously matched the liquidations
+               row caused a visual collision; this version reads as
+               "how far from neutral" without competing with the bar
+               below it. Fills outward from the 50% midline toward the
+               dominant side. */}
+            <div className="relative h-1.5 rounded-full bg-[var(--text-faint)]/15 overflow-hidden">
+              <div
+                className="absolute top-0 bottom-0 bg-[var(--accent)]/60"
+                style={
+                  dominantSide === 'long'
+                    ? { left: '50%', width: `${(longCountPct - 50).toFixed(2)}%` }
+                    : { right: '50%', width: `${(50 - longCountPct).toFixed(2)}%` }
+                }
+              />
+              <div
+                className="absolute top-0 bottom-0 w-px bg-[var(--text-faint)]/40"
+                style={{ left: '50%' }}
+              />
+            </div>
+          </div>
+        )}
+        {liq && liqTotal > 0 && (
+          <div className="mt-3 space-y-1">
+            <div className="flex items-center justify-between text-[10px] text-[var(--text-faint)]">
+              <span>Longs liquidated · {formatUSD(liq.longNotionalUsd)}</span>
+              <span>Shorts liquidated · {formatUSD(liq.shortNotionalUsd)}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-[var(--text-faint)]/15 overflow-hidden flex">
+              <div className="h-full bg-red-500/70" style={{ width: `${longPct.toFixed(2)}%` }} />
+              <div className="h-full bg-[var(--green)]/70" style={{ width: `${(100 - longPct).toFixed(2)}%` }} />
+            </div>
+          </div>
+        )}
+        {hyperliquid.largestLiquidation24h && (
+          <div className="mt-3 text-[11px] text-[var(--text-muted)]">
+            Largest liquidation today:{' '}
+            <span className={hyperliquid.largestLiquidation24h.side === 'long' ? 'text-red-500' : 'text-[var(--green)]'}>
+              {formatUSD(hyperliquid.largestLiquidation24h.notionalUsd)} {hyperliquid.largestLiquidation24h.side}
+            </span>{' '}
+            wiped ·{' '}
+            <a
+              href={`https://app.hyperliquid.xyz/explorer/address/${hyperliquid.largestLiquidation24h.user}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono text-[10px] hover:text-[var(--accent)]"
+            >
+              {shortenAddress(hyperliquid.largestLiquidation24h.user, 5)}
+            </a>
+          </div>
+        )}
+        <div className="mt-3 pt-2 border-t border-[var(--border)]/50 text-[10px] text-[var(--text-faint)] flex flex-wrap gap-x-3 gap-y-0.5">
+          <span>
+            Mark{' '}
+            <span className="text-[var(--text-muted)] tabular-nums">{formatPrice(hyperliquid.priceUsd)}</span>
+            {kContract && <span className="text-[var(--text-faint)]"> per 1k {summary.symbol}</span>}
+          </span>
+          {hyperliquid.priceLow24h != null && hyperliquid.priceHigh24h != null && (
+            <span>
+              24h range{' '}
+              <span className="text-[var(--text-muted)] tabular-nums">
+                {formatPrice(hyperliquid.priceLow24h)} – {formatPrice(hyperliquid.priceHigh24h)}
+              </span>
+            </span>
+          )}
+          {premiumPct != null && (
+            <span title="Mark price on the Hyperliquid perp vs the Uniswap V3 mainnet spot reference.">
+              Perp vs spot{' '}
+              <span
+                className={
+                  Math.abs(premiumPct) < 0.05
+                    ? 'text-[var(--text-muted)]'
+                    : premiumPct > 0
+                      ? 'text-[var(--green)]'
+                      : 'text-red-500'
+                }
+              >
+                {Math.abs(premiumPct) < 0.05 ? '~0.00%' : `${premiumPct >= 0 ? '+' : ''}${premiumPct.toFixed(2)}%`}
+              </span>
+            </span>
+          )}
+          {hyperliquid.trades24h > 0 && (
+            <span>
+              24h activity{' '}
+              <span className="text-[var(--text-muted)] tabular-nums">
+                {formatNumber(hyperliquid.trades24h)} trades · {formatNumber(hyperliquid.uniqueUsers24h)} traders
+              </span>
+            </span>
+          )}
+          <span className="ml-auto">via Pinax Token API</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Lending-market card. Surfaces total supplied / borrowed / utilization
+// and current rates for tokens listed in supported lending protocols
+// (Aave V3 across Ethereum + Arbitrum + Base + Polygon + Optimism).
+// Renders nothing when the token isn't a lending-market asset — that's
+// most of the catalog.
+function LendingCard({
+  lending,
+  summary,
+}: {
+  lending: TokenDetail['lending'];
+  summary: TokenDetail['summary'];
+}) {
+  if (!lending || lending.markets.length === 0) return null;
+  const symbol = summary.symbol;
+  // Map LendingChain → human-readable label. Local helper, kept close
+  // to the only consumer.
+  const chainLabel: Record<typeof lending.markets[number]['chain'], string> = {
+    mainnet: 'Ethereum',
+    arbitrum: 'Arbitrum',
+    base: 'Base',
+    polygon: 'Polygon',
+    optimism: 'Optimism',
+  };
+  const aggSuppliedUsd = lending.totalSuppliedUsd;
+  const aggBorrowedUsd = lending.totalBorrowedUsd;
+  const aggAvailableUsd = lending.availableLiquidityUsd;
+  const aggUtilPct = lending.utilization != null ? lending.utilization * 100 : null;
+  // Best-of teaser: the row a user is most likely to act on. "Best supply"
+  // = chain paying the highest yield to depositors; "cheapest borrow" =
+  // chain charging the lowest rate to borrowers. Constrained to active
+  // markets so a frozen / supply-only deployment can't headline a stat.
+  const eligible = lending.markets.filter((m) => m.isActive && !m.isFrozen);
+  const bestSupply = eligible.reduce<typeof lending.markets[number] | null>(
+    (best, m) => (best == null || m.supplyApr > best.supplyApr ? m : best),
+    null
+  );
+  const cheapestBorrow = eligible
+    .filter((m) => m.borrowingEnabled)
+    .reduce<typeof lending.markets[number] | null>(
+      (best, m) => (best == null || m.variableBorrowApr < best.variableBorrowApr ? m : best),
+      null
+    );
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3 flex-wrap">
+          <TokenIcon
+            symbol={summary.symbol}
+            slug={summary.icon}
+            logoUri={summary.logoUri}
+            contract={summary.contract}
+            chain={summary.chain}
+            size={24}
+          />
+          <CardTitle>{symbol} on Aave V3 Core</CardTitle>
+          <span className="ml-auto text-[10px] text-[var(--text-faint)]">via The Graph subgraphs</span>
+        </div>
+        <p className="mt-1 text-xs text-[var(--text-muted)] leading-snug">
+          You can <span className="text-[var(--green)]">supply {symbol}</span> to earn yield, or post it as
+          collateral to <span className="text-[var(--text)]">borrow</span> other assets. Each row below is the
+          same {symbol} market on a different chain — Aave's deployments price risk independently, so APRs vary.
+        </p>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {lending.markets.length > 1 && (
+            // Aggregate strip — only meaningful when there's more than one
+            // deployment to roll up. Sits at the top so the headline
+            // multi-chain numbers read first.
+            <div className="rounded-md bg-[var(--text-faint)]/5 px-3 py-2 space-y-2">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">All chains combined</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">Supplied</div>
+                  <div className="tabular-nums mt-0.5">{aggSuppliedUsd != null ? formatUSD(aggSuppliedUsd) : '—'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">Borrowed</div>
+                  <div className="tabular-nums mt-0.5">{aggBorrowedUsd != null ? formatUSD(aggBorrowedUsd) : '—'}</div>
+                </div>
+                <div>
+                  <div
+                    className="text-[10px] uppercase tracking-wider text-[var(--text-faint)] cursor-help"
+                    title="Total liquidity available to borrow right now across every Aave V3 deployment listing this asset."
+                  >
+                    Available
+                  </div>
+                  <div className="tabular-nums mt-0.5">{aggAvailableUsd != null ? formatUSD(aggAvailableUsd) : '—'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">Utilization</div>
+                  <div className="tabular-nums mt-0.5">{aggUtilPct != null ? `${aggUtilPct.toFixed(1)}%` : '—'}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          {(bestSupply || cheapestBorrow) && (
+            // "Best-of" teaser — the row a user with this token is most
+            // likely to act on. Calls out the highest-yield supply venue
+            // and the cheapest borrow venue so they don't have to scan the
+            // table for the same conclusion.
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {bestSupply && (
+                <div className="rounded-md border border-[var(--border)] px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">
+                    Best Supply APR
+                  </div>
+                  <div className="mt-0.5 flex items-baseline gap-2">
+                    <span className="tabular-nums text-base text-[var(--green)]">{(bestSupply.supplyApr * 100).toFixed(2)}%</span>
+                    <span className="inline-flex items-center gap-1.5 text-[var(--text-muted)]">
+                      on <ChainIcon chain={bestSupply.chain} size={18} /> {chainLabel[bestSupply.chain]}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {cheapestBorrow && (
+                <div className="rounded-md border border-[var(--border)] px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">
+                    Cheapest Borrow APR
+                  </div>
+                  <div className="mt-0.5 flex items-baseline gap-2">
+                    <span className="tabular-nums text-base text-[var(--text)]">{(cheapestBorrow.variableBorrowApr * 100).toFixed(2)}%</span>
+                    <span className="inline-flex items-center gap-1.5 text-[var(--text-muted)]">
+                      on <ChainIcon chain={cheapestBorrow.chain} size={18} /> {chainLabel[cheapestBorrow.chain]}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {/* Per-chain table — replaces the previous stack of mini-cards
+             with utilization bars, which read like a project timeline. A
+             table is visually honest about "this is rate-and-balance data
+             across deployments" rather than implying sequential progress. */}
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <table className="w-full text-xs">
+              <thead className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">
+                <tr className="border-b border-[var(--border)]">
+                  <th className="text-left font-medium py-1.5 pl-4 sm:pl-2">Chain</th>
+                  <th className="text-right font-medium py-1.5 px-2">
+                    <HelpTooltip
+                      label="Supplied"
+                      className="justify-end"
+                    >
+                      Total {symbol} (in USD) that lenders have deposited into this pool. The "of cap" line below is how full it is against Aave's per-asset supply ceiling.
+                    </HelpTooltip>
+                  </th>
+                  <th className="text-right font-medium py-1.5 px-2">
+                    <HelpTooltip
+                      label="Borrowed"
+                      className="justify-end"
+                    >
+                      Total {symbol} (in USD) currently being borrowed against this pool. The "of cap" line shows how close it is to the protocol's borrow ceiling.
+                    </HelpTooltip>
+                  </th>
+                  <th className="text-right font-medium py-1.5 px-2">
+                    <HelpTooltip
+                      label="To borrow"
+                      className="justify-end"
+                    >
+                      USD liquidity that's actually borrowable from the pool right now (Supplied minus Borrowed, minus any reserves the protocol withholds).
+                    </HelpTooltip>
+                  </th>
+                  <th className="text-right font-medium py-1.5 px-2">
+                    <HelpTooltip
+                      label="Util"
+                      className="justify-end"
+                    >
+                      Utilization = Borrowed ÷ Supplied. Higher means borrowers have absorbed most of the supply, which pushes both APRs up. Color: amber ≥80%, red ≥95%.
+                    </HelpTooltip>
+                  </th>
+                  <th className="text-right font-medium py-1.5 px-2">
+                    <HelpTooltip
+                      label="Supply APR"
+                      className="justify-end"
+                    >
+                      Annualized yield <span className="text-[var(--green)]">paid to you</span> when you supply {symbol} to this pool. Moves per-block as utilization shifts.
+                    </HelpTooltip>
+                  </th>
+                  <th className="text-right font-medium py-1.5 px-2">
+                    <HelpTooltip
+                      label="Borrow APR"
+                      className="justify-end"
+                    >
+                      Annualized rate <span className="text-[var(--text)]">you pay</span> if you borrow {symbol} (variable rate). Always higher than Supply APR — Aave keeps the spread.
+                    </HelpTooltip>
+                  </th>
+                  <th className="text-right font-medium py-1.5 px-2">
+                    <HelpTooltip
+                      label="Liq. LTV"
+                      className="justify-end"
+                    >
+                      Liquidation threshold. If you post {symbol} as collateral, your loan can be liquidated once the loan-to-value crosses this percentage. Higher = more borrowing room.
+                    </HelpTooltip>
+                  </th>
+                  <th className="py-1.5 pr-4 sm:pr-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {lending.markets.map((m) => {
+                  const utilPct = m.utilization * 100;
+                  const supplyAprPct = m.supplyApr * 100;
+                  const borrowAprPct = m.variableBorrowApr * 100;
+                  const supplyCapPct =
+                    m.supplyCapTokens != null && m.supplyCapTokens > 0
+                      ? (m.totalSuppliedTokens / m.supplyCapTokens) * 100
+                      : null;
+                  const borrowCapPct =
+                    m.borrowCapTokens != null && m.borrowCapTokens > 0
+                      ? (m.totalBorrowedTokens / m.borrowCapTokens) * 100
+                      : null;
+                  // Cap subline color: amber ≥80%, red ≥95%, "at cap" once
+                  // the actual balance has exceeded the cap (Aave's wind-
+                  // down pattern, e.g. Optimism USDC.e with borrowCap=1).
+                  const capColor = (pct: number) =>
+                    pct >= 95 ? 'text-red-500' : pct >= 80 ? 'text-amber-500' : 'text-[var(--text-faint)]';
+                  // Utilization color encodes the same "load" signal the
+                  // old bar carried, but inline with the number — frees the
+                  // row from a separate visual element.
+                  const utilColor =
+                    utilPct >= 95 ? 'text-red-500' : utilPct >= 80 ? 'text-amber-500' : 'text-[var(--text-muted)]';
+                  const statusBadge = m.isFrozen
+                    ? 'frozen'
+                    : !m.isActive
+                      ? 'inactive'
+                      : !m.borrowingEnabled
+                        ? 'supply only'
+                        : null;
+                  return (
+                    <tr key={`${m.protocol}-${m.chain}`} className="border-b border-[var(--border)]/50 last:border-0 hover:bg-[var(--text-faint)]/5">
+                      <td className="py-2 pl-4 sm:pl-2 align-top">
+                        <div className="inline-flex items-center gap-2 text-[var(--text)]">
+                          <ChainIcon chain={m.chain} size={22} />
+                          {chainLabel[m.chain]}
+                        </div>
+                        {statusBadge && (
+                          <div className="text-[10px] text-[var(--text-faint)]">{statusBadge}</div>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-right tabular-nums align-top">
+                        <div>{m.totalSuppliedUsd != null ? formatUSD(m.totalSuppliedUsd) : '—'}</div>
+                        {supplyCapPct != null && (
+                          <div className={`text-[10px] ${capColor(supplyCapPct)}`}>
+                            {supplyCapPct >= 100 ? 'at cap' : `${supplyCapPct.toFixed(0)}% of cap`}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-right tabular-nums align-top">
+                        <div>{m.totalBorrowedUsd != null ? formatUSD(m.totalBorrowedUsd) : '—'}</div>
+                        {borrowCapPct != null && (
+                          <div className={`text-[10px] ${capColor(borrowCapPct)}`}>
+                            {borrowCapPct >= 100 ? 'at cap' : `${borrowCapPct.toFixed(0)}% of cap`}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-right tabular-nums align-top">
+                        {m.availableLiquidityUsd != null ? formatUSD(m.availableLiquidityUsd) : '—'}
+                      </td>
+                      <td className={`py-2 px-2 text-right tabular-nums align-top ${utilColor}`}>{utilPct.toFixed(1)}%</td>
+                      <td className="py-2 px-2 text-right tabular-nums align-top text-[var(--green)]">{supplyAprPct.toFixed(2)}%</td>
+                      <td className="py-2 px-2 text-right tabular-nums align-top">{borrowAprPct.toFixed(2)}%</td>
+                      <td className="py-2 px-2 text-right tabular-nums align-top">
+                        {m.liquidationThresholdBps != null ? `${(m.liquidationThresholdBps / 100).toFixed(0)}%` : '—'}
+                      </td>
+                      <td className="py-2 pr-4 sm:pr-2 text-right align-top">
+                        <a
+                          href={m.aaveMarketUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={`Open the ${symbol} reserve on Aave V3 (${chainLabel[m.chain]})`}
+                          className="inline-flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--accent)] whitespace-nowrap"
+                        >
+                          <ProtocolIcon slug="aave" size={18} />
+                          Open in Aave
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                          </svg>
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="text-[10px] text-[var(--text-faint)] pt-1">
+            {symbol} is listed in {lending.markets.length} {lending.markets.length === 1 ? 'Aave V3 Core deployment' : 'Aave V3 Core deployments'}. Rates and balances reflect the latest block indexed by the source subgraph; USD figures use the live spot price from the detail header for consistent cross-chain aggregation.
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Markets({
+  markets,
+  chain,
+  summary,
+  onTradeClick,
+}: {
+  markets: TokenDetail['markets'];
+  chain: string;
+  summary: TokenDetail['summary'];
+  onTradeClick?: (e: TradeClickEvent) => void;
+}) {
   // Concentration risk signal: how much of the indexed pool TVL sits in the
   // single deepest pool. Markets are already TVL-sorted, so [0] is the
   // headliner. A 90%-concentration token is one rug-pull away from
@@ -195,7 +1046,17 @@ function Markets({ markets, chain, onTradeClick }: { markets: TokenDetail['marke
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <CardTitle>Markets</CardTitle>
+          <div className="flex items-center gap-3">
+            <TokenIcon
+              symbol={summary.symbol}
+              slug={summary.icon}
+              logoUri={summary.logoUri}
+              contract={summary.contract}
+              chain={summary.chain}
+              size={24}
+            />
+            <CardTitle>{summary.symbol} spot pools</CardTitle>
+          </div>
           <span className="text-[11px] text-[var(--text-faint)] flex items-center gap-2 flex-wrap">
             <span>{markets.length} pools · click to trade · <span className="italic">clicks tracked anonymously</span></span>
             {topShare != null && (
@@ -235,7 +1096,22 @@ function Markets({ markets, chain, onTradeClick }: { markets: TokenDetail['marke
         {markets.length === 0 ? (
           <div className="text-xs text-[var(--text-faint)]">No DEX pools indexed for this token.</div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
+            <colgroup>
+              {/* Fixed-width layout so columns spread across the card's
+                  full width instead of all bunching to the left. The
+                  weighting roughly matches each column's likely content
+                  length: Venue/Pair carry icons + label, Fee is a tiny
+                  number, the USD columns are similar, Trade gets a
+                  generous slice so its left-aligned icons sit clearly
+                  apart from the numeric columns. */}
+              <col className="w-[18%]" />
+              <col className="w-[18%]" />
+              <col className="w-[8%]" />
+              <col className="w-[14%]" />
+              <col className="w-[14%]" />
+              <col className="w-[28%]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-[var(--border)]">
                 <th className="py-2 text-left text-[11px] font-medium text-[var(--text-faint)]">Venue</th>
@@ -243,7 +1119,7 @@ function Markets({ markets, chain, onTradeClick }: { markets: TokenDetail['marke
                 <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">Fee</th>
                 <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">TVL</th>
                 <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">24h Vol</th>
-                <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">Trade</th>
+                <th className="py-2 pl-8 text-left text-[11px] font-medium text-[var(--text-faint)]">Trade</th>
               </tr>
             </thead>
             <tbody>
@@ -268,10 +1144,20 @@ function Markets({ markets, chain, onTradeClick }: { markets: TokenDetail['marke
                   : { className: 'border-b border-[var(--border)]/40' };
                 return (
                   <tr key={m.pool} {...rowProps}>
-                    <td className="py-2 capitalize">{m.protocol.replace(/_/g, ' ')}</td>
                     <td className="py-2">
-                      <span className="font-medium">{m.baseSymbol}</span>
-                      <span className="text-[var(--text-faint)]"> / {m.quoteSymbol}</span>
+                      <span className="inline-flex items-center gap-2 capitalize">
+                        <ProtocolIcon slug={defiLlamaSlugFor(m.protocol)} size={18} />
+                        {m.protocol.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="py-2">
+                      <span className="inline-flex items-center gap-1.5">
+                        <TokenIcon symbol={m.baseSymbol} contract={m.baseContract} chain={summary.chain} size={18} />
+                        <span className="font-medium">{m.baseSymbol}</span>
+                        <span className="text-[var(--text-faint)]">/</span>
+                        <TokenIcon symbol={m.quoteSymbol} contract={m.quoteContract} chain={summary.chain} size={18} />
+                        <span className="text-[var(--text-faint)]">{m.quoteSymbol}</span>
+                      </span>
                     </td>
                     <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">
                       {m.feeBps != null && m.feeBps > 0 ? `${(m.feeBps / 10000).toFixed(2)}%` : '—'}
@@ -282,9 +1168,10 @@ function Markets({ markets, chain, onTradeClick }: { markets: TokenDetail['marke
                     <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">
                       {m.volume24hUsd != null ? formatUSD(m.volume24hUsd) : <span className="text-[var(--text-faint)]">—</span>}
                     </td>
-                    <td className="py-2 text-right">
+                    <td className="py-2 pl-8 text-left">
                       {trade ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-[var(--accent)] hover:underline">
+                        <span className="inline-flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline">
+                          <ProtocolIcon slug={defiLlamaSlugFor(m.protocol) ?? defiLlamaSlugFor(trade.venue)} size={18} />
                           {trade.venue}
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
@@ -315,7 +1202,14 @@ function relativeTime(ts: number): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function RecentSwaps({ swaps, symbol }: { swaps: TokenDetail['recentSwaps']; symbol: string }) {
+function RecentSwaps({
+  swaps,
+  summary,
+}: {
+  swaps: TokenDetail['recentSwaps'];
+  summary: TokenDetail['summary'];
+}) {
+  const symbol = summary.symbol;
   // "Last activity" indicator. A token whose most recent indexed swap was
   // hours/days ago is dormant — useful flag at a glance, no need to scan
   // the rows below to figure it out.
@@ -347,7 +1241,17 @@ function RecentSwaps({ swaps, symbol }: { swaps: TokenDetail['recentSwaps']; sym
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <CardTitle>Recent swaps</CardTitle>
+          <div className="flex items-center gap-3">
+            <TokenIcon
+              symbol={summary.symbol}
+              slug={summary.icon}
+              logoUri={summary.logoUri}
+              contract={summary.contract}
+              chain={summary.chain}
+              size={24}
+            />
+            <CardTitle>{symbol} recent swaps</CardTitle>
+          </div>
           <div className="text-[11px] text-[var(--text-faint)] flex items-center gap-3 flex-wrap">
             {buyPct != null && (
               <span title={`${buys} buys / ${sells} sells in the last ${swaps.length} indexed swaps. > 65% buys tinted green, < 35% tinted red.`}>
@@ -368,7 +1272,22 @@ function RecentSwaps({ swaps, symbol }: { swaps: TokenDetail['recentSwaps']; sym
         {swaps.length === 0 ? (
           <div className="text-xs text-[var(--text-faint)]">No recent swaps returned.</div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
+            <colgroup>
+              {/* Fixed-width layout so columns spread across the card's
+                  full width. Pair gets the biggest share because it
+                  carries two icons + symbols + a protocol tag; Tx gets
+                  enough room for a fuller-than-6-char hash so the column
+                  doesn't read as a stub anchored to the right edge. */}
+              <col className="w-[9%]" />
+              <col className="w-[7%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[12%]" />
+              <col className="w-[24%]" />
+              <col className="w-[15%]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-[var(--border)]">
                 <th className="py-2 text-left text-[11px] font-medium text-[var(--text-faint)]">When</th>
@@ -378,7 +1297,7 @@ function RecentSwaps({ swaps, symbol }: { swaps: TokenDetail['recentSwaps']; sym
                 <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">Price</th>
                 <th className="py-2 text-left text-[11px] font-medium text-[var(--text-faint)] pl-3">Trader</th>
                 <th className="py-2 text-left text-[11px] font-medium text-[var(--text-faint)] pl-3">Pair</th>
-                <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)]">Tx</th>
+                <th className="py-2 pl-3 text-left text-[11px] font-medium text-[var(--text-faint)]">Tx</th>
               </tr>
             </thead>
             <tbody>
@@ -419,17 +1338,24 @@ function RecentSwaps({ swaps, symbol }: { swaps: TokenDetail['recentSwaps']; sym
                     )}
                   </td>
                   <td className="py-2 pl-3 text-xs text-[var(--text-muted)]">
-                    {symbol} / {s.counterpartySymbol}
-                    <span className="ml-2 text-[10px] text-[var(--text-faint)] capitalize">{s.protocol.replace(/_/g, ' ')}</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <TokenIcon symbol={summary.symbol} slug={summary.icon} logoUri={summary.logoUri} contract={summary.contract} chain={summary.chain} size={16} />
+                      <span>{symbol}</span>
+                      <span className="text-[var(--text-faint)]">/</span>
+                      <TokenIcon symbol={s.counterpartySymbol} contract={s.counterpartyContract ?? undefined} chain={summary.chain} size={16} />
+                      <span>{s.counterpartySymbol}</span>
+                      <span className="ml-1 text-[10px] text-[var(--text-faint)] capitalize">{s.protocol.replace(/_/g, ' ')}</span>
+                    </span>
                   </td>
-                  <td className="py-2 text-right">
+                  <td className="py-2 pl-3 text-left">
                     <a
                       href={`https://etherscan.io/tx/${s.txHash}`}
                       target="_blank"
                       rel="noreferrer"
                       className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent)]"
+                      title={s.txHash}
                     >
-                      {s.txHash.slice(0, 6)}…
+                      {shortenAddress(s.txHash, 6)}
                     </a>
                   </td>
                 </tr>
@@ -478,6 +1404,7 @@ function TradeCTA({
       title={`Swap ${symbol} on ${trade.venue} (top pool by TVL)`}
       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25 transition-colors text-sm font-medium"
     >
+      <ProtocolIcon slug={defiLlamaSlugFor(top.protocol) ?? defiLlamaSlugFor(trade.venue)} size={18} />
       Trade on {trade.venue}
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
@@ -496,32 +1423,6 @@ const EXPLORERS: Record<string, { name: string; tx: string }> = {
   optimism: { name: 'Optimism', tx: 'https://optimistic.etherscan.io/token/' },
 };
 
-function CrossChainRow({ alt }: { alt: TokenDetail['summary']['altContracts'] }) {
-  const entries = Object.entries(alt).filter(([, addr]) => !!addr) as Array<[string, string]>;
-  if (entries.length === 0) return null;
-  return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
-      <span className="text-[var(--text-faint)]">Also on:</span>
-      {entries.map(([chain, addr]) => {
-        const ex = EXPLORERS[chain];
-        if (!ex) return null;
-        return (
-          <a
-            key={chain}
-            href={`${ex.tx}${addr}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
-            title={`${ex.name}: ${addr}`}
-          >
-            {ex.name}
-          </a>
-        );
-      })}
-    </div>
-  );
-}
-
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -538,87 +1439,6 @@ function CopyButton({ text }: { text: string }) {
     >
       {copied ? 'copied' : 'copy'}
     </button>
-  );
-}
-
-function Info({
-  contract,
-  decimals,
-  totalSupply,
-  circulating,
-  website,
-  name,
-}: {
-  contract: string;
-  decimals: number;
-  totalSupply: number | null;
-  circulating: number | null;
-  website: string | null;
-  name: string;
-}) {
-  let host: string | null = null;
-  if (website) {
-    try { host = new URL(website).host.replace(/^www\./, ''); } catch {}
-  }
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Info</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {website && (
-          <a
-            href={website}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-between gap-2 mb-3 px-3 py-2 rounded-md border border-[var(--border)] bg-[var(--bg-elevated)]/40 hover:border-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors group"
-          >
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A9.005 9.005 0 0121 12.001c0 .921-.139 1.811-.398 2.65m-19.204-5.07A8.965 8.965 0 003 12.001c0 .921.139 1.811.398 2.65" />
-              </svg>
-              <span className="text-sm font-medium">Visit {name}</span>
-            </span>
-            <span className="flex items-center gap-1 text-[11px] text-[var(--text-faint)] group-hover:text-[var(--accent)]">
-              {host}
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-              </svg>
-            </span>
-          </a>
-        )}
-        <dl className="space-y-2 text-sm">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <dt className="text-[var(--text-faint)] text-xs uppercase tracking-wider">Contract</dt>
-            <dd className="flex items-center font-mono text-xs">
-              <a
-                href={`https://etherscan.io/token/${contract}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[var(--text-muted)] hover:text-[var(--accent)]"
-              >
-                {shortenAddress(contract, 6)}
-              </a>
-              <CopyButton text={contract} />
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-[var(--text-faint)] text-xs uppercase tracking-wider">Decimals</dt>
-            <dd className="tabular-nums">{decimals}</dd>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-[var(--text-faint)] text-xs uppercase tracking-wider">Circulating</dt>
-            <dd className="tabular-nums">{circulating != null ? formatNumber(Math.round(circulating)) : '—'}</dd>
-          </div>
-          {totalSupply != null && (
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-[var(--text-faint)] text-xs uppercase tracking-wider">Total Supply</dt>
-              <dd className="tabular-nums text-[var(--text-muted)]">{formatNumber(Math.round(totalSupply))}</dd>
-            </div>
-          )}
-        </dl>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -640,10 +1460,12 @@ export default function TokenDetailPage({ params }: Props) {
       </div>
     );
 
-  const { summary, priceSeries, benchmarkSeries, topHolders, markets, recentSwaps, range24h } = data;
+  const { summary, priceSeries, benchmarkSeries, topHolders, markets, recentSwaps, range24h, lending, hyperliquid } = data;
 
   return (
-    <div className="px-4 sm:px-6 py-6 max-w-[1280px] mx-auto space-y-4">
+    <>
+      <StickyTokenBar summary={summary} />
+      <div className="px-4 sm:px-6 py-6 max-w-[1280px] mx-auto space-y-4">
       <div>
         <Link href="/tokens" className="text-xs text-[var(--text-muted)] hover:text-[var(--text)]">← Tokens</Link>
         <div className="mt-2 flex items-center gap-3 flex-wrap">
@@ -659,6 +1481,16 @@ export default function TokenDetailPage({ params }: Props) {
             {summary.name}
             <span className="ml-2 text-[var(--text-muted)]">{summary.symbol}</span>
           </h1>
+          {summary.tags.length > 0 && (
+            // Tags fold inline next to the symbol so they don't sit alone
+            // on a near-empty row when a token only has one tag (e.g. LINK
+            // → just "Oracle"). Reads as a category subtitle.
+            <span className="flex flex-wrap gap-1">
+              {summary.tags.map((tag) => (
+                <TagBadge key={tag} tag={tag} />
+              ))}
+            </span>
+          )}
           <a
             href={`https://etherscan.io/token/${summary.contract}`}
             target="_blank"
@@ -683,21 +1515,23 @@ export default function TokenDetailPage({ params }: Props) {
           )}
           <LiveQuoteIndicator asOf={summary.quoteAsOf} />
         </div>
-        {summary.tags.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {summary.tags.map((tag) => (
-              <TagBadge key={tag} tag={tag} />
-            ))}
-          </div>
-        )}
-        <CrossChainRow alt={summary.altContracts} />
+
+        <HeaderInfoRow
+          contract={summary.contract}
+          decimals={summary.decimals}
+          website={summary.website}
+          name={summary.name}
+          alt={summary.altContracts}
+        />
 
         {summary.warnings.length > 0 && (
           <div className="mt-2 text-xs text-amber-500">⚠ {summary.warnings.join(' / ')}</div>
         )}
+
+        <SectionNav data={data} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+      <div className="space-y-4">
         <div className="space-y-4">
           <PerformancePills
             summary={summary}
@@ -737,7 +1571,7 @@ export default function TokenDetailPage({ params }: Props) {
                 <span className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">24h DEX Vol</span>
                 <span
                   className="text-[10px] text-[var(--text-faint)] cursor-help"
-                  title="Latest-day decentralized-exchange volume aggregated across the Uniswap V2 + V3 mainnet subgraphs (and Uniswap V3 on Arbitrum / Base / Polygon when an alt-chain contract is configured), plus Curve Finance mainnet. CEX volume is intentionally excluded."
+                  title="Latest-day decentralized-exchange volume aggregated across Uniswap V2 + V3 mainnet, Uniswap V3 on Arbitrum / Base / Polygon (when an alt-chain contract is configured), PancakeSwap V3 mainnet, Aerodrome on Base, and Curve Finance mainnet. CEX volume is intentionally excluded."
                 >
                   ⓘ
                 </span>
@@ -799,83 +1633,131 @@ export default function TokenDetailPage({ params }: Props) {
             </Card>
           </div>
 
-          <TokenPriceChart
-            data={priceSeries}
-            benchmark={benchmarkSeries}
-            isLoading={isLoading && !data}
-            pegged={summary.tags.includes('Stablecoin')}
-            windowId={chartWindow}
-            onWindowChange={setChartWindow}
-          />
+          <div id="chart" className="scroll-mt-4">
+            <TokenPriceChart
+              data={priceSeries}
+              identity={{
+                symbol: summary.symbol,
+                icon: summary.icon,
+                logoUri: summary.logoUri,
+                contract: summary.contract,
+                chain: summary.chain,
+              }}
+              benchmark={benchmarkSeries}
+              isLoading={isLoading && !data}
+              pegged={summary.tags.includes('Stablecoin')}
+              windowId={chartWindow}
+              onWindowChange={setChartWindow}
+            />
+          </div>
 
-          <RecentSwaps swaps={recentSwaps} symbol={summary.symbol} />
+          <div id="swaps" className="scroll-mt-4">
+            <RecentSwaps swaps={recentSwaps} summary={summary} />
+          </div>
 
-          <Markets markets={markets} chain={summary.chain} onTradeClick={track} />
-        </div>
+          <div id="markets" className="scroll-mt-4">
+            <Markets markets={markets} chain={summary.chain} summary={summary} onTradeClick={track} />
+          </div>
 
-        <div className="space-y-4">
-          <Info
-            contract={summary.contract}
-            decimals={summary.decimals}
-            totalSupply={summary.totalSupply}
-            circulating={summary.circulatingSupply}
-            website={summary.website}
-            name={summary.name}
-          />
+          <div id="lending" className="scroll-mt-4">
+            <LendingCard lending={lending} summary={summary} />
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Top holders</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {topHolders.length === 0 ? (
-                <div className="text-xs text-[var(--text-faint)]">No holder data returned.</div>
-              ) : (
-                <ol className="space-y-2 text-sm">
-                  {topHolders.slice(0, 10).map((h, i) => {
-                    // Share of circulating supply. The single most decision-
-                    // useful number on this list — without it the absolute
-                    // amounts are uninterpretable across tokens.
-                    const sharePct =
-                      summary.circulatingSupply != null && summary.circulatingSupply > 0
-                        ? (h.amount / summary.circulatingSupply) * 100
-                        : null;
-                    return (
-                      <li key={h.address} className="flex items-baseline justify-between gap-2">
-                        <span className="text-[var(--text-faint)] text-xs tabular-nums w-5 shrink-0">{i + 1}</span>
-                        <a
-                          href={`https://etherscan.io/address/${h.address}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent)] flex-1 truncate"
-                        >
-                          {shortenAddress(h.address, 5)}
-                        </a>
-                        {h.isContract === true && (
-                          <span
-                            className="text-[9px] uppercase tracking-wider px-1 py-0.5 rounded bg-[var(--text-faint)]/10 text-[var(--text-faint)]"
-                            title="Address is a smart contract (bridge, staking module, LP pool, vesting, etc.)"
+          <div id="perps" className="scroll-mt-4">
+            <HyperliquidCard hyperliquid={hyperliquid} summary={summary} />
+          </div>
+
+          <div id="holders" className="scroll-mt-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <TokenIcon
+                    symbol={summary.symbol}
+                    slug={summary.icon}
+                    logoUri={summary.logoUri}
+                    contract={summary.contract}
+                    chain={summary.chain}
+                    size={24}
+                  />
+                  <CardTitle>{summary.symbol} top holders</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {topHolders.length === 0 ? (
+                  <div className="text-xs text-[var(--text-faint)]">No holder data returned.</div>
+                ) : (() => {
+                  // Compute each row's share once, then derive the max so the
+                  // inline scale-bar normalizes against the largest holder in
+                  // this list. Visual signal: how many ×s the #1 holder is
+                  // vs. the rest.
+                  const slice = topHolders.slice(0, 10);
+                  const shares = slice.map((h) =>
+                    summary.circulatingSupply != null && summary.circulatingSupply > 0
+                      ? (h.amount / summary.circulatingSupply) * 100
+                      : null
+                  );
+                  const maxShare = Math.max(0, ...shares.map((s) => s ?? 0));
+                  return (
+                    // Two-column wallet list on wide screens (was a single
+                    // narrow column when this card lived in a 320px sidebar).
+                    <ol className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+                      {slice.map((h, i) => {
+                        const sharePct = shares[i];
+                        const relShare = sharePct != null && maxShare > 0 ? sharePct / maxShare : 0;
+                        return (
+                          <li
+                            key={h.address}
+                            className="flex items-center gap-2 py-1 border-b border-[var(--border)]/30 last:border-0"
                           >
-                            contract
-                          </span>
-                        )}
-                        {sharePct != null && (
-                          <span className="tabular-nums text-xs text-[var(--text)]">
-                            {sharePct >= 0.01 ? sharePct.toFixed(2) : sharePct.toFixed(3)}%
-                          </span>
-                        )}
-                        <span className="tabular-nums text-[10px] text-[var(--text-faint)]">
-                          {h.valueUsd != null ? formatUSD(h.valueUsd) : formatNumber(Math.round(h.amount))}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ol>
-              )}
-            </CardContent>
-          </Card>
+                            <span className="text-[var(--text-faint)] text-xs tabular-nums w-5 shrink-0">{i + 1}</span>
+                            <a
+                              href={`https://etherscan.io/address/${h.address}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={h.address}
+                              className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent)] shrink-0"
+                            >
+                              {shortenAddress(h.address, 8)}
+                            </a>
+                            {h.isContract === true && (
+                              <span
+                                className="text-[9px] uppercase tracking-wider px-1 py-0.5 rounded bg-[var(--text-faint)]/10 text-[var(--text-faint)] shrink-0"
+                                title="Address is a smart contract (bridge, staking module, LP pool, vesting, etc.)"
+                              >
+                                contract
+                              </span>
+                            )}
+                            {/* Inline scale bar — fills proportional to this
+                               holder's share vs the largest in the list.
+                               Sits in the flexible space between the address
+                               and the numerical readout so the visual rank
+                               reads at a glance. */}
+                            <div className="flex-1 min-w-[40px] h-1 rounded-full bg-[var(--text-faint)]/15 overflow-hidden">
+                              <div
+                                className={`h-full ${i === 0 ? 'bg-[var(--accent)]' : 'bg-[var(--accent)]/60'}`}
+                                style={{ width: `${(relShare * 100).toFixed(2)}%` }}
+                              />
+                            </div>
+                            {sharePct != null && (
+                              <span className="tabular-nums text-xs text-[var(--text)] shrink-0 w-12 text-right">
+                                {sharePct >= 0.01 ? sharePct.toFixed(2) : sharePct.toFixed(3)}%
+                              </span>
+                            )}
+                            <span className="tabular-nums text-[10px] text-[var(--text-faint)] shrink-0 w-16 text-right">
+                              {h.valueUsd != null ? formatUSD(h.valueUsd) : formatNumber(Math.round(h.amount))}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
+    </>
   );
 }

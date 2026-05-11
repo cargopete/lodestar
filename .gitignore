@@ -49,3 +49,4 @@ next-env.d.ts
 # local dev artifacts
 /logs/
 /.playwright-screens/
+/.playwright-cli/

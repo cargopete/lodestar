@@ -27,6 +27,7 @@ export const TOKEN_SEEDS: TokenSeed[] = [
       arbitrum: '0x82af49447d8a07e3bd95bd0d56f35241523fbab1',
       base: '0x4200000000000000000000000000000000000006',
       polygon: '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619',
+      optimism: '0x4200000000000000000000000000000000000006',
     },
   },
   {
@@ -45,6 +46,7 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     altContracts: {
       arbitrum: '0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f',
       polygon: '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6',
+      optimism: '0x68f180fcce6836688e9084f035309e29bf0a2095',
     },
   },
   {
@@ -68,6 +70,7 @@ export const TOKEN_SEEDS: TokenSeed[] = [
       arbitrum: '0xaf88d065e77c8cc2239327c5edb3a432268e5831',
       base: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
       polygon: '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
+      optimism: '0x7f5c764cbc14f9669b88837ca1490cca17c31607',
     },
   },
   {
@@ -107,6 +110,7 @@ export const TOKEN_SEEDS: TokenSeed[] = [
       arbitrum: '0xf97f4df75117a78c1a5a0dbb814af92458539fb4',
       base: '0x88fb150bdc53a65fe94dea0c9ba0a6daf8c6e196',
       polygon: '0x53e0bca35ec356bd5dddfebbd1fc0fd03fabad39',
+      optimism: '0x350a791bfc2c21f9ed5d10980dad2e2638ffa7f6',
     },
   },
   {
@@ -144,6 +148,7 @@ export const TOKEN_SEEDS: TokenSeed[] = [
       arbitrum: '0xba5ddd1f9d7f570dc94a51479a000e3bce967196',
       base: '0xa88594d404727625a9437c3f886c7643872296ae',
       polygon: '0xd6df932a45c0f255f85145f286ea0b292b21c90b',
+      optimism: '0x76fb31fb4af56892a25e32cfc43de717950c9278',
     },
   },
   {
@@ -255,7 +260,11 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'usdt',
     website: 'https://tether.to',
     tags: ['Stablecoin'],
-    altContracts: {arbitrum:"0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",polygon:"0xc2132d05d31c914a87c6611c10748aeb04b58e8f"},
+    altContracts: {
+      arbitrum: '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9',
+      polygon: '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
+      optimism: '0x94b008aa00579c1307b0ef2c499ad98a8ce58e58',
+    },
   },
   {
     contract: '0x6b175474e89094c44da98b954eedeac495271d0f',
@@ -272,7 +281,11 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'dai',
     website: 'https://makerdao.com',
     tags: ['Stablecoin'],
-    altContracts: {arbitrum:"0xda10009cbd5d07dd0cecc66161fc93d7c9000da1",polygon:"0x8f3cf7ad23cd3cadbd9735aff958023239c6a063"},
+    altContracts: {
+      arbitrum: '0xda10009cbd5d07dd0cecc66161fc93d7c9000da1',
+      polygon: '0x8f3cf7ad23cd3cadbd9735aff958023239c6a063',
+      optimism: '0xda10009cbd5d07dd0cecc66161fc93d7c9000da1',
+    },
   },
   {
     contract: '0x853d955acef822db058eb8505911ed77f175b99e',
@@ -287,6 +300,9 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'frax',
     website: 'https://frax.finance',
     tags: ['Stablecoin'],
+    altContracts: {
+      arbitrum: '0x17fc002b466eec40dae837fc4be5c67993ddbd6f',
+    },
   },
   {
     contract: '0xc5f0f7b66764f6ec8c8dff7ba683102295e16409',
@@ -329,6 +345,10 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'lusd',
     website: 'https://www.liquity.org',
     tags: ['Stablecoin'],
+    altContracts: {
+      arbitrum: '0x93b346b6bc2548da6a1e7d98e9a421b42541425b',
+      optimism: '0xc40f949f8a4e094d1b49a23ea9241d289b7b2819',
+    },
   },
   {
     // Was previously a wrong contract (Biconomy's BICO) under the GHO
@@ -345,6 +365,10 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'gho',
     website: 'https://gho.aave.com',
     tags: ['Stablecoin'],
+    altContracts: {
+      arbitrum: '0x7dff72693f6a4149b17e7c6314655f6a9f7c8b33',
+      base: '0x6bb7a212910682dcfdbd5bcbb3e28fb4e8da10ee',
+    },
   },
   {
     contract: '0xf939e0a03fb07f59a73314e73794be0e57ac1b4e',
@@ -387,7 +411,12 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'wsteth',
     website: 'https://lido.fi',
     tags: ['LST'],
-    altContracts: {arbitrum:"0x5979d7b546e38e414f7e9822514be443a4800529",base:"0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452",polygon:"0x03b54a6e9a984069379fae1a4fc4dbae93b3bccd"},
+    altContracts: {
+      arbitrum: '0x5979d7b546e38e414f7e9822514be443a4800529',
+      base: '0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452',
+      polygon: '0x03b54a6e9a984069379fae1a4fc4dbae93b3bccd',
+      optimism: '0x1f32b1c2345538c0c6f582fcb022739c4a194ebb',
+    },
   },
   {
     contract: '0xae78736cd615f374d3085123a210448e74fc6393',
@@ -402,7 +431,11 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'reth',
     website: 'https://www.rocketpool.net',
     tags: ['LST'],
-    altContracts: {arbitrum:"0xec70dcb4a1efa46b8f2d97c310c9c4790ba5ffa8",base:"0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c"},
+    altContracts: {
+      arbitrum: '0xec70dcb4a1efa46b8f2d97c310c9c4790ba5ffa8',
+      base: '0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c',
+      optimism: '0x9bcef72be871e61ed4fbbc7630889bee758eb81d',
+    },
   },
   {
     contract: '0xbe9895146f7af43049ca1c1ae358b0541ea49704',
@@ -417,7 +450,9 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'cbeth',
     website: 'https://www.coinbase.com/cbeth',
     tags: ['LST'],
-    altContracts: {base:"0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22"},
+    altContracts: {
+      base: '0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22',
+    },
   },
   {
     contract: '0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee',
@@ -432,7 +467,10 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'weeth',
     website: 'https://www.ether.fi',
     tags: ['LST'],
-    altContracts: {arbitrum:"0x35751007a407ca6feffe80b3cb397736d2cf4dbe",base:"0x04c0599ae5a44757c0af6f9ec3b93da8976c150a"},
+    altContracts: {
+      arbitrum: '0x35751007a407ca6feffe80b3cb397736d2cf4dbe',
+      base: '0x04c0599ae5a44757c0af6f9ec3b93da8976c150a',
+    },
   },
   {
     contract: '0xbf5495efe5db9ce00f80364c8b423567e58d2110',
@@ -447,6 +485,10 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'ezeth',
     website: 'https://www.renzoprotocol.com',
     tags: ['LST'],
+    altContracts: {
+      arbitrum: '0x2416092f143378750bb29b79ed961ab195cceea5',
+      base: '0x2416092f143378750bb29b79ed961ab195cceea5',
+    },
   },
   {
     contract: '0xac3e018457b222d93114458476f3e3416abbe38f',
@@ -503,6 +545,9 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'bal',
     website: 'https://balancer.fi',
     tags: ['DEX', 'Governance'],
+    altContracts: {
+      polygon: '0x9a71012b13ca4d3d0cdc72a177df3ef03b0e76a3',
+    },
   },
   {
     contract: '0x808507121b80c02388fad14726482e061b8da827',
@@ -601,7 +646,9 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'arb',
     website: 'https://arbitrum.foundation',
     tags: ['Infrastructure', 'Governance'],
-    altContracts: {arbitrum:"0x912ce59144191c1204e64559fe8253a0e49e6548"},
+    altContracts: {
+      arbitrum: '0x912ce59144191c1204e64559fe8253a0e49e6548',
+    },
   },
   {
     contract: '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0',
@@ -912,6 +959,9 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'rseth',
     website: 'https://kelpdao.xyz',
     tags: ['LST', 'Restaking'],
+    altContracts: {
+      arbitrum: '0x4186bfc76e2e237523cbc30fd220fe055156b41f',
+    },
   },
   // SWELL/WETH 10000bps  TVL=$51,081
   {
@@ -1974,6 +2024,9 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'cbbtc',
     website: 'https://www.coinbase.com/cbbtc',
     tags: ['Wrapped'],
+    altContracts: {
+      base: '0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf',
+    },
   },
   // tBTC/WETH 30bps  TVL=$542,637
   {
@@ -1988,6 +2041,10 @@ export const TOKEN_SEEDS: TokenSeed[] = [
     iconSlug: 'tbtc',
     website: 'https://threshold.network',
     tags: ['Wrapped'],
+    altContracts: {
+      arbitrum: '0x6c84a8f1c29108f47a79964b5fe888d4f4d0de40',
+      base: '0x236aa50979d5f3de3bd1eeb40e81137f22ab794b',
+    },
   },
   // MORPHO/WETH 100bps  TVL=$1,974,734
   {

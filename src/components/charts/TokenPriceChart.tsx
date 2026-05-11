@@ -13,11 +13,21 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
+import { TokenIcon } from '@/components/tokens/TokenIcon';
 import { formatCompact, formatUSD } from '@/lib/utils';
 import type { OhlcPoint } from '@/lib/tokens/types';
 
 interface Props {
   data: OhlcPoint[];
+  /** Token identity for the card header. When omitted, the header
+   *  falls back to a generic "Price" title without a logo. */
+  identity?: {
+    symbol: string;
+    icon: string | null;
+    logoUri: string | null;
+    contract: string;
+    chain: 'mainnet' | 'arbitrum' | 'base' | 'polygon' | 'optimism';
+  };
   /**
    * Optional ETH/USD daily closes used as a volatility benchmark. When the
    * data is provided, the chart's stats line shows e.g. "vol 47% (1.8× ETH)"
@@ -125,6 +135,7 @@ function Candle({ x = 0, y = 0, width = 0, height = 0, payload }: CandleProps) {
 
 export function TokenPriceChart({
   data,
+  identity,
   benchmark,
   isLoading,
   pegged = false,
@@ -218,8 +229,18 @@ export function TokenPriceChart({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-baseline gap-3">
-            <CardTitle>Price</CardTitle>
+          <div className="flex items-center gap-3 flex-wrap">
+            {identity && (
+              <TokenIcon
+                symbol={identity.symbol}
+                slug={identity.icon}
+                logoUri={identity.logoUri}
+                contract={identity.contract}
+                chain={identity.chain}
+                size={24}
+              />
+            )}
+            <CardTitle>{identity ? `${identity.symbol} price` : 'Price'}</CardTitle>
             {stats && (
               <span className={`text-xs tabular-nums ${positive ? 'text-[var(--green)]' : 'text-red-500'}`}>
                 {positive ? '+' : ''}{stats.pct.toFixed(2)}%
