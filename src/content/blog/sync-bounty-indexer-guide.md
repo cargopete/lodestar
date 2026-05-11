@@ -66,7 +66,20 @@ curl -s -X POST http://your-graph-node:8030/graphql \
   -d '{"query":"{ indexingStatuses(subgraphs: [\"'$DEPLOYMENT_ID'\"]) { synced health chains { latestBlock { number } } } }"}'
 ```
 
-Wait for `synced: true` before proceeding. Depending on the subgraph and chain, this can take anywhere from minutes to days.
+Wait for `synced: true` before proceeding.
+
+> **StakeSquid / standard compose setups:** graph-node ports (8020, 8030) are typically `expose`-only and not mapped to the host. Run the commands above from inside the server with `docker exec` instead:
+> ```bash
+> # Admin API (subgraph_create / subgraph_deploy)
+> docker exec index-node-0 curl -s -X POST http://localhost:8020/ \
+>   -H "Content-Type: application/json" \
+>   -d '...'
+>
+> # Status API (sync check) — route via indexer-agent since index-node-0 has no curl
+> docker exec indexer-agent curl -s -X POST http://query-node-0:8030/graphql \
+>   -H "Content-Type: application/json" \
+>   -d '...'
+> ``` Depending on the subgraph and chain, this can take anywhere from minutes to days.
 
 ---
 
@@ -106,7 +119,9 @@ mutation {
 }
 ```
 
-Post both mutations to your indexer-agent management API at `http://localhost:8000/` (or wherever your agent is running). The agent will execute the allocation on its next reconcile loop, typically within a minute.
+Post both mutations to your indexer-agent management API at `http://localhost:8000/`. The agent will execute the allocation on its next reconcile loop, typically within a minute.
+
+> **StakeSquid / compose users:** Port 8000 isn't mapped to the host by default. Prefix your curl with `docker exec indexer-agent` and keep `http://localhost:8000/` as-is — the container resolves it correctly.
 
 **Finding your allocation ID after it's created:**
 
@@ -135,7 +150,7 @@ If the subgraph has a graft base, you'll need to deploy the base deployment firs
 
 This is the step most indexers miss. The bounty contract checks `lastPOIPresentedAt > bounty.postedAt`. This timestamp is only set when you call `SubgraphService.collect()` — which the indexer-agent does via the `presentPOI` action. It collects indexing rewards without closing your allocation.
 
-Run this against your management API (`http://localhost:8000/`):
+Run this against your management API (`http://localhost:8000/`) — same docker exec note as Step 3 applies if your ports aren't host-mapped:
 
 ```graphql
 mutation {
@@ -181,7 +196,7 @@ The contract pays out immediately on confirmation. No waiting, no admin approval
 
 **Transaction reverts** — The most likely cause is someone else claimed first (first valid claim wins). Check Arbiscan for a `BountyClaimed` event on the BountyBoard contract.
 
-**`presentPOI` action fails with "Invalid action input"** — This is a known bug in indexer-agent v0.25.6 where the validation switch is missing the `presentPOI` case. Patch it by editing `/opt/indexer/packages/indexer-common/dist/actions.js` inside your agent container — add `case ActionType.PRESENT_POI: hasActionParams = 'deploymentID' in variableToCheck && 'allocationID' in variableToCheck; break;` before the `RESIZE` case. Then restart the agent.
+**`presentPOI` action fails with "Invalid action input"** — This can happen on certain agent builds where the action validation doesn't recognise the `presentPOI` type. Patch it by editing `/opt/indexer/packages/indexer-common/dist/actions.js` inside your agent container — add `case ActionType.PRESENT_POI: hasActionParams = 'deploymentID' in variableToCheck && 'allocationID' in variableToCheck; break;` before the `RESIZE` case, then restart the agent. Note: most v0.25.6 builds handle `presentPOI` correctly without this patch — only apply it if you actually see the error.
 
 **Can't find allocation ID** — Query `{ allocations(filter: {}) { id subgraphDeployment } }` against your management API, or search for your indexer address in the SubgraphService events on Arbiscan.
 
