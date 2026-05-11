@@ -100,6 +100,32 @@ export const BOUNTY_BOARD_ABI = [
   },
 ] as const;
 
+// Minimal ABI for SubgraphService.getAllocation() — field order matches deployed contract exactly
+export const SUBGRAPH_SERVICE_ABI = [
+  {
+    name: 'getAllocation',
+    type: 'function' as const,
+    stateMutability: 'view' as const,
+    inputs: [{ name: 'allocationId', type: 'address' }],
+    outputs: [
+      {
+        type: 'tuple',
+        components: [
+          { name: 'indexer', type: 'address' },
+          { name: 'subgraphDeploymentId', type: 'bytes32' },
+          { name: 'tokens', type: 'uint256' },
+          { name: 'createdAt', type: 'uint256' },
+          { name: 'closedAt', type: 'uint256' },
+          { name: 'lastPOIPresentedAt', type: 'uint256' },
+          { name: 'accRewardsPerAllocatedToken', type: 'uint256' },
+          { name: 'accRewardsPending', type: 'uint256' },
+          { name: 'createdAtEpoch', type: 'uint256' },
+        ],
+      },
+    ],
+  },
+] as const;
+
 export const GRT_ABI = [
   {
     name: 'approve',

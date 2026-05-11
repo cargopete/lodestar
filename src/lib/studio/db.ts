@@ -182,8 +182,11 @@ export async function listBounties(deploymentId?: string): Promise<SyncBounty[]>
   }
   return db!<SyncBounty[]>`
     SELECT * FROM sync_bounties
-    WHERE status = 'open'
-    ORDER BY amount_grt::numeric DESC, created_at DESC
+    WHERE status IN ('open', 'claimed')
+    ORDER BY
+      CASE status WHEN 'open' THEN 0 ELSE 1 END,
+      amount_grt::numeric DESC,
+      created_at DESC
     LIMIT 100
   `;
 }
