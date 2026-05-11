@@ -11,7 +11,7 @@ import { cn, shortenAddress } from '@/lib/utils';
 import { buildSignInMessage } from '@/lib/studio/auth';
 import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import { CONTRACTS } from '@/lib/wallet';
-import { BOUNTY_BOARD_ABI, GRT_ABI, extractBountyId } from '@/lib/bountyBoard';
+import { BOUNTY_BOARD_ABI, GRT_ABI, SUBGRAPH_SERVICE_ABI, extractBountyId } from '@/lib/bountyBoard';
 import type { StudioSubgraph, SyncBounty } from '@/lib/studio/db';
 
 // ---------------------------------------------------------------------------
@@ -1023,6 +1023,37 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
   const [claimTxHash, setClaimTxHash] = useState<`0x${string}` | undefined>();
   const [errMsg, setErrMsg] = useState('');
 
+  const validAddress = allocationId.startsWith('0x') && allocationId.length === 42;
+
+  // Poll allocation state from SubgraphService every 10s once an address is entered
+  const { data: allocState } = useReadContract({
+    address: CONTRACTS.subgraphService,
+    abi: SUBGRAPH_SERVICE_ABI,
+    functionName: 'getAllocation',
+    args: validAddress ? [allocationId as `0x${string}`] : undefined,
+    query: {
+      enabled: validAddress && step !== 'done',
+      refetchInterval: 10_000,
+    },
+  });
+
+  // Read the on-chain bounty to get postedAt for the POI comparison
+  const { data: chainBounty } = useReadContract({
+    address: CONTRACTS.bountyBoard,
+    abi: BOUNTY_BOARD_ABI,
+    functionName: 'getBounty',
+    args: bounty.chain_bounty_id ? [BigInt(bounty.chain_bounty_id)] : undefined,
+    query: { enabled: !!bounty.chain_bounty_id && step !== 'done' },
+  });
+
+  const poiReady = !!(
+    allocState &&
+    chainBounty &&
+    allocState.lastPOIPresentedAt > 0n &&
+    allocState.lastPOIPresentedAt > (chainBounty as { postedAt: bigint }).postedAt
+  );
+  const allocationClosed = allocState ? allocState.closedAt > 0n : false;
+
   const { writeContract, isPending } = useWriteContract({
     mutation: {
       onSuccess: (hash) => { setClaimTxHash(hash); setStep('claiming'); },
@@ -1031,10 +1062,20 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
   });
 
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimTxHash });
-  useEffect(() => { if (claimConfirmed) setStep('done'); }, [claimConfirmed]);
+  useEffect(() => {
+    if (!claimConfirmed) return;
+    setStep('done');
+    // Best-effort DB update — fire and forget
+    fetch(`/api/studio/bounties/${bounty.id}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'claim' }),
+    }).catch(() => {});
+  }, [claimConfirmed, bounty.id]);
 
   const handleClaim = () => {
-    if (!bounty.chain_bounty_id || !allocationId.startsWith('0x')) return;
+    if (!bounty.chain_bounty_id || !validAddress) return;
     writeContract({
       address: CONTRACTS.bountyBoard,
       abi: BOUNTY_BOARD_ABI,
@@ -1043,8 +1084,20 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
     });
   };
 
-  const validAddress = allocationId.startsWith('0x') && allocationId.length === 42;
   const canClose = step !== 'claiming';
+
+  // GraphQL snippet indexers can run against their own management API
+  const poiMutation = `mutation {
+  queueActions(actions: [{
+    type: presentPOI,
+    deploymentID: "${bounty.deployment_id}",
+    allocationID: "${allocationId || '<your-allocation-id>'}",
+    protocolNetwork: "eip155:42161",
+    status: approved, priority: 0,
+    isLegacy: false, source: "manual",
+    reason: "bounty claim"
+  }]) { id type status failureReason }
+}`;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
@@ -1066,7 +1119,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
           {step === 'form' && (
             <>
               <p className="text-sm text-[var(--text-muted)]">
-                The contract verifies on-chain that you have an open allocation for this deployment with a POI submitted after the bounty was posted.
+                The contract verifies you have an open allocation with a POI submitted after the bounty was posted. Submit your POI via your own indexer-agent, then claim here.
               </p>
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5">
@@ -1084,12 +1137,43 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
                   )}
                 />
                 <p className="text-xs text-[var(--text-faint)] mt-1">
-                  The address used in <code>SubgraphService.startService()</code>. Find it in your indexer-agent logs or on{' '}
+                  Your active allocation address for this deployment. Find it in your indexer-agent logs or on{' '}
                   <a href={`https://arbiscan.io/address/${CONTRACTS.subgraphService}#events`} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
                     Arbiscan
                   </a>.
                 </p>
               </div>
+
+              {/* On-chain status panel */}
+              {validAddress && allocState && (
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3 space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-faint)]">Allocation</span>
+                    <span className={allocationClosed ? 'text-[var(--red)]' : 'text-[var(--green)]'}>
+                      {allocationClosed ? 'Closed — cannot claim' : 'Open'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-faint)]">POI verified on-chain</span>
+                    <span className={poiReady ? 'text-[var(--green)]' : 'text-[var(--text-muted)]'}>
+                      {poiReady ? 'Yes — ready to claim' : 'Not yet (polling every 10s)'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* POI instructions — shown when allocation is open but POI not yet confirmed */}
+              {validAddress && allocState && !allocationClosed && !poiReady && (
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3 space-y-2">
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Run this against your indexer-agent management API (port 8000), then wait for the status above to update:
+                  </p>
+                  <pre className="text-[10px] font-mono text-[var(--text-faint)] whitespace-pre-wrap break-all leading-relaxed">
+                    {poiMutation}
+                  </pre>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button
                   onClick={onClose}
@@ -1099,7 +1183,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
                 </button>
                 <button
                   onClick={handleClaim}
-                  disabled={isPending || !validAddress}
+                  disabled={isPending || !poiReady}
                   className="flex-1 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {isPending ? 'Waiting for wallet...' : 'Claim GRT'}
