@@ -17,10 +17,14 @@ import { arbitrumClient } from '@/lib/reo-contract';
 import { BOUNTY_BOARD_ABI, SUBGRAPH_SERVICE_ABI } from '@/lib/bountyBoard';
 import { subgraphQuery } from '@/lib/subgraph';
 import { cached } from '@/lib/cache';
+import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 
 const BOUNTY_BOARD = (process.env.NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS ?? '0x0000000000000000000000000000000000000000').trim() as `0x${string}`;
 const SUBGRAPH_SERVICE = '0xb2Bb92d0DE618878E438b55D5846cfecD9301105' as const;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+const GATEWAY = process.env.GRAPH_API_KEY
+  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}`
+  : null;
 
 async function resolveQueryUrl(chainBountyId: string, deploymentId: string): Promise<string | null> {
   return cached(`bounty-query-url:v1:${chainBountyId}`, 3600, async () => {
@@ -56,18 +60,45 @@ async function resolveQueryUrl(chainBountyId: string, deploymentId: string): Pro
 
     if (!indexerAddress || indexerAddress === ZERO_ADDRESS) return null;
 
-    // 3. Look up the indexer's public query URL from The Graph network subgraph
+    // 3. Look up the winner's public query URL from The Graph network subgraph
     try {
       const data = await subgraphQuery<{ indexer: { url: string | null } | null }>(
         `{ indexer(id: "${indexerAddress}") { url } }`,
       );
       const url = data.indexer?.url;
-      if (!url) return null;
-      const base = url.endsWith('/') ? url : `${url}/`;
-      return `${base}subgraphs/id/${deploymentId}`;
+      if (url) {
+        const base = url.endsWith('/') ? url : `${url}/`;
+        return `${base}subgraphs/id/${deploymentId}`;
+      }
     } catch {
-      return null;
+      // fall through to allocation scan
     }
+
+    // 4. Winner has no URL — scan all active allocations for any indexer serving this deployment
+    try {
+      const deploymentHex = ipfsHashToBytes32(deploymentId);
+      const allocData = await subgraphQuery<{
+        allocations: Array<{ indexer: { url: string | null } }>;
+      }>(`{
+        allocations(
+          where: { subgraphDeployment: "${deploymentHex}", status: Active }
+          first: 10
+          orderBy: allocatedTokens
+          orderDirection: desc
+        ) { indexer { url } }
+      }`);
+      for (const alloc of allocData.allocations ?? []) {
+        const url = alloc.indexer?.url;
+        if (url) {
+          const base = url.endsWith('/') ? url : `${url}/`;
+          return `${base}subgraphs/id/${deploymentId}`;
+        }
+      }
+    } catch {
+      // fall through to gateway
+    }
+
+    return null;
   });
 }
 
@@ -99,10 +130,14 @@ export async function POST(
     return NextResponse.json({ error: 'BountyBoard contract not configured' }, { status: 503 });
   }
 
-  const queryUrl = await resolveQueryUrl(bounty.chain_bounty_id, bounty.deployment_id);
+  // Try direct indexer URL first, fall back to gateway
+  let queryUrl = await resolveQueryUrl(bounty.chain_bounty_id, bounty.deployment_id);
+  if (!queryUrl && GATEWAY) {
+    queryUrl = `${GATEWAY}/deployments/id/${bounty.deployment_id}`;
+  }
   if (!queryUrl) {
     return NextResponse.json(
-      { error: 'Could not resolve indexer query endpoint — indexer may not have a public URL registered' },
+      { error: 'Could not resolve query endpoint — indexer has no public URL and no gateway key is configured' },
       { status: 502 },
     );
   }
