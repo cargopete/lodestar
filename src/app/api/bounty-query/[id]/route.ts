@@ -149,7 +149,7 @@ export async function POST(
   // This works for any deployment our node is syncing and avoids TAP v2 complexity.
   if (GRAPH_NODE_FREE_QUERY_BASE && process.env.GRAPH_NODE_FREE_QUERY_KEY) {
     const freeUrl = `${GRAPH_NODE_FREE_QUERY_BASE}/subgraphs/id/${bounty.deployment_id}`;
-    const authHeader = `Basic ${Buffer.from(process.env.GRAPH_NODE_FREE_QUERY_KEY).toString('base64')}`;
+    const authHeader = `Basic ${Buffer.from(process.env.GRAPH_NODE_FREE_QUERY_KEY.trim()).toString('base64')}`;
     try {
       const upstream = await fetch(freeUrl, {
         method: 'POST',
