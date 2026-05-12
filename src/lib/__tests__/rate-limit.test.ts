@@ -83,6 +83,12 @@ describe('rateLimit', () => {
     expect(result.limit).toBe(60);
   });
 
+  it('applies correct limit for /api/subgraph-playground/ (20 rpm)', async () => {
+    mockIncr.mockResolvedValue(1);
+    const result = await rateLimit('1.2.3.4', '/api/subgraph-playground/QmFoo');
+    expect(result.limit).toBe(20);
+  });
+
   it('applies fallback limit of 200 rpm for unmatched routes', async () => {
     mockIncr.mockResolvedValue(1);
     const result = await rateLimit('1.2.3.4', '/api/epochs');

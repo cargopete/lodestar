@@ -17,6 +17,7 @@ const LIMITS: Array<[RegExp, number]> = [
   [/^\/api\/portfolio/, 30],
   [/^\/api\/feed/, 20],
   [/^\/api\/vote/, 60],
+  [/^\/api\/subgraph-playground\//, 20],
   [/^\/api\//, 200],
 ];
 
