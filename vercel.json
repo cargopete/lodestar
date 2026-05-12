@@ -47,6 +47,10 @@
     {
       "path": "/api/cron/warm-protocols",
       "schedule": "*/45 * * * *"
+    },
+    {
+      "path": "/api/cron/tap-provision",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

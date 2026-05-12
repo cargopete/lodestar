@@ -8,7 +8,11 @@
  *   DB bounty → chain BountyBoard.getBounty() → winner allocation ID
  *   → SubgraphService.getAllocation() → indexer address
  *   → Graph network subgraph → indexer.url
- *   → proxy to <url>/subgraphs/id/<deploymentId>
+ *   → proxy to <url>/subgraphs/id/<deploymentId> with TAP receipt
+ *
+ * For published subgraphs the gateway serves them directly (no TAP needed on
+ * our side). For unpublished bounty deployments we go direct-to-indexer and
+ * attach a TAP v2 receipt so the indexer-service accepts the query.
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { hasDbAccess } from '@/lib/db';
@@ -18,6 +22,7 @@ import { BOUNTY_BOARD_ABI, SUBGRAPH_SERVICE_ABI } from '@/lib/bountyBoard';
 import { subgraphQuery } from '@/lib/subgraph';
 import { cached } from '@/lib/cache';
 import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
+import { signTapReceipt, hasTapSigner } from '@/lib/tap';
 
 const BOUNTY_BOARD = (process.env.NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS ?? '0x0000000000000000000000000000000000000000').trim() as `0x${string}`;
 const SUBGRAPH_SERVICE = '0xb2Bb92d0DE618878E438b55D5846cfecD9301105' as const;
@@ -26,9 +31,17 @@ const GATEWAY = process.env.GRAPH_API_KEY
   ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}`
   : null;
 
-async function resolveQueryUrl(chainBountyId: string, deploymentId: string): Promise<string | null> {
-  return cached(`bounty-query-url:v1:${chainBountyId}`, 3600, async () => {
-    // 1. Read winning allocation ID from the BountyBoard contract
+interface ResolvedEndpoint {
+  url: string;
+  /** Indexer address to sign the TAP receipt for; null when routing via gateway. */
+  indexerAddress: string | null;
+}
+
+async function resolveEndpoint(chainBountyId: string, deploymentId: string): Promise<ResolvedEndpoint | null> {
+  // Cache the resolved endpoint for 1 hour. Null values are not cached by
+  // `cached()` so a failed resolution is retried on the next request.
+  return cached(`bounty-query-url:v2:${chainBountyId}`, 3600, async () => {
+    // 1. Read winning allocation ID from the BountyBoard contract.
     let winner: `0x${string}`;
     try {
       const bountyData = await arbitrumClient.readContract({
@@ -44,7 +57,7 @@ async function resolveQueryUrl(chainBountyId: string, deploymentId: string): Pro
 
     if (!winner || winner.toLowerCase() === ZERO_ADDRESS) return null;
 
-    // 2. Get the indexer address from SubgraphService
+    // 2. Get the indexer address from SubgraphService.
     let indexerAddress: string;
     try {
       const allocation = await arbitrumClient.readContract({
@@ -60,7 +73,7 @@ async function resolveQueryUrl(chainBountyId: string, deploymentId: string): Pro
 
     if (!indexerAddress || indexerAddress === ZERO_ADDRESS) return null;
 
-    // 3. Look up the winner's public query URL from The Graph network subgraph
+    // 3. Look up the winner's public query URL from The Graph network subgraph.
     try {
       const data = await subgraphQuery<{ indexer: { url: string | null } | null }>(
         `{ indexer(id: "${indexerAddress}") { url } }`,
@@ -68,34 +81,37 @@ async function resolveQueryUrl(chainBountyId: string, deploymentId: string): Pro
       const url = data.indexer?.url;
       if (url) {
         const base = url.endsWith('/') ? url : `${url}/`;
-        return `${base}subgraphs/id/${deploymentId}`;
+        return { url: `${base}subgraphs/id/${deploymentId}`, indexerAddress };
       }
     } catch {
       // fall through to allocation scan
     }
 
-    // 4. Winner has no URL — scan all active allocations for any indexer serving this deployment
+    // 4. Winner has no URL — scan all active allocations for any indexer serving this deployment.
     try {
       const deploymentHex = ipfsHashToBytes32(deploymentId);
       const allocData = await subgraphQuery<{
-        allocations: Array<{ indexer: { url: string | null } }>;
+        allocations: Array<{ indexer: { id: string; url: string | null } }>;
       }>(`{
         allocations(
           where: { subgraphDeployment: "${deploymentHex}", status: Active }
           first: 10
           orderBy: allocatedTokens
           orderDirection: desc
-        ) { indexer { url } }
+        ) { indexer { id url } }
       }`);
       for (const alloc of allocData.allocations ?? []) {
         const url = alloc.indexer?.url;
         if (url) {
           const base = url.endsWith('/') ? url : `${url}/`;
-          return `${base}subgraphs/id/${deploymentId}`;
+          return {
+            url: `${base}subgraphs/id/${deploymentId}`,
+            indexerAddress: alloc.indexer.id.toLowerCase(),
+          };
         }
       }
     } catch {
-      // fall through to gateway
+      // fall through — no direct indexer found
     }
 
     return null;
@@ -130,18 +146,6 @@ export async function POST(
     return NextResponse.json({ error: 'BountyBoard contract not configured' }, { status: 503 });
   }
 
-  // Try direct indexer URL first, fall back to gateway
-  let queryUrl = await resolveQueryUrl(bounty.chain_bounty_id, bounty.deployment_id);
-  if (!queryUrl && GATEWAY) {
-    queryUrl = `${GATEWAY}/deployments/id/${bounty.deployment_id}`;
-  }
-  if (!queryUrl) {
-    return NextResponse.json(
-      { error: 'Could not resolve query endpoint — indexer has no public URL and no gateway key is configured' },
-      { status: 502 },
-    );
-  }
-
   let body: unknown;
   try {
     body = await req.json();
@@ -149,19 +153,66 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  try {
-    const upstream = await fetch(queryUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(15_000),
-    });
-    const data = await upstream.json();
-    return NextResponse.json(data, { status: upstream.ok ? 200 : upstream.status });
-  } catch (err) {
-    return NextResponse.json(
-      { error: `Upstream error: ${err instanceof Error ? err.message : String(err)}` },
-      { status: 502 },
-    );
+  // Try direct indexer routing (with TAP receipt for unpublished deployments).
+  const endpoint = await resolveEndpoint(bounty.chain_bounty_id, bounty.deployment_id);
+
+  if (endpoint) {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+    // Attach a TAP receipt so the indexer-service accepts our query.
+    // The payer (TAP_SIGNER_PRIVATE_KEY) must have escrow with this indexer.
+    // Published subgraphs also benefit from this path when an indexer URL is known.
+    if (hasTapSigner() && endpoint.indexerAddress) {
+      try {
+        const receipt = await signTapReceipt(endpoint.indexerAddress);
+        if (receipt) headers['TAP-Receipt'] = receipt;
+      } catch {
+        // signing failed — try without receipt (indexer may reject, will fall back below)
+      }
+    }
+
+    try {
+      const upstream = await fetch(endpoint.url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
+      });
+      const data = await upstream.json();
+      // If indexer rejected due to missing/invalid receipt, fall through to gateway.
+      if (!upstream.ok && upstream.status === 402) {
+        // payment required — fall through
+      } else {
+        return NextResponse.json(data, { status: upstream.ok ? 200 : upstream.status });
+      }
+    } catch {
+      // network error — try gateway
+    }
   }
+
+  // Gateway fallback — works for published (signalled) subgraphs.
+  // Unpublished bounty deployments will get "subgraph not found" from the gateway.
+  if (GATEWAY) {
+    const gatewayUrl = `${GATEWAY}/deployments/id/${bounty.deployment_id}`;
+    try {
+      const upstream = await fetch(gatewayUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
+      });
+      const data = await upstream.json();
+      return NextResponse.json(data, { status: upstream.ok ? 200 : upstream.status });
+    } catch (err) {
+      return NextResponse.json(
+        { error: `Gateway error: ${err instanceof Error ? err.message : String(err)}` },
+        { status: 502 },
+      );
+    }
+  }
+
+  return NextResponse.json(
+    { error: 'Could not resolve query endpoint — no direct indexer URL and no gateway key configured' },
+    { status: 502 },
+  );
 }
