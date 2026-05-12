@@ -18,14 +18,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { hasDbAccess } from '@/lib/db';
 import { getBounty } from '@/lib/studio/db';
 import { arbitrumClient } from '@/lib/reo-contract';
-import { BOUNTY_BOARD_ABI, SUBGRAPH_SERVICE_ABI } from '@/lib/bountyBoard';
+import { BOUNTY_BOARD_ABI } from '@/lib/bountyBoard';
 import { subgraphQuery } from '@/lib/subgraph';
 import { cached } from '@/lib/cache';
 import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import { signTapReceipt, hasTapSigner } from '@/lib/tap';
 
 const BOUNTY_BOARD = (process.env.NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS ?? '0x0000000000000000000000000000000000000000').trim() as `0x${string}`;
-const SUBGRAPH_SERVICE = '0xb2Bb92d0DE618878E438b55D5846cfecD9301105' as const;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const GATEWAY = process.env.GRAPH_API_KEY
   ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}`
@@ -57,21 +56,9 @@ async function resolveEndpoint(chainBountyId: string, deploymentId: string): Pro
 
     if (!winner || winner.toLowerCase() === ZERO_ADDRESS) return null;
 
-    // 2. Get the indexer address from SubgraphService.
-    let indexerAddress: string;
-    try {
-      const allocation = await arbitrumClient.readContract({
-        address: SUBGRAPH_SERVICE,
-        abi: SUBGRAPH_SERVICE_ABI,
-        functionName: 'getAllocation',
-        args: [winner],
-      });
-      indexerAddress = (allocation.indexer as string).toLowerCase();
-    } catch {
-      return null;
-    }
-
-    if (!indexerAddress || indexerAddress === ZERO_ADDRESS) return null;
+    // 2. The BountyBoard resolves the allocation to the indexer internally and
+    //    stores the indexer address directly as `winner` — use it as-is.
+    const indexerAddress = winner.toLowerCase();
 
     // 3. Look up the winner's public query URL from The Graph network subgraph.
     try {

@@ -14,12 +14,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasDbAccess, db } from '@/lib/db';
 import { arbitrumClient } from '@/lib/reo-contract';
-import { BOUNTY_BOARD_ABI, SUBGRAPH_SERVICE_ABI } from '@/lib/bountyBoard';
+import { BOUNTY_BOARD_ABI } from '@/lib/bountyBoard';
 import { hasTapSigner, ensureEscrow, getEscrowBalance, MIN_ESCROW_WEI } from '@/lib/tap';
 import { log } from '@/lib/logger';
 
 const BOUNTY_BOARD = (process.env.NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS ?? '').trim() as `0x${string}`;
-const SUBGRAPH_SERVICE = '0xb2Bb92d0DE618878E438b55D5846cfecD9301105' as const;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 function isAuthorized(req: NextRequest): boolean {
@@ -37,17 +36,10 @@ async function resolveIndexer(chainBountyId: string): Promise<string | null> {
       functionName: 'getBounty',
       args: [BigInt(chainBountyId)],
     });
-    const winner = bountyData.winner as `0x${string}`;
-    if (!winner || winner.toLowerCase() === ZERO_ADDRESS) return null;
-
-    const allocation = await arbitrumClient.readContract({
-      address: SUBGRAPH_SERVICE,
-      abi: SUBGRAPH_SERVICE_ABI,
-      functionName: 'getAllocation',
-      args: [winner],
-    });
-    const indexer = (allocation.indexer as string).toLowerCase();
-    return indexer === ZERO_ADDRESS ? null : indexer;
+    // The BountyBoard resolves the allocation to the indexer address internally
+    // and stores it directly as `winner`.
+    const winner = (bountyData.winner as string).toLowerCase();
+    return winner === ZERO_ADDRESS ? null : winner;
   } catch {
     return null;
   }
