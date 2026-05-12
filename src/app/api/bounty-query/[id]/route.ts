@@ -29,6 +29,11 @@ const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const GATEWAY = process.env.GRAPH_API_KEY
   ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}`
   : null;
+// Direct graph-node query endpoint (bypasses TAP — our node only).
+// Basic auth: GRAPH_NODE_FREE_QUERY_KEY = "user:password"
+const GRAPH_NODE_FREE_QUERY_BASE = process.env.GRAPH_NODE_FREE_QUERY_KEY
+  ? 'https://indexer.lodestar-dashboard.com/free-query'
+  : null;
 
 interface ResolvedEndpoint {
   url: string;
@@ -138,6 +143,28 @@ export async function POST(
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  // Try our own graph-node directly (no TAP required, basicAuth only).
+  // This works for any deployment our node is syncing and avoids TAP v2 complexity.
+  if (GRAPH_NODE_FREE_QUERY_BASE && process.env.GRAPH_NODE_FREE_QUERY_KEY) {
+    const freeUrl = `${GRAPH_NODE_FREE_QUERY_BASE}/subgraphs/id/${bounty.deployment_id}`;
+    const authHeader = `Basic ${Buffer.from(process.env.GRAPH_NODE_FREE_QUERY_KEY).toString('base64')}`;
+    try {
+      const upstream = await fetch(freeUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: authHeader },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (upstream.ok) {
+        const data = await upstream.json();
+        return NextResponse.json(data);
+      }
+      // Non-200 means our node isn't serving this deployment — fall through.
+    } catch {
+      // Network error — fall through.
+    }
   }
 
   // Try direct indexer routing (with TAP receipt for unpublished deployments).
