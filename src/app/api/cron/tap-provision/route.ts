@@ -16,6 +16,8 @@ import { hasDbAccess, db } from '@/lib/db';
 import { arbitrumClient } from '@/lib/reo-contract';
 import { BOUNTY_BOARD_ABI } from '@/lib/bountyBoard';
 import { hasTapSigner, ensureEscrow, getEscrowBalance, MIN_ESCROW_WEI } from '@/lib/tap';
+import { subgraphQuery } from '@/lib/subgraph';
+import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import { log } from '@/lib/logger';
 
 const BOUNTY_BOARD = (process.env.NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS ?? '').trim() as `0x${string}`;
@@ -27,8 +29,13 @@ function isAuthorized(req: NextRequest): boolean {
   return req.headers.get('authorization') === `Bearer ${secret}`;
 }
 
-/** Resolve the indexer address for a given on-chain bounty ID. */
-async function resolveIndexer(chainBountyId: string): Promise<string | null> {
+/**
+ * Resolve all indexer addresses to provision escrow with for a given bounty.
+ * Returns the winner if they have a registered URL, otherwise falls back to
+ * any active indexers serving the deployment (same logic as bounty-query route).
+ */
+async function resolveIndexers(chainBountyId: string, deploymentId: string): Promise<string[]> {
+  let winner: string | null = null;
   try {
     const bountyData = await arbitrumClient.readContract({
       address: BOUNTY_BOARD,
@@ -36,13 +43,47 @@ async function resolveIndexer(chainBountyId: string): Promise<string | null> {
       functionName: 'getBounty',
       args: [BigInt(chainBountyId)],
     });
-    // The BountyBoard resolves the allocation to the indexer address internally
-    // and stores it directly as `winner`.
-    const winner = (bountyData.winner as string).toLowerCase();
-    return winner === ZERO_ADDRESS ? null : winner;
+    const w = (bountyData.winner as string).toLowerCase();
+    if (w !== ZERO_ADDRESS) winner = w;
   } catch {
-    return null;
+    return [];
   }
+
+  if (!winner) return [];
+
+  // Check if the winner has a URL in the network subgraph.
+  try {
+    const data = await subgraphQuery<{ indexer: { url: string | null } | null }>(
+      `{ indexer(id: "${winner}") { url } }`,
+    );
+    if (data.indexer?.url) return [winner];
+  } catch {
+    // fall through to active allocation scan
+  }
+
+  // Winner has no URL — scan active allocations for any indexer serving this deployment.
+  try {
+    const deploymentHex = ipfsHashToBytes32(deploymentId);
+    const allocData = await subgraphQuery<{
+      allocations: Array<{ indexer: { id: string; url: string | null } }>;
+    }>(`{
+      allocations(
+        where: { subgraphDeployment: "${deploymentHex}", status: Active }
+        first: 10
+        orderBy: allocatedTokens
+        orderDirection: desc
+      ) { indexer { id url } }
+    }`);
+    const addresses = (allocData.allocations ?? [])
+      .filter((a) => a.indexer?.url)
+      .map((a) => a.indexer.id.toLowerCase());
+    if (addresses.length > 0) return addresses;
+  } catch {
+    // ignore
+  }
+
+  // No URL found anywhere — still provision the winner so we're ready if they register one.
+  return [winner];
 }
 
 export async function GET(req: NextRequest) {
@@ -62,8 +103,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
   }
 
-  const bounties = await db!<{ chain_bounty_id: string }[]>`
-    SELECT chain_bounty_id
+  const bounties = await db!<{ chain_bounty_id: string; deployment_id: string }[]>`
+    SELECT chain_bounty_id, deployment_id
     FROM sync_bounties
     WHERE status = 'claimed'
       AND chain_bounty_id IS NOT NULL
@@ -73,20 +114,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ provisioned: {}, note: 'no claimed bounties' });
   }
 
-  // Resolve all indexer addresses in parallel (one chain call per bounty).
+  // Resolve all indexer addresses in parallel (winner + fallback active indexers).
   const resolved = await Promise.all(
-    bounties.map(async (b: { chain_bounty_id: string }) => ({
-      chainBountyId: b.chain_bounty_id,
-      indexer: await resolveIndexer(b.chain_bounty_id),
-    })),
+    bounties.map((b: { chain_bounty_id: string; deployment_id: string }) =>
+      resolveIndexers(b.chain_bounty_id, b.deployment_id),
+    ),
   );
 
-  // Deduplicate indexer addresses.
-  const indexers = [...new Set(
-    resolved
-      .map((r: { chainBountyId: string; indexer: string | null }) => r.indexer)
-      .filter((v): v is string => v !== null),
-  )];
+  // Deduplicate indexer addresses across all bounties.
+  const indexers = [...new Set(resolved.flat())];
 
   const results: Record<string, string> = {};
 
