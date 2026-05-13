@@ -17,6 +17,24 @@ The contract is live on Arbitrum One. The indexer is running. The dashboard page
 
 ---
 
+## How it works
+
+Five steps, one data flow:
+
+**1. Stream** — The indexer subscribes to Solana Mainnet via Yellowstone gRPC (Dragon's Mouth). It receives every confirmed transaction matching the Jupiter v6 program ID in real time, as a continuous stream.
+
+**2. Decode** — For each transaction, it looks at the instruction data. The first 8 bytes are the discriminator — an Anchor convention, it's the first 8 bytes of `SHA256("global:instruction_name")`. That tells you which instruction it is (`shared_accounts_route`, `exact_out_route`, etc.). The rest of the bytes are Borsh-encoded arguments: amounts, slippage, hop count. Account indices in the instruction get resolved to actual public keys using the transaction's full account list — including Address Lookup Tables, which is where mint addresses typically live in Jupiter transactions.
+
+**3. Write** — Each decoded swap becomes a row in `entity_changes` in Postgres, with a `fields` JSONB column containing all the decoded swap data. Rows start as `NEW`. A background sweeper polls the Solana RPC every 10 seconds for the current finalized slot and promotes eligible rows to `FINAL`.
+
+**4. Serve** — PostgREST sits in front of Postgres and exposes the table as a REST API with no custom code. Filtering, ordering, pagination — all just query parameters.
+
+**5. Gate** — seahorn-gateway (Axum) sits in front of PostgREST. Every inbound request must carry a valid TAP receipt — an EIP-712 signed payment struct. Invalid or missing receipt: 402. Valid: proxied through to PostgREST and the receipt is stored for later aggregation and on-chain GRT collection.
+
+The whole thing reconnects automatically if the gRPC stream drops, resumes from the last persisted cursor slot so nothing is double-written, and the payment loop runs entirely in the background.
+
+---
+
 ## The architecture
 
 Five components, one data flow:
