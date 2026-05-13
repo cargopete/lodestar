@@ -57,7 +57,7 @@ function mintInfo(mint?: string) {
 }
 
 function mintLabel(mint?: string): string {
-  if (!mint) return '?';
+  if (!mint) return '—';
   return MINTS[mint]?.symbol ?? `${mint.slice(0, 4)}…${mint.slice(-4)}`;
 }
 
@@ -220,9 +220,11 @@ function LiveFeed() {
                       <span className="text-[11px] font-mono text-[var(--text)]">
                         {formatAmount(f.in_amount, f.source_mint)}
                       </span>
-                      <span className="text-[10px] text-[var(--text-faint)] ml-0.5">
-                        {mintLabel(f.source_mint)}
-                      </span>
+                      {f.source_mint && (
+                        <span className="text-[10px] text-[var(--text-faint)] ml-0.5">
+                          {mintLabel(f.source_mint)}
+                        </span>
+                      )}
                     </div>
 
                     {/* Hops */}
@@ -449,8 +451,8 @@ export default function SeahornPage() {
         </div>
         <div className="shrink-0 hidden sm:block">
           <div className="text-[11px] text-[var(--text-faint)] text-right">
-            <p>Powered by Lodestar</p>
-            <p className="font-mono">SolanaDataService</p>
+            <p>Powered by Lodestar&apos;s</p>
+            <p className="font-mono">SolanaDataService contract</p>
           </div>
         </div>
       </div>
