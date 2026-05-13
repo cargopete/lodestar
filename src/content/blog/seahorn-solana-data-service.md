@@ -35,6 +35,20 @@ The whole thing reconnects automatically if the gRPC stream drops, resumes from 
 
 ---
 
+## Who pays?
+
+No free lunch, but the accounting depends on who's asking.
+
+**Dashboard visitors** pay nothing. Every time someone loads the Seahorn page, the Next.js API routes hit Lodestar's dispatch-gateway, which signs TAP receipts on behalf of the query. GRT is drawn from Lodestar's escrow on `PaymentsEscrow` on Arbitrum One.
+
+**Lodestar** absorbs that cost — but since Lodestar is also the provider, the GRT cycles straight back to the provider wallet via `collect()`. The net cost is only the protocol fee baked into `collect()` (a small percentage) plus gas for the on-chain settlement transactions. It's not zero, but it's close.
+
+**External consumers** pay properly. They deposit GRT into `PaymentsEscrow`, their gateway signs a TAP receipt per query, and GRT flows from their escrow to whichever provider served the request. Pay per query, settled on-chain. The per-query cost is set by the provider and denominated in GRT wei per request.
+
+The dashboard is, in economic terms, a subsidised demo. Lodestar pays the protocol fee in exchange for proving the full payment loop works under real traffic — same logic as [pointing our own indexer at our own Dispatch network](/blog/dispatch-dogfooding). The circular payment is cheap. The production validation it provides is not.
+
+---
+
 ## The architecture
 
 Five components, one data flow:
