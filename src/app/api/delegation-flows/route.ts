@@ -11,7 +11,7 @@ export interface DelegationFlowPoint {
   net: number;
 }
 
-const ALLOWED_DAYS = new Set([30, 90, 180, 365]);
+const ALLOWED_DAYS = new Set([30, 60, 90, 180, 360, 365, 730]);
 
 async function fetchFromSubgraph(days: number): Promise<DelegationFlowPoint[]> {
   const cutoff = Math.floor((Date.now() - days * 86400_000) / 1000).toString();
@@ -65,9 +65,11 @@ async function fetchFromSubgraph(days: number): Promise<DelegationFlowPoint[]> {
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
-  const days = ALLOWED_DAYS.has(Number(params.get('days')))
+  const baseDays = ALLOWED_DAYS.has(Number(params.get('days')))
     ? Number(params.get('days'))
     : 90;
+  const compare = params.get('compare') === '1';
+  const days = compare ? baseDays * 2 : baseDays;
 
   const cacheKey = `lodestar:delegation-flows:v3:${days}`;
 

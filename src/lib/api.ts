@@ -474,13 +474,13 @@ export async function fetchTokenMetrics(count = 100): Promise<{
 /**
  * Fetch network-wide delegation inflows/outflows aggregated by day
  */
-export async function fetchDelegationFlows(days = 90): Promise<{
+export async function fetchDelegationFlows(days = 90, compare = false): Promise<{
   date: string;
   inflows: number;
   outflows: number;
   net: number;
 }[]> {
-  const response = await fetch(`/api/delegation-flows?days=${days}`);
+  const response = await fetch(`/api/delegation-flows?days=${days}${compare ? '&compare=1' : ''}`);
   if (!response.ok) throw new Error(`Delegation flows failed: ${response.status}`);
   const json = await response.json();
   return json.data ?? [];

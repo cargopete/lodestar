@@ -573,10 +573,10 @@ export function useIndexerStakeHistory(address: string | null) {
 /**
  * Hook for network-wide delegation inflows/outflows over time
  */
-export function useDelegationFlows(days = 90) {
+export function useDelegationFlows(days = 90, compare = false) {
   return useQuery({
-    queryKey: ['delegationFlows', days],
-    queryFn: () => fetchDelegationFlows(days),
+    queryKey: ['delegationFlows', days, compare],
+    queryFn: () => fetchDelegationFlows(days, compare),
     staleTime: TEN_MINUTES,
     refetchInterval: TEN_MINUTES,
   });
