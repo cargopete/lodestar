@@ -60,6 +60,13 @@ export async function getSubgraphBySlug(slug: string): Promise<StudioSubgraph | 
   return rows[0] ?? null;
 }
 
+export async function getSubgraphById(id: number): Promise<StudioSubgraph | null> {
+  const rows = await db!<StudioSubgraph[]>`
+    SELECT * FROM studio_subgraphs WHERE id = ${id}
+  `;
+  return rows[0] ?? null;
+}
+
 export async function createSubgraph(
   owner: string,
   slug: string,

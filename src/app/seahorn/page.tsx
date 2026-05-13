@@ -103,14 +103,15 @@ function LiveFeed() {
       const raw: Swap[] = await resp.json();
       if (!Array.isArray(raw)) { setUnavailable(true); return; }
       setUnavailable(false);
+      const valid = raw.filter(s => s.fields?.source_mint && s.fields?.destination_mint);
       setItems(prev => {
         const prevMaxId = prev[0]?.id ?? 0;
-        const freshIds = new Set(raw.filter(s => s.id > prevMaxId).map(s => s.id));
+        const freshIds = new Set(valid.filter(s => s.id > prevMaxId).map(s => s.id));
         if (freshIds.size > 0) {
           setNewIds(freshIds);
           setTimeout(() => setNewIds(new Set()), 900);
         }
-        return raw;
+        return valid;
       });
     } catch {
       setUnavailable(true);
@@ -420,12 +421,12 @@ export default function SeahornPage() {
   useEffect(() => {
     fetch('/api/seahorn/swaps?limit=25')
       .then(r => r.json())
-      .then((d: Swap[]) => { if (Array.isArray(d)) setSwaps(d); })
+      .then((d: Swap[]) => { if (Array.isArray(d)) setSwaps(d.filter(s => s.fields?.source_mint && s.fields?.destination_mint)); })
       .catch(() => {});
     const t = setInterval(() => {
       fetch('/api/seahorn/swaps?limit=25')
         .then(r => r.json())
-        .then((d: Swap[]) => { if (Array.isArray(d)) setSwaps(d); })
+        .then((d: Swap[]) => { if (Array.isArray(d)) setSwaps(d.filter(s => s.fields?.source_mint && s.fields?.destination_mint)); })
         .catch(() => {});
     }, 5_000);
     return () => clearInterval(t);
