@@ -338,17 +338,30 @@ export function Sidebar() {
         {navigation.map((section) => {
           const isCollapsed = section.collapsible && collapsed[section.title];
           return (
-            <div key={section.title} className="mb-5">
+            <div key={section.title} className={cn('mb-5', isCollapsed && 'mb-1.5')}>
               {section.collapsible ? (
                 <button
                   onClick={() => toggleSection(section.title)}
-                  className="flex items-center justify-between w-full px-2.5 mb-1.5 group"
+                  className={cn(
+                    'flex items-center justify-between w-full px-2.5 py-1.5 rounded-[var(--radius-button)] transition-colors group',
+                    isCollapsed
+                      ? 'bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.08)] mb-0'
+                      : 'mb-1.5 hover:bg-[rgba(255,255,255,0.03)]'
+                  )}
                 >
-                  <h4 className="text-[11px] font-medium text-[var(--text-faint)] group-hover:text-[var(--text-muted)] transition-colors">
+                  <h4 className={cn(
+                    'text-[11px] font-medium transition-colors',
+                    isCollapsed
+                      ? 'text-[var(--text-muted)]'
+                      : 'text-[var(--text-faint)] group-hover:text-[var(--text-muted)]'
+                  )}>
                     {section.title}
                   </h4>
                   <svg
-                    className={cn('w-3 h-3 text-[var(--text-faint)] transition-transform', isCollapsed ? '' : 'rotate-180')}
+                    className={cn(
+                      'w-3 h-3 transition-transform',
+                      isCollapsed ? 'text-[var(--text-muted)]' : 'text-[var(--text-faint)] rotate-180'
+                    )}
                     fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />

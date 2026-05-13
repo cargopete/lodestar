@@ -44,7 +44,7 @@ export function StatCard({
           {loading ? (
             <div className="h-8 w-24 shimmer rounded" />
           ) : (
-            <p className="text-[24px] font-semibold font-mono text-[var(--text)] tracking-tight">
+            <p className={cn('font-semibold font-mono text-[var(--text)] tracking-tight', value.length > 9 ? 'text-[20px]' : 'text-[24px]')}>
               {value}
             </p>
           )}

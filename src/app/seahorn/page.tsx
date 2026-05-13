@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/Badge';
@@ -109,6 +109,9 @@ function LiveFeed() {
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
   const [filter, setFilter] = useState<'all' | 'rwa'>('all');
+  const [rwaHistory, setRwaHistory] = useState<Swap[]>([]);
+  const [rwaHistoryLoading, setRwaHistoryLoading] = useState(false);
+  const rwaFetched = useRef(false);
 
   const poll = useCallback(async () => {
     try {
@@ -139,6 +142,20 @@ function LiveFeed() {
     const t = setInterval(poll, 5_000);
     return () => clearInterval(t);
   }, [poll]);
+
+  // Fetch historical RWA swaps the first time the RWA filter is activated
+  useEffect(() => {
+    if (filter !== 'rwa' || rwaFetched.current) return;
+    rwaFetched.current = true;
+    setRwaHistoryLoading(true);
+    fetch('/api/seahorn/swaps?limit=25&rwa=1')
+      .then(r => r.json())
+      .then((d: Swap[]) => {
+        if (Array.isArray(d)) setRwaHistory(d.filter(s => s.fields?.source_mint && s.fields?.destination_mint));
+      })
+      .catch(() => {})
+      .finally(() => setRwaHistoryLoading(false));
+  }, [filter]);
 
   return (
     <Card>
@@ -199,12 +216,63 @@ function LiveFeed() {
           </div>
         ) : (() => {
           const displayed = filter === 'rwa' ? items.filter(s => isRwaSwap(s.fields ?? {})) : items;
-          return displayed.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-[13px] text-[var(--text-muted)]">No RWA swaps in the current 25-swap window.</p>
-              <p className="text-[11px] text-[var(--text-faint)] mt-1">USDY and PYUSD activity will appear here when routed through Jupiter.</p>
-            </div>
-          ) : (
+          if (displayed.length === 0 && filter === 'rwa') {
+            if (rwaHistoryLoading) return (
+              <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-9 shimmer rounded" />)}</div>
+            );
+            if (rwaHistory.length > 0) return (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[11px] text-[var(--text-faint)]">No USDY/PYUSD in live window — showing most recent historical swaps</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-badge)] bg-[var(--bg-elevated)] text-[var(--text-muted)] text-[10px] font-medium border border-[var(--border)]">Historical</span>
+                </div>
+                <div className="rounded-[var(--radius-button)] border border-[var(--border)] overflow-hidden opacity-80">
+                  <div className="grid grid-cols-[1.4fr_1.8fr_1fr_auto_auto] gap-3 px-4 py-2 bg-[var(--bg-elevated)] border-b border-[var(--border)]">
+                    {['Wallet', 'Pair', 'Amount', 'Hops', 'When'].map(h => (
+                      <span key={h} className="text-[10px] text-[var(--text-muted)]">{h}</span>
+                    ))}
+                  </div>
+                  <div className="divide-y divide-[var(--border)]">
+                    {rwaHistory.map(item => {
+                      const f = item.fields ?? {};
+                      const srcColor = mintColor(f.source_mint);
+                      const dstColor = mintColor(f.destination_mint);
+                      const isFinal = item.commitment_status === 'FINAL';
+                      const txUrl = item.tx_signature ? `https://solscan.io/tx/${item.tx_signature}` : null;
+                      return (
+                        <div key={item.id} className="grid grid-cols-[1.4fr_1.8fr_1fr_auto_auto] gap-3 px-4 py-2.5 hover:bg-[var(--bg-elevated)]">
+                          <a href={`https://solscan.io/account/${f.user}`} target="_blank" rel="noreferrer" className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">{shortAddr(f.user)}</a>
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="text-[11px] font-mono font-medium" style={{ color: srcColor }}>{mintLabel(f.source_mint)}</span>
+                            <span className="text-[10px] text-[var(--text-faint)]">→</span>
+                            <span className="text-[11px] font-mono font-medium" style={{ color: dstColor }}>{mintLabel(f.destination_mint)}</span>
+                            {isFinal ? <span className="ml-1 w-1 h-1 rounded-full bg-[var(--green)] shrink-0" /> : <span className="ml-1 w-1 h-1 rounded-full bg-[var(--amber)] shrink-0" />}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-[11px] font-mono text-[var(--text)]">{formatAmount(f.in_amount, f.source_mint)}</span>
+                            {f.source_mint && <span className="text-[10px] text-[var(--text-faint)] ml-0.5">{mintLabel(f.source_mint)}</span>}
+                          </div>
+                          <span className="text-[11px] font-mono text-[var(--text-muted)] text-center">{f.hops ?? '—'}</span>
+                          {txUrl ? (
+                            <a href={txUrl} target="_blank" rel="noreferrer" className="text-[11px] text-[var(--text-faint)] hover:text-[var(--accent)] whitespace-nowrap text-right transition-colors">{relativeTime(item.created_at)}</a>
+                          ) : (
+                            <span className="text-[11px] text-[var(--text-faint)] whitespace-nowrap text-right">{relativeTime(item.created_at)}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            );
+            return (
+              <div className="py-8 text-center">
+                <p className="text-[13px] text-[var(--text-muted)]">No RWA swaps found.</p>
+                <p className="text-[11px] text-[var(--text-faint)] mt-1">USDY and PYUSD activity will appear here when routed through Jupiter.</p>
+              </div>
+            );
+          }
+          return displayed.length === 0 ? null : (
           <div className="rounded-[var(--radius-button)] border border-[var(--border)] overflow-hidden">
             {/* Header */}
             <div className="grid grid-cols-[1.4fr_1.8fr_1fr_auto_auto] gap-3 px-4 py-2 bg-[var(--bg-elevated)] border-b border-[var(--border)]">
