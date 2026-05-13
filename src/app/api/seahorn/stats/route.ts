@@ -13,19 +13,19 @@ export async function GET() {
       fetch(`${BASE}?entity_type=eq.JupiterSwap&select=id&order=id.desc&limit=1`, {
         signal: AbortSignal.timeout(5_000),
         headers: { Accept: 'application/json' },
-        cache: 'no-store',
+        next: { revalidate: 15 },
       }),
       // Recent 200 for slot + unique wallets
       fetch(`${BASE}?entity_type=eq.JupiterSwap&select=slot,fields&order=slot.desc&limit=200`, {
         signal: AbortSignal.timeout(5_000),
         headers: { Accept: 'application/json' },
-        cache: 'no-store',
+        next: { revalidate: 15 },
       }),
       // Most recent FINAL row id ≈ finalized count estimate
       fetch(`${BASE}?entity_type=eq.JupiterSwap&commitment_status=eq.FINAL&select=id&order=id.desc&limit=1`, {
         signal: AbortSignal.timeout(5_000),
         headers: { Accept: 'application/json' },
-        cache: 'no-store',
+        next: { revalidate: 15 },
       }),
     ]);
 

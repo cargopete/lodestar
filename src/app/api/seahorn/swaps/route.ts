@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 5;
 
 const GATEWAY = process.env.DISPATCH_GATEWAY_URL ?? 'http://167.235.29.213:8080';
 
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       {
         signal: AbortSignal.timeout(5_000),
         headers: { Accept: 'application/json' },
-        cache: 'no-store',
+        next: { revalidate: 5 },
       }
     );
   } catch (err) {
