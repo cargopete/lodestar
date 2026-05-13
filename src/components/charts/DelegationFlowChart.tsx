@@ -45,12 +45,33 @@ export function DelegationFlowChart() {
     { label: '1y', value: 365 },
   ];
 
+  const totalInflows  = (data ?? []).reduce((s, d) => s + d.inflows,  0);
+  const totalOutflows = (data ?? []).reduce((s, d) => s + d.outflows, 0);
+  const netFlow       = totalInflows - totalOutflows;
+  const totalVolume   = totalInflows + totalOutflows;
+  const netPct        = totalVolume > 0 ? (netFlow / totalVolume) * 100 : 0;
+  const netPositive   = netFlow >= 0;
+
   return (
     <Card className="min-w-0 overflow-hidden">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Delegation Flows</CardTitle>
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <CardTitle>Delegation Flows</CardTitle>
+            {!isLoading && hasData && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-badge)] text-[11px] font-mono font-medium shrink-0"
+                style={{
+                  background: netPositive ? 'var(--green-dim)' : 'var(--red-dim)',
+                  color:      netPositive ? 'var(--green)'     : 'var(--red)',
+                }}
+              >
+                {netPositive ? '+' : ''}{formatGRT(netFlow)} GRT
+                <span className="opacity-70">({netPositive ? '+' : ''}{netPct.toFixed(1)}%)</span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
             {windows.map((w) => (
               <button
                 key={w.value}
