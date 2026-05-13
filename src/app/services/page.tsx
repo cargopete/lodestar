@@ -91,7 +91,11 @@ export default function ServicesPage() {
             onSelect={() =>
               setSelectedService(selectedService === service.id ? null : service.id)
             }
-            ctaHref={service.id.toLowerCase() === '0x7101d5c1a5c89c3647f5118da118e56c023ba0b9' ? '/dispatch' : undefined}
+            ctaHref={
+            service.id.toLowerCase() === '0x7101d5c1a5c89c3647f5118da118e56c023ba0b9' ? '/dispatch' :
+            service.id.toLowerCase() === '0xdde3f913cb6d1332bc018eb63647020a87dd7b37' ? '/seahorn' :
+            undefined
+          }
           />
         ))}
       </div>

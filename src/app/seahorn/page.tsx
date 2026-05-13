@@ -9,15 +9,28 @@ import { cn } from '@/lib/utils';
 // ── Known Solana token mints ──────────────────────────────────────────────────
 
 const MINTS: Record<string, { symbol: string; decimals: number; color: string }> = {
-  So11111111111111111111111111111111111111112:  { symbol: 'SOL',  decimals: 9, color: '#9945FF' },
-  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: { symbol: 'USDC', decimals: 6, color: '#2775CA' },
-  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: { symbol: 'USDT', decimals: 6, color: '#26A17B' },
-  JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN: { symbol: 'JUP',  decimals: 6, color: '#C8A200' },
-  DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: { symbol: 'BONK', decimals: 5, color: '#F99429' },
-  mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So:  { symbol: 'mSOL', decimals: 9, color: '#AAB4C9' },
-  EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm: { symbol: 'WIF',  decimals: 6, color: '#E87D2A' },
-  '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs': { symbol: 'WETH', decimals: 8, color: '#627EEA' },
+  So11111111111111111111111111111111111111112:    { symbol: 'SOL',   decimals: 9,  color: '#9945FF' },
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: { symbol: 'USDC',  decimals: 6,  color: '#2775CA' },
+  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: { symbol: 'USDT',  decimals: 6,  color: '#26A17B' },
+  JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN:  { symbol: 'JUP',   decimals: 6,  color: '#C8A200' },
+  DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: { symbol: 'BONK',  decimals: 5,  color: '#F99429' },
+  mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So:  { symbol: 'mSOL',  decimals: 9,  color: '#AAB4C9' },
+  EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm: { symbol: 'WIF',   decimals: 6,  color: '#E87D2A' },
+  '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs': { symbol: 'WETH', decimals: 8,  color: '#627EEA' },
+  // ── RWA tokens ────────────────────────────────────────────────────────────
+  A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6: { symbol: 'USDY',  decimals: 6,  color: '#1A9E5A' }, // Ondo — tokenised US T-bills
+  '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo': { symbol: 'PYUSD', decimals: 6, color: '#0070BA' }, // PayPal USD
 };
+
+// Mints considered Real World Assets — used to filter/highlight swaps
+const RWA_MINTS = new Set([
+  'A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6', // USDY (Ondo Finance)
+  '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo', // PYUSD (PayPal)
+]);
+
+function isRwaSwap(f: SwapFields): boolean {
+  return RWA_MINTS.has(f.source_mint ?? '') || RWA_MINTS.has(f.destination_mint ?? '');
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -95,6 +108,7 @@ function LiveFeed() {
   const [newIds, setNewIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'rwa'>('all');
 
   const poll = useCallback(async () => {
     try {
@@ -136,10 +150,32 @@ function LiveFeed() {
               On-chain swaps indexed from Solana · refreshes every 5s
             </p>
           </div>
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-badge)] bg-[var(--green-dim)] text-[var(--green)] text-[10px] font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse" />
-            Live
-          </span>
+          <div className="flex items-center gap-2">
+            {items.length > 0 && (
+              <div className="flex items-center rounded-[var(--radius-badge)] border border-[var(--border)] overflow-hidden text-[10px] font-medium">
+                <button
+                  onClick={() => setFilter('all')}
+                  className={cn('px-2.5 py-1 transition-colors', filter === 'all' ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]')}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setFilter('rwa')}
+                  className={cn('px-2.5 py-1 transition-colors', filter === 'rwa' ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]')}
+                >
+                  RWA {items.filter(s => isRwaSwap(s.fields ?? {})).length > 0 && (
+                    <span className={cn('ml-1 rounded-full px-1', filter === 'rwa' ? 'bg-white/20' : 'bg-[var(--accent-dim)] text-[var(--accent)]')}>
+                      {items.filter(s => isRwaSwap(s.fields ?? {})).length}
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-badge)] bg-[var(--green-dim)] text-[var(--green)] text-[10px] font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse" />
+              Live
+            </span>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -161,7 +197,14 @@ function LiveFeed() {
               No swaps indexed yet. The indexer may still be syncing.
             </p>
           </div>
-        ) : (
+        ) : (() => {
+          const displayed = filter === 'rwa' ? items.filter(s => isRwaSwap(s.fields ?? {})) : items;
+          return displayed.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-[13px] text-[var(--text-muted)]">No RWA swaps in the current 25-swap window.</p>
+              <p className="text-[11px] text-[var(--text-faint)] mt-1">USDY and PYUSD activity will appear here when routed through Jupiter.</p>
+            </div>
+          ) : (
           <div className="rounded-[var(--radius-button)] border border-[var(--border)] overflow-hidden">
             {/* Header */}
             <div className="grid grid-cols-[1.4fr_1.8fr_1fr_auto_auto] gap-3 px-4 py-2 bg-[var(--bg-elevated)] border-b border-[var(--border)]">
@@ -171,7 +214,7 @@ function LiveFeed() {
             </div>
             {/* Rows */}
             <div className="divide-y divide-[var(--border)]">
-              {items.map(item => {
+              {displayed.map(item => {
                 const f = item.fields ?? {};
                 const srcColor = mintColor(f.source_mint);
                 const dstColor = mintColor(f.destination_mint);
@@ -253,7 +296,8 @@ function LiveFeed() {
               })}
             </div>
           </div>
-        )}
+          );
+        })()}
       </CardContent>
     </Card>
   );
