@@ -141,7 +141,10 @@ interface ServiceCardProps {
   ctaHref?: string;
 }
 
-const DISPATCH_ID = '0x7101d5c1a5c89c3647f5118da118e56c023ba0b9';
+const NO_ALLOCATION_IDS = new Set([
+  '0x7101d5c1a5c89c3647f5118da118e56c023ba0b9', // Dispatch (JSON-RPC)
+  '0xdde3f913cb6d1332bc018eb63647020a87dd7b37', // Seahorn (Solana Service)
+]);
 
 function ServiceCard({ service, grtPrice, isSelected, onSelect, ctaHref }: ServiceCardProps) {
   const provisioned = weiToGRT(service.totalTokensProvisioned);
@@ -151,7 +154,7 @@ function ServiceCard({ service, grtPrice, isSelected, onSelect, ctaHref }: Servi
   const minThawDays = Math.round(Number(service.minimumThawingPeriod) / 86400);
   const maxVerifierCutPct = (Number(service.maximumVerifierCut) / 10000).toFixed(0);
   const minProvision = weiToGRT(service.minimumProvisionTokens);
-  const isDispatch = service.id.toLowerCase() === DISPATCH_ID;
+  const isDispatch = NO_ALLOCATION_IDS.has(service.id.toLowerCase());
 
   const serviceName = resolveServiceName(service.id);
 
