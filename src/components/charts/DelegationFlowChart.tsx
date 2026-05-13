@@ -104,16 +104,16 @@ export function DelegationFlowChart() {
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
                 <p className="text-[10px] text-[var(--text-faint)] mb-1">Current {WINDOW_LABEL[days]}</p>
                 <p className={`text-lg font-mono font-semibold ${netPositive ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
-                  {netPositive ? '+' : ''}{formatGRT(currentNet)}
+                  {netPositive ? '+' : '−'}{formatGRT(Math.abs(currentNet))}
                 </p>
-                <p className="text-[10px] text-[var(--text-faint)] font-mono">{netPositive ? '+' : ''}{formatGRTFull(currentNet)} GRT net</p>
+                <p className="text-[10px] text-[var(--text-faint)] font-mono">{netPositive ? '+' : '−'}{formatGRTFull(Math.abs(currentNet))} GRT net</p>
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
                 <p className="text-[10px] text-[var(--text-faint)] mb-1">Previous {WINDOW_LABEL[days]}</p>
-                <p className={`text-lg font-mono font-semibold ${previousNet >= 0 ? 'text-[var(--text-muted)]' : 'text-[var(--text-muted)]'}`}>
-                  {previousNet >= 0 ? '+' : ''}{formatGRT(previousNet)}
+                <p className="text-lg font-mono font-semibold text-[var(--text-muted)]">
+                  {previousNet >= 0 ? '+' : '−'}{formatGRT(Math.abs(previousNet))}
                 </p>
-                <p className="text-[10px] text-[var(--text-faint)] font-mono">{previousNet >= 0 ? '+' : ''}{formatGRTFull(previousNet)} GRT net</p>
+                <p className="text-[10px] text-[var(--text-faint)] font-mono">{previousNet >= 0 ? '+' : '−'}{formatGRTFull(Math.abs(previousNet))} GRT net</p>
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)] flex flex-col justify-center items-center">
                 <p className="text-[10px] text-[var(--text-faint)] mb-1">Change</p>
