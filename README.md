@@ -3,13 +3,13 @@ _Stay oriented_
 
 ![Screen Recording 2026-03-20 at 13 49 40](https://github.com/user-attachments/assets/62f58f1f-55f4-4d32-a8df-8ee3f1c9632e)
 
-Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network metrics, indexer intelligence, delegation tools, and portfolio tracking for the Horizon era.
+Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network metrics, indexer intelligence, delegation tools, portfolio tracking, and Solana data services for the Horizon era.
 
 **Live:** [lodestar-dashboard.com](https://lodestar-dashboard.com)
 
 ## Features
 
-- **Protocol Overview** — Total stake, delegation, signalling, epoch progress, rewards-per-epoch chart, token distribution
+- **Protocol Overview** — Total stake, delegation, signalling, epoch progress, rewards-per-epoch chart, token distribution. Delegation Flows chart shows inflow/outflow bar chart with current-vs-previous period comparison and net GRT summary.
 - **Intel Feed** — Live protocol intelligence panel with governance proposals, GIP updates, epoch summaries, and announcements sourced from The Graph Forum, GitHub, and on-chain data
 - **Indexer Directory** — Sortable/filterable table with stake, delegation capacity, reward cuts, REO eligibility indicators, recent delegation activity icons, and mobile card view
 - **Indexer Profiles** — Detailed view with allocations, delegator breakdown, Horizon service provisions, REO eligibility assessment, recent delegation activity, and reward cut change alerts
@@ -20,6 +20,8 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Horizon Activity Feed** — Live on-chain events from the Horizon staking contract — delegations, self-stakes, provisions, slashing, and withdrawals. Refreshes every 30 seconds. Powered by a self-hosted Amp node querying raw Arbitrum One logs. Gracefully degrades if the node is unreachable.
 - **Data Services & Provisions** — Horizon-era service providers (Subgraph Service, Dispatch JSON-RPC) with provisioned stake, thawing status, verifier cuts, and ENS-resolved indexer names
 - **Dispatch JSON-RPC** — Live decentralised JSON-RPC service on The Graph Horizon framework. Serves 4 chains: Ethereum (1), Arbitrum One (42161), Base (8453), BNB Smart Chain (56). Interactive RPC playground with EIP-712 TAP receipt signing, per-request GRT micropayments via GraphTally, provider attestations, a full consumer escrow management UI (deposit, thaw, withdraw), and one-click MetaMask network add for each supported chain
+- **Seahorn** — Real-time Solana data service. Jupiter v6 swaps indexed on-chain via Yellowstone gRPC, written to Postgres, served through PostgREST, and access-gated with TAP receipts. Dashboard shows live swap feed with RWA filter (USDY/PYUSD), top pairs, provider attestation details, indexing stats, and a how-it-works breakdown. Falls back to historical RWA swaps when the live window is empty.
+- **Foghorn** — Block-pinned GraphQL observability service. Probes are dispatched via The Graph gateway to all allocating indexers on a target deployment, recording latency (p50/p95) and response consistency. Per-deployment summaries and a live divergence feed at `/foghorn`.
 - **QoS Performance Charts** — Query count, success rate, latency, and blocks-behind timeseries on indexer profiles, sourced from the E&N QoS oracle subgraph
 - **Stake History Charts** — Self-stake and delegation history with cumulative rewards tab
 - **Push Protocol Notifications** — Opt-in delegator alerts for reward cut changes and inactive indexer detection. EIP-191 signed subscription; notifications sent via Push Protocol channel
@@ -47,6 +49,9 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 
 ### Shipped
 
+- [x] Seahorn — live Solana/Jupiter v6 swap indexer with TAP-gated PostgREST API, RWA filter, and historical fallback (v2.27.0+)
+- [x] Foghorn — block-pinned GraphQL probe service with latency tracking and divergence feed (v2.20.0+)
+- [x] Delegation Flows period comparison — current vs previous window with net GRT and % change (v2.29.0+)
 - [x] Dispatch JSON-RPC — decentralised RPC on 4 chains (ETH, Arb, Base, BNB) with TAP receipt signing, escrow management, provider attestations, and per-chain MetaMask add (v2.7.0+)
 - [x] Horizon Activity feed — live Amp-powered on-chain event stream (v2.6.0)
 - [x] Push Protocol delegator notifications — opt-in alerts for cut changes and inactive indexers (v2.6.0)
@@ -200,6 +205,8 @@ Code: [`src/lib/scoring/`](src/lib/scoring/)
 - Amp (`ampd`) — self-hosted on-chain event indexer for Horizon event history, exposed via Tailscale Funnel
 - Ollama (qwen3:8b) — self-hosted inference for the Lodie AI assistant
 - Push Protocol — opt-in delegator notifications via on-chain channel
+- Seahorn indexer — self-hosted Yellowstone gRPC subscriber + Postgres + PostgREST for Solana/Jupiter swap data, served via the Dispatch gateway with TAP receipt verification
+- Foghorn — self-hosted GraphQL probe runner dispatching block-pinned queries via The Graph gateway
 
 ## Getting Started
 
@@ -227,8 +234,10 @@ Open [http://localhost:3000](http://localhost:3000).
 | `PUSH_CHANNEL_ADDRESS` | Push Protocol channel wallet address | No |
 | `PUSH_CHANNEL_PRIVATE_KEY` | Push Protocol channel private key (for sending notifications) | No |
 | `PUSH_ENV` | Push Protocol environment — `staging` or `prod` | No |
+| `DISPATCH_GATEWAY_URL` | Seahorn/Dispatch gateway URL (PostgREST endpoint) | No |
+| `FOGHORN_API_URL` | Foghorn probe service API base URL | No |
 
-Horizon event history (`/api/horizon/*`), Lodie (`/api/lodie/*`), and Push notifications degrade gracefully when their env vars are absent.
+Horizon event history (`/api/horizon/*`), Lodie (`/api/lodie/*`), Push notifications, Seahorn, and Foghorn all degrade gracefully when their env vars are absent.
 
 ## Project Structure
 
@@ -252,6 +261,8 @@ src/
     profile/     # Connected wallet portfolio
     roadmap/     # Public roadmap
     dispatch/    # Dispatch JSON-RPC playground and consumer escrow tools
+    foghorn/     # GraphQL probe observability dashboard
+    seahorn/     # Solana/Jupiter swap data service (live feed + RWA filter)
     services/    # Data services (Horizon)
     subgraphs/   # Subgraph directory
   components/    # UI components, layout, charts, tables, feed
