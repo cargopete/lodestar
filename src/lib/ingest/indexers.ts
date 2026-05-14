@@ -153,37 +153,45 @@ function mapToIndexerRow(i: EnrichedIndexer) {
     url: i.url,
     geo_hash: i.geoHash,
     created_at_epoch: i.createdAt,
-    self_stake_grt: i.selfStakeGRT,
-    delegated_grt: i.delegatedGRT,
-    allocated_grt: weiToGRT(i.allocatedTokens),
-    provisioned_grt: i.provisionedGRT,
+    self_stake_grt: safeNum(i.selfStakeGRT),
+    delegated_grt: safeNum(i.delegatedGRT),
+    allocated_grt: safeNum(weiToGRT(i.allocatedTokens)),
+    provisioned_grt: safeNum(i.provisionedGRT),
     reward_cut: i.indexingRewardCut,
     query_fee_cut: i.queryFeeCut,
-    effective_cut: i.effectiveCut,
-    delegator_apr: i.delegatorAPR,
-    delegation_capacity_pct: i.delegationCapacity.utilizationPercent,
-    over_delegation_dilution: i.overDelegationDilution,
-    own_stake_ratio: i.ownStakeRatio,
-    indexer_rewards_own_ratio: i.indexerRewardsOwnGenerationRatio,
+    effective_cut: safeNum(i.effectiveCut),
+    delegator_apr: safeNum(i.delegatorAPR),
+    delegation_capacity_pct: safeNum(i.delegationCapacity.utilizationPercent),
+    over_delegation_dilution: safeNum(i.overDelegationDilution),
+    own_stake_ratio: safeNum(i.ownStakeRatio),
+    indexer_rewards_own_ratio: safeNum(i.indexerRewardsOwnGenerationRatio),
     delegator_parameter_cooldown: i.delegatorParameterCooldown,
     last_delegation_param_update: i.lastDelegationParameterUpdate,
     reo_status: i.reoStatus,
     reo_source: i.reoSource,
     reo_renewal_timestamp: i.reoRenewalTimestamp,
-    reo_expires_at: i.reoExpiresAt,
-    reo_days_remaining: i.reoDaysRemaining,
+    // reoExpiresAt is a Unix timestamp (seconds) — must convert to Date for TIMESTAMPTZ column
+    reo_expires_at: i.reoExpiresAt ? new Date(i.reoExpiresAt * 1000) : null,
+    // reo_days_remaining is INTEGER in DB — oracle returns a float, floor it
+    reo_days_remaining: i.reoDaysRemaining !== null ? Math.floor(i.reoDaysRemaining) : null,
     score: i.score,
     score_grade: i.scoreGrade,
     delegations_in_7d: i.recentActivity.delegationsIn7d,
     undelegations_in_7d: i.recentActivity.undelegationsIn7d,
-    net_flow_grt_7d: i.recentActivity.netFlowGRT,
-    rewards_earned_grt: weiToGRT(i.rewardsEarned),
-    query_fees_collected_grt: i.queryFeesCollectedGRT,
+    net_flow_grt_7d: safeNum(i.recentActivity.netFlowGRT),
+    rewards_earned_grt: safeNum(weiToGRT(i.rewardsEarned)),
+    query_fees_collected_grt: safeNum(i.queryFeesCollectedGRT),
     allocation_count: i.allocationCount,
     distinct_data_services: i.distinctDataServices,
-    delegation_exchange_rate: i.delegationExchangeRate,
+    delegation_exchange_rate: safeNum(i.delegationExchangeRate),
     last_updated: new Date().toISOString(),
   };
+}
+
+/** Coerce NaN/Infinity to null — Postgres NUMERIC rejects both. */
+function safeNum(v: number | null | undefined): number | null {
+  if (v == null || !isFinite(v)) return null;
+  return v;
 }
 
 function weiToGRT(wei: string): number {

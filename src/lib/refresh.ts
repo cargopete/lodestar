@@ -626,7 +626,7 @@ export async function refreshIndexers(opts: {
       log.refresh.info({ upserted: pgResult.upserted, snapshots: pgResult.snapshots, paramChanges: pgResult.paramChanges }, 'Postgres write complete');
       await updateIngestionState(sql, 'indexers', {});
     } catch (e) {
-      log.refresh.warn({ err: e }, 'Postgres write failed (non-fatal)');
+      log.refresh.error({ err: e, message: e instanceof Error ? e.message : String(e) }, 'Postgres write failed (non-fatal)');
     }
   }
 
