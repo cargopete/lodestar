@@ -29,16 +29,9 @@ export function Footer() {
               rel="noopener noreferrer"
               className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
             >
-              sponsoring
+              buying me a coffee
             </a>
-            {' '}or{' '}
-            <a
-              href="/indexers/0xb43b2cccceada5292732a8c58ae134adefce09bb"
-              className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
-            >
-              delegating to the Lodestar indexer
-            </a>
-            {' '}— that way you&apos;re not only helping us, you&apos;re helping the whole network.
+            .
           </p>
 
           <div className="flex items-center gap-4">

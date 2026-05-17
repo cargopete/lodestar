@@ -474,7 +474,7 @@ function ConsumerStatus() {
             )}
           </div>
           <div>
-            <p className="text-[10px] text-[var(--text-muted)] mb-1">Escrow (lodestar-indexer)</p>
+            <p className="text-[10px] text-[var(--text-muted)] mb-1">Escrow Balance</p>
             {escrowLoading ? <div className="h-6 w-20 shimmer rounded" /> : (
               <p className={cn('text-[18px] font-mono font-medium', escrow && parseFloat(escrow) > 0 ? 'text-[var(--green)]' : 'text-[var(--text)]')}>
                 {escrow ?? '—'} <span className="text-[12px] text-[var(--text-muted)]">GRT</span>
