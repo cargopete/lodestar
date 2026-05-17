@@ -18,7 +18,7 @@ Running a Graph Protocol indexer at small scale in 2026 is not economically viab
 The costs are fixed regardless of allocation size:
 
 - **VPS** (Hetzner, 16 vCPU / 64 GB RAM / 2 TB NVMe): €89/month
-- **Chainstack archive nodes** (Arbitrum + Base): $49/month
+- **Chainstack archive nodes** (Arbitrum + Base): $200/month
 - **graph-node storage**: ~800 GB provisioned, growing
 - **Operator time**: non-trivial
 
