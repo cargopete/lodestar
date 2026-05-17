@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
           skip: ${skip}
           orderBy: ${orderBy}
           orderDirection: ${orderDirection}
-          where: { stakedTokens_gt: "0" }
+          where: { stakedTokens_gt: "0", id_not: "0xb43b2cccceada5292732a8c58ae134adefce09bb" }
         ) {
           id
           account {

@@ -14,6 +14,10 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid address format' }, { status: 400 });
   }
 
+  if (addr === '0xb43b2cccceada5292732a8c58ae134adefce09bb') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   if (!hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }

@@ -3,6 +3,7 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
+import { redirect } from 'next/navigation';
 import { useGRTPrice, useNetworkStats, useIndexerProvisions, useREOStatus, useRecentDelegations, useENSName, useEnrichedIndexers, useIndexerStatus, useIndexerPayments } from '@/hooks/useNetworkStats';
 import {
   weiToGRT,
@@ -101,6 +102,11 @@ export default function IndexerDetailPage({
   params: Promise<{ address: string }>;
 }) {
   const { address } = use(params);
+
+  if (address.toLowerCase() === '0xb43b2cccceada5292732a8c58ae134adefce09bb') {
+    redirect('/indexers');
+  }
+
   const { data: indexer, isLoading, error } = useIndexerDetails(address);
   const { data: priceData } = useGRTPrice();
   const { data: networkData } = useNetworkStats();
