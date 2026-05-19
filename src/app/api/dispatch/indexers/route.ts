@@ -37,7 +37,10 @@ export async function GET() {
           chains { id }
         }
       }`);
-      return result.indexers ?? [];
+      const BLOCKED = new Set(['0xb43b2cccceada5292732a8c58ae134adefce09bb']);
+      return (result.indexers ?? []).filter(
+        (i) => !BLOCKED.has(i.address?.toLowerCase())
+      );
     });
 
     return NextResponse.json({ data }, {

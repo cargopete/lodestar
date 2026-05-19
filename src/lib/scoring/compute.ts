@@ -210,6 +210,16 @@ export async function computeMonthlyScores(
   `;
   const fees30dMap = new Map(fees30dRows.map((r) => [r.indexer_address, Number(r.fees)]));
 
+  // 9. Community votes for this period (weighted: delegators = 5, others = 1)
+  const period = periodStart.slice(0, 7); // YYYY-MM
+  const voteTallyRows = await sql`
+    SELECT indexer_address, SUM(vote_weight)::int as weighted_votes
+    FROM community_votes
+    WHERE period = ${period}
+    GROUP BY indexer_address
+  `;
+  const voteMap = new Map(voteTallyRows.map((r) => [r.indexer_address, Number(r.weighted_votes)]));
+
   // ── Assemble metrics per indexer ──────────────────────
 
   const metrics: IndexerMetrics[] = indexers.map((idx) => {
@@ -300,7 +310,7 @@ export async function computeMonthlyScores(
       reo_score: round2(reoScore),
       poi_consensus_score: 0,
       allocation_breadth_score: round2(breadthScore),
-      community_vote_score: 0,
+      community_vote_score: Math.min(voteMap.get(m.address) ?? 0, 10),
       data_service_score: round2(dataServiceScore),
       subtotal: round2(subtotal),
       penalty_multiplier: round2(penaltyMultiplier),

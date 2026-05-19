@@ -4,6 +4,20 @@ const INDEXER_AGENT_URL = process.env.INDEXER_AGENT_URL;
 // Optional Basic auth credentials for the management API proxy (format: "user:password")
 const INDEXER_AGENT_TOKEN = process.env.INDEXER_AGENT_TOKEN;
 
+function isSafeUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+    const h = u.hostname.toLowerCase();
+    if (h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '0.0.0.0') return false;
+    if (/^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h)) return false;
+    if (/^169\.254\./.test(h)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // POST — queue a presentPOI action on the indexer-agent management API.
 // Body: { deploymentId: string, allocationId: string }
 // Requires INDEXER_AGENT_URL env var pointing at the management API.
@@ -38,6 +52,12 @@ export async function POST(req: NextRequest) {
   if (!targetUrl) {
     return NextResponse.json(
       { error: 'INDEXER_AGENT_URL is not configured on this server and no agentUrl was provided' },
+      { status: 503 }
+    );
+  }
+  if (agentUrl && !isSafeUrl(agentUrl)) {
+    return NextResponse.json(
+      { error: 'Invalid agentUrl — must be a public http/https URL' },
       { status: 503 },
     );
   }

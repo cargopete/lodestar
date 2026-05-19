@@ -47,7 +47,7 @@ vi.mock('../ingest/indexers', () => ({
 
 vi.mock('../logger', () => ({
   log: {
-    refresh: { info: vi.fn(), warn: vi.fn() },
+    refresh: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     cron: { info: vi.fn(), warn: vi.fn() },
   },
   default: { info: vi.fn() },

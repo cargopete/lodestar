@@ -3,7 +3,7 @@ _Stay oriented_
 
 ![Screen Recording 2026-03-20 at 13 49 40](https://github.com/user-attachments/assets/62f58f1f-55f4-4d32-a8df-8ee3f1c9632e)
 
-Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network metrics, indexer intelligence, delegation tools, portfolio tracking, and Solana data services for the Horizon era.
+Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network metrics, indexer intelligence, delegation tools, portfolio tracking, and decentralised JSON-RPC services for the Horizon era.
 
 **Live:** [lodestar-dashboard.com](https://lodestar-dashboard.com)
 
@@ -20,7 +20,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Horizon Activity Feed** — Live on-chain events from the Horizon staking contract — delegations, self-stakes, provisions, slashing, and withdrawals. Refreshes every 30 seconds. Powered by a self-hosted Amp node querying raw Arbitrum One logs. Gracefully degrades if the node is unreachable.
 - **Data Services & Provisions** — Horizon-era service providers (Subgraph Service, Dispatch JSON-RPC) with provisioned stake, thawing status, verifier cuts, and ENS-resolved indexer names
 - **Dispatch JSON-RPC** — Live decentralised JSON-RPC service on The Graph Horizon framework. Serves 4 chains: Ethereum (1), Arbitrum One (42161), Base (8453), BNB Smart Chain (56). Interactive RPC playground with EIP-712 TAP receipt signing, per-request GRT micropayments via GraphTally, provider attestations, a full consumer escrow management UI (deposit, thaw, withdraw), and one-click MetaMask network add for each supported chain
-- **Seahorn** — Real-time Solana data service. Jupiter v6 swaps indexed on-chain via Yellowstone gRPC, written to Postgres, served through PostgREST, and access-gated with TAP receipts. Dashboard shows live swap feed with RWA filter (USDY/PYUSD), top pairs, provider attestation details, indexing stats, and a how-it-works breakdown. Falls back to historical RWA swaps when the live window is empty.
+- **Seahorn** — Solana data service. Jupiter v6 swaps indexed via Yellowstone gRPC and written to Postgres, served through PostgREST, access-gated with TAP receipts. Dashboard shows live swap feed with RWA filter (USDY/PYUSD), top pairs, provider attestation details, indexing stats, and a how-it-works breakdown. Falls back to historical RWA swaps.
 - **QoS Performance Charts** — Query count, success rate, latency, and blocks-behind timeseries on indexer profiles, sourced from the E&N QoS oracle subgraph
 - **Stake History Charts** — Self-stake and delegation history with cumulative rewards tab
 - **Push Protocol Notifications** — Opt-in delegator alerts for reward cut changes and inactive indexer detection. EIP-191 signed subscription; notifications sent via Push Protocol channel
@@ -28,12 +28,10 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Delegation Calculator** — Model redelegation scenarios with thawing period cost analysis and net gain projections
 - **Compare Indexers** — Side-by-side comparison of up to 3 indexers
 - **POI Consensus Dashboard** — Divergence detection and stake-weighted consensus across active deployments
-- **Governance Tracker** — Live status and impact summaries for active GIPs (0079, 0086, 0087, 0088, 0070) with live protocol metrics
 - **GraphTally / TAP Payments** — Escrow balances, RAV redemptions, top collectors, and per-indexer payment detail
 - **Indexing Health** — Chain-by-chain indexing lag monitoring, sync progress, and subgraph health across the network
 - **AI / MCP Directory** — Curated directory of Graph-ecosystem MCP servers and AI tools at `/ai`
-- **Lodie AI Assistant** — Conversational AI assistant with live protocol context, multi-turn memory, and page-aware suggestions. Runs qwen3:8b via self-hosted Ollama; degrades gracefully if unavailable
-- **Monthly Leaderboard** — Community favourites leaderboard scored on network service, trust, and protocol health, with expandable score breakdowns
+- **Monthly Leaderboard** — Community favourites leaderboard scored on network service, trust, and protocol health, with expandable score breakdowns and community voting
 - **Blog** — Technical writeups on indexer infrastructure, Graph Node architecture, Amp self-hosting, and Horizon tooling
 - **Wallet Connection** — Connect via MetaMask, WalletConnect, or Coinbase Wallet (Arbitrum only)
 - **Mobile-First Layout** — Bottom tab navigation, table-to-card patterns, responsive grids, touch-friendly targets
@@ -43,11 +41,11 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 ### Planned
 
 - [ ] PWA support — installable to home screen for daily portfolio checking
-- [ ] Retention controls for Amp parquet data
-- [ ] Lodie: re-enable streaming — currently disabled as a workaround for tunnel buffering
+- [ ] Amp node reconnection — re-enable Horizon Activity live feed with persistent Amp connection
 
 ### Shipped
 
+- [x] Community voting — EIP-712 signed votes on leaderboard indexers; delegator votes weighted ×5 (v3.0.0)
 - [x] Seahorn — live Solana/Jupiter v6 swap indexer with TAP-gated PostgREST API, RWA filter, and historical fallback (v2.27.0+)
 - [x] Delegation Flows period comparison — current vs previous window with net GRT and % change (v2.29.0+)
 - [x] Dispatch JSON-RPC — decentralised RPC on 4 chains (ETH, Arb, Base, BNB) with TAP receipt signing, escrow management, provider attestations, and per-chain MetaMask add (v2.7.0+)
@@ -57,11 +55,9 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - [x] Stake history charts + cumulative rewards tab (v2.6.0)
 - [x] AI / MCP directory at `/ai` (v2.6.0)
 - [x] One-click delegation — algorithmic indexer selection with preference tuning, smart default with override
-- [x] Lodie AI assistant — local Ollama inference with live protocol context
 - [x] GraphTally / TAP payment pipeline — escrow balances, redemptions, per-indexer detail
 - [x] Indexing health — chain lag monitoring, sync status across deployments
 - [x] POI Consensus Dashboard — divergence detection, stake-weighted consensus
-- [x] Governance Tracker — live GIP status and impact summaries
 - [x] REO (Rewards Eligibility Oracle) heuristic — eligibility indicators in indexer table and detailed assessment on profiles (GIP-0079)
 - [x] Recent delegation activity — delegation/undelegation events on indexer profiles, activity indicators in the directory
 - [x] Reward cut change alerts — flagged in indexer table and profile when parameters changed within 30 days
@@ -169,8 +165,9 @@ Delegator-focused metrics like APR and effective cut live on the **Indexer Direc
 | | Delegation Retention | 3 | 30-day net delegation flow |
 | **Protocol Health** | REO Eligibility | 6 | Oracle-sourced status |
 | **Economics** | Delegation Capacity | 5 | Bucket: <70% = 5, 70-90% = 3, 90-99% = 1, 100% = 0 |
+| **Community** | Community Votes | 10 | EIP-712 signed votes cast that month; delegator votes weighted ×5. Capped at 10 pts. |
 
-**Total: 71 points**, normalised to 0–100.
+**Total: 81 points**, normalised to 0–100.
 
 ### Penalties
 
@@ -192,18 +189,17 @@ Code: [`src/lib/scoring/`](src/lib/scoring/)
 
 ## Tech Stack
 
-- Next.js 16 (App Router, Turbopack)
-- React 19, TypeScript, Tailwind CSS 4
+- Next.js 16.2.6 (App Router, Turbopack)
+- React 19.2.6, TypeScript 5, Tailwind CSS 4
 - wagmi v3 + viem (Arbitrum One)
 - @tanstack/react-query + @tanstack/react-table
 - Recharts (area charts, donut charts)
-- Self-hosted Postgres (postgres.js) + Upstash Redis
+- Self-hosted Postgres 16 (postgres.js) + Upstash Redis
 - CoinGecko + DefiLlama (price/TVL data)
 - The Graph Network subgraph (Arbitrum, inline fetch)
-- Amp (`ampd`) — self-hosted on-chain event indexer for Horizon event history, exposed via Tailscale Funnel
-- Ollama (qwen3:8b) — self-hosted inference for the Lodie AI assistant
+- Alchemy — Arbitrum One RPC for on-chain contract reads
+- Amp (`ampd`) — optional self-hosted on-chain event indexer for Horizon event history
 - Push Protocol — opt-in delegator notifications via on-chain channel
-- Seahorn indexer — self-hosted Yellowstone gRPC subscriber + Postgres + PostgREST for Solana/Jupiter swap data, served via the Dispatch gateway with TAP receipt verification
 
 ## Getting Started
 
@@ -219,56 +215,68 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Description | Required |
 |---|---|---|
 | `GRAPH_API_KEY` | API key from [The Graph Studio](https://thegraph.com/studio/apikeys/) | Yes |
-| `DATABASE_URL` | Postgres connection string | Yes |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | Yes |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | Yes |
+| `DATABASE_URL` | Postgres connection string (`postgresql://user:pass@host:port/db`) | Yes |
+| `KV_REST_API_URL` | Upstash Redis REST URL | Yes |
+| `KV_REST_API_TOKEN` | Upstash Redis REST token | Yes |
+| `KV_REST_API_READ_ONLY_TOKEN` | Upstash Redis read-only token | Yes |
 | `CRON_SECRET` | Random string to protect cron endpoints | Yes |
-| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | WalletConnect project ID | No (uses demo) |
+| `ARBITRUM_RPC_URL` | Arbitrum One RPC URL (Alchemy, Infura, etc.) | Yes |
+| `GITHUB_TOKEN` | GitHub PAT for the Intel Feed (forum/GIP data) | Yes |
+| `NEXT_PUBLIC_SITE_URL` | Production URL e.g. `https://lodestar-dashboard.com` | Yes |
+| `GRAPH_NODE_FREE_QUERY_KEY` | Graph Node API key for free-tier queries | No |
+| `TOKEN_API_KEY` | Token metadata API key | No |
+| `SESSION_SECRET` | Secret for Studio session HMAC (required for `/dock`) | No |
+| `TAP_SIGNER_PRIVATE_KEY` | Private key for TAP receipt signing | No |
+| `NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS` | Deployed BountyBoard contract address | No |
 | `AMP_ENDPOINT` | Self-hosted `ampd` endpoint for Horizon event history | No |
 | `AMP_TOKEN` | Auth token for the `ampd` nginx proxy | No |
-| `OLLAMA_URL` | Ollama server URL for Lodie AI assistant | No |
-| `OLLAMA_SECRET` | Bearer token for Ollama server (if auth enabled) | No |
 | `PUSH_CHANNEL_ADDRESS` | Push Protocol channel wallet address | No |
-| `PUSH_CHANNEL_PRIVATE_KEY` | Push Protocol channel private key (for sending notifications) | No |
+| `PUSH_CHANNEL_PRIVATE_KEY` | Push Protocol channel private key | No |
 | `PUSH_ENV` | Push Protocol environment — `staging` or `prod` | No |
-| `DISPATCH_GATEWAY_URL` | Seahorn/Dispatch gateway URL (PostgREST endpoint) | No |
+| `DISPATCH_GATEWAY_URL` | Dispatch/Seahorn gateway URL (PostgREST endpoint) | No |
+| `INDEXER_AGENT_URL` | Indexer agent management API URL | No |
+| `INDEXER_AGENT_TOKEN` | Basic auth credentials for indexer agent (`user:pass`) | No |
 
-Horizon event history (`/api/horizon/*`), Lodie (`/api/lodie/*`), Push notifications, and Seahorn all degrade gracefully when their env vars are absent.
+Horizon event history (`/api/horizon/*`), Push notifications, and Seahorn all degrade gracefully when their env vars are absent.
 
 ## Project Structure
 
 ```
 src/
   app/           # Next.js pages and API routes
-    api/         # Price, subgraph proxy, TVL, feed, cron, Amp, Lodie, Push endpoints
+    api/         # Price, subgraph proxy, TVL, feed, cron, Horizon, Push, studio endpoints
     activity/    # Live Horizon on-chain event feed (Amp-powered)
     ai/          # AI / MCP tool directory
     blog/        # Technical blog (Markdown posts)
     calculator/  # Redelegation calculator
     compare/     # Indexer comparison tool
+    curate/      # Subgraph curation tools
     curators/    # Curator portfolio
     delegators/  # Delegator portfolio
-    governance/  # GIP tracker with live protocol metrics
+    dispatch/    # Dispatch JSON-RPC playground and consumer escrow tools
+    dock/        # Studio subgraph management (deploy key, bounties)
     indexers/    # Indexer directory + profiles
     indexing/    # Chain health and subgraph indexing status
-    leaderboard/ # Monthly indexer leaderboard
+    leaderboard/ # Monthly indexer leaderboard with community voting
     payments/    # GraphTally / TAP payment pipeline
     poi/         # POI consensus dashboard
     profile/     # Connected wallet portfolio
-    roadmap/     # Public roadmap
-    dispatch/    # Dispatch JSON-RPC playground and consumer escrow tools
-    seahorn/     # Solana/Jupiter swap data service (live feed + RWA filter)
+    protocols/   # Protocol list and details
+    seahorn/     # Solana/Jupiter swap data service (feed + RWA filter)
     services/    # Data services (Horizon)
     subgraphs/   # Subgraph directory
+    tokens/      # Token analytics
   components/    # UI components, layout, charts, tables, feed
   content/       # Blog posts (Markdown)
   hooks/         # React Query hooks
   lib/           # API clients, queries, utilities, wallet config
+    scoring/     # Monthly leaderboard score computation
+    ingest/      # Postgres ingestion pipeline (indexers, allocations, epochs)
 ```
 
 ## Contributing
 
-Issues and feedback welcome at [github.com/cargopete/lodestar/issues](https://github.com/lodestar-team/lodestar/issues).
+Issues and feedback welcome at [github.com/lodestar-team/lodestar/issues](https://github.com/lodestar-team/lodestar/issues).
 
 ## License
 
