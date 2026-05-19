@@ -13,7 +13,7 @@ Lodestar reaches 3.0.0 today. The dashboard is stable, the team is proud of what
 
 ## What 3.0.0 Is
 
-This release formalises the state of the dashboard after a period of significant work: a complete leaderboard scoring system with community voting, Horizon-native Dispatch provider tracking, REO status, risk scoring, data service diversity metrics, allocation breadth, delegation retention, and a full suite of indexer profile and subgraph tooling.
+This release formalises the state of the dashboard after a period of significant work: a complete leaderboard scoring system, Horizon-native Dispatch provider tracking, REO status, risk scoring, data service diversity metrics, allocation breadth, delegation retention, and a full suite of indexer profile and subgraph tooling.
 
 It is a stable, working product. The test suite is green. The APIs are cached. The security surface has been audited. The infrastructure holds up.
 
