@@ -1,12 +1,21 @@
-import Redis from 'ioredis';
 import { log } from './logger';
 
-let _redis: Redis | null = null;
+// ioredis is dynamically imported to avoid bundling TCP socket code into the
+// Edge runtime (used by opengraph-image and middleware routes).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _redis: any | null = null;
 
-function getRedis(): Redis {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getRedisClient(): Promise<any> {
   if (!_redis) {
+    const { default: Redis } = await import('ioredis');
     _redis = new Redis(process.env.REDIS_URL!, { lazyConnect: false, enableOfflineQueue: false });
   }
+  return _redis;
+}
+
+// Sync accessor for health endpoint (it awaits ping() itself).
+function getRedis() {
   return _redis;
 }
 
@@ -15,13 +24,15 @@ function hasRedis(): boolean {
 }
 
 async function redisGet<T>(key: string): Promise<T | null> {
-  const raw = await getRedis().get(key);
+  const client = await getRedisClient();
+  const raw = await client.get(key);
   if (raw === null) return null;
   return JSON.parse(raw) as T;
 }
 
 async function redisSet<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
-  await getRedis().set(key, JSON.stringify(value), 'EX', ttlSeconds);
+  const client = await getRedisClient();
+  await client.set(key, JSON.stringify(value), 'EX', ttlSeconds);
 }
 
 // In-memory cache fallback. Used when Redis isn't configured (typical for
@@ -205,4 +216,4 @@ export async function cacheSetSwr<T>(key: string, value: T, ttlSeconds: number):
   await redisSet(key, entry, ttlSeconds * 4);
 }
 
-export { getRedis, hasRedis };
+export { getRedis, getRedisClient, hasRedis };

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
-import { getRedis, hasRedis } from '@/lib/cache';
+import { getRedisClient, hasRedis } from '@/lib/cache';
 import { log } from '@/lib/logger';
 
 // Staleness thresholds in minutes per ingestion type
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     redisStatus = { status: 'down', latency_ms: 0, error: 'Redis not configured' };
   } else {
     try {
-      await getRedis().ping();
+      await (await getRedisClient()).ping();
       redisStatus = { status: 'up', latency_ms: Date.now() - redisStart };
     } catch (e) {
       redisStatus = { status: 'down', latency_ms: Date.now() - redisStart, error: String(e) };
