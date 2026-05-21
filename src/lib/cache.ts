@@ -1,24 +1,27 @@
-import { Redis } from '@upstash/redis';
+import Redis from 'ioredis';
 import { log } from './logger';
 
 let _redis: Redis | null = null;
 
 function getRedis(): Redis {
   if (!_redis) {
-    const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
-    _redis = new Redis({ url: url!, token: token! });
+    _redis = new Redis(process.env.REDIS_URL!, { lazyConnect: false, enableOfflineQueue: false });
   }
   return _redis;
 }
 
 function hasRedis(): boolean {
-  // Treat empty strings as unset. Some deploy targets inject the env keys with
-  // empty values when no Redis is provisioned, which would otherwise route
-  // every cache read/write through an invalid URL and stall on TCP timeout.
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  return !!(url && token);
+  return !!process.env.REDIS_URL;
+}
+
+async function redisGet<T>(key: string): Promise<T | null> {
+  const raw = await getRedis().get(key);
+  if (raw === null) return null;
+  return JSON.parse(raw) as T;
+}
+
+async function redisSet<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
+  await getRedis().set(key, JSON.stringify(value), 'EX', ttlSeconds);
 }
 
 // In-memory cache fallback. Used when Redis isn't configured (typical for
@@ -54,7 +57,7 @@ export async function cached<T>(
 ): Promise<T> {
   if (hasRedis()) {
     try {
-      const existing = await getRedis().get<T>(key);
+      const existing = await redisGet<T>(key);
       if (existing !== null && existing !== undefined) return existing;
     } catch (e) {
       log.cache.warn({ err: e, key }, 'Redis read failed');
@@ -97,7 +100,7 @@ export async function cached<T>(
     const fresh = await fetcher();
     if (hasRedis()) {
       try {
-        await getRedis().set(key, fresh, { ex: ttlSeconds });
+        await redisSet(key, fresh, ttlSeconds);
       } catch (e) {
         log.cache.warn({ err: e, key }, 'Redis write failed');
       }
@@ -123,14 +126,14 @@ export async function cached<T>(
  * Write directly to Redis (used by cron jobs).
  */
 export async function cacheSet<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
-  await getRedis().set(key, value, { ex: ttlSeconds });
+  await redisSet(key, value, ttlSeconds);
 }
 
 /**
  * Read directly from Redis (used by GET endpoints serving pre-computed data).
  */
 export async function cacheGet<T>(key: string): Promise<T | null> {
-  return getRedis().get<T>(key);
+  return redisGet<T>(key);
 }
 
 // ---------------------------------------------------------------------------
@@ -158,7 +161,7 @@ export async function cachedSwr<T>(
 
   if (hasRedis()) {
     try {
-      const entry = await getRedis().get<SwrEntry<T>>(key);
+      const entry = await redisGet<SwrEntry<T>>(key);
       if (entry != null) {
         if (entry.freshUntil > Date.now()) return entry.data;
         // Stale — serve immediately, kick off background refresh
@@ -167,11 +170,7 @@ export async function cachedSwr<T>(
           (async () => {
             try {
               const fresh = await fetcher();
-              await getRedis().set(
-                key,
-                { data: fresh, freshUntil: Date.now() + ttlSeconds * 1000 },
-                { ex: hardTtl }
-              );
+              await redisSet(key, { data: fresh, freshUntil: Date.now() + ttlSeconds * 1000 }, hardTtl);
             } catch (e) {
               log.cache.warn({ err: e, key }, 'SWR background refresh failed');
             } finally {
@@ -187,11 +186,7 @@ export async function cachedSwr<T>(
     // Cold miss — block and compute
     const fresh = await fetcher();
     try {
-      await getRedis().set(
-        key,
-        { data: fresh, freshUntil: Date.now() + ttlSeconds * 1000 },
-        { ex: hardTtl }
-      );
+      await redisSet(key, { data: fresh, freshUntil: Date.now() + ttlSeconds * 1000 }, hardTtl);
     } catch (e) {
       log.cache.warn({ err: e, key }, 'Redis SWR write failed');
     }
@@ -207,7 +202,7 @@ export async function cachedSwr<T>(
  */
 export async function cacheSetSwr<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
   const entry: SwrEntry<T> = { data: value, freshUntil: Date.now() + ttlSeconds * 1000 };
-  await getRedis().set(key, entry, { ex: ttlSeconds * 4 });
+  await redisSet(key, entry, ttlSeconds * 4);
 }
 
 export { getRedis, hasRedis };
