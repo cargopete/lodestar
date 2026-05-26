@@ -96,6 +96,11 @@ const METHODS_INITIAL_COUNT = 5;
 
 const PRICE_PER_CU = 4_000_000_000_000n; // GRT wei per compute unit
 
+// Providers manually marked inactive — filtered from active set
+const MANUALLY_INACTIVE_PROVIDERS = new Set([
+  '0xb43b2cccceada5292732a8c58ae134adefce09bb', // lodestar-indexer.eth
+]);
+
 const CU_WEIGHTS: Record<string, number> = {
   eth_chainId: 1, net_version: 1, eth_blockNumber: 1,
   eth_getBalance: 5, eth_getTransactionCount: 5, eth_getCode: 5,
@@ -106,7 +111,7 @@ const CU_WEIGHTS: Record<string, number> = {
   eth_getLogs: 20,
 };
 
-function Playground() {
+function Playground({ disabled }: { disabled?: boolean }) {
   const { address, isConnected } = useAccount();
   const [methodIdx, setMethodIdx] = useState(0);
   const [params, setParams] = useState(METHODS[0].params);
@@ -126,7 +131,7 @@ function Playground() {
   };
 
   const send = async () => {
-    if (!isConnected || !address) return;
+    if (!isConnected || !address || disabled) return;
     setStatus('sending');
     setResult(null);
     setError(null);
@@ -170,7 +175,15 @@ function Playground() {
         </p>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        {disabled && (
+          <div className="mb-4 flex items-center gap-2.5 px-3 py-2.5 rounded-[var(--radius-button)] bg-[var(--amber-dim,rgba(245,158,11,0.12))] border border-[rgba(245,158,11,0.25)] text-amber-400 text-[12px]">
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            Service temporarily unavailable — no active providers. Requests are disabled until a provider comes online.
+          </div>
+        )}
+        <div className={cn('space-y-3', disabled && 'opacity-50 pointer-events-none select-none')}>
           {/* Method selector */}
           <div className="flex flex-wrap gap-2">
             {visibleMethods.map((m, i) => (
@@ -212,7 +225,7 @@ function Playground() {
           <div className="flex items-center gap-3">
             <button
               onClick={send}
-              disabled={!isConnected || status !== 'idle'}
+              disabled={!isConnected || status !== 'idle' || !!disabled}
               className="px-4 py-2 text-[12px] font-medium bg-[var(--accent)] text-white rounded-[var(--radius-button)] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
             >
               {status === 'sending' ? 'Sending…' : 'Send Request →'}
@@ -1180,7 +1193,18 @@ interface DispatchRegistryIndexer {
 export default function DispatchPage() {
   const { data: provisionsData } = useServiceProvisions(DISPATCH.rpcDataService);
   const provisions = provisionsData?.provisions ?? [];
-  const providerProvision = provisions.find(
+
+  // Filter out manually inactive providers and any provider with 100% stake thawing (exiting)
+  const activeProvisions = provisions.filter(p => {
+    if (MANUALLY_INACTIVE_PROVIDERS.has(p.indexer.id.toLowerCase())) return false;
+    const provisioned = BigInt(p.tokensProvisioned);
+    const thawing = BigInt(p.tokensThawing);
+    if (provisioned > 0n && thawing >= provisioned) return false;
+    return true;
+  });
+  const hasActiveProviders = activeProvisions.length > 0;
+
+  const providerProvision = activeProvisions.find(
     (p) => p.indexer.id.toLowerCase() === DISPATCH.provider.toLowerCase()
   );
   const provisionedGRT = providerProvision ? weiToGRT(providerProvision.tokensProvisioned) : null;
@@ -1204,10 +1228,17 @@ export default function DispatchPage() {
             <h1 className="text-[20px] font-medium text-[var(--text)] tracking-tight">
               Dispatch JSON-RPC
             </h1>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-badge)] bg-[var(--green-dim)] text-[var(--green)] text-[10px] font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse" />
-              Live
-            </span>
+            {hasActiveProviders ? (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-badge)] bg-[var(--green-dim)] text-[var(--green)] text-[10px] font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] animate-pulse" />
+                Live
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-badge)] bg-[rgba(245,158,11,0.12)] text-amber-400 text-[10px] font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                No Providers
+              </span>
+            )}
           </div>
           <p className="text-[13px] text-[var(--text-muted)] max-w-xl">
             Decentralised JSON-RPC on The Graph&apos;s Horizon framework. Staked indexers serve RPC requests
@@ -1247,8 +1278,8 @@ export default function DispatchPage() {
       <StatGrid className="lg:grid-cols-4">
         <StatCard
           label="Active Providers"
-          value={String(provisions.length || '-')}
-          subtitle={provisions.length === 1 ? (provisions[0].indexer.account.defaultDisplayName ?? shortAddr(provisions[0].indexer.id)) : `${provisions.length} indexers`}
+          value={String(activeProvisions.length || '0')}
+          subtitle={activeProvisions.length === 1 ? (activeProvisions[0].indexer.account.defaultDisplayName ?? shortAddr(activeProvisions[0].indexer.id)) : activeProvisions.length === 0 ? 'none online' : `${activeProvisions.length} indexers`}
           icon={
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
@@ -1288,7 +1319,7 @@ export default function DispatchPage() {
       </StatGrid>
 
       {/* Playground */}
-      <Playground />
+      <Playground disabled={!hasActiveProviders} />
 
       {/* Live Feed */}
       <LiveFeed />
@@ -1307,7 +1338,7 @@ export default function DispatchPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Active Providers</CardTitle>
-              <Badge variant="default">{provisions.length} online</Badge>
+              <Badge variant="default">{activeProvisions.length} online</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -1317,7 +1348,13 @@ export default function DispatchPage() {
                 <span className="text-[10px] text-[var(--text-muted)]">Indexer</span>
                 <span className="text-[10px] text-[var(--text-muted)]">Status</span>
               </div>
-              {provisions.map((p, i) => {
+              {activeProvisions.length === 0 && (
+                <div className="px-4 py-6 text-center">
+                  <p className="text-[13px] text-[var(--text-muted)]">No active providers at this time.</p>
+                  <p className="text-[11px] text-[var(--text-faint)] mt-1">Service will resume when a provider comes online.</p>
+                </div>
+              )}
+              {activeProvisions.map((p, i) => {
                 const name = p.indexer.account.defaultDisplayName ?? shortAddr(p.indexer.id);
                 const pGRT = weiToGRT(p.tokensProvisioned);
                 const tGRT = weiToGRT(p.tokensThawing);

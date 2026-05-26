@@ -9,6 +9,7 @@
  *   npx tsx scripts/cron-runner.ts delegations    # ingest delegation events
  *   npx tsx scripts/cron-runner.ts disputes       # ingest disputes
  *   npx tsx scripts/cron-runner.ts snapshot       # network snapshot
+ *   npx tsx scripts/cron-runner.ts compute-scores # score indexers → push to Redis
  *
  * Requires .env.local with: GRAPH_API_KEY, DATABASE_URL
  * For refresh: also needs UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
@@ -28,7 +29,10 @@ function loadEnv() {
       const eqIdx = trimmed.indexOf('=');
       if (eqIdx < 0) continue;
       const key = trimmed.slice(0, eqIdx).trim();
-      const val = trimmed.slice(eqIdx + 1).trim();
+      const raw = trimmed.slice(eqIdx + 1).trim();
+      const val = (raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))
+        ? raw.slice(1, -1)
+        : raw;
       if (!process.env[key]) process.env[key] = val;
     }
   } catch {
