@@ -518,13 +518,13 @@ export async function refreshIndexers(opts: {
 
     const indexerClosedAllocs = closedAllocsByIndexer.get(indexer.id) ?? [];
     const rollingAPY30d = erAPY30d ?? (
-      indexerClosedAllocs.length > 0 && delegated > 0
-        ? calculateRollingAPY(indexerClosedAllocs, delegated, 30)
+      indexerClosedAllocs.length > 0 && delegatedActive > 0
+        ? calculateRollingAPY(indexerClosedAllocs, delegatedActive, 30)
         : null
     );
     const rollingAPY90d = erAPY90d ?? (
-      indexerClosedAllocs.length > 0 && delegated > 0
-        ? calculateRollingAPY(indexerClosedAllocs, delegated, 90)
+      indexerClosedAllocs.length > 0 && delegatedActive > 0
+        ? calculateRollingAPY(indexerClosedAllocs, delegatedActive, 90)
         : null
     );
 
@@ -551,7 +551,7 @@ export async function refreshIndexers(opts: {
       })(),
       queryFeesCollectedGRT: weiToGRT(indexer.queryFeesCollected),
       netFlowGRT: activity.netFlowGRT,
-      delegatedGRT: delegated,
+      delegatedGRT: delegatedActive,
       rollingAPY30d,
       delegatorAPR: apr,
       distinctDataServices,
@@ -578,7 +578,7 @@ export async function refreshIndexers(opts: {
       geoHash: indexer.geoHash,
       createdAt: indexer.createdAt,
       selfStakeGRT: selfStake,
-      delegatedGRT: delegated,
+      delegatedGRT: delegatedActive,
       delegatorAPR: apr,
       delegationCapacity: capacity,
       reoStatus,

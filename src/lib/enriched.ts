@@ -26,7 +26,7 @@ export interface EnrichedIndexer {
 
   // Pre-computed fields
   selfStakeGRT: number;
-  delegatedGRT: number;
+  delegatedGRT: number;          // active delegation only (excl. thawing tokens)
   delegatorAPR: number;
   delegationCapacity: {
     maxCapacity: number;

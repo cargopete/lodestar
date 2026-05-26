@@ -164,7 +164,7 @@ export function calculateDelegatorAPR(
  * Prefer calculateExchangeRateAPY when historical exchange rates are available.
  *
  * @param closedAllocations - Closed allocations with pre-calculated delegator rewards
- * @param delegatedGRT - Total GRT delegated to this indexer
+ * @param delegatedGRT - Active GRT delegated (excl. thawing tokens)
  * @param windowDays - Rolling window (30 or 90)
  */
 export function calculateRollingAPY(
