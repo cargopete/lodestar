@@ -12,6 +12,7 @@ interface StatCardProps {
   };
   subtitle?: string;
   tag?: string;
+  tooltip?: string;
   icon?: React.ReactNode;
   loading?: boolean;
   className?: string;
@@ -23,6 +24,7 @@ export function StatCard({
   delta,
   subtitle,
   tag,
+  tooltip,
   icon,
   loading = false,
   className,
@@ -38,6 +40,17 @@ export function StatCard({
             {tag && (
               <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-[var(--accent-dim)] text-[var(--accent)] uppercase tracking-wide leading-none">
                 {tag}
+              </span>
+            )}
+            {tooltip && (
+              <span className="relative group/stattip inline-flex items-center">
+                <svg className="w-3 h-3 text-[var(--text-faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <circle cx="12" cy="12" r="10" />
+                  <path strokeLinecap="round" d="M12 16v-4m0-4h.01" />
+                </svg>
+                <span className="absolute left-0 top-full mt-1.5 w-60 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/stattip:opacity-100 transition-opacity z-50 text-[11px] font-normal normal-case tracking-normal text-[var(--text)]">
+                  {tooltip}
+                </span>
               </span>
             )}
           </p>

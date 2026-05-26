@@ -331,6 +331,7 @@ export default function IndexerDetailPage({
           label="Total Delegated"
           value={`${formatGRT(delegated)} GRT`}
           subtitle={formatUSD(delegated * grtPrice)}
+          tooltip="Active delegation only — tokens currently in the 28-day thaw period are excluded, as they earn no rewards and would distort APR/APY figures."
         />
         <StatCard
           label="Allocated"
@@ -359,7 +360,7 @@ export default function IndexerDetailPage({
                 )}>
                   {enrichedIndexer.rollingAPY90d.toFixed(2)}%
                 </p>
-                <p className="text-[10px] text-[var(--text-faint)] mt-1">From delegation pool share growth</p>
+                <p className="text-[10px] text-[var(--text-faint)] mt-1">Per-share rate · immune to thawing distortion</p>
               </CardContent>
             </Card>
           )}
@@ -373,7 +374,7 @@ export default function IndexerDetailPage({
                 )}>
                   {enrichedIndexer.rollingAPY30d.toFixed(2)}%
                 </p>
-                <p className="text-[10px] text-[var(--text-faint)] mt-1">From delegation pool share growth</p>
+                <p className="text-[10px] text-[var(--text-faint)] mt-1">Per-share rate · immune to thawing distortion</p>
               </CardContent>
             </Card>
           )}
@@ -383,7 +384,7 @@ export default function IndexerDetailPage({
               <p className="text-xl font-semibold font-mono text-[var(--text)]">
                 {enrichedIndexer.delegatorAPR.toFixed(2)}%
               </p>
-              <p className="text-[10px] text-[var(--text-faint)] mt-1">Theoretical from active allocations · capped at 100%</p>
+              <p className="text-[10px] text-[var(--text-faint)] mt-1">Active allocations · thawing tokens excluded · capped at 100%</p>
             </CardContent>
           </Card>
         </div>

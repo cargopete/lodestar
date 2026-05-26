@@ -447,7 +447,7 @@ export function IndexerTable() {
         ),
       }),
       columnHelper.accessor('delegated', {
-        header: () => <HeaderTip label="Delegated" tip="Total GRT delegated to this indexer by other token holders. Delegators earn a share of indexing rewards minus the indexer's cut." />,
+        header: () => <HeaderTip label="Delegated" tip="Active GRT delegated to this indexer — tokens currently in the 28-day thaw period are excluded, since they earn no rewards and would inflate the denominator." />,
         cell: (info) => (
           <span className="font-mono text-[var(--green)]">
             {formatGRT(info.getValue())} GRT
@@ -513,7 +513,7 @@ export function IndexerTable() {
         },
       }),
       columnHelper.accessor('apr', {
-        header: () => <HeaderTip label="APR" tip="Current annualised return based on live allocations. Fluctuates each epoch — treat as a snapshot, not a guarantee." />,
+        header: () => <HeaderTip label="APR" tip="Forward-looking annualised return based on live allocations. Calculated against active delegation only — thawing tokens are excluded so they don't depress the figure. Snapshot, not a guarantee." />,
         cell: (info) => {
           const value = info.getValue();
           if (value === null) return <span className="text-[var(--text-faint)]">—</span>;
@@ -528,7 +528,7 @@ export function IndexerTable() {
         },
       }),
       columnHelper.accessor('rollingAPY90d', {
-        header: () => <HeaderTip label="APY 90d" tip="Actual compounded return over the last 90 days from delegation pool share growth. More stable than 30d APY. Hover a value to see 30d APY." />,
+        header: () => <HeaderTip label="APY 90d" tip="Compounded return over the last 90 days from delegation pool share growth. Per-share rate — immune to thawing distortion. Hover a value to see 30d APY." />,
         cell: (info) => {
           const value = info.getValue();
           const row = info.row.original;
