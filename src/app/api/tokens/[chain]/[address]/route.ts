@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cached } from '@/lib/cache';
+import { cachedSwr } from '@/lib/cache';
 import { fetchTokenDetail } from '@/lib/tokens/fetcher';
 
 // Pin to Node runtime: the fetcher transitively uses viem's HTTP transport
@@ -25,11 +25,11 @@ export async function GET(_req: Request, { params }: Ctx) {
       return NextResponse.json({ error: 'invalid contract address' }, { status: 400 });
     }
     const key = `lodestar:tokens:detail:v0:${chain}:${address.toLowerCase()}`;
-    const data = await cached(key, 120, () => fetchTokenDetail(chain, address));
+    const data = await cachedSwr(key, 600, () => fetchTokenDetail(chain, address));
     if (!data) return NextResponse.json({ error: 'token not in v0 seed list' }, { status: 404 });
     return NextResponse.json(
       { data },
-      { headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=240' } }
+      { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }
     );
   } catch (error) {
     console.error('[tokens detail]', error);

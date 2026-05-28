@@ -414,6 +414,9 @@ export async function fetchTokenDetail(
     dexVolumes,
     aaveReserves,
     hyperliquid,
+    ethBmP1,
+    ethBmP2,
+    onChainSupplyRaw,
   ] = await Promise.all([
     buildSummary(seed, ethUsd),
     fetchPoolOhlc(seed.chain, seed.pool.address, '1d', 100, 1),
@@ -445,16 +448,13 @@ export async function fetchTokenDetail(
     // matching HL coin (most of the catalog) and silently degrades when
     // the API is unavailable.
     fetchHyperliquidForSeed(seed).catch(() => null),
-  ]);
-  // ETH daily-close benchmark for the volatility comparison. Two pages of
-  // 1d × 100 against the same WETH/USDC reference pool the spot lookup uses,
-  // de-duped to one row per UTC day. The chart receives an aligned
-  // `[timestamp, close][]` array and computes vol against it for the
-  // currently-selected window.
-  const ethBenchmark = await Promise.all([
+    // ETH benchmark and on-chain total supply — independent of the above,
+    // batched here to avoid sequential round-trips after the main await.
     fetchPoolOhlc('mainnet', ETH_REFERENCE_POOL, '1d', 100, 1).catch(() => []),
     fetchPoolOhlc('mainnet', ETH_REFERENCE_POOL, '1d', 100, 2).catch(() => []),
+    fetchTotalSupplies([{ chain: seed.chain, contract: seed.contract }]),
   ]);
+  const ethBenchmark = [ethBmP1, ethBmP2];
   const dexBreakdown = dexVolumes.get(seed.contract.toLowerCase());
   if (dexBreakdown) {
     summary.dexVolume24hUsd = dexBreakdown.totalUsd > 0 ? dexBreakdown.totalUsd : null;
@@ -506,14 +506,8 @@ export async function fetchTokenDetail(
     return deviation <= threshold;
   });
 
-  // Pull on-chain totalSupply so FDV populates on the detail page even when
-  // the directory cache hasn't run yet (or this token is being viewed in
-  // isolation). Cheap (cached per-process after first hit).
-  const onChainSupply = await fetchTotalSupplies([
-    { chain: seed.chain, contract: seed.contract, decimals: summary.decimals },
-  ]);
   const tsKey = `${seed.chain}:${seed.contract.toLowerCase()}`;
-  const ts = onChainSupply.get(tsKey);
+  const ts = onChainSupplyRaw.get(tsKey);
   if (ts != null) {
     summary.totalSupply = ts;
     if (summary.priceUsd != null) summary.fdvUsd = ts * summary.priceUsd;
@@ -541,13 +535,15 @@ export async function fetchTokenDetail(
   // deficiency so we can ask the API team to either fix the type or ship a
   // pre-scaled `amount_decimal` field.
   const decimals = summary.decimals ?? 18;
-  // Classify holder addresses as EOA vs contract via `eth_getCode`.
-  // Cached per-process; one round-trip per new address. Failures fall
-  // back to `null` (unknown) so the row simply doesn't get badged.
-  const classified = await classifyAddresses(
-    seed.chain,
-    holdersRaw.map((h) => h.address)
-  ).catch(() => new Map<string, boolean>());
+  // Classify holder addresses (EOA vs contract) and fetch pool stats in
+  // parallel — both depend on the main batch but are independent of each other.
+  const poolIds = poolsRaw.map((p) => p.pool);
+  const [classified, poolStats] = await Promise.all([
+    classifyAddresses(seed.chain, holdersRaw.map((h) => h.address)).catch(() => new Map<string, boolean>()),
+    poolIds.length > 0
+      ? fetchPoolStats(poolIds, seed.contract, ethUsd)
+      : Promise.resolve(new Map<string, PoolStats>()),
+  ]);
   const topHolders: TokenHolder[] = holdersRaw.map((h) => {
     const raw = typeof h.amount === 'string' ? h.amount : String(h.amount ?? '0');
     if (typeof h.amount === 'string') {
@@ -572,12 +568,6 @@ export async function fetchTokenDetail(
     return { address: h.address, amount: scaled, valueUsd, isContract };
   });
 
-  // Pool stats from the V3 subgraph. Fired after `poolsRaw` resolves because
-  // we need the pool ids to scope the query — non-V3 pools (Curve, CoW)
-  // simply won't be in the response and degrade to null.
-  const poolIds = poolsRaw.map((p) => p.pool);
-  const poolStats =
-    poolIds.length > 0 ? await fetchPoolStats(poolIds, seed.contract, ethUsd) : new Map();
   const markets = buildMarkets(poolsRaw, seed.contract, poolStats);
   const recentSwaps = buildSwaps(swapsRaw, seed.contract, summary.priceUsd, ethUsd);
   const performance = buildPerformance(priceSeries);
