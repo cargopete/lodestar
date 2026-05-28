@@ -3,7 +3,7 @@ _Stay oriented_
 
 ![Screen Recording 2026-03-20 at 13 49 40](https://github.com/user-attachments/assets/62f58f1f-55f4-4d32-a8df-8ee3f1c9632e)
 
-Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network metrics, indexer intelligence, delegation tools, and portfolio tracking.
+Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network metrics, indexer intelligence, delegation tools, portfolio tracking, curation management, and subgraph developer tooling.
 
 **Live:** [lodestar-dashboard.com](https://lodestar-dashboard.com)
 
@@ -15,7 +15,9 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Indexer Profiles** — Detailed view with allocations, delegator breakdown, Horizon service provisions, REO eligibility assessment, recent delegation activity, and reward cut change alerts
 - **Accurate APR & Effective Cut** — Per-allocation signal-weighted APR calculation and effective cut formula matching [grtinfo](https://github.com/ellipfra/grtinfo)
 - **Delegator Portfolio** — Position tracking, rebalancing insights, underperforming position detection, CSV export
-- **Curator Portfolio** — Signal positions and query-fee-to-signal ratio analysis
+- **Curator Portfolio** — Signal positions and query-fee-to-signal ratio analysis across all curators
+- **Curate** — Wallet-connected curation tool: signal and unsignal on subgraphs, manage your own signal portfolio, search deployments by name or IPFS hash, and track per-position query-fee yield
+- **Subgraph Dock** — Developer studio for subgraph publishers: connect with your Studio account, view published subgraphs and sync status, manage metadata (name, description, image, website), generate deploy keys, query live deployments, and interact with the Sync Bounty Board
 - **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting and IPFS manifest complexity scoring (Light→Extreme)
 - **Horizon Activity Feed** — Live on-chain events from the Horizon staking contract — delegations, self-stakes, provisions, slashing, and withdrawals. Refreshes every 30 seconds. Powered by a self-hosted Amp node querying raw Arbitrum One logs. Gracefully degrades if the node is unreachable.
 - **QoS Performance Charts** — Query count, success rate, latency, and blocks-behind timeseries on indexer profiles, sourced from the E&N QoS oracle subgraph
@@ -200,8 +202,10 @@ src/
     blog/        # Technical blog (Markdown posts)
     calculator/  # Redelegation calculator
     compare/     # Indexer comparison tool
-    curators/    # Curator portfolio
+    curate/      # Wallet-connected curation tool (signal/unsignal)
+    curators/    # Curator directory
     delegators/  # Delegator portfolio
+    dock/        # Subgraph developer studio (publish, metadata, deploy keys, bounties)
     indexers/    # Indexer directory + profiles
     indexing/    # Chain health and subgraph indexing status
     payments/    # GraphTally / TAP payment pipeline
