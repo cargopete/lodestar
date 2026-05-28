@@ -370,8 +370,8 @@ The main items in flight:
 
 ## Try it
 
-- **camp API:** [camp.cargopete.com](https://camp.cargopete.com)
-- **OpenAPI spec + browsable docs:** [camp.cargopete.com/docs](https://camp.cargopete.com/docs)
-- **Explore dashboards:** [camp.cargopete.com/explore](https://camp.cargopete.com/explore)
+- **camp API:** [engine.camp](https://engine.camp)
+- **OpenAPI spec + browsable docs:** [engine.camp/docs](https://engine.camp/docs)
+- **Explore dashboards:** [engine.camp/explore](https://engine.camp/explore)
 - **Source:** [github.com/lodestar-team/camp](https://github.com/lodestar-team/camp)
 - **Intro post (if you missed it):** [camp: A Free Decoded Arbitrum API](/blog/camp-free-amp-api-arbitrum)

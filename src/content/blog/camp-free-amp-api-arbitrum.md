@@ -33,7 +33,7 @@ Amp is licensed BUSL-1.1. The node software, the query engine, the storage layer
 
 camp is a public-facing REST gateway that wraps an Amp node and translates clean HTTP requests into SQL against Amp's internal tables.
 
-Live at **[camp.cargopete.com](https://camp.cargopete.com)**.
+Live at **[engine.camp](https://engine.camp)**.
 
 The pitch: same query shape Dune offers (decoded protocol tables, SQL semantics), but updated at chain tip, free, and with a predictable REST interface instead of a query editor.
 
@@ -58,7 +58,7 @@ Query parameters follow a consistent pattern: `from_block`, `to_block`, `limit`,
 
 ```bash
 # ERC-20 transfers for USDC on Arbitrum One, last 1000 blocks
-curl "https://camp.cargopete.com/v1/transfers?token=0xaf88d065e77c8cC2239327C5EDb3A432268e5831&from_block=300000000&limit=20"
+curl "https://engine.camp/v1/transfers?token=0xaf88d065e77c8cC2239327C5EDb3A432268e5831&from_block=300000000&limit=20"
 ```
 
 Response is JSON — decoded, typed, human-readable. No hex decoding, no ABI parsing in your client.
@@ -187,7 +187,7 @@ Both projects are open source. The pattern is replicable: run `ampd` against any
 
 ## Try it
 
-- **camp API:** [camp.cargopete.com](https://camp.cargopete.com)
+- **camp API:** [engine.camp](https://engine.camp)
 - **camp source:** [github.com/lodestar-team/camp](https://github.com/lodestar-team/camp)
 - **camp-data-service:** [github.com/lodestar-team/camp-data-service](https://github.com/lodestar-team/camp-data-service)
 - **Amp:** [amp.thegraph.com](https://amp.thegraph.com)
