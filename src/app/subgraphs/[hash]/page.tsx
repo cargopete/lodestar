@@ -399,8 +399,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                 : 'Unable to fetch indexing status. The deployment may not have active allocations.'}
             </p>
             <p className="text-sm text-[var(--text-muted)]">
-              Signal GRT to this subgraph to get Indexers to pick it up and start allocating to it.{' '}
-              <a href={`/curate?deployment=${hash}`} className="text-[var(--accent)] hover:underline">Go to Curate →</a>
+              Signal GRT to this subgraph to get Indexers to pick it up and start allocating to it.
             </p>
           </div>
         </CardContent>
@@ -444,8 +443,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
             <div className="py-4 space-y-2">
               <p className="text-sm text-[var(--text-muted)]">No indexers have active allocations on this deployment.</p>
               <p className="text-sm text-[var(--text-muted)]">
-                Signal GRT to this subgraph to get Indexers to pick it up and start allocating to it.{' '}
-                <a href={`/curate?deployment=${hash}`} className="text-[var(--accent)] hover:underline">Go to Curate →</a>
+                Signal GRT to this subgraph to get Indexers to pick it up and start allocating to it.
               </p>
             </div>
           ) : (

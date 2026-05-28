@@ -135,29 +135,6 @@ async function main() {
         break;
       }
 
-      case 'compute-scores': {
-        const { computeMonthlyScores } = await import('../src/lib/scoring/compute.js');
-        const now = new Date();
-        const result = await computeMonthlyScores(sql, {
-          year: now.getUTCFullYear(),
-          month: now.getUTCMonth() + 1,
-        });
-        // Push to Redis so the Vercel frontend can read it
-        if (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) {
-          const { cacheSet } = await import('../src/lib/cache.js');
-          await cacheSet('lodestar:leaderboard:latest', {
-            periodStart: result.entries[0]?.period_start,
-            periodEnd: result.entries[0]?.period_end,
-            computedAt: Date.now(),
-            entries: result.entries,
-          }, 86400 * 35); // 35 days — refreshed monthly
-          log.cron.info({ entries: result.entries.length }, 'Redis: leaderboard scores pushed');
-        }
-        rowsAffected = result.scored;
-        log.cron.info({ step, scored: result.scored, durationMs: Date.now() - start }, 'Step complete');
-        break;
-      }
-
       default:
         log.cron.fatal({ step }, 'Unknown step');
         process.exit(1);

@@ -20,10 +20,6 @@ const PAGE_TIPS: Record<string, { basic: string; deep?: string }> = {
     basic: "Positions, rewards, and anything thawing. Track your anchors here.",
     deep: "Undelegating starts a 28-day thawing period — your GRT is locked and earns nothing during that time. The portfolio page shows unrealised rewards, which only materialise when you undelegate.",
   },
-  '/services': {
-    basic: "Horizon's new waters. Indexers provision stake here to serve data services beyond subgraphs.",
-    deep: "Horizon separates indexing agreements from the old allocation model. Indexers provision stake per service type, allowing more flexible pricing and new revenue streams beyond query fees.",
-  },
   '/payments': {
     basic: "The TAP pipeline — escrow balances and redemptions. What's been earned and what's been collected.",
     deep: "TAP replaces the old voucher system. Gateways deposit escrow and issue RAVs to indexers, who redeem them on-chain. The gap between escrow and redeemed is the outstanding obligation — useful for spotting redemption delays.",
@@ -35,10 +31,6 @@ const PAGE_TIPS: Record<string, { basic: string; deep?: string }> = {
   '/poi': {
     basic: "Proof of Indexing. If indexers disagree here, someone's off course.",
     deep: "A POI is a cryptographic hash of an indexer's state at a given block. If two indexers produce different POIs for the same deployment and block, one is indexing incorrectly. Persistent divergence can lead to disputes and slashing.",
-  },
-  '/leaderboard': {
-    basic: "The monthly standings — who's doing the most for the network.",
-    deep: "The leaderboard score is built entirely from on-chain metrics: subgraph coverage, query fees, allocation efficiency, cut stability, tenure, delegation retention, REO eligibility, and data service coverage. Designed to reward consistent, transparent indexing over raw size.",
   },
   '/calculator': {
     basic: "Run the numbers before you move. Redelegation carries a cost.",
@@ -130,14 +122,6 @@ const PAGE_QUESTIONS: Record<string, string[]> = {
     "How do indexers redeem payments?",
     "What does outstanding obligation mean?",
   ],
-  '/services': [
-    "What is Horizon?",
-    "How does stake provisioning work?",
-    "What data services are available?",
-    "How is Horizon different from old allocations?",
-    "How do indexers earn on Horizon?",
-    "What is a data service?",
-  ],
   '/subgraphs': [
     "What makes a subgraph high complexity?",
     "How does curation work?",
@@ -161,13 +145,6 @@ const PAGE_QUESTIONS: Record<string, string[]> = {
     "How do I pick the better indexer?",
     "Which indexers are REO eligible?",
     "What is allocation efficiency?",
-  ],
-  '/leaderboard': [
-    "How is the leaderboard score calculated?",
-    "Which component has the most points?",
-    "Who are the top indexers this month?",
-    "What rewards consistent indexers?",
-    "How does cut stability affect rankings?",
   ],
 };
 

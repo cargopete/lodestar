@@ -15,9 +15,7 @@ const pageTitles: Record<string, string> = {
   '/calculator': 'Delegation Calculator',
   '/compare': 'Compare Indexers',
   '/profile': 'Portfolio',
-  '/services': 'Data Services',
   '/poi': 'POI Explorer',
-  '/dispatch': 'Dispatch JSON-RPC',
 };
 
 function getPageTitle(pathname: string): string {

@@ -29,10 +29,6 @@
       "schedule": "*/30 * * * *"
     },
     {
-      "path": "/api/cron/dispatch-notifications",
-      "schedule": "*/15 * * * *"
-    },
-    {
       "path": "/api/cron/ingest-horizon-activity",
       "schedule": "*/2 * * * *"
     },

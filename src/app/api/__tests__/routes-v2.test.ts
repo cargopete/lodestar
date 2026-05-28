@@ -2,8 +2,8 @@
  * API Route Contract Tests — Part 2
  *
  * Covers all routes not tested in routes.test.ts:
- * portfolio, data-services, provisions, indexer-status, payments,
- * feed, networks, parameter-history, vote, token-metrics, leaderboard,
+ * portfolio, provisions, indexer-status, payments,
+ * feed, networks, parameter-history, vote, token-metrics,
  * rewards-history, health, cron/refresh
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -206,41 +206,6 @@ describe('/api/portfolio', () => {
 
     const query = mockSubgraphQuery.mock.calls[0][0] as string;
     expect(query).toContain('0xabcd');
-  });
-});
-
-// ============================================================
-// /api/data-services
-// ============================================================
-
-describe('/api/data-services', () => {
-  let GET: () => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/data-services/route');
-    GET = mod.GET;
-  });
-
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const res = await GET();
-    expect(res.status).toBe(503);
-  });
-
-  it('returns { data } with data services', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      dataServices: [
-        { id: '0xservice1', totalTokensProvisioned: '1000000000000000000000000' },
-      ],
-    });
-
-    const res = await GET();
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('dataServices');
-    expect(Array.isArray(json.data.dataServices)).toBe(true);
   });
 });
 
@@ -898,68 +863,6 @@ describe('/api/token-metrics', () => {
     const req = makeRequest('/api/token-metrics?count=999');
     const res = await GET(req);
     expect(res.status).toBe(200);
-  });
-});
-
-// ============================================================
-// /api/leaderboard
-// ============================================================
-
-describe('/api/leaderboard', () => {
-  let GET: (req: Request) => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/leaderboard/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
-  });
-
-  it('returns 503 when no cached data and no period param', async () => {
-    // mockCacheGet returns null by default
-    const req = makeRequest('/api/leaderboard');
-    const res = await GET(req);
-    expect(res.status).toBe(503);
-  });
-
-  it('returns cached leaderboard for latest period', async () => {
-    mockCacheGet.mockResolvedValueOnce({
-      periodStart: '2026-04-01',
-      periodEnd: '2026-04-30',
-      computedAt: Date.now(),
-      entries: [{ indexer_address: '0xindexer', final_score: 85, rank: 1 }],
-    });
-
-    const req = makeRequest('/api/leaderboard');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('entries');
-    expect(json).toHaveProperty('periodStart');
-    expect(json).toHaveProperty('badgeHolder');
-  });
-
-  it('returns 400 for invalid period format', async () => {
-    // No cached data, DB not configured — falls through to period validation
-    mockHasDbAccess.mockReturnValue(true);
-    mockDb.mockResolvedValue([]);
-    // Need some cached data to not short-circuit to the DB path
-    // Actually: when periodParam is provided AND cached doesn't match, it goes to DB path
-    // DB returns [] → no scores → 404
-
-    const req = makeRequest('/api/leaderboard?period=not-valid');
-    const res = await GET(req);
-    // Invalid period format → 400
-    expect(res.status).toBe(400);
-  });
-
-  it('returns empty periods list when DB not configured', async () => {
-    const req = makeRequest('/api/leaderboard?periods=true');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('periods');
-    expect(json.periods).toEqual([]);
   });
 });
 

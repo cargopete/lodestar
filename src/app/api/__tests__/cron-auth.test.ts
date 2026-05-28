@@ -323,36 +323,6 @@ describe('/api/cron/refresh-chain-health', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('/api/cron/dispatch-notifications', () => {
-  it('enforces CRON_SECRET auth', async () => {
-    await assertCronAuth('/api/cron/dispatch-notifications', () => import('@/app/api/cron/dispatch-notifications/route'));
-  });
-
-  it('returns 503 when DB not configured', async () => {
-    vi.stubEnv('CRON_SECRET', 'test-secret');
-    const { GET } = await import('@/app/api/cron/dispatch-notifications/route');
-    const res = await GET(authedRequest('/api/cron/dispatch-notifications'));
-    expect(res.status).toBe(503);
-    vi.unstubAllEnvs();
-  });
-
-  it('returns 200 with notified:0 when no subscribers', async () => {
-    vi.stubEnv('CRON_SECRET', 'test-secret');
-    mockHasDbAccess.mockReturnValue(true);
-    // subscriber count = 0
-    mockDb.mockResolvedValueOnce([{ cnt: '0' }]);
-    const { GET } = await import('@/app/api/cron/dispatch-notifications/route');
-    const res = await GET(authedRequest('/api/cron/dispatch-notifications'));
-    const json = await res.json();
-    expect(res.status).toBe(200);
-    expect(json.ok).toBe(true);
-    expect(json.notified).toBe(0);
-    vi.unstubAllEnvs();
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 describe('/api/horizon/debug — auth guard', () => {
   it('returns 401 when CRON_SECRET not set', async () => {
     vi.unstubAllEnvs();

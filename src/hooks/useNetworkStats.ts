@@ -7,9 +7,7 @@ import {
   fetchIndexers,
   fetchGRTPrice,
   fetchTVL,
-  fetchDataServices,
   fetchIndexerProvisions,
-  fetchServiceProvisions,
   fetchEnrichedIndexers,
   fetchSubgraphDeployments,
   fetchSubgraphDeployments30d,
@@ -19,8 +17,6 @@ import {
   fetchIndexingStatus,
   fetchIndexerStatus,
   fetchNetworksRegistry,
-  fetchLeaderboard,
-  fetchLeaderboardPeriods,
   fetchDelegatorPortfolio,
   fetchCuratorPortfolio,
   fetchRewardsHistory,
@@ -161,18 +157,6 @@ export function useTVL() {
 }
 
 /**
- * Hook for data services (Horizon multi-service)
- */
-export function useDataServices() {
-  return useQuery({
-    queryKey: ['dataServices'],
-    queryFn: () => fetchDataServices(),
-    staleTime: FIVE_MINUTES,
-    refetchInterval: FIVE_MINUTES,
-  });
-}
-
-/**
  * Hook for indexer provisions
  */
 export function useIndexerProvisions(indexer: string) {
@@ -182,19 +166,6 @@ export function useIndexerProvisions(indexer: string) {
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
     enabled: !!indexer,
-  });
-}
-
-/**
- * Hook for service provisions
- */
-export function useServiceProvisions(dataService: string, first = 50, skip = 0) {
-  return useQuery({
-    queryKey: ['serviceProvisions', dataService, first, skip],
-    queryFn: () => fetchServiceProvisions(dataService, first, skip),
-    staleTime: FIVE_MINUTES,
-    refetchInterval: FIVE_MINUTES,
-    enabled: !!dataService,
   });
 }
 
@@ -435,30 +406,6 @@ export function useENSName(address: string) {
 }
 
 /**
- * Hook for leaderboard scores (monthly, cached for long periods)
- */
-export function useLeaderboard(period?: string) {
-  return useQuery({
-    queryKey: ['leaderboard', period],
-    queryFn: () => fetchLeaderboard(period),
-    staleTime: ONE_HOUR,
-    refetchInterval: period ? false : ONE_HOUR, // don't refetch historical
-    placeholderData: keepPreviousData,
-  });
-}
-
-/**
- * Hook for available leaderboard periods
- */
-export function useLeaderboardPeriods() {
-  return useQuery({
-    queryKey: ['leaderboardPeriods'],
-    queryFn: fetchLeaderboardPeriods,
-    staleTime: ONE_HOUR,
-  });
-}
-
-/**
  * Hook for delegator rewards accrual history (exchange-rate-based)
  */
 export function useRewardsHistory(address: string | undefined, days = 90) {
@@ -509,25 +456,6 @@ export function useIndexerPayments(receiver: string) {
   });
 }
 
-/**
- * Hook for total GRT earned from Dispatch gateway receipts (all-time sum).
- * Only makes sense for the lodestar provider since it's a single-provider gateway.
- */
-export function useDispatchProviderEarnings(enabled: boolean) {
-  return useQuery({
-    queryKey: ['dispatchProviderEarnings'],
-    queryFn: async () => {
-      const resp = await fetch('/api/dispatch/provider-earnings');
-      if (!resp.ok) throw new Error(`provider-earnings: ${resp.status}`);
-      const json = await resp.json();
-      return json.totalWei as string | undefined;
-    },
-    staleTime: 60_000,
-    refetchInterval: 60_000,
-    enabled,
-    retry: 1,
-  });
-}
 
 /**
  * Hook for indexer daily reward & query fee trends

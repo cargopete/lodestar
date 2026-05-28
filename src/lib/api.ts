@@ -2,9 +2,7 @@ import {
   type NetworkStatsResponse,
   type EpochHistoryResponse,
   type IndexersResponse,
-  type DataServicesResponse,
   type IndexerProvisionsResponse,
-  type ServiceProvisionsResponse,
   type DelegatorPortfolioResponse,
   type CuratorPortfolioResponse,
   type PaymentsOverview,
@@ -14,7 +12,6 @@ import type { EnrichedIndexer } from './enriched';
 import type { ManifestAnalysis } from './manifest';
 import type { POIOverview, POIDeploymentDetail } from './poi';
 import type { DeploymentIndexingStatus } from './indexing-status';
-import type { LeaderboardEntry } from './scoring';
 import type { VotesResponse, VoteMessage } from './voting';
 
 /**
@@ -79,33 +76,6 @@ export async function fetchEnrichedIndexers(): Promise<{
 }
 
 /**
- * Fetch leaderboard scores from Redis cache
- */
-export async function fetchLeaderboard(period?: string): Promise<{
-  periodStart: string;
-  periodEnd: string;
-  computedAt: number;
-  entries: LeaderboardEntry[];
-  badgeHolder?: { address: string; score: number; period: string } | null;
-}> {
-  const qs = period ? `?period=${encodeURIComponent(period)}` : '';
-  const response = await fetch(`/api/leaderboard${qs}`);
-  if (!response.ok) throw new Error('Leaderboard data not available');
-  return response.json();
-}
-
-/**
- * Fetch available leaderboard periods
- */
-export async function fetchLeaderboardPeriods(): Promise<{
-  periods: { start: string; end: string }[];
-}> {
-  const response = await fetch('/api/leaderboard?periods=true');
-  if (!response.ok) throw new Error('Failed to fetch periods');
-  return response.json();
-}
-
-/**
  * Fetch GRT price from proxy
  */
 export async function fetchGRTPrice(): Promise<{
@@ -129,16 +99,6 @@ export async function fetchTVL(): Promise<{
 }
 
 /**
- * Fetch all data services via cached GET endpoint
- */
-export async function fetchDataServices(): Promise<DataServicesResponse> {
-  const response = await fetch('/api/data-services');
-  if (!response.ok) throw new Error(`Data services failed: ${response.status}`);
-  const json = await response.json();
-  return json.data as DataServicesResponse;
-}
-
-/**
  * Fetch provisions for a specific indexer via cached GET endpoint
  */
 export async function fetchIndexerProvisions(indexer: string): Promise<IndexerProvisionsResponse> {
@@ -146,25 +106,6 @@ export async function fetchIndexerProvisions(indexer: string): Promise<IndexerPr
   if (!response.ok) throw new Error(`Indexer provisions failed: ${response.status}`);
   const json = await response.json();
   return json.data as IndexerProvisionsResponse;
-}
-
-/**
- * Fetch provisions for a specific data service via cached GET endpoint
- */
-export async function fetchServiceProvisions(
-  dataService: string,
-  first = 50,
-  skip = 0
-): Promise<ServiceProvisionsResponse> {
-  const qs = new URLSearchParams({
-    service: dataService,
-    first: String(first),
-    skip: String(skip),
-  });
-  const response = await fetch(`/api/provisions?${qs}`);
-  if (!response.ok) throw new Error(`Service provisions failed: ${response.status}`);
-  const json = await response.json();
-  return json.data as ServiceProvisionsResponse;
 }
 
 /**

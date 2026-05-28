@@ -19,7 +19,6 @@ function detectIntents(msg: string): string[] {
   if (/reo|eligible|renewal|oracle/i.test(msg)) intents.push('reo');
   if (/delegat/i.test(msg)) intents.push('indexers');
   if (/epoch|reward history|weekly|daily|last few/i.test(msg)) intents.push('epochs');
-  if (/leaderboard|ranking|community|month|favourite|best indexer/i.test(msg)) intents.push('leaderboard');
   if (/subgraph|signal|curat|deployment/i.test(msg)) intents.push('subgraphs');
   if (/recent|activity|flow|delegation event|last week|trending/i.test(msg)) intents.push('activity');
   if (/biggest delegator|largest delegator|top delegator|most delegat|whale/i.test(msg)) intents.push('top_delegators');
@@ -36,8 +35,7 @@ function pageIntents(page: string): string[] {
   if (page.startsWith('/delegators')) intents.push('portfolio');
   if (page.startsWith('/poi')) intents.push('poi');
   if (page.startsWith('/governance')) intents.push('governance');
-  if (page.startsWith('/payments') || page.startsWith('/services')) intents.push('network');
-  if (page.startsWith('/leaderboard')) intents.push('leaderboard');
+  if (page.startsWith('/payments')) intents.push('network');
   if (page.startsWith('/subgraphs')) intents.push('subgraphs');
   if (page.startsWith('/calculator') || page.startsWith('/compare') || page.startsWith('/delegate')) intents.push('indexers');
   return intents;
@@ -50,7 +48,7 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
   const parts: string[] = [];
   const nameTerm = intents.find(i => i.startsWith('name:'))?.slice(5);
 
-  const [snap, allIndexers, recentEpochs, nameHits, portfolio, leaderboard, activity, topDelegators] =
+  const [snap, allIndexers, recentEpochs, nameHits, portfolio, activity, topDelegators] =
     await Promise.allSettled([
 
       // Always: latest network snapshot
@@ -97,17 +95,6 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
              WHERE d.delegator_address = ${walletAddress.toLowerCase()}
                AND d.staked_tokens > 0
              ORDER BY d.staked_tokens DESC LIMIT 10`
-        : Promise.resolve([]),
-
-      // Leaderboard: top 10 for latest scored period
-      intents.includes('leaderboard')
-        ? db`SELECT i.name, i.ens_name, s.final_score, s.rank,
-                    s.query_fee_score,
-                    s.allocation_efficiency_score, s.is_eligible_for_badge
-             FROM indexer_scores s JOIN indexers i ON i.address = s.indexer_address
-             WHERE s.period_start = (SELECT MAX(period_start) FROM indexer_scores)
-               AND s.rank IS NOT NULL
-             ORDER BY s.rank LIMIT 10`
         : Promise.resolve([]),
 
       // Recent delegation activity: last 7 days summary
@@ -216,16 +203,6 @@ async function buildContext(intents: string[], walletAddress?: string): Promise<
     }
   }
 
-  // ── Leaderboard ──
-  if (leaderboard.status === 'fulfilled' && leaderboard.value.length) {
-    const lines = leaderboard.value.map(row => {
-      const label = row.ens_name || row.name || '?';
-      const badge = row.is_eligible_for_badge ? ' [BADGE]' : '';
-      return `#${row.rank} ${label}: score=${Number(row.final_score).toFixed(1)}${badge}`;
-    });
-    parts.push(`LEADERBOARD (current month, top 10):\n${lines.join('\n')}`);
-  }
-
   // ── Top delegators ──
   if (topDelegators.status === 'fulfilled' && topDelegators.value.length) {
     const lines = topDelegators.value.map((d, i) =>
@@ -283,8 +260,6 @@ REO (Rewards Eligibility Oracle, GIP-0079): On-chain oracle on Arbitrum. Contrac
 
 POI (Proof of Indexing): Cryptographic hash of indexer state at a given block. If two indexers produce different POIs for the same deployment/block, one is wrong. Persistent divergence leads to disputes and potential slashing.
 
-LEADERBOARD SCORING (monthly, /leaderboard): Community favourites — not just most profitable. Pure on-chain metrics. Components: subgraph coverage (20pts), query fees (10pts), allocation efficiency (10pts), cut stability (12pts), tenure (5pts), delegation retention (3pts), REO eligibility (6pts), data service coverage (5pts), delegation capacity (5pts). Total 76pts normalised to 100. Penalties for slashing, high cut increases, zero fees, self-stake below 100K.
-
 ONE-CLICK DELEGATION (/delegate): Algorithmically selects best indexer. Hard filters: REO ineligible excluded, delegation capacity ≥90% excluded, reward cut ≥90% excluded. Then scores with preference-weighted system — four sliders: best returns, stability, safety, network contribution. Default=neutral (standard weights).
 
 LODESTAR PAGES:
@@ -295,8 +270,6 @@ LODESTAR PAGES:
 /delegators/[address] individual delegator positions
 /subgraphs subgraph directory with signal/stake ratios, complexity
 /poi POI divergence explorer and consensus dashboard
-/leaderboard monthly community rankings with EIP-712 voting
-/services Horizon data services and provisions
 /payments GraphTally/TAP escrow, RAVs, redemptions
 /governance GIP tracker (GIPs 0070, 0079, 0086, 0087, 0088)
 /compare side-by-side indexer comparison (up to 3)
