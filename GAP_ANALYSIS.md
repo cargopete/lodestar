@@ -73,13 +73,14 @@ The previous revision of this doc badly undersold `/dock`. Verified against
 | **Update subgraph metadata on-chain (post-publish)** | ✅ | **Live** — `GNS.updateSubgraphMetadata` from the `/dock` lifecycle panel, reusing the IPFS metadata route (`SubgraphLifecyclePanel.tsx`) |
 | **Transfer subgraph ownership** | ✅ | **Live** — `GNS.safeTransferFrom` behind a typed double-address confirmation (`SubgraphLifecyclePanel.tsx`) |
 | **Deprecate / archive subgraph** | ✅ | **Live** — `GNS.deprecateSubgraph` behind a typed "DEPRECATE" confirmation (`SubgraphLifecyclePanel.tsx`) |
-| **Subgraph health monitor + alerting** | 🛠️ Planned | Sync status/health/errors visible (`/api/indexing-status`); webhook/Discord/Slack alerting not built |
+| **Subgraph health monitor + alerting** | ✅ Live | Per-subgraph Discord/Slack webhook alerts; edge-triggered cron (`check-subgraph-health`) queries each indexer's `/status`, fires on lagging/failed/recovered (`SubgraphAlertsPanel`) |
 | **API-key lifecycle** (mint / restrict / usage / spend) | 🛠️ Planned | The one true tether to Studio. See **Metered Gateway (RFC-004)** below |
 | Billing — GRT deposit/withdraw/balance | 🛠️ Planned | Part of the gateway plan; on-chain billing ledger |
 
-**Verdict:** the publish pipeline AND the full on-chain lifecycle (metadata update / transfer /
-deprecate) are now shipped. The only remaining replacement-blocking gaps are (1) the query-key
-lifecycle (RFC-004) and (2) health alerting — both committed work below.
+**Verdict:** the publish pipeline, the full on-chain lifecycle (metadata update / transfer /
+deprecate), the non-custodial metered gateway (RFC-004 Phase A), AND health alerting are now
+shipped. The only remaining gap is the **custodial** paid tier (RFC-004 Phase B), deliberately
+gated on a money-transmitter legal review.
 
 ---
 
@@ -299,8 +300,8 @@ Reused the existing `/dock` wagmi/viem write infrastructure.
    regulatory exposure.** The paid prepaid-GRT step is **Phase B (Tier 4), gated on a
    money-transmitter legal review.**
 
-### Tier 3 — Health monitoring + alerting
-6. 🛠️ Subgraph health monitor with webhook / Discord / Slack alerting (roadmap-q2 Tier 4 #17).
+### Tier 3 — Health monitoring + alerting (partially shipped)
+6. ~~Subgraph health monitor with webhook / Discord / Slack alerting~~ — ✅ **SHIPPED** — non-custodial per-subgraph webhook alerts, edge-triggered, 15-min `check-subgraph-health` cron querying each indexer's `/status`.
 7. 🛠️ Indexer/operator settings writes (operator address, ENS) so indexers also never open Explorer.
 
 ### Tier 4 — Custodial gateway (gated)
