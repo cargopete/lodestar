@@ -21,6 +21,7 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { cn, formatNumber, formatGRT, weiToGRT, shortenAddress } from '@/lib/utils';
 import { VersionsTable } from '@/components/subgraph/VersionsTable';
+import { ActivitySection } from '@/components/subgraph/ActivitySection';
 import type { IndexerStatusResult } from '@/lib/indexing-status';
 import type { ComplexityCategory, DataSourceSignal, TemplateSignal } from '@/lib/manifest';
 import type { NetworkInfo } from '@/app/api/networks/route';
@@ -29,13 +30,14 @@ import type { NetworkInfo } from '@/app/api/networks/route';
 // Tab configuration
 // ---------------------------------------------------------------------------
 
-type Tab = 'overview' | 'schema' | 'curators' | 'history' | 'versions' | 'manifest' | 'playground';
+type Tab = 'overview' | 'schema' | 'curators' | 'history' | 'versions' | 'activity' | 'manifest' | 'playground';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'schema', label: 'Schema' },
   { id: 'curators', label: 'Curators' },
   { id: 'history', label: 'History' },
   { id: 'versions', label: 'Versions' },
+  { id: 'activity', label: 'Activity' },
   { id: 'manifest', label: 'Manifest' },
   { id: 'playground', label: 'Playground' },
 ];
@@ -991,6 +993,9 @@ const GraphiQLIDE = dynamic(() => import('@/components/SubgraphGraphiQL'), {
 
 function PlaygroundSection({ hash }: { hash: string }) {
   const endpointPath = `/api/subgraph-playground/${hash}`;
+  // The real decentralised-network gateway endpoint for this deployment. Users
+  // substitute their own Subgraph Studio API key for <api-key>.
+  const gatewayUrl = `https://gateway.thegraph.com/api/<api-key>/deployments/id/${hash}`;
 
   return (
     <div className="space-y-4">
@@ -1003,7 +1008,7 @@ function PlaygroundSection({ hash }: { hash: string }) {
               <button
                 onClick={() => navigator.clipboard.writeText(`${window.location.origin}${endpointPath}`)}
                 className="text-[var(--accent)] hover:text-[var(--text)] transition-colors flex-shrink-0"
-                title="Copy endpoint URL"
+                title="Copy Lodestar proxy URL"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -1013,6 +1018,20 @@ function PlaygroundSection({ hash }: { hash: string }) {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Real decentralised-network gateway endpoint (bring your own API key) */}
+          <div className="mb-3 flex items-center gap-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2">
+            <span className="text-[10px] uppercase tracking-wide text-[var(--text-faint)] shrink-0">Gateway URL</span>
+            <code className="text-xs font-mono text-[var(--text-muted)] truncate flex-1">{gatewayUrl}</code>
+            <button
+              onClick={() => navigator.clipboard.writeText(gatewayUrl)}
+              className="text-[var(--accent)] hover:text-[var(--text)] transition-colors flex-shrink-0"
+              title="Copy gateway query URL"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
           <GraphiQLIDE hash={hash} />
         </CardContent>
       </Card>
@@ -1137,6 +1156,7 @@ function DeploymentPageInner({ hash }: { hash: string }) {
         {activeTab === 'curators' && <CurationSection hash={hash} />}
         {activeTab === 'history' && <HistorySection hash={hash} />}
         {activeTab === 'versions' && <VersionsSection hash={hash} />}
+        {activeTab === 'activity' && <ActivitySection hash={hash} />}
         {activeTab === 'manifest' && <ManifestSection hash={hash} />}
         {activeTab === 'playground' && <PlaygroundSection hash={hash} />}
       </div>
