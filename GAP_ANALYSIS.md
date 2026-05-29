@@ -195,11 +195,11 @@ lifecycle (RFC-004) and (2) health alerting — both committed work below.
 | **Subgraph ownership transfer** | ✅ | ✅ | **Live** — `GNS.safeTransferFrom`, typed double-address confirm |
 | **Deprecate / archive subgraph** | ✅ | ✅ | **Live** — `GNS.deprecateSubgraph`, typed confirm |
 | **Subgraph health monitor + alerting** | ✅ | 🛠️ Planned | Sync/health/errors visible; add webhook/Discord/Slack alerting (Tier 4 #17) |
-| **API key management** (create/rename/regenerate/delete) | ✅ | 🛠️ Planned | Metered Gateway RFC-004 — the replacement-blocker |
+| **API key management** (create / revoke) | ✅ | ✅ | **Live (free tier)** — mint/list/revoke `lod_live_` keys in `/dock` (`ApiKeysPanel`), metered proxy `/api/gateway/[key]`. Non-custodial, RFC-004 Phase A |
 | **API key domain/subgraph restrictions** | ✅ | 🛠️ Planned | RFC-004 Phase 4 (domain/deployment allow-lists) |
 | **Indexer routing preferences per key** | ✅ | 🛠️ Planned | The RFC's *differentiator*: route by Lodestar risk/REO/QoS scores. Out of scope as a commodity, in scope as intelligence-layer routing |
-| **Query usage monitoring per key** | ✅ | 🛠️ Planned | RFC-004 `api_key_usage` metering — **plus a Lodestar analytics overlay Studio lacks** (ships in non-custodial Phase 1) |
-| **Billing** — GRT deposit/withdraw/balance | ✅ | 🛠️ Planned | RFC-004 Phase 2 — prepaid GRT balance, reserve-then-reconcile (the custody step) |
+| **Query usage monitoring per key** | ✅ | ✅ | **Live** — per-key + per-user monthly usage in `/dock` (`api_key_usage` metering) |
+| **Billing** — GRT deposit/withdraw/balance | ✅ | 🛠️ Planned | RFC-004 Phase B — prepaid GRT balance, reserve-then-reconcile (**the custody step — gated on legal review**) |
 
 ---
 
@@ -258,8 +258,9 @@ The decision is "own the pipe", but the RFC's phasing already front-loads value 
 custody, which is exactly the de-risked path:
 
 0. **Phase 0 — Foundations.** ✅ DONE (above).
-1. **Phase 1 — Key CRUD + free tier only.** Mint/list/revoke `lod_live_` keys, proxy with a
-   free 100k/month quota, **NO billing — non-custodial**. This already ships the usage
+1. **Phase 1 — Key CRUD + free tier only.** ✅ **SHIPPED 2026-05-29** — `lod_live_` keys, Vercel
+   proxy, free-tier caps (5k/user, 90k global), `/dock` panel, non-custodial. Mint/list/revoke `lod_live_` keys, proxy with a
+   free quota, **NO billing — non-custodial**. This already ships the usage
    dashboard (the one thing Studio's usage view doesn't match) with **zero regulatory exposure**.
    Build the proxy + key-CRUD routes + `/dock` keys panel; reuse the existing session auth.
 2. **Phase 2 — Deposits + metering.** Deposit watcher (Arbitrum GRT `Transfer` → treasury),
@@ -291,10 +292,12 @@ Reused the existing `/dock` wagmi/viem write infrastructure.
 3. ~~`GNS.deprecateSubgraph`~~ — ✅ deprecate / archive with typed confirm.
 4. ~~"Recently Created" sort~~ — ✅ sortable "Created" column (`subgraphs/page.tsx`). ("Updated" not buildable — no `updatedAt` on the entity.)
 
-### Tier 2 — Metered Gateway, non-custodial first (RFC-004 Phase 1)
-5. 🛠️ RFC-004 **Phase 1** — Lodestar-minted `lod_live_` keys + free 100k/mo quota + the
-   standalone proxy + key-CRUD routes + `/dock` keys & usage panel. **Non-custodial, no
-   billing.** Ships the usage dashboard (Studio's weak spot) with zero regulatory exposure.
+### Tier 2 — ✅ SHIPPED — Metered Gateway, non-custodial (RFC-004 Phase A)
+5. ~~RFC-004 **Phase A**~~ — ✅ Lodestar-minted `lod_live_` keys + free-tier quota (5k/user/mo,
+   90k global kill-switch, env-configurable) + Vercel proxy (`/api/gateway/[key]`) + key-CRUD
+   routes + `/dock` keys & usage panel (`ApiKeysPanel`). **Non-custodial, no billing, zero
+   regulatory exposure.** The paid prepaid-GRT step is **Phase B (Tier 4), gated on a
+   money-transmitter legal review.**
 
 ### Tier 3 — Health monitoring + alerting
 6. 🛠️ Subgraph health monitor with webhook / Discord / Slack alerting (roadmap-q2 Tier 4 #17).
