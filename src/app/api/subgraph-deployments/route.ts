@@ -11,7 +11,7 @@ interface DeploymentRaw {
   queryFeesAmount: string;
   indexerAllocations: { id: string }[];
   curatorSignals: { id: string }[];
-  versions: { subgraph: { metadata: { displayName: string } | null } }[];
+  versions: { subgraph: { metadata: { displayName: string; categories: string[] | null } | null } }[];
 }
 
 const ALLOWED_ORDER_BY = new Set([
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         indexerAllocations(where: { status: Active }) { id }
         curatorSignals { id }
         versions(first: 1, orderBy: createdAt, orderDirection: desc) {
-          subgraph { metadata { displayName } }
+          subgraph { metadata { displayName categories } }
         }
       }
     }`;
@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       const data = result.subgraphDeployments.map((d) => ({
         ...d,
         displayName: d.versions?.[0]?.subgraph?.metadata?.displayName ?? null,
+        categories: d.versions?.[0]?.subgraph?.metadata?.categories ?? [],
         versions: undefined,
       }));
       return NextResponse.json({ data });
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
       }
       versions(first: 1, orderBy: createdAt, orderDirection: desc) {
         subgraph {
-          metadata { displayName }
+          metadata { displayName categories }
         }
       }
     }
@@ -100,6 +101,7 @@ export async function GET(request: NextRequest) {
       return result.subgraphDeployments.map((d) => ({
         ...d,
         displayName: d.versions?.[0]?.subgraph?.metadata?.displayName ?? null,
+        categories: d.versions?.[0]?.subgraph?.metadata?.categories ?? [],
         versions: undefined,
       }));
     });

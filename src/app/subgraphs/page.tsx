@@ -123,6 +123,7 @@ function SubgraphDirectory() {
   const [eliteOnly, setEliteOnly] = useState(() => searchParams.get('elite') === '1');
   const [networkFilter, setNetworkFilter] = useState<string>(() => searchParams.get('network') ?? 'all');
   const [complexityFilter, setComplexityFilter] = useState<string>(() => searchParams.get('complexity') ?? 'all');
+  const [categoryFilter, setCategoryFilter] = useState<string>(() => searchParams.get('category') ?? 'all');
   const [knownNetworks, setKnownNetworks] = useState<Set<string>>(new Set());
   const [rowNetworks, setRowNetworks] = useState<Record<string, string>>({});
   const [knownComplexities, setKnownComplexities] = useState<Set<string>>(new Set());
@@ -149,10 +150,11 @@ function SubgraphDirectory() {
     if (eliteOnly) params.set('elite', '1');
     if (networkFilter !== 'all') params.set('network', networkFilter);
     if (complexityFilter !== 'all') params.set('complexity', complexityFilter);
+    if (categoryFilter !== 'all') params.set('category', categoryFilter);
     const qs = params.toString();
     const target = qs ? `/subgraphs?${qs}` : '/subgraphs';
     router.replace(target, { scroll: false });
-  }, [page, sortKey, sortDesc, searchQuery, feeWindow, eliteOnly, networkFilter, complexityFilter, router]);
+  }, [page, sortKey, sortDesc, searchQuery, feeWindow, eliteOnly, networkFilter, complexityFilter, categoryFilter, router]);
 
   // Networks registry for display names and icons
   const { data: registryData } = useNetworksRegistry();
@@ -244,6 +246,7 @@ function SubgraphDirectory() {
           id: d.id,
           ipfsHash: d.ipfsHash,
           displayName: d.displayName ?? null,
+          categories: d.categories ?? [],
           signal,
           stake,
           queryFees,
@@ -273,6 +276,7 @@ function SubgraphDirectory() {
         id: d.id,
         ipfsHash: d.ipfsHash,
         displayName: d.displayName ?? null,
+        categories: d.categories ?? [],
         signal,
         stake,
         queryFees,
@@ -290,12 +294,20 @@ function SubgraphDirectory() {
     if (eliteOnly) filtered = filtered.filter((r) => r.isElite);
     if (networkFilter !== 'all') filtered = filtered.filter((r) => !rowNetworks[r.ipfsHash] || rowNetworks[r.ipfsHash] === networkFilter);
     if (complexityFilter !== 'all') filtered = filtered.filter((r) => !rowComplexities[r.ipfsHash] || rowComplexities[r.ipfsHash] === complexityFilter);
+    if (categoryFilter !== 'all') filtered = filtered.filter((r) => r.categories.includes(categoryFilter));
     // In 30d mode, paginate client-side
     if (is30d) {
       return filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
     }
     return filtered;
-  }, [allRows, eliteOnly, networkFilter, rowNetworks, complexityFilter, rowComplexities, is30d, page]);
+  }, [allRows, eliteOnly, networkFilter, rowNetworks, complexityFilter, rowComplexities, categoryFilter, is30d, page]);
+
+  // Categories discovered across the loaded rows (for the filter dropdown)
+  const knownCategories = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of allRows) for (const c of r.categories) if (c) s.add(c);
+    return s;
+  }, [allRows]);
 
   // Selection aggregates (across all loaded rows, not just current page)
   const selectedRows = useMemo(
@@ -313,10 +325,11 @@ function SubgraphDirectory() {
       if (eliteOnly) filtered = filtered.filter((r) => r.isElite);
       if (networkFilter !== 'all') filtered = filtered.filter((r) => !rowNetworks[r.ipfsHash] || rowNetworks[r.ipfsHash] === networkFilter);
       if (complexityFilter !== 'all') filtered = filtered.filter((r) => !rowComplexities[r.ipfsHash] || rowComplexities[r.ipfsHash] === complexityFilter);
+      if (categoryFilter !== 'all') filtered = filtered.filter((r) => r.categories.includes(categoryFilter));
       return filtered.length;
     }
     return undefined; // use estimate for all-time
-  }, [allRows, is30d, eliteOnly, networkFilter, rowNetworks, complexityFilter, rowComplexities]);
+  }, [allRows, is30d, eliteOnly, networkFilter, rowNetworks, complexityFilter, rowComplexities, categoryFilter]);
 
   // For all-time mode: estimate total since we don't have count from the subgraph
   const hasFullPage = !is30d && allRows.length === PAGE_SIZE;
@@ -432,6 +445,23 @@ function SubgraphDirectory() {
               .map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
+          </select>
+        )}
+        {knownCategories.size > 0 && (
+          <select
+            value={categoryFilter}
+            onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }}
+            className={cn(
+              'px-3 py-1.5 text-xs rounded-[var(--radius-button)]',
+              'bg-[var(--bg-surface)] border border-[var(--border)]',
+              'text-[var(--text)]',
+              'focus:outline-none focus:border-[var(--accent)]'
+            )}
+          >
+            <option value="all">All Categories</option>
+            {[...knownCategories].sort().map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
           </select>
         )}
         {(knownNetworks.size > 0 || registryData?.networks) && (

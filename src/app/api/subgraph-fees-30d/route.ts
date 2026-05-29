@@ -20,7 +20,7 @@ interface DeploymentDetail {
   queryFeesAmount: string;
   indexerAllocations: { id: string }[];
   curatorSignals: { id: string }[];
-  versions: { subgraph: { metadata: { displayName: string } | null } }[];
+  versions: { subgraph: { metadata: { displayName: string; categories: string[] | null } | null } }[];
 }
 
 interface AggregatedDeployment {
@@ -33,6 +33,7 @@ interface AggregatedDeployment {
   indexerAllocations: { id: string }[];
   curatorSignals: { id: string }[];
   displayName: string | null;
+  categories: string[];
 }
 
 /**
@@ -125,7 +126,7 @@ export async function GET() {
             curatorSignals { id }
             versions(first: 1, orderBy: createdAt, orderDirection: desc) {
               subgraph {
-                metadata { displayName }
+                metadata { displayName categories }
               }
             }
           }
@@ -154,6 +155,7 @@ export async function GET() {
           indexerAllocations: dep.indexerAllocations,
           curatorSignals: dep.curatorSignals,
           displayName: dep.versions?.[0]?.subgraph?.metadata?.displayName ?? null,
+          categories: dep.versions?.[0]?.subgraph?.metadata?.categories ?? [],
         });
       }
 
