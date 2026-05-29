@@ -12,6 +12,7 @@ import { buildSignInMessage } from '@/lib/studio/auth';
 import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import { CONTRACTS } from '@/lib/wallet';
 import { BOUNTY_BOARD_ABI, GRT_ABI, SUBGRAPH_SERVICE_ABI, extractBountyId } from '@/lib/bountyBoard';
+import { SubgraphLifecyclePanel } from '@/components/studio/SubgraphLifecyclePanel';
 import type { StudioSubgraph, SyncBounty } from '@/lib/studio/db';
 
 // ---------------------------------------------------------------------------
@@ -1636,6 +1637,16 @@ function SubgraphDetailModal({
                 <div className="pt-4 border-t border-[var(--border)]">
                   <DeployKeyPanel />
                 </div>
+
+                <SubgraphLifecyclePanel
+                  sg={sg}
+                  displayName={displayName}
+                  description={description}
+                  onUpdated={(updated) => {
+                    setSg(updated);
+                    onUpdated(updated);
+                  }}
+                />
 
                 <div className="pt-4 border-t border-[var(--border)]">
                   <button
