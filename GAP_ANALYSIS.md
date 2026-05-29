@@ -41,10 +41,10 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 | Feature | Explorer | Lodestar | Verified Status |
 |---|---|---|---|
 | Search by **contract address** (find subgraphs indexing it) | ✅ | ✅ | **Live** — `subgraph-search/route.ts` detects `0x` addresses and substring-matches the deployment manifest (`manifest_contains_nocase`). NB: the network subgraph has no indexed data-source address field, so this searches the raw manifest, not `dataSources.source.address` |
-| Category filter: DeFi / NFTs / DAOs | ✅ | ❌ | Missing — has network, complexity, elite filters only (`subgraphs/page.tsx`) |
-| Sort: Most Queried | ✅ | ❌ | Missing — sort keys are `signal \| stake \| queryFees` only |
-| Sort: Recently Created / Recently Updated | ✅ | ❌ | Missing — same sort key enum |
-| Per-subgraph **query count** (not just fees) | ✅ | ❌ | Missing — only fees, signal, stake shown |
+| Category filter: DeFi / NFTs / DAOs | ✅ | ✅ | **Live** — filters on `metadata.categories`, threaded through both data paths with URL sync (`subgraphs/page.tsx`) |
+| Sort: Most Queried | ✅ | ✅ | **Live (as Query Fees)** — the network subgraph exposes no query *count*, only `queryFeesAmount`; the existing Query Fees sort *is* "most queried" |
+| Sort: Recently Created / Recently Updated | ✅ | ❌ | Missing — deferred; needs a new sortable "Created" column (the directory uses column-header sorting) |
+| Per-subgraph **query count** (not just fees) | ✅ | ❌ | Not buildable — network subgraph has no query-count field (gateway-only analytic); only `queryFeesAmount` exists |
 | Filter by indexed chain | ✅ | ✅ | Live |
 | Sort by signal / stake / fees | ✅ | ✅ | Live |
 | Complexity filter (Light/Moderate/Heavy/Extreme) | ❌ | ✅ | Lodestar leads |
@@ -58,8 +58,8 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 |---|---|---|---|
 | **Built-in GraphQL playground** | ✅ Full GraphiQL (schema browser, autocomplete, syntax highlight) | ✅ | **Live** — embedded GraphiQL v4 with schema browser, autocomplete and syntax highlighting, proxied server-side via `GRAPH_API_KEY` (`SubgraphGraphiQL.tsx`) |
 | **Subgraph version history** (semver labels, all deployment IDs, timestamps) | ✅ | ✅ | **Live** — new "Versions" tab lists every version's semver label, deployment ID and timestamp, and flags the current one (`subgraph-versions` route + `VersionsTable`) |
-| **Activity log** (deployments, signals, queries over time) | ✅ | ❌ | Missing — no activity tab exists |
-| **Network gateway query URL** displayed + copyable | ✅ | ❌ | Missing — playground shows lodestar's own proxy path `/api/subgraph-playground/[hash]`, not the actual `gateway.thegraph.com` endpoint |
+| **Activity log** (deployments, signals, queries over time) | ✅ | ✅ | **Live** — "Activity" tab merges version-publish + curator-signal events into a timeline (`ActivitySection`) |
+| **Network gateway query URL** displayed + copyable | ✅ | ✅ | **Live** — real `gateway.thegraph.com/api/<api-key>/deployments/id/[hash]` shown + copyable on the playground tab |
 | Per-subgraph indexer status table (stake, fees, sync status) | ✅ | ✅ | Live — IndexerStatus section shows all allocating indexers |
 | Signal / Unsignal on-chain from subgraph page | ✅ | ✅ | Live (via /curate) |
 | Schema browser | ✅ | ✅ | Live |
@@ -73,7 +73,7 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 
 | Feature | Explorer | Lodestar | Verified Status |
 |---|---|---|---|
-| **Cooldown remaining** column (time until delegation params can change) | ✅ | ❌ | Missing as a table column — data (`delegatorParameterCooldown`) is in row shape and used in comparison/calculator/detail page but not rendered as a directory column (`IndexerTable.tsx` columns: Score, Name, Self Stake, Delegated, Capacity, Reward Cut, APR, APY 90d, Fees, Allocations) |
+| **Cooldown remaining** column (time until delegation params can change) | ✅ | ✅ | **Live** — sortable "Cooldown" column (days remaining) added to `IndexerTable.tsx` |
 | Query Fee Cut % | ✅ | ✅ | Live |
 | Effective Reward Cut | ✅ | ✅ | Live |
 | Owned / Delegated / Allocated stake columns | ✅ | ✅ | Live |
@@ -90,8 +90,8 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 
 | Feature | Explorer | Lodestar | Verified Status |
 |---|---|---|---|
-| **Disputes / slashing history tab** | ✅ | ❌ | Missing — no disputes tab or section found in `indexers/[address]/page.tsx` |
-| **Operator address** display | ✅ | ❌ | Missing — not referenced anywhere in indexer pages |
+| **Disputes / slashing history tab** | ✅ | ✅ | **Live** — "Disputes & Slashing" section (type/status/slashed/burned/fisherman) from the ingested `disputes` table (`DisputesSection`); shows "clean record" when none |
+| **Operator address** display | ✅ | ✅ | **Live** — `account.operators` shown under the indexer address, linked to Arbiscan |
 | **Historical / closed allocations** | ✅ | ✅ | **Live** — "Closed Allocations" table (most recent 50) showing allocated stake, indexing rewards, query fees, duration in epochs and a force-closed flag (`ClosedAllocationsTable`) |
 | **Cooldown remaining** on detail page | ✅ | ✅ | Live — shown inline in the parameters card as "Locked for Xd" when cooldown active |
 | Live node syncing status per deployment | ❌ | ✅ | Lodestar leads |
@@ -106,10 +106,10 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 
 | Feature | Explorer | Lodestar | Verified Status |
 |---|---|---|---|
-| **Epoch status per row**: Active / Settling / Distributing / Finalized | ✅ | ❌ | Missing — `Epoch` type in `queries.ts` has no status field; API only fetches block numbers, fee totals, reward totals |
-| Per-epoch query fees + indexing rewards **table** | ✅ | ❌ | Missing — epoch data exists in API but is used for charts/progress bar, no sortable epoch table |
-| Genesis-to-now cumulative token supply (minted / burned) | ✅ | 🟡 | Partial — charts exist; no clean headline stat |
-| Annual issuance rate displayed (2.75%) | ✅ | ❌ | Missing — minor |
+| **Epoch status per row**: Active / Settling / Distributing / Finalized | ✅ | ✅ | **Live** — derived from epoch number vs current (`epochStatus`); no on-chain status field exists, so it's a labelled approximation |
+| Per-epoch query fees + indexing rewards **table** | ✅ | ✅ | **Live** — "Recent Epochs" table on the network page (`EpochTable`) with status + fees + rewards + block range |
+| Genesis-to-now cumulative token supply (minted / burned) | ✅ | ✅ | **Live** — "Total Supply" headline stat card (chart already existed for the trend) |
+| Annual issuance rate displayed | ✅ | ✅ | **Live** — computed "Annual Issuance (est.)" stat from `networkGRTIssuancePerBlock` × L1 blocks/yr ÷ supply (≈8.6% live; the doc's old "2.75%" was stale) |
 | Current epoch number + progress | ✅ | ✅ | Live |
 | Protocol parameters grid | ✅ | ✅ | Live |
 | Participant counts (indexers / delegators / curators) | ✅ | ✅ | Live |
