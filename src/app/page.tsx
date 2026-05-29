@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useNetworkStats, useGRTPrice, useTVL, useEpochInfo, useSubgraphDeployments30d } from '@/hooks/useNetworkStats';
+import { useNetworkStats, useGRTPrice, useTVL, useEpochInfo, useEpochHistory, useSubgraphDeployments30d } from '@/hooks/useNetworkStats';
+import { EpochTable } from '@/components/EpochTable';
+import { annualIssuancePercent } from '@/lib/network-math';
 import { weiToGRT, formatGRT, formatUSD, formatNumber, formatPPM } from '@/lib/utils';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
@@ -29,8 +31,12 @@ export default function ProtocolOverview() {
   const totalSignalled = network ? weiToGRT(network.totalTokensSignalled) : 0;
   const totalAllocated = network ? weiToGRT(network.totalTokensAllocated) : 0;
   const totalQueryFees = network ? weiToGRT(network.totalQueryFees) : 0;
+  const totalSupply = network?.totalSupply ? weiToGRT(network.totalSupply) : 0;
+  const issuancePerBlockGrt = network?.networkGRTIssuancePerBlock ? weiToGRT(network.networkGRTIssuancePerBlock) : 0;
+  const issuancePct = totalSupply > 0 && issuancePerBlockGrt > 0 ? annualIssuancePercent(issuancePerBlockGrt, totalSupply) : null;
 
   const { epoch: actualEpoch, progress: epochProgress, epochLength } = useEpochInfo();
+  const { data: epochHistory } = useEpochHistory(20);
 
   const topSubgraphs = (subgraphs30d ?? [])
     .slice()
@@ -91,6 +97,17 @@ export default function ProtocolOverview() {
           value={networkLoading ? '—' : `${formatGRT(totalQueryFees)} GRT`}
           loading={networkLoading}
         />
+        <StatCard
+          label="Total Supply"
+          value={networkLoading || totalSupply === 0 ? '—' : `${formatGRT(totalSupply)} GRT`}
+          loading={networkLoading}
+        />
+        <StatCard
+          label="Annual Issuance (est.)"
+          value={issuancePct == null ? '—' : `≈${issuancePct.toFixed(2)}%`}
+          subtitle={issuancePerBlockGrt > 0 ? `${issuancePerBlockGrt.toFixed(1)} GRT / L1 block` : undefined}
+          loading={networkLoading}
+        />
       </StatGrid>
 
       {/* Epoch progress */}
@@ -118,6 +135,16 @@ export default function ProtocolOverview() {
             variant="accent"
             size="lg"
           />
+        </CardContent>
+      </Card>
+
+      {/* Per-epoch fees & rewards with derived status */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Epochs</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <EpochTable epochs={epochHistory?.epoches ?? []} currentEpoch={actualEpoch} />
         </CardContent>
       </Card>
 
