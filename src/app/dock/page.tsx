@@ -1983,6 +1983,8 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
   const [cancelHashes, setCancelHashes] = useState<Record<string, `0x${string}`>>({});
   const [howToOpen, setHowToOpen] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [refundHashes, setRefundHashes] = useState<Record<string, `0x${string}`>>({});
   const [queryOpenIds, setQueryOpenIds] = useState<Set<number>>(new Set());
 
   const toggleQuery = (id: number) =>
@@ -2013,6 +2015,31 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
       address: CONTRACTS.bountyBoard,
       abi: BOUNTY_BOARD_ABI,
       functionName: 'cancel',
+      args: [BigInt(bounty.chain_bounty_id)],
+    });
+  };
+
+  const { writeContract: writeRefund } = useWriteContract({
+    mutation: {
+      onSuccess: (hash) => {
+        if (refundingId) setRefundHashes((prev) => ({ ...prev, [refundingId]: hash }));
+        setRefundingId(null);
+      },
+      onError: (e) => {
+        setRefundingId(null);
+        alert(e.message.slice(0, 200));
+      },
+    },
+  });
+
+  const handleRefund = (bounty: SyncBounty) => {
+    if (!bounty.chain_bounty_id) return;
+    if (!confirm(`Refund expired bounty #${bounty.chain_bounty_id}? The locked GRT returns to the developer.`)) return;
+    setRefundingId(bounty.chain_bounty_id);
+    writeRefund({
+      address: CONTRACTS.bountyBoard,
+      abi: BOUNTY_BOARD_ABI,
+      functionName: 'refundExpired',
       args: [BigInt(bounty.chain_bounty_id)],
     });
   };
@@ -2112,10 +2139,18 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
             {bounties.map((b) => {
               const isOwn = sessionAddress.toLowerCase() === b.developer_address?.toLowerCase();
               const isClaimed = b.status === 'claimed';
+              // Expired = the cache says so, or the deadline has passed (guard against
+              // a not-yet-reconciled row showing a Claim button that would revert).
+              const isExpired =
+                !isClaimed &&
+                (b.status === 'expired' ||
+                  (!!b.expires_at && Date.now() > new Date(b.expires_at).getTime()));
               const cancelTxHash = b.chain_bounty_id ? cancelHashes[b.chain_bounty_id] : undefined;
+              const refundTxHash = b.chain_bounty_id ? refundHashes[b.chain_bounty_id] : undefined;
               const cancelUnlockAt = new Date(new Date(b.created_at).getTime() + 72 * 60 * 60 * 1000);
               const cancelUnlocked = Date.now() >= cancelUnlockAt.getTime();
               const isCancelling = cancellingId === b.chain_bounty_id;
+              const isRefunding = refundingId === b.chain_bounty_id;
               const queryOpen = queryOpenIds.has(b.id);
 
               return (
@@ -2149,6 +2184,11 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                             Claimed
                           </span>
                         )}
+                        {isExpired && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--amber-dim)] text-[var(--amber)] font-medium">
+                            Expired
+                          </span>
+                        )}
                       </div>
                       {b.message && (
                         <p className="text-xs text-[var(--text-muted)] mt-1 italic">&ldquo;{b.message}&rdquo;</p>
@@ -2168,7 +2208,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className={cn('text-base font-semibold', isClaimed ? 'text-[var(--text-muted)] line-through' : 'text-[var(--accent)]')}>
+                      <span className={cn('text-base font-semibold', (isClaimed || isExpired) ? 'text-[var(--text-muted)] line-through' : 'text-[var(--accent)]')}>
                         {b.amount_grt} GRT
                       </span>
                       {isClaimed ? (
@@ -2183,6 +2223,28 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                         >
                           {queryOpen ? 'Hide Query' : 'Query →'}
                         </button>
+                      ) : isExpired && b.chain_bounty_id ? (
+                        refundTxHash ? (
+                          <a
+                            href={`https://arbiscan.io/tx/${refundTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-[var(--text-faint)] hover:underline"
+                          >
+                            Refunding...
+                          </a>
+                        ) : isOwn ? (
+                          <button
+                            onClick={() => handleRefund(b)}
+                            disabled={isRefunding}
+                            className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors disabled:opacity-50"
+                            title="Return the locked GRT to the developer"
+                          >
+                            {isRefunding ? 'Waiting...' : 'Refund'}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-[var(--text-faint)]">Expired</span>
+                        )
                       ) : isOwn && b.chain_bounty_id ? (
                         cancelTxHash ? (
                           <a

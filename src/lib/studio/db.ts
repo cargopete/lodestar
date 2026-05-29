@@ -189,12 +189,27 @@ export async function listBounties(deploymentId?: string): Promise<SyncBounty[]>
   }
   return db!<SyncBounty[]>`
     SELECT * FROM sync_bounties
-    WHERE status IN ('open', 'claimed')
+    WHERE status IN ('open', 'claimed', 'expired')
     ORDER BY
-      CASE status WHEN 'open' THEN 0 ELSE 1 END,
+      CASE status WHEN 'open' THEN 0 WHEN 'claimed' THEN 1 ELSE 2 END,
       amount_grt::numeric DESC,
       created_at DESC
     LIMIT 100
+  `;
+}
+
+/**
+ * Bounties whose cached status may lag the chain — i.e. not yet in a terminal
+ * cache state and backed by an on-chain bounty. Used by the reconcile cron.
+ */
+export async function listReconcilableBounties(): Promise<
+  Pick<SyncBounty, 'id' | 'status' | 'chain_bounty_id' | 'claimed_by'>[]
+> {
+  return db!<Pick<SyncBounty, 'id' | 'status' | 'chain_bounty_id' | 'claimed_by'>[]>`
+    SELECT id, status, chain_bounty_id, claimed_by
+    FROM sync_bounties
+    WHERE status IN ('open', 'claimed')
+      AND chain_bounty_id IS NOT NULL
   `;
 }
 

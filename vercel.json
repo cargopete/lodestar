@@ -51,6 +51,10 @@
     {
       "path": "/api/cron/tap-provision",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-bounties",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
