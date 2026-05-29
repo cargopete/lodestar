@@ -9,16 +9,17 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 
 ## Features
 
-- **Protocol Overview** — Total stake, delegation, signalling, epoch progress, rewards-per-epoch chart, token distribution. Delegation Flows chart shows inflow/outflow bar chart with current-vs-previous period comparison and net GRT summary.
+- **Protocol Overview** — Total stake, delegation, signalling, total supply, estimated annual issuance, epoch progress, a per-epoch fees/rewards table with derived status (Active/Settling/Distributing/Finalized), rewards-per-epoch chart, token distribution. Delegation Flows chart shows inflow/outflow bar chart with current-vs-previous period comparison and net GRT summary.
 - **Intel Feed** — Live protocol intelligence panel with governance proposals, GIP updates, epoch summaries, and announcements sourced from The Graph Forum, GitHub, and on-chain data
-- **Indexer Directory** — Sortable/filterable table with stake, delegation capacity, reward cuts, REO eligibility indicators, recent delegation activity icons, and mobile card view
-- **Indexer Profiles** — Detailed view with allocations, delegator breakdown, Horizon service provisions, REO eligibility assessment, recent delegation activity, and reward cut change alerts
+- **Indexer Directory** — Sortable/filterable table with stake, delegation capacity, reward cuts, delegation-parameter cooldown remaining, REO eligibility indicators, recent delegation activity icons, and mobile card view
+- **Indexer Profiles** — Detailed view with active and historical/closed allocations, operator addresses, disputes & slashing history, delegator breakdown, Horizon service provisions, REO eligibility assessment, recent delegation activity, and reward cut change alerts
 - **Accurate APR & Effective Cut** — Per-allocation signal-weighted APR calculation and effective cut formula matching [grtinfo](https://github.com/ellipfra/grtinfo)
-- **Delegator Portfolio** — Position tracking, rebalancing insights, underperforming position detection, CSV export
+- **Delegator Portfolio** — Position tracking with Active/Thawing/Withdrawable status badges, rebalancing insights, underperforming position detection, CSV export
 - **Curator Portfolio** — Signal positions and query-fee-to-signal ratio analysis across all curators
 - **Curate** — Wallet-connected curation tool: signal and unsignal on subgraphs, manage your own signal portfolio, search deployments by name or IPFS hash, and track per-position query-fee yield
 - **Subgraph Dock** — Developer studio for subgraph publishers: connect with your Studio account, view published subgraphs and sync status, manage metadata (name, description, image, website), generate deploy keys, query live deployments, and interact with the Sync Bounty Board
-- **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting and IPFS manifest complexity scoring (Light→Extreme)
+- **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting, IPFS manifest complexity scoring (Light→Extreme), category filter (DeFi/NFT/DAO), and contract-address search (find subgraphs indexing a given contract)
+- **Subgraph Detail** — Embedded GraphiQL playground (schema browser, autocomplete) with the real copyable gateway query URL, deployment version history (semver labels + IPFS hashes), and an activity timeline (version publishes + curator signal events)
 - **Horizon Activity Feed** — Live on-chain events from the Horizon staking contract — delegations, self-stakes, provisions, slashing, and withdrawals. Refreshes every 30 seconds. Powered by a self-hosted Amp node querying raw Arbitrum One logs. Gracefully degrades if the node is unreachable.
 - **QoS Performance Charts** — Query count, success rate, latency, and blocks-behind timeseries on indexer profiles, sourced from the E&N QoS oracle subgraph
 - **Stake History Charts** — Self-stake and delegation history with cumulative rewards tab
@@ -43,6 +44,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 
 ### Shipped
 
+- [x] Explorer/Studio parity batch — GraphiQL playground, subgraph version history & activity log, real gateway URL, closed allocations, disputes/slashing + operator addresses, cooldown column, per-epoch status table, total-supply & issuance stats, category filter, contract-address search, Withdrawable badge (see `GAP_ANALYSIS.md`)
 - [x] Delegation Flows period comparison — current vs previous window with net GRT and % change (v2.29.0+)
 - [x] Horizon Activity feed — live Amp-powered on-chain event stream (v2.6.0)
 - [x] Push Protocol delegator notifications — opt-in alerts for cut changes and inactive indexers (v2.6.0)

@@ -27,6 +27,7 @@ import {
 } from '@/lib/utils';
 import type { Indexer } from '@/lib/queries';
 import type { EnrichedIndexer } from '@/lib/enriched';
+import { cooldownRemainingDays } from '@/lib/network-math';
 import { Card } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Badge } from '@/components/ui/Badge';
@@ -247,13 +248,11 @@ export function IndexerTable() {
           capacity: e.delegationCapacity.utilizationPercent,
           rewardCut: e.indexingRewardCut,
           queryCut: e.queryFeeCut,
-          cooldownRemaining: (() => {
-            const cd = e.delegatorParameterCooldown ?? 0;
-            const lu = e.lastDelegationParameterUpdate ?? 0;
-            if (cd <= 0) return 0;
-            const remaining = cd - (Math.floor(Date.now() / 1000) - lu);
-            return remaining > 0 ? remaining / 86400 : 0;
-          })(),
+          cooldownRemaining: cooldownRemainingDays(
+            e.delegatorParameterCooldown ?? 0,
+            e.lastDelegationParameterUpdate ?? 0,
+            Math.floor(Date.now() / 1000),
+          ),
           allocations: e.allocationCount,
           allocated: weiToGRT(e.allocatedTokens),
           rewards: weiToGRT(e.rewardsEarned),
@@ -313,13 +312,11 @@ export function IndexerTable() {
           capacity: calculateCapacityUsed(selfStake, delegated, delegationRatio),
           rewardCut: indexer.indexingRewardCut,
           queryCut: indexer.queryFeeCut,
-          cooldownRemaining: (() => {
-            const cd = indexer.delegatorParameterCooldown ?? 0;
-            const lu = indexer.lastDelegationParameterUpdate ?? 0;
-            if (cd <= 0) return 0;
-            const remaining = cd - (Math.floor(Date.now() / 1000) - lu);
-            return remaining > 0 ? remaining / 86400 : 0;
-          })(),
+          cooldownRemaining: cooldownRemainingDays(
+            indexer.delegatorParameterCooldown ?? 0,
+            indexer.lastDelegationParameterUpdate ?? 0,
+            Math.floor(Date.now() / 1000),
+          ),
           allocations: indexer.allocationCount,
           allocated,
           rewards,

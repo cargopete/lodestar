@@ -4,11 +4,8 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { useSubgraphVersions, useSubgraphCuration } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { formatGRT, weiToGRT, shortenAddress, formatRelativeTime } from '@/lib/utils';
-
-type Activity =
-  | { kind: 'version'; ts: number; label: string; version: number; ipfsHash: string }
-  | { kind: 'signal'; ts: number; curator: string; signalledGrt: number };
+import { formatGRT, shortenAddress, formatRelativeTime } from '@/lib/utils';
+import { buildActivityFeed } from '@/lib/subgraph-activity';
 
 /**
  * Per-subgraph activity log, assembled client-side from the version history
@@ -19,18 +16,10 @@ export function ActivitySection({ hash }: { hash: string }) {
   const { data: versionsData, isLoading: vLoading } = useSubgraphVersions(hash);
   const { data: curationData, isLoading: cLoading } = useSubgraphCuration(hash);
 
-  const events = useMemo<Activity[]>(() => {
-    const out: Activity[] = [];
-    for (const v of versionsData?.versions ?? []) {
-      out.push({ kind: 'version', ts: v.createdAt, label: v.label || `v${v.version}`, version: v.version, ipfsHash: v.ipfsHash });
-    }
-    for (const s of curationData?.signals ?? []) {
-      if (s.lastSignalChange > 0) {
-        out.push({ kind: 'signal', ts: s.lastSignalChange, curator: s.curatorAddress, signalledGrt: weiToGRT(s.signalledTokens) });
-      }
-    }
-    return out.sort((a, b) => b.ts - a.ts).slice(0, 50);
-  }, [versionsData, curationData]);
+  const events = useMemo(
+    () => buildActivityFeed(versionsData?.versions ?? [], curationData?.signals ?? []),
+    [versionsData, curationData],
+  );
 
   const isLoading = vLoading || cLoading;
 

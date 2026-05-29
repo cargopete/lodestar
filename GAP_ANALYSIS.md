@@ -123,7 +123,7 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 | **Delegation status column**: Delegating / Undelegating / Withdrawable | ✅ | ✅ | **Live** — a distinct "Withdrawable" badge now surfaces in the portfolio table once the thaw completes, separate from in-progress "Thawing" (`deriveDelegationStatus` / `DelegationStatusBadge`) |
 | **Withdraw thawed GRT** action | ✅ | ✅ | Live — full withdraw flow in `UndelegatePanel.tsx` with mode tabs, transaction status, and calendar reminder |
 | **Undelegate** action (with 25%/50%/ALL quick inputs) | ✅ | ✅ | Live |
-| **Indexer's own tabbed profile** (allocations / delegations / curations / settings) | ✅ | 🟡 | Partial — indexer detail page covers most data but not as a unified tabbed profile |
+| **Indexer's own tabbed profile** (allocations / delegations / curations / settings) | ✅ | 🟡 | 🚫 Won't do — all data is present on the detail page; tabbing it is a cosmetic refactor with regression risk and no new data |
 | **Operator address configuration** (for indexers) | ✅ | ❌ | Missing |
 | **ENS name configuration** | ✅ | ❌ | Missing |
 | Published subgraphs you've created | ✅ | 🟡 | Partial — accessible via /dock |
@@ -145,9 +145,9 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 | **Billing** — GRT deposit/withdraw, credit card, balance | ✅ | 🔒 | Out of scope |
 | **Subgraph version history** list (all past deployment IDs + semver labels) | ✅ | ✅ | **Live** — surfaced via the Versions tab on the subgraph detail page (`subgraph-versions` route) |
 | **Deploy key** display and regeneration | ✅ | ✅ | Live — `/api/studio/deploy-key` with display and regenerate button in /dock |
-| Playground for unpublished / development subgraphs | ✅ | ❌ | Missing |
-| Subgraph metadata editing (name, description, image, links) | ✅ | 🟡 | Partial — via /dock |
-| Subgraph ownership transfer | ✅ | ❌ | Missing |
+| Playground for unpublished / development subgraphs | ✅ | ❌ | 🚫 Won't do — /dock studio scope, deferred |
+| Subgraph metadata editing (name, description, image, links) | ✅ | 🟡 | 🚫 Won't do (for now) — basic editing via /dock; completion deferred |
+| Subgraph ownership transfer | ✅ | ❌ | 🚫 Won't do — irreversible on-chain GNS tx, /dock studio scope |
 
 ---
 
@@ -177,25 +177,28 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 
 6. **API key management** — 🅿️ **explored & parked** (see `RFC-004`, branch `metered-gateway`). The metered prepaid-GRT gateway was designed and Phase 0 built, then parked: at-cost it's a **zero-margin resale of a commodity Studio offers directly** (mint keys, deposit GRT, see usage) while saddling Lodestar with fund custody + regulatory exposure. Conclusion: Lodestar's payable value is the **intelligence layer** (risk/REO/APY/advisor + Lodie AI + an enriched-data API), not the query pipe. Revisit only if monetising that intelligence or if a differentiated gateway angle emerges.
 
-### Tier 2 — Meaningful gaps, moderate effort
+### Tier 2 — ✅ all shipped 2026-05-29
 
-7. **Cooldown remaining column** on indexer table — data is already in the row shape; just add it as an optional column. Low effort.
-8. **Epoch status states** in an epoch table — Active / Settling / Distributing / Finalized. Needs a `status` field added to the epoch GQL query.
-9. **Subgraph activity log** — per-subgraph event history (deployments, signals, queries) as a new tab.
-10. **Disputes / slashing history** on indexer detail — historical dispute events from the network subgraph.
-11. **Subgraph category filters** — DeFi / NFT / DAO classification (could be manual tag mapping or inferred from metadata) + sort by Most Queried / Recently Created.
-12. **Per-subgraph query count** — expose raw query count alongside fees.
-13. **Operator address** display on indexer detail.
-14. **Network gateway query URL** on subgraph detail — show and copy the real `gateway.thegraph.com/api/.../deployments/id/[hash]` endpoint, not just the lodestar proxy path.
+7. ~~**Cooldown remaining column**~~ — ✅ sortable column in `IndexerTable`.
+8. ~~**Epoch status states + per-epoch table**~~ — ✅ `EpochTable` + derived `epochStatus`.
+9. ~~**Subgraph activity log**~~ — ✅ "Activity" tab (`ActivitySection`).
+10. ~~**Disputes / slashing history**~~ — ✅ `DisputesSection` from the ingested `disputes` table.
+11. ~~**Subgraph category filter**~~ — ✅ DeFi/NFT/DAO via `metadata.categories`.
+13. ~~**Operator address**~~ — ✅ shown on indexer detail.
+14. ~~**Network gateway query URL**~~ — ✅ real gateway endpoint shown + copyable.
 
-### Tier 3 — Polish / low effort / minor
+### Tier 3 — partial
 
-15. Token API & Substreams discovery links — nav additions only.
-16. ENS name configuration in profile settings.
-17. Genesis-to-now cumulative token supply headline stat on network page.
-18. Annual issuance rate (2.75%) stat card on network page.
-19. Subgraph ownership transfer UI.
-20. Playground for unpublished/development subgraphs (Studio workflow — lower priority unless /dock expands).
+17. ~~Cumulative token supply headline stat~~ — ✅ "Total Supply" card.
+18. ~~Annual issuance rate~~ — ✅ computed "Annual Issuance (est.)" card (live ≈8.6%; the old "2.75%" was stale).
+15. Token API & Substreams discovery links — nav additions only. *(not yet done — low priority)*
+16. ENS name configuration in profile settings. *(not yet done — low priority)*
+
+### 🚫 Won't do (decided 2026-05-29)
+
+- **Per-subgraph query count** (#12) & **"Recently Created" sort** — query *count* isn't in the network subgraph (gateway-only analytic); "Most Queried" is already the Query Fees sort. Created-sort deferred as low-value.
+- **Unified tabbed indexer profile** — pure cosmetic refactor of a large working page (all data already present); regression risk outweighs benefit.
+- **Subgraph ownership transfer** (#19), **dev-subgraph playground** (#20), **metadata-editing completion** — `/dock` studio scope; ownership transfer is an irreversible on-chain GNS tx. Parked until the studio is a priority.
 
 ---
 

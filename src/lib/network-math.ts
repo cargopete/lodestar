@@ -25,6 +25,21 @@ export function epochStatus(epochId: number, currentEpoch: number): EpochStatus 
 export const L1_BLOCKS_PER_YEAR = Math.round((365.25 * 24 * 3600) / 12.09);
 
 /**
+ * Days remaining until an indexer can next change its delegation parameters.
+ * Returns 0 when no cooldown is configured or it has already elapsed.
+ * All inputs in unix seconds.
+ */
+export function cooldownRemainingDays(
+  cooldownSecs: number,
+  lastUpdateSecs: number,
+  nowSecs: number,
+): number {
+  if (cooldownSecs <= 0) return 0;
+  const remaining = cooldownSecs - (nowSecs - lastUpdateSecs);
+  return remaining > 0 ? remaining / 86400 : 0;
+}
+
+/**
  * Annualised GRT issuance as a percentage of total supply.
  * `issuancePerBlockGrt` and `totalSupplyGrt` are in whole GRT (not wei).
  * Returns 0 for non-positive supply.

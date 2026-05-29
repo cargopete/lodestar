@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { epochStatus, annualIssuancePercent, L1_BLOCKS_PER_YEAR } from '../network-math';
+import { epochStatus, annualIssuancePercent, cooldownRemainingDays, L1_BLOCKS_PER_YEAR } from '../network-math';
 
 describe('epochStatus', () => {
   it('labels the current epoch Active (and anything ahead, defensively)', () => {
@@ -38,5 +38,23 @@ describe('annualIssuancePercent', () => {
   it('uses a sane L1 blocks/year constant (~2.6M)', () => {
     expect(L1_BLOCKS_PER_YEAR).toBeGreaterThan(2_500_000);
     expect(L1_BLOCKS_PER_YEAR).toBeLessThan(2_700_000);
+  });
+});
+
+describe('cooldownRemainingDays', () => {
+  const NOW = 1_800_000_000;
+  it('returns 0 when no cooldown is configured', () => {
+    expect(cooldownRemainingDays(0, NOW - 1000, NOW)).toBe(0);
+  });
+  it('returns 0 when the cooldown has already elapsed', () => {
+    // 7-day cooldown, last update 10 days ago → elapsed
+    expect(cooldownRemainingDays(7 * 86400, NOW - 10 * 86400, NOW)).toBe(0);
+  });
+  it('returns the days remaining mid-cooldown', () => {
+    // 7-day cooldown, last update 2 days ago → 5 days remaining
+    expect(cooldownRemainingDays(7 * 86400, NOW - 2 * 86400, NOW)).toBeCloseTo(5, 6);
+  });
+  it('returns the full period for a just-changed parameter', () => {
+    expect(cooldownRemainingDays(28 * 86400, NOW, NOW)).toBeCloseTo(28, 6);
   });
 });
