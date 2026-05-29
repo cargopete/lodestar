@@ -126,18 +126,21 @@ export function useEpochInfo() {
     return { epoch: 0, progress: 0, epochLength: 0 };
   }
 
-  // The subgraph's currentEpoch only updates when EpochManager is called on-chain,
-  // so it can lag by several epochs. We derive the real epoch by estimating the
-  // current Ethereum L1 block from wall-clock time (post-merge: exactly 12s/block).
-  // epochLength is in L1 blocks, so this gives an accurate epoch calculation.
+  // The epoch number comes straight from the subgraph's graphNetwork.currentEpoch,
+  // which tracks the on-chain EpochManager and is the authoritative value.
+  // (We previously estimated it from wall-clock time assuming exactly 12s/L1-block,
+  // but post-merge blocks average ~12.09s, so that estimate drifted ~1 epoch ahead
+  // every few months — by mid-2026 it was running a full ~10 epochs too high.)
+  const epoch = network.currentEpoch;
+
+  // Progress within the epoch is purely cosmetic (a bar that fills over ~24h), so we
+  // still estimate it from wall-clock time. We anchor it to the estimate's *own* epoch
+  // boundary rather than the subgraph epoch's, which keeps the fraction in [0, 100) and
+  // resetting each epoch instead of pinning at 100% if the two sources disagree slightly.
   const now = Math.floor(Date.now() / 1000);
   const estimatedL1Block = ETH_MERGE_BLOCK + Math.floor((now - ETH_MERGE_TIMESTAMP) / L1_BLOCK_TIME);
-
-  const epoch = network.lastLengthUpdateEpoch +
-    Math.floor((estimatedL1Block - network.lastLengthUpdateBlock) / network.epochLength);
-  const epochStartBlock = network.lastLengthUpdateBlock +
-    (epoch - network.lastLengthUpdateEpoch) * network.epochLength;
-  const blocksIntoEpoch = estimatedL1Block - epochStartBlock;
+  const blocksIntoEpoch =
+    (estimatedL1Block - network.lastLengthUpdateBlock) % network.epochLength;
   const progress = Math.min((blocksIntoEpoch / network.epochLength) * 100, 100);
 
   return { epoch, progress, epochLength: network.epochLength };
