@@ -56,6 +56,7 @@ interface IndexerRow {
   capacity: number;
   rewardCut: number;
   queryCut: number;
+  cooldownRemaining: number; // days until delegation params can change (0 = none)
   allocations: number;
   allocated: number;
   rewards: number;
@@ -246,6 +247,13 @@ export function IndexerTable() {
           capacity: e.delegationCapacity.utilizationPercent,
           rewardCut: e.indexingRewardCut,
           queryCut: e.queryFeeCut,
+          cooldownRemaining: (() => {
+            const cd = e.delegatorParameterCooldown ?? 0;
+            const lu = e.lastDelegationParameterUpdate ?? 0;
+            if (cd <= 0) return 0;
+            const remaining = cd - (Math.floor(Date.now() / 1000) - lu);
+            return remaining > 0 ? remaining / 86400 : 0;
+          })(),
           allocations: e.allocationCount,
           allocated: weiToGRT(e.allocatedTokens),
           rewards: weiToGRT(e.rewardsEarned),
@@ -305,6 +313,13 @@ export function IndexerTable() {
           capacity: calculateCapacityUsed(selfStake, delegated, delegationRatio),
           rewardCut: indexer.indexingRewardCut,
           queryCut: indexer.queryFeeCut,
+          cooldownRemaining: (() => {
+            const cd = indexer.delegatorParameterCooldown ?? 0;
+            const lu = indexer.lastDelegationParameterUpdate ?? 0;
+            if (cd <= 0) return 0;
+            const remaining = cd - (Math.floor(Date.now() / 1000) - lu);
+            return remaining > 0 ? remaining / 86400 : 0;
+          })(),
           allocations: indexer.allocationCount,
           allocated,
           rewards,
@@ -511,6 +526,15 @@ export function IndexerTable() {
             </div>
           );
         },
+      }),
+      columnHelper.accessor('cooldownRemaining', {
+        header: () => <HeaderTip label="Cooldown" tip="Days until this indexer can next change its delegation parameters (cut, etc.). A longer cooldown means more predictable terms for delegators. '—' means no cooldown is currently active." />,
+        cell: (info) => {
+          const days = info.getValue();
+          if (!days || days <= 0) return <span className="text-[var(--text-faint)]">—</span>;
+          return <span className="font-mono text-[var(--text)]">{Math.ceil(days)}d</span>;
+        },
+        sortUndefined: 'last',
       }),
       columnHelper.accessor('apr', {
         header: () => <HeaderTip label="APR" tip="Forward-looking annualised return based on live allocations. Calculated against active delegation only — thawing tokens are excluded so they don't depress the figure. Snapshot, not a guarantee." />,

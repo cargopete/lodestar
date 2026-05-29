@@ -327,6 +327,33 @@ export function useSubgraphVersions(hash: string | null) {
   });
 }
 
+export interface IndexerDispute {
+  id: string;
+  dispute_type: string | null;
+  fisherman: string | null;
+  allocation_id: string | null;
+  deployment_id: string | null;
+  status: string | null;
+  tokens_slashed_grt: string | null;
+  tokens_burned_grt: string | null;
+  created_at: string | null;
+  closed_at: string | null;
+}
+
+export function useIndexerDisputes(address: string) {
+  return useQuery({
+    queryKey: ['indexerDisputes', address],
+    queryFn: async () => {
+      const res = await fetch(`/api/indexer-disputes/${address.toLowerCase()}`);
+      if (!res.ok) throw new Error('Failed to fetch disputes');
+      return (await res.json()) as { disputes: IndexerDispute[] };
+    },
+    staleTime: FIVE_MINUTES,
+    enabled: !!address,
+    retry: 1,
+  });
+}
+
 /**
  * Hook for REO (Rewards Eligibility Oracle) status
  */

@@ -17,6 +17,7 @@ import {
   cn,
 } from '@/lib/utils';
 import { ClosedAllocationsTable, type ClosedAllocation } from '@/components/indexer/ClosedAllocationsTable';
+import { DisputesSection } from '@/components/indexer/DisputesSection';
 import { calculateDelegationCapacity } from '@/lib/rewards';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -38,6 +39,7 @@ interface IndexerDetail {
   account: {
     id: string;
     defaultDisplayName: string | null;
+    operators?: { id: string }[] | null;
     metadata?: { displayName?: string | null; description?: string | null; website?: string | null } | null;
   };
   stakedTokens: string;
@@ -263,6 +265,25 @@ export default function IndexerDetailPage({
                 </svg>
               </a>
             </div>
+            {indexer.account.operators && indexer.account.operators.length > 0 && (
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <span className="text-[11px] text-[var(--text-faint)]">
+                  Operator{indexer.account.operators.length > 1 ? 's' : ''}:
+                </span>
+                {indexer.account.operators.map((op) => (
+                  <a
+                    key={op.id}
+                    href={`https://arbiscan.io/address/${op.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                    title={op.id}
+                  >
+                    {shortenAddress(op.id)}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
@@ -1008,6 +1029,9 @@ export default function IndexerDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Disputes & Slashing history */}
+      <DisputesSection address={address} />
 
       {/* Service Provisions */}
       <ProvisionsPanel

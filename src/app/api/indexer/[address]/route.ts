@@ -31,6 +31,7 @@ export async function GET(
           account {
             id
             defaultDisplayName
+            operators { id }
             metadata {
               displayName
               description
