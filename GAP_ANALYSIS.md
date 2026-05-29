@@ -174,8 +174,8 @@ gated on a money-transmitter legal review.
 | **Withdraw thawed GRT** | ✅ | ✅ | Live — full flow in `UndelegatePanel.tsx` |
 | **Undelegate** (25%/50%/ALL) | ✅ | ✅ | Live |
 | Indexer's own tabbed profile | ✅ | 🟡 | All data present on detail page; tabbing is a cosmetic refactor — low priority, not blocking replacement |
-| **Operator address configuration** (indexers) | ✅ | 🛠️ Planned | Promoted from "won't do" — needed so an indexer never opens Explorer settings either |
-| **ENS name configuration** | ✅ | 🛠️ Planned | Promoted from "won't do" for the same reason |
+| **Operator address configuration** (indexers) | ✅ | 🚫 Won't do | Niche indexer settings-write; indexers overwhelmingly set the operator via their own agent/CLI tooling, not a dashboard. Low value-to-effort |
+| **ENS name configuration** | ✅ | 🚫 Won't do | Settings-write, low value; ENS is set once via the ENS app and rarely changed. Not worth the on-chain write surface |
 | Published subgraphs you've created | ✅ | ✅ | Surfaced via `/dock` (developer's own subgraph list) |
 | Thawing countdown timer | ✅ | ✅ | Live |
 | Delegation position cards | ✅ | ✅ | Live |
@@ -302,7 +302,7 @@ Reused the existing `/dock` wagmi/viem write infrastructure.
 
 ### Tier 3 — Health monitoring + alerting (partially shipped)
 6. ~~Subgraph health monitor with webhook / Discord / Slack alerting~~ — ✅ **SHIPPED** — non-custodial per-subgraph webhook alerts, edge-triggered, 15-min `check-subgraph-health` cron querying each indexer's `/status`.
-7. 🛠️ Indexer/operator settings writes (operator address, ENS) so indexers also never open Explorer.
+7. 🚫 **Won't do** — Indexer operator-address / ENS settings writes. Niche settings-writes that indexers do via their own agent/CLI/the ENS app, not a dashboard; not worth the on-chain write surface.
 
 ### Tier 4 — Custodial gateway (gated)
 8. 🛠️ RFC-004 **Phase 2** — deposit watcher + prepaid balance + reserve-commit metering.
@@ -312,6 +312,8 @@ Reused the existing `/dock` wagmi/viem write infrastructure.
 10. 🛠️ RFC-004 **Phase 4** — per-key domain/deployment restrictions, spend caps, rate recalibration.
 
 ### 🔒 Out of scope / deferred
+- **Indexer operator-address / ENS settings writes** — won't do; indexers set these via their
+  own agent/CLI/the ENS app, not a dashboard.
 - **Indexer routing preferences per key** — gateway-internal at The Graph; not ours to control
   unless we operate routing ourselves.
 - **Token API / Substreams discovery links** — low value; revisit only if it blocks a user.
