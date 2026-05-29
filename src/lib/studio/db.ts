@@ -25,6 +25,18 @@ export interface DeployKey {
   last_used_at: string | null;
 }
 
+export interface StudioApiKey {
+  id: number;
+  owner_address: string;
+  label: string | null;
+  key_hash: string;
+  key_prefix: string;
+  status: 'active' | 'revoked';
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+}
+
 export interface SyncBounty {
   id: number;
   deployment_id: string;
@@ -173,6 +185,97 @@ export async function findOwnerByKeyHash(keyHash: string): Promise<string | null
   if (!rows[0]) return null;
   await db!`UPDATE studio_deploy_keys SET last_used_at = NOW() WHERE key_hash = ${keyHash}`;
   return rows[0].owner_address;
+}
+
+// ---------------------------------------------------------------------------
+// Metered gateway API keys (RFC-004 Phase A — free-tier only, NO billing)
+// ---------------------------------------------------------------------------
+
+export async function listApiKeys(owner: string): Promise<StudioApiKey[]> {
+  return db!<StudioApiKey[]>`
+    SELECT * FROM studio_api_keys
+    WHERE owner_address = ${owner.toLowerCase()}
+    ORDER BY created_at DESC
+  `;
+}
+
+export async function createApiKey(
+  owner: string,
+  label: string | null,
+  keyHash: string,
+  keyPrefix: string,
+): Promise<StudioApiKey> {
+  const [row] = await db!<StudioApiKey[]>`
+    INSERT INTO studio_api_keys (owner_address, label, key_hash, key_prefix)
+    VALUES (${owner.toLowerCase()}, ${label}, ${keyHash}, ${keyPrefix})
+    RETURNING *
+  `;
+  return row;
+}
+
+export async function revokeApiKey(id: number, owner: string): Promise<void> {
+  await db!`
+    UPDATE studio_api_keys
+    SET status = 'revoked', revoked_at = NOW()
+    WHERE id = ${id} AND owner_address = ${owner.toLowerCase()}
+  `;
+}
+
+/**
+ * Look up a key by its hash for proxy auth, bumping last_used_at.
+ * Returns the id/owner/status (caller checks status === 'active').
+ */
+export async function findApiKeyByHash(
+  keyHash: string,
+): Promise<{ id: number; owner_address: string; status: string } | null> {
+  const rows = await db!<{ id: number; owner_address: string; status: string }[]>`
+    SELECT id, owner_address, status
+    FROM studio_api_keys
+    WHERE key_hash = ${keyHash}
+  `;
+  if (!rows[0]) return null;
+  await db!`UPDATE studio_api_keys SET last_used_at = NOW() WHERE key_hash = ${keyHash}`;
+  return rows[0];
+}
+
+/** Upsert the per-key, per-month meter by +1. */
+export async function incrementKeyUsage(keyId: number, period: string): Promise<void> {
+  await db!`
+    INSERT INTO api_key_usage (key_id, period, query_count)
+    VALUES (${keyId}, ${period}, 1)
+    ON CONFLICT (key_id, period)
+    DO UPDATE SET query_count = api_key_usage.query_count + 1
+  `;
+}
+
+/** Current period's query_count for one key (0 if none). */
+export async function getKeyUsage(keyId: number, period: string): Promise<number> {
+  const rows = await db!<{ query_count: string }[]>`
+    SELECT query_count FROM api_key_usage
+    WHERE key_id = ${keyId} AND period = ${period}
+  `;
+  return rows[0] ? Number(rows[0].query_count) : 0;
+}
+
+/** Total queries across ALL keys for the period (global free-tier ceiling). */
+export async function getGlobalUsage(period: string): Promise<number> {
+  const rows = await db!<{ total: string | null }[]>`
+    SELECT COALESCE(SUM(query_count), 0) AS total
+    FROM api_key_usage
+    WHERE period = ${period}
+  `;
+  return rows[0] ? Number(rows[0].total) : 0;
+}
+
+/** Total queries across one owner's keys for the period (per-user cap is per-USER). */
+export async function getOwnerUsage(owner: string, period: string): Promise<number> {
+  const rows = await db!<{ total: string | null }[]>`
+    SELECT COALESCE(SUM(u.query_count), 0) AS total
+    FROM api_key_usage u
+    JOIN studio_api_keys k ON k.id = u.key_id
+    WHERE k.owner_address = ${owner.toLowerCase()} AND u.period = ${period}
+  `;
+  return rows[0] ? Number(rows[0].total) : 0;
 }
 
 // ---------------------------------------------------------------------------

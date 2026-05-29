@@ -13,6 +13,7 @@ import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import { CONTRACTS } from '@/lib/wallet';
 import { BOUNTY_BOARD_ABI, GRT_ABI, SUBGRAPH_SERVICE_ABI, extractBountyId } from '@/lib/bountyBoard';
 import { SubgraphLifecyclePanel } from '@/components/studio/SubgraphLifecyclePanel';
+import ApiKeysPanel from '@/components/studio/ApiKeysPanel';
 import type { StudioSubgraph, SyncBounty } from '@/lib/studio/db';
 
 // ---------------------------------------------------------------------------
@@ -1637,6 +1638,9 @@ function SubgraphDetailModal({
                 <div className="pt-4 border-t border-[var(--border)]">
                   <DeployKeyPanel />
                 </div>
+
+                {/* Query API keys (RFC-004 Phase A — metered gateway, free-tier) */}
+                <ApiKeysPanel />
 
                 <SubgraphLifecyclePanel
                   sg={sg}
