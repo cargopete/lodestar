@@ -1,6 +1,6 @@
 # Lodestar vs. Graph Explorer & Studio — Gap Analysis
 
-> Last updated: 2026-05-28  
+> Last updated: 2026-05-29  
 > Goal: reach feature parity with official Graph products.  
 > Status legend: ✅ Live | 🟡 Partial | ❌ Missing | 🔒 Out of scope  
 > All items verified by reading actual source code — not inferred.
@@ -39,7 +39,7 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 
 | Feature | Explorer | Lodestar | Verified Status |
 |---|---|---|---|
-| Search by **contract address** (find subgraphs indexing it) | ✅ | ❌ | Missing — search only accepts name or Qm hash (`subgraph-search/route.ts`) |
+| Search by **contract address** (find subgraphs indexing it) | ✅ | ✅ | **Live** — `subgraph-search/route.ts` detects `0x` addresses and substring-matches the deployment manifest (`manifest_contains_nocase`). NB: the network subgraph has no indexed data-source address field, so this searches the raw manifest, not `dataSources.source.address` |
 | Category filter: DeFi / NFTs / DAOs | ✅ | ❌ | Missing — has network, complexity, elite filters only (`subgraphs/page.tsx`) |
 | Sort: Most Queried | ✅ | ❌ | Missing — sort keys are `signal \| stake \| queryFees` only |
 | Sort: Recently Created / Recently Updated | ✅ | ❌ | Missing — same sort key enum |
@@ -55,8 +55,8 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 
 | Feature | Explorer | Lodestar | Verified Status |
 |---|---|---|---|
-| **Built-in GraphQL playground** | ✅ Full GraphiQL (schema browser, autocomplete, syntax highlight) | 🟡 | Partial — custom textarea + run button + response panel, proxied server-side via `GRAPH_API_KEY`. Functional but no schema browser, autocomplete, or syntax highlighting |
-| **Subgraph version history** (semver labels, all deployment IDs, timestamps) | ✅ | ❌ | Missing — "History" tab is a signal/stake/fees chart, not a deployment version list |
+| **Built-in GraphQL playground** | ✅ Full GraphiQL (schema browser, autocomplete, syntax highlight) | ✅ | **Live** — embedded GraphiQL v4 with schema browser, autocomplete and syntax highlighting, proxied server-side via `GRAPH_API_KEY` (`SubgraphGraphiQL.tsx`) |
+| **Subgraph version history** (semver labels, all deployment IDs, timestamps) | ✅ | ✅ | **Live** — new "Versions" tab lists every version's semver label, deployment ID and timestamp, and flags the current one (`subgraph-versions` route + `VersionsTable`) |
 | **Activity log** (deployments, signals, queries over time) | ✅ | ❌ | Missing — no activity tab exists |
 | **Network gateway query URL** displayed + copyable | ✅ | ❌ | Missing — playground shows lodestar's own proxy path `/api/subgraph-playground/[hash]`, not the actual `gateway.thegraph.com` endpoint |
 | Per-subgraph indexer status table (stake, fees, sync status) | ✅ | ✅ | Live — IndexerStatus section shows all allocating indexers |
@@ -91,7 +91,7 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 |---|---|---|---|
 | **Disputes / slashing history tab** | ✅ | ❌ | Missing — no disputes tab or section found in `indexers/[address]/page.tsx` |
 | **Operator address** display | ✅ | ❌ | Missing — not referenced anywhere in indexer pages |
-| **Historical / closed allocations** | ✅ | ❌ | Missing — only active allocations are fetched and displayed; no closed allocation table |
+| **Historical / closed allocations** | ✅ | ✅ | **Live** — "Closed Allocations" table (most recent 50) showing allocated stake, indexing rewards, query fees, duration in epochs and a force-closed flag (`ClosedAllocationsTable`) |
 | **Cooldown remaining** on detail page | ✅ | ✅ | Live — shown inline in the parameters card as "Locked for Xd" when cooldown active |
 | Live node syncing status per deployment | ❌ | ✅ | Lodestar leads |
 | REO eligibility + renewal countdown | ❌ | ✅ | Lodestar leads |
@@ -119,7 +119,7 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 
 | Feature | Explorer | Lodestar | Verified Status |
 |---|---|---|---|
-| **Delegation status column**: Delegating / Undelegating / Withdrawable | ✅ | 🟡 | Partial — Status column exists showing "Active" / "Thawing" / "Closed" badges, but "Thawing" covers both still-thawing and ready-to-withdraw states. `UndelegatePanel` does detect `thawing.isComplete` and shows a green "Ready to withdraw" button — it just isn't reflected back in the table badge |
+| **Delegation status column**: Delegating / Undelegating / Withdrawable | ✅ | ✅ | **Live** — a distinct "Withdrawable" badge now surfaces in the portfolio table once the thaw completes, separate from in-progress "Thawing" (`deriveDelegationStatus` / `DelegationStatusBadge`) |
 | **Withdraw thawed GRT** action | ✅ | ✅ | Live — full withdraw flow in `UndelegatePanel.tsx` with mode tabs, transaction status, and calendar reminder |
 | **Undelegate** action (with 25%/50%/ALL quick inputs) | ✅ | ✅ | Live |
 | **Indexer's own tabbed profile** (allocations / delegations / curations / settings) | ✅ | 🟡 | Partial — indexer detail page covers most data but not as a unified tabbed profile |
@@ -142,7 +142,7 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 | **Indexer routing preferences per key** (speed / price / freshness / security) | ✅ | ❌ | Missing |
 | **Query usage monitoring per key** (queries executed, GRT spent, spending limits) | ✅ | ❌ | Missing |
 | **Billing** — GRT deposit/withdraw, credit card, balance | ✅ | 🔒 | Out of scope |
-| **Subgraph version history** list (all past deployment IDs + semver labels) | ✅ | ❌ | Missing — /dock stores current `version_label` only, no history list |
+| **Subgraph version history** list (all past deployment IDs + semver labels) | ✅ | ✅ | **Live** — surfaced via the Versions tab on the subgraph detail page (`subgraph-versions` route) |
 | **Deploy key** display and regeneration | ✅ | ✅ | Live — `/api/studio/deploy-key` with display and regenerate button in /dock |
 | Playground for unpublished / development subgraphs | ✅ | ❌ | Missing |
 | Subgraph metadata editing (name, description, image, links) | ✅ | 🟡 | Partial — via /dock |
@@ -164,12 +164,17 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 
 ### Tier 1 — High impact, core parity, buildable now
 
-1. **GraphQL playground upgrade** — swap the textarea for a proper embedded GraphiQL (schema browser, autocomplete, syntax highlighting). The API proxy already exists at `/api/subgraph-playground/[hash]`; just replace the UI layer.
-2. **"Withdrawable" delegation status badge** — the logic already exists in `UndelegatePanel.tsx` (`thawing.isComplete`); surface it as a third badge state in the portfolio table so users can see at a glance which positions are ready to withdraw without opening the manage panel.
-3. **Contract address search** on subgraph directory — enter a contract address, get subgraphs that index it. Needs a new branch in `subgraph-search/route.ts` querying `dataSources.source.address`.
-4. **Subgraph version history tab** — list all past deployment IDs with semver labels and timestamps. Data available from GNS subgraph via `subgraph.versions`.
-5. **Historical / closed allocations** on indexer detail — a second table (or tab) showing closed allocations alongside active ones.
-6. **API key management** — Studio's primary developer feature. Even a basic version (create, view, delete, restrict by domain) would close a major gap for developers using Lodestar as a Studio alternative.
+**✅ Shipped 2026-05-29:**
+
+1. ~~**GraphQL playground upgrade**~~ — ✅ embedded GraphiQL v4 (schema browser, autocomplete, syntax highlighting) reusing the existing `/api/subgraph-playground/[hash]` proxy (`SubgraphGraphiQL.tsx`).
+2. ~~**"Withdrawable" delegation status badge**~~ — ✅ distinct badge state via `deriveDelegationStatus` / `DelegationStatusBadge`, surfaced in the portfolio table.
+3. ~~**Contract address search**~~ — ✅ `subgraph-search/route.ts` substring-matches the deployment manifest (`manifest_contains_nocase`). The originally-assumed `dataSources.source.address` field does **not** exist on the network subgraph — the raw manifest string is searched instead.
+4. ~~**Subgraph version history tab**~~ — ✅ "Versions" tab + `subgraph-versions` route + `VersionsTable`, listing semver labels, deployment IDs and timestamps.
+5. ~~**Historical / closed allocations**~~ — ✅ "Closed Allocations" table on indexer detail (`ClosedAllocationsTable`).
+
+**Remaining:**
+
+6. **API key management** — Studio's primary developer feature. Even a basic version (create, view, delete, restrict by domain) would close a major gap for developers using Lodestar as a Studio alternative. Now the largest remaining Tier 1 gap.
 
 ### Tier 2 — Meaningful gaps, moderate effort
 
@@ -199,5 +204,7 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 - **Cooldown remaining** is present on the indexer *detail* page already; the gap is only the directory *table* column.
 - **Deploy key** in /dock is fully live — not a gap.
 - **Delegation withdraw** is fully live — not a gap.
-- **GraphQL playground** is functional (not a link) — the gap is upgrade quality (schema browser / autocomplete), not existence.
-- Tier 1 item #6 (API key management) is the biggest lift but also the most differentiating Studio feature Lodestar doesn't touch at all.
+- **GraphQL playground** is now full GraphiQL (schema browser / autocomplete / highlighting) — gap closed.
+- **Contract-address search** searches the raw deployment manifest string; the network subgraph exposes no indexed data-source address field, so per-address `where` filtering isn't possible — `manifest_contains_nocase` is the workable approach.
+- **Closed allocations** are capped at the 50 most recent (history can be very large); the cap is intentional, not pagination.
+- Tier 1 item #6 (API key management) is now the biggest remaining lift — the most differentiating Studio feature Lodestar doesn't touch at all.
