@@ -14,6 +14,7 @@ import { CONTRACTS } from '@/lib/wallet';
 import { BOUNTY_BOARD_ABI, GRT_ABI, SUBGRAPH_SERVICE_ABI, extractBountyId } from '@/lib/bountyBoard';
 import { SubgraphLifecyclePanel } from '@/components/studio/SubgraphLifecyclePanel';
 import ApiKeysPanel from '@/components/studio/ApiKeysPanel';
+import SubgraphAlertsPanel from '@/components/studio/SubgraphAlertsPanel';
 import type { StudioSubgraph, SyncBounty } from '@/lib/studio/db';
 
 // ---------------------------------------------------------------------------
@@ -1641,6 +1642,13 @@ function SubgraphDetailModal({
 
                 {/* Query API keys (RFC-004 Phase A — metered gateway, free-tier) */}
                 <ApiKeysPanel />
+
+                {sg.deployment_id && (
+                  <SubgraphAlertsPanel
+                    deploymentId={sg.deployment_id}
+                    label={displayName || sg.display_name}
+                  />
+                )}
 
                 <SubgraphLifecyclePanel
                   sg={sg}

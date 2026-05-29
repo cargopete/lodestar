@@ -194,7 +194,7 @@ lifecycle (RFC-004) and (2) health alerting — both committed work below.
 | **On-chain metadata update (post-publish)** | ✅ | ✅ | **Live** — `GNS.updateSubgraphMetadata` (`SubgraphLifecyclePanel.tsx`) |
 | **Subgraph ownership transfer** | ✅ | ✅ | **Live** — `GNS.safeTransferFrom`, typed double-address confirm |
 | **Deprecate / archive subgraph** | ✅ | ✅ | **Live** — `GNS.deprecateSubgraph`, typed confirm |
-| **Subgraph health monitor + alerting** | ✅ | 🛠️ Planned | Sync/health/errors visible; add webhook/Discord/Slack alerting (Tier 4 #17) |
+| **Subgraph health monitor + alerting** | ✅ | ✅ | **Live** — per-subgraph webhook alerts (Discord/Slack), cron `check-subgraph-health` queries each indexer's `/status`, edge-triggered lagging/failed/recovered notifications (`SubgraphAlertsPanel`) |
 | **API key management** (create / revoke) | ✅ | ✅ | **Live (free tier)** — mint/list/revoke `lod_live_` keys in `/dock` (`ApiKeysPanel`), metered proxy `/api/gateway/[key]`. Non-custodial, RFC-004 Phase A |
 | **API key domain/subgraph restrictions** | ✅ | 🛠️ Planned | RFC-004 Phase 4 (domain/deployment allow-lists) |
 | **Indexer routing preferences per key** | ✅ | 🛠️ Planned | The RFC's *differentiator*: route by Lodestar risk/REO/QoS scores. Out of scope as a commodity, in scope as intelligence-layer routing |
