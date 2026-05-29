@@ -70,16 +70,16 @@ The previous revision of this doc badly undersold `/dock`. Verified against
 | **Publish new version (on-chain)** | ✅ | Real `GNS.publishNewVersion(subgraphId, deploymentId, versionMeta)` write |
 | GraphQL playground / query | ✅ | Session-auth'd gateway proxy (`/api/studio/query/[id]`) + embedded GraphiQL on the public subgraph page |
 | Post / claim / cancel / refund sync bounties | ✅ | Full BountyBoard flow on-chain (`post`/`claim`/`cancel`/`refundExpired`) |
-| **Update subgraph metadata on-chain (post-publish)** | 🛠️ Planned | Only off-chain display-name/description edited today; on-chain `updateSubgraphMetadata` not yet wired |
-| **Transfer subgraph ownership** | 🛠️ Planned | GNS NFT transfer — not yet wired (previously "won't do", now committed) |
-| **Deprecate / archive subgraph** | 🛠️ Planned | GNS `deprecateSubgraph` — not yet wired |
+| **Update subgraph metadata on-chain (post-publish)** | ✅ | **Live** — `GNS.updateSubgraphMetadata` from the `/dock` lifecycle panel, reusing the IPFS metadata route (`SubgraphLifecyclePanel.tsx`) |
+| **Transfer subgraph ownership** | ✅ | **Live** — `GNS.safeTransferFrom` behind a typed double-address confirmation (`SubgraphLifecyclePanel.tsx`) |
+| **Deprecate / archive subgraph** | ✅ | **Live** — `GNS.deprecateSubgraph` behind a typed "DEPRECATE" confirmation (`SubgraphLifecyclePanel.tsx`) |
 | **Subgraph health monitor + alerting** | 🛠️ Planned | Sync status/health/errors visible (`/api/indexing-status`); webhook/Discord/Slack alerting not built |
 | **API-key lifecycle** (mint / restrict / usage / spend) | 🛠️ Planned | The one true tether to Studio. See **Metered Gateway (RFC-004)** below |
 | Billing — GRT deposit/withdraw/balance | 🛠️ Planned | Part of the gateway plan; on-chain billing ledger |
 
-**Verdict:** the publish pipeline is real and on-chain. The replacement-blocking gaps are
-(1) the query-key lifecycle, (2) the cheap on-chain lifecycle writes, and (3) health alerting.
-All three are now committed work (below) rather than "won't do".
+**Verdict:** the publish pipeline AND the full on-chain lifecycle (metadata update / transfer /
+deprecate) are now shipped. The only remaining replacement-blocking gaps are (1) the query-key
+lifecycle (RFC-004) and (2) health alerting — both committed work below.
 
 ---
 
@@ -92,7 +92,7 @@ All three are now committed work (below) rather than "won't do".
 | Search by **contract address** | ✅ | ✅ | **Live** — `subgraph-search/route.ts` substring-matches the deployment manifest (`manifest_contains_nocase`); network subgraph has no indexed data-source address field |
 | Category filter: DeFi / NFTs / DAOs | ✅ | ✅ | **Live** — filters on `metadata.categories` with URL sync (`subgraphs/page.tsx`) |
 | Sort: Most Queried | ✅ | ✅ | **Live (as Query Fees)** — network subgraph exposes only `queryFeesAmount`, not query count |
-| Sort: Recently Created / Updated | ✅ | 🛠️ Planned | Promoted from "deferred" — needed for full Explorer replacement; add a sortable "Created" column |
+| Sort: Recently Created | ✅ | ✅ | **Live** — sortable "Created" column on the directory (`subgraphs/page.tsx`), server-side `orderBy: createdAt`. "Recently Updated" not offered — the entity has no `updatedAt` |
 | Per-subgraph **query count** | ✅ | ❌ | Not buildable from the network subgraph (gateway-only analytic). **Becomes buildable** for subgraphs routed through the Lodestar gateway (RFC-004) |
 | Filter by indexed chain | ✅ | ✅ | Live |
 | Sort by signal / stake / fees | ✅ | ✅ | Live |
@@ -191,9 +191,9 @@ All three are now committed work (below) rather than "won't do".
 | **Deploy key** display + regeneration | ✅ | ✅ | Live (`/api/studio/deploy-key`) |
 | **Playground / query proxy** | ✅ | ✅ | Live (`/api/studio/query/[id]` + GraphiQL) |
 | **IPFS upload for `graph-cli`** | ✅ | ✅ | Live (`/api/studio/ipfs/[...path]`) |
-| **On-chain metadata update (post-publish)** | ✅ | 🛠️ Planned | `GNS.updateSubgraphMetadata` — cheap, we already do GNS writes |
-| **Subgraph ownership transfer** | ✅ | 🛠️ Planned | GNS NFT transfer — promoted from "won't do" |
-| **Deprecate / archive subgraph** | ✅ | 🛠️ Planned | `GNS.deprecateSubgraph` |
+| **On-chain metadata update (post-publish)** | ✅ | ✅ | **Live** — `GNS.updateSubgraphMetadata` (`SubgraphLifecyclePanel.tsx`) |
+| **Subgraph ownership transfer** | ✅ | ✅ | **Live** — `GNS.safeTransferFrom`, typed double-address confirm |
+| **Deprecate / archive subgraph** | ✅ | ✅ | **Live** — `GNS.deprecateSubgraph`, typed confirm |
 | **Subgraph health monitor + alerting** | ✅ | 🛠️ Planned | Sync/health/errors visible; add webhook/Discord/Slack alerting (Tier 4 #17) |
 | **API key management** (create/rename/regenerate/delete) | ✅ | 🛠️ Planned | Metered Gateway RFC-004 — the replacement-blocker |
 | **API key domain/subgraph restrictions** | ✅ | 🛠️ Planned | RFC-004 Phase 4 (domain/deployment allow-lists) |
@@ -283,13 +283,13 @@ custody, which is exactly the de-risked path:
 Everything marked ✅ above. Explorer replacement is effectively complete; Studio publish
 pipeline is real and on-chain.
 
-### Tier 1 — Cheap on-chain lifecycle writes (we already do GNS writes)
-Highest value-to-effort: reuses the existing `/dock` wagmi/viem write infrastructure.
+### Tier 1 — ✅ SHIPPED — cheap on-chain lifecycle writes + directory polish
+Reused the existing `/dock` wagmi/viem write infrastructure.
 
-1. 🛠️ `GNS.updateSubgraphMetadata` — edit published subgraph metadata on-chain.
-2. 🛠️ `GNS` ownership transfer (NFT transfer) — hand a subgraph to another wallet.
-3. 🛠️ `GNS.deprecateSubgraph` — deprecate / archive.
-4. 🛠️ "Recently Created / Updated" sort on the subgraph directory (Explorer-replacement polish).
+1. ~~`GNS.updateSubgraphMetadata`~~ — ✅ edit published subgraph metadata on-chain (`SubgraphLifecyclePanel.tsx`).
+2. ~~`GNS` ownership transfer~~ — ✅ `safeTransferFrom` with typed double-address confirm.
+3. ~~`GNS.deprecateSubgraph`~~ — ✅ deprecate / archive with typed confirm.
+4. ~~"Recently Created" sort~~ — ✅ sortable "Created" column (`subgraphs/page.tsx`). ("Updated" not buildable — no `updatedAt` on the entity.)
 
 ### Tier 2 — Metered Gateway, non-custodial first (RFC-004 Phase 1)
 5. 🛠️ RFC-004 **Phase 1** — Lodestar-minted `lod_live_` keys + free 100k/mo quota + the

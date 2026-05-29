@@ -18,7 +18,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Curator Portfolio** — Signal positions and query-fee-to-signal ratio analysis across all curators
 - **Curate** — Wallet-connected curation tool: signal and unsignal on subgraphs, manage your own signal portfolio, search deployments by name or IPFS hash, and track per-position query-fee yield
 - **Subgraph Dock** — Developer studio for subgraph publishers: connect with your Studio account, view published subgraphs and sync status, manage metadata (name, description, image, website), generate deploy keys, query live deployments, and interact with the Sync Bounty Board. Full on-chain lifecycle for published subgraphs — update metadata (`GNS.updateSubgraphMetadata`), transfer ownership and deprecate, each behind a typed irreversibility confirmation
-- **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting, IPFS manifest complexity scoring (Light→Extreme), category filter (DeFi/NFT/DAO), and contract-address search (find subgraphs indexing a given contract)
+- **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting, IPFS manifest complexity scoring (Light→Extreme), category filter (DeFi/NFT/DAO), contract-address search (find subgraphs indexing a given contract), and sorting by signal/stake/query fees or recently created
 - **Subgraph Detail** — Embedded GraphiQL playground (schema browser, autocomplete) with the real copyable gateway query URL, deployment version history (semver labels + IPFS hashes), and an activity timeline (version publishes + curator signal events)
 - **Horizon Activity Feed** — Live on-chain events from the Horizon staking contract — delegations, self-stakes, provisions, slashing, and withdrawals. Refreshes every 30 seconds. Powered by a self-hosted Amp node querying raw Arbitrum One logs. Gracefully degrades if the node is unreachable.
 - **QoS Performance Charts** — Query count, success rate, latency, and blocks-behind timeseries on indexer profiles, sourced from the E&N QoS oracle subgraph
@@ -44,6 +44,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 
 ### Shipped
 
+- [x] Studio replacement — on-chain subgraph lifecycle in the Dock (`GNS.updateSubgraphMetadata` / `safeTransferFrom` / `deprecateSubgraph`, each behind a typed irreversibility confirmation) plus a "Recently Created" sort on the subgraph directory (see `GAP_ANALYSIS.md`)
 - [x] Explorer/Studio parity batch — GraphiQL playground, subgraph version history & activity log, real gateway URL, closed allocations, disputes/slashing + operator addresses, cooldown column, per-epoch status table, total-supply & issuance stats, category filter, contract-address search, Withdrawable badge (see `GAP_ANALYSIS.md`)
 - [x] Delegation Flows period comparison — current vs previous window with net GRT and % change (v2.29.0+)
 - [x] Horizon Activity feed — live Amp-powered on-chain event stream (v2.6.0)
