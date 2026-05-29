@@ -20,13 +20,16 @@ const PAGE_SIZE = 25;
 const ELITE_FEE_THRESHOLD_GRT = 1000;
 
 // Map front-end sort keys to GraphQL field names
+// NB: 'created' maps to the SubgraphDeployment.createdAt timestamp — the entity has no
+// updatedAt, so only "Recently Created" is offered (not "Recently Updated").
 const SORT_KEY_MAP: Record<string, string> = {
   signal: 'signalledTokens',
   stake: 'stakedTokens',
   queryFees: 'queryFeesAmount',
+  created: 'createdAt',
 };
 
-type SortKey = 'signal' | 'stake' | 'queryFees';
+type SortKey = 'signal' | 'stake' | 'queryFees' | 'created';
 
 // ---------- per-row cells ----------
 
@@ -111,7 +114,7 @@ function SubgraphDirectory() {
   const [page, setPage] = useState(() => Number(searchParams.get('page')) || 0);
   const [sortKey, setSortKey] = useState<SortKey>(() => {
     const v = searchParams.get('sort');
-    return (v === 'signal' || v === 'stake' || v === 'queryFees') ? v : 'queryFees';
+    return (v === 'signal' || v === 'stake' || v === 'queryFees' || v === 'created') ? v : 'queryFees';
   });
   const [sortDesc, setSortDesc] = useState(() => searchParams.get('dir') !== 'asc');
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
@@ -247,6 +250,7 @@ function SubgraphDirectory() {
           ipfsHash: d.ipfsHash,
           displayName: d.displayName ?? null,
           categories: d.categories ?? [],
+          createdAt: d.createdAt,
           signal,
           stake,
           queryFees,
@@ -259,7 +263,11 @@ function SubgraphDirectory() {
       });
       // Sort client-side
       const sortFn = (a: typeof mapped[0], b: typeof mapped[0]) => {
-        const field = sortKey === 'signal' ? 'signal' : sortKey === 'stake' ? 'stake' : 'queryFees';
+        const field =
+          sortKey === 'signal' ? 'signal'
+          : sortKey === 'stake' ? 'stake'
+          : sortKey === 'created' ? 'createdAt'
+          : 'queryFees';
         const diff = a[field] - b[field];
         return sortDesc ? -diff : diff;
       };
@@ -277,6 +285,7 @@ function SubgraphDirectory() {
         ipfsHash: d.ipfsHash,
         displayName: d.displayName ?? null,
         categories: d.categories ?? [],
+        createdAt: d.createdAt,
         signal,
         stake,
         queryFees,
@@ -736,6 +745,9 @@ function SubgraphDirectory() {
                 <th className={cn(thSortable, 'text-right')} onClick={() => handleSort('queryFees')}>
                   {is30d ? 'Fees 30d (GRT)' : 'Query Fees (GRT)'}{renderSortArrow('queryFees')}
                 </th>
+                <th className={cn(thSortable, 'text-right')} onClick={() => handleSort('created')}>
+                  Created{renderSortArrow('created')}
+                </th>
                 <th className={cn(thBase, 'text-right')}>Indexers</th>
                 <th className={cn(thBase, 'text-right')}>Signal/Stake</th>
                 <th className={cn(thBase, 'text-right')}>Curators</th>
@@ -813,6 +825,9 @@ function SubgraphDirectory() {
                     </td>
                     <td className={`px-4 py-3 text-right font-mono text-sm text-[var(--text)] ${tdBorder}`}>
                       {formatGRT(row.queryFees)}
+                    </td>
+                    <td className={`px-4 py-3 text-right font-mono text-sm text-[var(--text-muted)] ${tdBorder}`}>
+                      {row.createdAt ? new Date(row.createdAt * 1000).toLocaleDateString() : '--'}
                     </td>
                     <td className={`px-4 py-3 text-right font-mono text-sm text-[var(--text)] ${tdBorder}`}>
                       <span className="inline-flex items-center justify-end gap-1.5">

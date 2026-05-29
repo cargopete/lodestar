@@ -9,6 +9,7 @@ interface DeploymentRaw {
   signalledTokens: string;
   stakedTokens: string;
   queryFeesAmount: string;
+  createdAt: number;
   indexerAllocations: { id: string }[];
   curatorSignals: { id: string }[];
   versions: { subgraph: { metadata: { displayName: string; categories: string[] | null } | null } }[];
@@ -18,6 +19,7 @@ const ALLOWED_ORDER_BY = new Set([
   'signalledTokens',
   'stakedTokens',
   'queryFeesAmount',
+  'createdAt',
 ]);
 
 export async function GET(request: NextRequest) {
@@ -37,6 +39,7 @@ export async function GET(request: NextRequest) {
         signalledTokens
         stakedTokens
         queryFeesAmount
+        createdAt
         indexerAllocations(where: { status: Active }) { id }
         curatorSignals { id }
         versions(first: 1, orderBy: createdAt, orderDirection: desc) {
@@ -79,6 +82,7 @@ export async function GET(request: NextRequest) {
       signalledTokens
       stakedTokens
       queryFeesAmount
+      createdAt
       indexerAllocations(where: { status: Active }) {
         id
       }

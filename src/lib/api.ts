@@ -142,6 +142,7 @@ export async function fetchSubgraphDeployments(params: {
   signalledTokens: string;
   stakedTokens: string;
   queryFeesAmount: string;
+  createdAt: number;
   indexerAllocations: { id: string }[];
   curatorSignals: { id: string }[];
   displayName: string | null;
@@ -168,6 +169,7 @@ export async function fetchSubgraphDeployments30d(): Promise<{
   stakedTokens: string;
   queryFeesAmount: string;
   queryFees30d: string;
+  createdAt: number;
   indexerAllocations: { id: string }[];
   curatorSignals: { id: string }[];
   displayName: string | null;

@@ -18,6 +18,7 @@ interface DeploymentDetail {
   signalledTokens: string;
   stakedTokens: string;
   queryFeesAmount: string;
+  createdAt: number;
   indexerAllocations: { id: string }[];
   curatorSignals: { id: string }[];
   versions: { subgraph: { metadata: { displayName: string; categories: string[] | null } | null } }[];
@@ -30,6 +31,7 @@ interface AggregatedDeployment {
   stakedTokens: string;
   queryFeesAmount: string;
   queryFees30d: string;
+  createdAt: number;
   indexerAllocations: { id: string }[];
   curatorSignals: { id: string }[];
   displayName: string | null;
@@ -122,6 +124,7 @@ export async function GET() {
             signalledTokens
             stakedTokens
             queryFeesAmount
+            createdAt
             indexerAllocations(where: { status: Active }) { id }
             curatorSignals { id }
             versions(first: 1, orderBy: createdAt, orderDirection: desc) {
@@ -152,6 +155,7 @@ export async function GET() {
           stakedTokens: dep.stakedTokens,
           queryFeesAmount: dep.queryFeesAmount,
           queryFees30d: fees30d.toString(),
+          createdAt: dep.createdAt,
           indexerAllocations: dep.indexerAllocations,
           curatorSignals: dep.curatorSignals,
           displayName: dep.versions?.[0]?.subgraph?.metadata?.displayName ?? null,
