@@ -39,6 +39,8 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 
 ### Planned
 
+- [ ] Indexer operator-address & ENS on-chain settings writes — so indexers also never need Explorer's settings (Tier 3 #7)
+- [ ] Metered gateway Phase B — prepaid-GRT paid tier beyond the free allowance (gated on a money-transmitter legal review)
 - [ ] PWA support — installable to home screen for daily portfolio checking
 - [ ] Amp node reconnection — re-enable Horizon Activity live feed with persistent Amp connection
 
