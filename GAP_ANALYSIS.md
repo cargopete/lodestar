@@ -22,6 +22,7 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 - Redelegation calculator with break-even analysis
 - Indexer comparison tool (up to 8 side-by-side)
 - GraphTally/TAP payment pipeline tracking
+- On-chain sync bounties (BountyBoard escrow) — developers lock GRT against a deployment ID; indexers claim trustlessly by proving an open allocation + post-bounty POI. Chain-reconciled cache (cron), with expiry/refund flow (experimental)
 - DeFi protocol directory with family aggregation
 - Governance tracker (GIP-0079/0086/0087/0088/0070) with live metrics
 - Community voting (EIP-712 + SIWE)
