@@ -124,8 +124,8 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 | **Withdraw thawed GRT** action | ✅ | ✅ | Live — full withdraw flow in `UndelegatePanel.tsx` with mode tabs, transaction status, and calendar reminder |
 | **Undelegate** action (with 25%/50%/ALL quick inputs) | ✅ | ✅ | Live |
 | **Indexer's own tabbed profile** (allocations / delegations / curations / settings) | ✅ | 🟡 | 🚫 Won't do — all data is present on the detail page; tabbing it is a cosmetic refactor with regression risk and no new data |
-| **Operator address configuration** (for indexers) | ✅ | ❌ | Missing |
-| **ENS name configuration** | ✅ | ❌ | Missing |
+| **Operator address configuration** (for indexers) | ✅ | ❌ | 🚫 Won't do — niche indexer settings-write |
+| **ENS name configuration** | ✅ | ❌ | 🚫 Won't do — settings-write, low value |
 | Published subgraphs you've created | ✅ | 🟡 | Partial — accessible via /dock |
 | Thawing countdown timer | ✅ | ✅ | Live |
 | Delegation position cards with full metrics | ✅ | ✅ | Live |
@@ -155,8 +155,8 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 
 | Feature | Explorer | Lodestar | Verified Status |
 |---|---|---|---|
-| Token API discovery + links | ✅ | ❌ | Missing — nav link only needed, no build |
-| Substreams discovery + links | ✅ | ❌ | Missing — nav link only needed, no build |
+| Token API discovery + links | ✅ | ❌ | 🚫 Won't do — low value; not pursuing |
+| Substreams discovery + links | ✅ | ❌ | 🚫 Won't do — low value; not pursuing |
 | AI/MCP gateway (in development at Graph) | Planned | ✅ | Lodestar leads with Lodie |
 
 ---
@@ -187,18 +187,27 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 13. ~~**Operator address**~~ — ✅ shown on indexer detail.
 14. ~~**Network gateway query URL**~~ — ✅ real gateway endpoint shown + copyable.
 
-### Tier 3 — partial
+### Tier 3 — ✅ shipped
 
 17. ~~Cumulative token supply headline stat~~ — ✅ "Total Supply" card.
 18. ~~Annual issuance rate~~ — ✅ computed "Annual Issuance (est.)" card (live ≈8.6%; the old "2.75%" was stale).
-15. Token API & Substreams discovery links — nav additions only. *(not yet done — low priority)*
-16. ENS name configuration in profile settings. *(not yet done — low priority)*
 
 ### 🚫 Won't do (decided 2026-05-29)
 
-- **Per-subgraph query count** (#12) & **"Recently Created" sort** — query *count* isn't in the network subgraph (gateway-only analytic); "Most Queried" is already the Query Fees sort. Created-sort deferred as low-value.
+- **Token API & Substreams discovery links** (#15) and **ENS / operator-address configuration** (#16, §6) — low value; nav clutter / niche settings-writes. Not pursuing.
+- **Per-subgraph query count** (#12) & **"Recently Created" sort** — query *count* isn't in the network subgraph (gateway-only analytic); "Most Queried" is already the Query Fees sort.
 - **Unified tabbed indexer profile** — pure cosmetic refactor of a large working page (all data already present); regression risk outweighs benefit.
 - **Subgraph ownership transfer** (#19), **dev-subgraph playground** (#20), **metadata-editing completion** — `/dock` studio scope; ownership transfer is an irreversible on-chain GNS tx. Parked until the studio is a priority.
+
+### 🅿️ Parked
+
+- **API-key management suite** (§7) — explored as a metered prepaid-GRT gateway (RFC-004) and parked; see that RFC for the economics. Revisit only via the intelligence-layer direction.
+
+---
+
+## ✅ Parity status: COMPLETE
+
+Every Explorer/Studio parity gap is now **shipped**, **won't-do**, **parked**, or **out-of-scope (billing)**. There are no remaining buildable parity items. Future work is net-new product (the intelligence layer), not catching up to the official tools.
 
 ---
 
