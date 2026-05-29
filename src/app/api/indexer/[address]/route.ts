@@ -116,10 +116,54 @@ export async function GET(
         lastId = batch[batch.length - 1].id;
       }
 
+      // Fetch the most recent closed allocations (history can be huge — cap at 50).
+      interface ClosedAllocation {
+        id: string;
+        allocatedTokens: string;
+        createdAtEpoch: number;
+        closedAtEpoch: number | null;
+        closedAt: number | null;
+        indexingRewards: string;
+        queryFeesCollected: string;
+        poi: string | null;
+        forceClosed: boolean;
+        subgraphDeployment: {
+          id: string;
+          ipfsHash: string;
+          versions: Array<{ subgraph: { metadata: { displayName: string } | null } | null }>;
+        };
+      }
+      const closedResult = await subgraphQuery<{ allocations: ClosedAllocation[] }>(`{
+        allocations(
+          first: 50,
+          where: { indexer: "${addr}", status: Closed }
+          orderBy: closedAt
+          orderDirection: desc
+        ) {
+          id
+          allocatedTokens
+          createdAtEpoch
+          closedAtEpoch
+          closedAt
+          indexingRewards
+          queryFeesCollected
+          poi
+          forceClosed
+          subgraphDeployment {
+            id
+            ipfsHash
+            versions(first: 1, orderBy: createdAt, orderDirection: desc) {
+              subgraph { metadata { displayName } }
+            }
+          }
+        }
+      }`);
+
       return {
         indexer: {
           ...result.indexer,
           allocations: allAllocations,
+          closedAllocations: closedResult.allocations ?? [],
         },
       };
     });

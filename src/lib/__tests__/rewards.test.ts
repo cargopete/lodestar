@@ -6,6 +6,7 @@ import {
   calculateDelegatorAPR,
   calculateDelegationCapacity,
   calculateThawingRemaining,
+  deriveDelegationStatus,
   formatThawingTime,
   generateRewardsCSV,
   calculatePoolExchangeRate,
@@ -365,6 +366,40 @@ describe('calculateThawingRemaining', () => {
     const lockedUntil = FIXED_NOW - 86400; // past
     const result = calculateThawingRemaining(lockedUntil);
     expect(result.percentComplete).toBeLessThanOrEqual(100);
+  });
+});
+
+// ---------- deriveDelegationStatus ----------
+
+describe('deriveDelegationStatus', () => {
+  const FIXED_NOW = 1711382400; // 2024-03-25T12:00:00Z
+
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(FIXED_NOW * 1000); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('returns "thawing" when tokens are locked and the thaw is still in progress', () => {
+    const lockedUntil = FIXED_NOW + 86400 * 7; // 7 days out
+    expect(deriveDelegationStatus(100, lockedUntil, true)).toBe('thawing');
+  });
+
+  it('returns "withdrawable" when locked tokens have finished thawing', () => {
+    const lockedUntil = FIXED_NOW - 10; // already elapsed
+    expect(deriveDelegationStatus(100, lockedUntil, false)).toBe('withdrawable');
+  });
+
+  it('prioritises thawing/withdrawable over active stake', () => {
+    // Partially-undelegated position: still has active stake AND locked tokens.
+    const future = FIXED_NOW + 86400;
+    expect(deriveDelegationStatus(50, future, true)).toBe('thawing');
+    expect(deriveDelegationStatus(50, FIXED_NOW - 1, true)).toBe('withdrawable');
+  });
+
+  it('returns "active" when there are no locked tokens and stake is active', () => {
+    expect(deriveDelegationStatus(0, 0, true)).toBe('active');
+  });
+
+  it('returns "closed" when there are no locked tokens and no active stake', () => {
+    expect(deriveDelegationStatus(0, 0, false)).toBe('closed');
   });
 });
 

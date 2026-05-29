@@ -291,6 +291,27 @@ export function calculateThawingRemaining(lockedUntil: number): {
   };
 }
 
+export type DelegationStatus = 'withdrawable' | 'thawing' | 'active' | 'closed';
+
+/**
+ * Derive a delegation position's display status.
+ *
+ * Thawing tokens take precedence over active stake (a partially-undelegated
+ * position shows as thawing). Once the thaw period elapses the position is
+ * "withdrawable" — surfaced as a distinct state so delegators can see at a
+ * glance which positions are ready to withdraw.
+ */
+export function deriveDelegationStatus(
+  lockedGRT: number,
+  lockedUntil: number,
+  isActive: boolean,
+): DelegationStatus {
+  if (lockedGRT > 0) {
+    return calculateThawingRemaining(lockedUntil).isComplete ? 'withdrawable' : 'thawing';
+  }
+  return isActive ? 'active' : 'closed';
+}
+
 /**
  * Format thawing time for display
  */

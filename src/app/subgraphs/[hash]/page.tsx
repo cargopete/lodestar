@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useState, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -9,6 +10,7 @@ import {
   useNetworksRegistry,
   useSubgraphCuration,
   useSubgraphHistory,
+  useSubgraphVersions,
   useENSName,
   useSubgraphSchema,
 } from '@/hooks/useNetworkStats';
@@ -18,6 +20,7 @@ import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { cn, formatNumber, formatGRT, weiToGRT, shortenAddress } from '@/lib/utils';
+import { VersionsTable } from '@/components/subgraph/VersionsTable';
 import type { IndexerStatusResult } from '@/lib/indexing-status';
 import type { ComplexityCategory, DataSourceSignal, TemplateSignal } from '@/lib/manifest';
 import type { NetworkInfo } from '@/app/api/networks/route';
@@ -26,12 +29,13 @@ import type { NetworkInfo } from '@/app/api/networks/route';
 // Tab configuration
 // ---------------------------------------------------------------------------
 
-type Tab = 'overview' | 'schema' | 'curators' | 'history' | 'manifest' | 'playground';
+type Tab = 'overview' | 'schema' | 'curators' | 'history' | 'versions' | 'manifest' | 'playground';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'schema', label: 'Schema' },
   { id: 'curators', label: 'Curators' },
   { id: 'history', label: 'History' },
+  { id: 'versions', label: 'Versions' },
   { id: 'manifest', label: 'Manifest' },
   { id: 'playground', label: 'Playground' },
 ];
@@ -743,6 +747,55 @@ function HistorySection({ hash }: { hash: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Versions tab — deployment version history (semver labels + deployment IDs)
+// ---------------------------------------------------------------------------
+
+function VersionsSection({ hash }: { hash: string }) {
+  const { data, isLoading, error } = useSubgraphVersions(hash);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Version History</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+            <span className="ml-3 text-sm text-[var(--text-muted)]">Loading versions…</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const versions = data?.versions ?? [];
+
+  if (error || versions.length === 0) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Version History</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-sm text-[var(--text-muted)] py-4">No version history available for this subgraph.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Version History</CardTitle>
+          <span className="text-[10px] text-[var(--text-faint)]">{versions.length} version{versions.length === 1 ? '' : 's'}</span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <VersionsTable versions={versions} />
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Manifest tab
 // ---------------------------------------------------------------------------
 
@@ -923,46 +976,21 @@ function ManifestSection({ hash }: { hash: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Playground tab
+// Playground tab — full GraphiQL IDE (schema browser, autocomplete, highlighting)
 // ---------------------------------------------------------------------------
 
-const STARTER_QUERY = '{\n  _meta {\n    block { number hash }\n    deployment\n  }\n}';
+const GraphiQLIDE = dynamic(() => import('@/components/SubgraphGraphiQL'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-[640px] rounded-[var(--radius-card)] border border-[var(--border)]">
+      <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+      <span className="ml-3 text-sm text-[var(--text-muted)]">Loading playground…</span>
+    </div>
+  ),
+});
 
 function PlaygroundSection({ hash }: { hash: string }) {
-  const [query, setQuery] = useState(STARTER_QUERY);
-  const [response, setResponse] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [runError, setRunError] = useState<string | null>(null);
   const endpointPath = `/api/subgraph-playground/${hash}`;
-
-  async function runQuery() {
-    setLoading(true);
-    setRunError(null);
-    try {
-      const res = await fetch(endpointPath, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
-      const data = await res.json();
-      if (Array.isArray(data.errors) && data.errors.length > 0) {
-        const msg: string = data.errors[0]?.message ?? 'GraphQL error';
-        if (msg.includes('not found') || msg.includes('not available')) {
-          setRunError(
-            'Subgraph not available via gateway — no indexer is currently serving this deployment through the public gateway. Signal GRT to attract indexers, or try again later.',
-          );
-        } else {
-          setRunError(msg);
-        }
-      } else {
-        setResponse(JSON.stringify(data, null, 2));
-      }
-    } catch (err) {
-      setRunError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -985,52 +1013,9 @@ function PlaygroundSection({ hash }: { hash: string }) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            <textarea
-              className="w-full h-40 font-mono text-sm p-3 rounded-[var(--radius-card)] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)] resize-y focus:outline-none focus:border-[var(--accent)]"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              spellCheck={false}
-            />
-            <button
-              onClick={runQuery}
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
-            >
-              {loading ? 'Running…' : 'Run Query'}
-            </button>
-          </div>
+          <GraphiQLIDE hash={hash} />
         </CardContent>
       </Card>
-
-      {runError && (
-        <Card>
-          <CardContent>
-            <p className="text-sm font-mono text-[var(--red)] py-2">{runError}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {response && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Response</CardTitle>
-              <button
-                onClick={() => navigator.clipboard.writeText(response)}
-                className="text-xs text-[var(--accent)] hover:underline"
-              >
-                Copy
-              </button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <pre className="text-xs font-mono text-[var(--text)] bg-[var(--bg-elevated)] p-4 rounded-[var(--radius-card)] overflow-auto max-h-[500px] whitespace-pre-wrap break-all">
-              {response}
-            </pre>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
@@ -1151,6 +1136,7 @@ function DeploymentPageInner({ hash }: { hash: string }) {
         {activeTab === 'schema' && <SchemaTab hash={hash} />}
         {activeTab === 'curators' && <CurationSection hash={hash} />}
         {activeTab === 'history' && <HistorySection hash={hash} />}
+        {activeTab === 'versions' && <VersionsSection hash={hash} />}
         {activeTab === 'manifest' && <ManifestSection hash={hash} />}
         {activeTab === 'playground' && <PlaygroundSection hash={hash} />}
       </div>

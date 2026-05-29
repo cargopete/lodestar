@@ -367,7 +367,7 @@ function SubgraphDirectory() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by name or Qm hash..."
+          placeholder="Search by name, Qm hash, or contract address (0x…)"
           className={cn(
             'w-full px-4 py-3 text-sm rounded-[var(--radius-card)]',
             'bg-[var(--bg-surface)] border border-[var(--border)]',

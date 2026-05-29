@@ -16,6 +16,7 @@ import {
   isGreedyCut,
   cn,
 } from '@/lib/utils';
+import { ClosedAllocationsTable, type ClosedAllocation } from '@/components/indexer/ClosedAllocationsTable';
 import { calculateDelegationCapacity } from '@/lib/rewards';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -75,6 +76,7 @@ interface IndexerDetail {
       versions: Array<{ subgraph: { metadata: { displayName: string } | null } | null }>;
     };
   }>;
+  closedAllocations?: ClosedAllocation[];
   delegators: Array<{
     id: string;
     stakedTokens: string;
@@ -986,6 +988,23 @@ export default function IndexerDetailPage({
                 </div>
               );
             })()}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Closed / Historical Allocations */}
+      {indexer.closedAllocations && indexer.closedAllocations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Closed Allocations</CardTitle>
+              <span className="text-[10px] text-[var(--text-faint)]">
+                Most recent {indexer.closedAllocations.length}
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ClosedAllocationsTable allocations={indexer.closedAllocations} />
           </CardContent>
         </Card>
       )}

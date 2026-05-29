@@ -734,11 +734,184 @@ describe('/api/subgraph-search', () => {
     expect(Array.isArray(json.data)).toBe(true);
   });
 
+  it('searches by contract address via manifest substring', async () => {
+    mockSubgraphQuery.mockResolvedValueOnce({
+      subgraphDeploymentManifests: [
+        {
+          deployment: {
+            ipfsHash: 'QmDeployA',
+            signalledTokens: '100',
+            stakedTokens: '200',
+            versions: [{ subgraph: { id: 'sA', metadata: { displayName: 'Pool A', description: null } } }],
+          },
+        },
+      ],
+    });
+
+    const req = makeRequest('/api/subgraph-search?q=0x1f98431c8ad98523631ae4a59f267346ea31f984');
+    const res = await GET(req);
+    const json = await getJson(res);
+
+    // Uses the manifest substring filter, not the name/hash branches
+    const query = mockSubgraphQuery.mock.calls[0][0] as string;
+    expect(query).toContain('subgraphDeploymentManifests');
+    expect(query).toContain('manifest_contains_nocase');
+
+    expect(res.status).toBe(200);
+    expect(json.data).toHaveLength(1);
+    expect(json.data[0].id).toBe('sA');
+    expect(json.data[0].currentVersion.subgraphDeployment.ipfsHash).toBe('QmDeployA');
+  });
+
+  it('sorts contract-address results by signal desc and dedupes by deployment', async () => {
+    mockSubgraphQuery.mockResolvedValueOnce({
+      subgraphDeploymentManifests: [
+        { deployment: { ipfsHash: 'QmLow', signalledTokens: '10', stakedTokens: '0', versions: [] } },
+        { deployment: { ipfsHash: 'QmHigh', signalledTokens: '9000', stakedTokens: '0', versions: [] } },
+        // duplicate of QmLow — should be dropped
+        { deployment: { ipfsHash: 'QmLow', signalledTokens: '10', stakedTokens: '0', versions: [] } },
+      ],
+    });
+
+    const req = makeRequest('/api/subgraph-search?q=0xabcdefabcdefabcdefabcdefabcdefabcdefabcd');
+    const res = await GET(req);
+    const json = await getJson(res);
+
+    expect(res.status).toBe(200);
+    expect(json.data).toHaveLength(2);
+    expect(json.data[0].currentVersion.subgraphDeployment.ipfsHash).toBe('QmHigh');
+    expect(json.data[1].currentVersion.subgraphDeployment.ipfsHash).toBe('QmLow');
+  });
+
+  it('skips manifests with no live deployment', async () => {
+    mockSubgraphQuery.mockResolvedValueOnce({
+      subgraphDeploymentManifests: [
+        { deployment: null },
+        { deployment: { ipfsHash: 'QmLive', signalledTokens: '5', stakedTokens: '0', versions: [] } },
+      ],
+    });
+
+    const req = makeRequest('/api/subgraph-search?q=0x0000000000000000000000000000000000000001');
+    const res = await GET(req);
+    const json = await getJson(res);
+
+    expect(res.status).toBe(200);
+    expect(json.data).toHaveLength(1);
+    expect(json.data[0].currentVersion.subgraphDeployment.ipfsHash).toBe('QmLive');
+  });
+
   it('returns 503 when no API key', async () => {
     mockHasSubgraphAccess.mockReturnValue(false);
     const req = makeRequest('/api/subgraph-search?q=uniswap');
     const res = await GET(req);
     expect(res.status).toBe(503);
+  });
+});
+
+// ============================================================
+// /api/subgraph-versions/[hash]
+// ============================================================
+
+describe('/api/subgraph-versions/[hash]', () => {
+  const VALID_HASH = 'QmNNqSFDNDhWPhscvpsyjAXTbHbpLpzyvhw51SxTx5mtwg';
+  let GET: (req: Request, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
+
+  beforeEach(async () => {
+    const mod = await import('@/app/api/subgraph-versions/[hash]/route');
+    GET = mod.GET as typeof GET;
+  });
+
+  it('rejects an invalid deployment hash with 400', async () => {
+    const req = makeRequest('/api/subgraph-versions/not-a-hash');
+    const res = await GET(req, { params: Promise.resolve({ hash: 'not-a-hash' }) });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 503 when no API key', async () => {
+    mockHasSubgraphAccess.mockReturnValue(false);
+    const req = makeRequest(`/api/subgraph-versions/${VALID_HASH}`);
+    const res = await GET(req, { params: Promise.resolve({ hash: VALID_HASH }) });
+    expect(res.status).toBe(503);
+  });
+
+  it('maps versions and flags the current deployment', async () => {
+    mockSubgraphQuery.mockResolvedValueOnce({
+      subgraphDeployments: [
+        {
+          versions: [
+            {
+              subgraph: {
+                id: 'sg-1',
+                versions: [
+                  {
+                    version: 1,
+                    createdAt: 1711047781,
+                    metadata: { label: '0.0.3', description: 'd' },
+                    subgraphDeployment: { ipfsHash: VALID_HASH, signalledTokens: '100', stakedTokens: '200' },
+                  },
+                  {
+                    version: 0,
+                    createdAt: 1701215330,
+                    metadata: { label: '0.0.2', description: 'd' },
+                    subgraphDeployment: { ipfsHash: 'QmOldDeploymentHashAAAAAAAAAAAAAAAAAAAAAAAAAAA', signalledTokens: '50', stakedTokens: '60' },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const req = makeRequest(`/api/subgraph-versions/${VALID_HASH}`);
+    const res = await GET(req, { params: Promise.resolve({ hash: VALID_HASH }) });
+    const json = await getJson(res);
+
+    expect(res.status).toBe(200);
+    expect(json.data.subgraphId).toBe('sg-1');
+    expect(json.data.versions).toHaveLength(2);
+    expect(json.data.versions[0].label).toBe('0.0.3');
+    expect(json.data.versions[0].isCurrent).toBe(true);
+    expect(json.data.versions[1].isCurrent).toBe(false);
+  });
+
+  it('filters out versions with no deployment', async () => {
+    mockSubgraphQuery.mockResolvedValueOnce({
+      subgraphDeployments: [
+        {
+          versions: [
+            {
+              subgraph: {
+                id: 'sg-1',
+                versions: [
+                  { version: 1, createdAt: 1, metadata: { label: 'a', description: null }, subgraphDeployment: { ipfsHash: VALID_HASH, signalledTokens: '1', stakedTokens: '1' } },
+                  { version: 0, createdAt: 0, metadata: null, subgraphDeployment: null },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const req = makeRequest(`/api/subgraph-versions/${VALID_HASH}`);
+    const res = await GET(req, { params: Promise.resolve({ hash: VALID_HASH }) });
+    const json = await getJson(res);
+
+    expect(res.status).toBe(200);
+    expect(json.data.versions).toHaveLength(1);
+  });
+
+  it('returns an empty list when the deployment has no parent subgraph', async () => {
+    mockSubgraphQuery.mockResolvedValueOnce({ subgraphDeployments: [] });
+
+    const req = makeRequest(`/api/subgraph-versions/${VALID_HASH}`);
+    const res = await GET(req, { params: Promise.resolve({ hash: VALID_HASH }) });
+    const json = await getJson(res);
+
+    expect(res.status).toBe(200);
+    expect(json.data.subgraphId).toBeNull();
+    expect(json.data.versions).toEqual([]);
   });
 });
 
@@ -763,8 +936,25 @@ describe('/api/indexer/[address]', () => {
         delegators: [],
       },
     });
-    // Second call: allocation pagination loop (returns empty = exits loop)
+    // Second call: active allocation pagination loop (returns empty = exits loop)
     mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
+    // Third call: recent closed allocations
+    mockSubgraphQuery.mockResolvedValueOnce({
+      allocations: [
+        {
+          id: '0xalloc1',
+          allocatedTokens: '5000000000000000000000',
+          createdAtEpoch: 100,
+          closedAtEpoch: 120,
+          closedAt: 1700000000,
+          indexingRewards: '1000000000000000000',
+          queryFeesCollected: '0',
+          poi: '0xpoi',
+          forceClosed: false,
+          subgraphDeployment: { id: '0xdep', ipfsHash: 'QmHash', versions: [] },
+        },
+      ],
+    });
 
     const req = makeRequest('/api/indexer/0x1234000000000000000000000000000000001234');
     const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
@@ -773,10 +963,28 @@ describe('/api/indexer/[address]', () => {
     expect(res.status).toBe(200);
     expect(json).toHaveProperty('data');
     expect(json.data).toHaveProperty('indexer');
+    expect(json.data.indexer.closedAllocations).toHaveLength(1);
+    expect(json.data.indexer.closedAllocations[0].id).toBe('0xalloc1');
+  });
+
+  it('queries closed allocations ordered by closedAt desc', async () => {
+    mockSubgraphQuery.mockResolvedValueOnce({ indexer: { id: '0x1234', allocations: [], delegators: [] } });
+    mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
+    mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
+
+    const req = makeRequest('/api/indexer/0x1234000000000000000000000000000000001234');
+    await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
+
+    // Third subgraph call is the closed-allocations query
+    const closedQuery = mockSubgraphQuery.mock.calls[2][0] as string;
+    expect(closedQuery).toContain('status: Closed');
+    expect(closedQuery).toContain('orderBy: closedAt');
+    expect(closedQuery).toContain('orderDirection: desc');
   });
 
   it('lowercases the address', async () => {
     mockSubgraphQuery.mockResolvedValueOnce({ indexer: { id: '0xabc', allocations: [], delegators: [] } });
+    mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
     mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
 
     const req = makeRequest('/api/indexer/0xABC0000000000000000000000000000000001234');

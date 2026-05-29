@@ -297,6 +297,33 @@ export function useSubgraphHistory(hash: string | null) {
   });
 }
 
+export interface SubgraphVersion {
+  version: number;
+  label: string | null;
+  createdAt: number;
+  ipfsHash: string;
+  signalledTokens: string;
+  stakedTokens: string;
+  isCurrent: boolean;
+}
+
+async function fetchSubgraphVersions(hash: string): Promise<{ subgraphId: string | null; versions: SubgraphVersion[] }> {
+  const res = await fetch(`/api/subgraph-versions/${hash}`);
+  if (!res.ok) throw new Error('Failed to fetch subgraph versions');
+  const json = await res.json();
+  return json.data;
+}
+
+export function useSubgraphVersions(hash: string | null) {
+  return useQuery({
+    queryKey: ['subgraphVersions', hash],
+    queryFn: () => fetchSubgraphVersions(hash!),
+    staleTime: ONE_HOUR,
+    enabled: !!hash,
+    retry: 1,
+  });
+}
+
 /**
  * Hook for REO (Rewards Eligibility Oracle) status
  */

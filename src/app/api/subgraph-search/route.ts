@@ -36,11 +36,77 @@ export async function GET(request: NextRequest) {
 
   try {
     const isHash = safe.startsWith('Qm') && safe.length >= 8;
+    // Contract address: 0x + 40 hex. The network subgraph has no indexed data-source
+    // address field, but every deployment's raw manifest YAML is queryable as a string,
+    // and contract addresses appear verbatim inside it — so substring-match the manifest.
+    const isAddress = /^0x[a-fA-F0-9]{40}$/.test(safe);
 
     const data = await cached(
       `lodestar:subgraph-search:${safe.toLowerCase()}`,
       300, // 5 min — subgraph names don't change often
       async () => {
+        if (isAddress) {
+          // Find deployments whose manifest references this contract address.
+          const manifests = await subgraphQuery<{
+            subgraphDeploymentManifests: Array<{
+              deployment: {
+                ipfsHash: string;
+                signalledTokens: string;
+                stakedTokens: string;
+                versions: Array<{
+                  subgraph: {
+                    id: string;
+                    metadata: { displayName: string; description: string | null } | null;
+                  };
+                }>;
+              } | null;
+            }>;
+          }>(`{
+            subgraphDeploymentManifests(
+              first: 20
+              where: { manifest_contains_nocase: "${safe}" }
+            ) {
+              deployment {
+                ipfsHash
+                signalledTokens
+                stakedTokens
+                versions(first: 1, orderBy: createdAt, orderDirection: desc) {
+                  subgraph {
+                    id
+                    metadata { displayName description }
+                  }
+                }
+              }
+            }
+          }`);
+          // Dedupe by deployment, drop manifests with no live deployment, sort by signal desc.
+          const seen = new Set<string>();
+          const mapped = manifests.subgraphDeploymentManifests
+            .map((m) => m.deployment)
+            .filter((d): d is NonNullable<typeof d> => {
+              if (!d || seen.has(d.ipfsHash)) return false;
+              seen.add(d.ipfsHash);
+              return true;
+            })
+            .sort((a, b) => {
+              const sa = BigInt(a.signalledTokens || '0');
+              const sb = BigInt(b.signalledTokens || '0');
+              return sa < sb ? 1 : sa > sb ? -1 : 0;
+            })
+            .map((d) => ({
+              id: d.versions[0]?.subgraph?.id ?? d.ipfsHash,
+              metadata: d.versions[0]?.subgraph?.metadata ?? null,
+              currentVersion: {
+                subgraphDeployment: {
+                  ipfsHash: d.ipfsHash,
+                  signalledTokens: d.signalledTokens,
+                  stakedTokens: d.stakedTokens,
+                },
+              },
+            }));
+          return { subgraphs: mapped };
+        }
+
         if (isHash) {
           // Search by IPFS hash — query deployments directly, then find parent subgraphs
           const deployments = await subgraphQuery<{

@@ -19,10 +19,12 @@ import {
 import {
   calculateUnrealizedRewards,
   generateRewardsCSV,
+  deriveDelegationStatus,
 } from '@/lib/rewards';
 import { useAccount } from 'wagmi';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { DelegationStatusBadge } from '@/components/ui/DelegationStatusBadge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { UndelegatePanel } from '@/components/ui/UndelegatePanel';
 import dynamic from 'next/dynamic';
@@ -368,7 +370,7 @@ export default function DelegatorPortfolioPage({
               <tbody>
                 {positions.map((pos) => {
                   const indexerName = resolveIndexerName(pos.stake.indexer.account, pos.stake.indexer.id);
-                  const isThawing = weiToGRT(pos.stake.lockedTokens) > 0;
+                  const status = deriveDelegationStatus(pos.lockedGRT, pos.stake.lockedUntil, pos.isActive);
 
                   return (
                     <React.Fragment key={pos.stake.id}>
@@ -481,18 +483,12 @@ export default function DelegatorPortfolioPage({
 
                       {/* Status */}
                       <td className="text-right py-3 px-4">
-                        {isThawing ? (
-                          <Badge variant="warning">Thawing</Badge>
-                        ) : pos.isActive ? (
-                          <Badge variant="success">Active</Badge>
-                        ) : (
-                          <Badge variant="default">Closed</Badge>
-                        )}
+                        <DelegationStatusBadge status={status} />
                       </td>
                       {/* Actions */}
                       {isOwnPortfolio && (
                         <td className="text-right py-3 px-4">
-                          {(pos.isActive || isThawing) && (
+                          {status !== 'closed' && (
                             <button
                               onClick={() => setManagingPosition(
                                 managingPosition === pos.stake.id ? null : pos.stake.id
