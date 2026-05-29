@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useNetworkStats, useGRTPrice, useTVL, useEpochInfo, useEpochHistory, useSubgraphDeployments30d } from '@/hooks/useNetworkStats';
 import { EpochTable } from '@/components/EpochTable';
@@ -19,6 +20,7 @@ const TokenIssuanceChart = dynamic(() => import('@/components/charts/TokenIssuan
 const DelegationFlowChart = dynamic(() => import('@/components/charts/DelegationFlowChart').then(m => ({ default: m.DelegationFlowChart })), { ssr: false });
 
 export default function ProtocolOverview() {
+  const [epochsOpen, setEpochsOpen] = useState(false);
   const { data: networkData, isLoading: networkLoading } = useNetworkStats();
   const { data: priceData, isLoading: priceLoading } = useGRTPrice();
   const { data: tvlData, isLoading: tvlLoading } = useTVL();
@@ -138,14 +140,32 @@ export default function ProtocolOverview() {
         </CardContent>
       </Card>
 
-      {/* Per-epoch fees & rewards with derived status */}
+      {/* Per-epoch fees & rewards with derived status — collapsed by default */}
       <Card>
-        <CardHeader>
-          <CardTitle>Recent Epochs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EpochTable epochs={epochHistory?.epoches ?? []} currentEpoch={actualEpoch} />
-        </CardContent>
+        <button
+          type="button"
+          onClick={() => setEpochsOpen((v) => !v)}
+          aria-expanded={epochsOpen}
+          className="w-full text-left"
+        >
+          <CardHeader className="flex flex-row items-center justify-between cursor-pointer select-none">
+            <CardTitle>Recent Epochs</CardTitle>
+            <svg
+              className={`w-5 h-5 text-[var(--text-faint)] transition-transform ${epochsOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </CardHeader>
+        </button>
+        {epochsOpen && (
+          <CardContent>
+            <EpochTable epochs={epochHistory?.epoches ?? []} currentEpoch={actualEpoch} />
+          </CardContent>
+        )}
       </Card>
 
       {/* Query fees — most important revenue chart, prominent position */}
