@@ -74,13 +74,14 @@ The previous revision of this doc badly undersold `/dock`. Verified against
 | **Transfer subgraph ownership** | ✅ | **Live** — `GNS.safeTransferFrom` behind a typed double-address confirmation (`SubgraphLifecyclePanel.tsx`) |
 | **Deprecate / archive subgraph** | ✅ | **Live** — `GNS.deprecateSubgraph` behind a typed "DEPRECATE" confirmation (`SubgraphLifecyclePanel.tsx`) |
 | **Subgraph health monitor + alerting** | ✅ Live | Per-subgraph Discord/Slack webhook alerts; edge-triggered cron (`check-subgraph-health`) queries each indexer's `/status`, fires on lagging/failed/recovered (`SubgraphAlertsPanel`) |
-| **API-key lifecycle** (mint / restrict / usage / spend) | 🛠️ Planned | The one true tether to Studio. See **Metered Gateway (RFC-004)** below |
-| Billing — GRT deposit/withdraw/balance | 🛠️ Planned | Part of the gateway plan; on-chain billing ledger |
+| **API-key lifecycle** (mint / revoke / usage) | ✅ Live | Non-custodial free tier — mint/revoke `lod_live_` keys + metered proxy + usage (RFC-004 Phase A). Restrictions/billing dropped (see below) |
+| Billing — GRT deposit/withdraw/balance | 🚫 Won't do | Custody = money-services business; dropped 2026-05-29 |
 
 **Verdict:** the publish pipeline, the full on-chain lifecycle (metadata update / transfer /
-deprecate), the non-custodial metered gateway (RFC-004 Phase A), AND health alerting are now
-shipped. The only remaining gap is the **custodial** paid tier (RFC-004 Phase B), deliberately
-gated on a money-transmitter legal review.
+deprecate), the non-custodial metered gateway (RFC-004 Phase A) AND health alerting are shipped.
+**Every buildable parity gap is now closed** — the remaining items are all 🚫 won't-do (custodial
+gateway, niche settings-writes) or not technically buildable (per-subgraph query count). Parity is
+done; future work is net-new product (the intelligence layer), not catching up to the official tools.
 
 ---
 
@@ -197,10 +198,10 @@ gated on a money-transmitter legal review.
 | **Deprecate / archive subgraph** | ✅ | ✅ | **Live** — `GNS.deprecateSubgraph`, typed confirm |
 | **Subgraph health monitor + alerting** | ✅ | ✅ | **Live** — per-subgraph webhook alerts (Discord/Slack), cron `check-subgraph-health` queries each indexer's `/status`, edge-triggered lagging/failed/recovered notifications (`SubgraphAlertsPanel`) |
 | **API key management** (create / revoke) | ✅ | ✅ | **Live (free tier)** — mint/list/revoke `lod_live_` keys in `/dock` (`ApiKeysPanel`), metered proxy `/api/gateway/[key]`. Non-custodial, RFC-004 Phase A |
-| **API key domain/subgraph restrictions** | ✅ | 🛠️ Planned | RFC-004 Phase 4 (domain/deployment allow-lists) |
-| **Indexer routing preferences per key** | ✅ | 🛠️ Planned | The RFC's *differentiator*: route by Lodestar risk/REO/QoS scores. Out of scope as a commodity, in scope as intelligence-layer routing |
+| **API key domain/subgraph restrictions** | ✅ | 🚫 Won't do | Was RFC-004 Phase 4; dropped with the custodial cluster |
+| **Indexer routing preferences per key** | ✅ | 🚫 Won't do | Gateway-internal at The Graph; only ours to set if we operate routing — dropped with the custodial cluster |
 | **Query usage monitoring per key** | ✅ | ✅ | **Live** — per-key + per-user monthly usage in `/dock` (`api_key_usage` metering) |
-| **Billing** — GRT deposit/withdraw/balance | ✅ | 🛠️ Planned | RFC-004 Phase B — prepaid GRT balance, reserve-then-reconcile (**the custody step — gated on legal review**) |
+| **Billing** — GRT deposit/withdraw/balance | ✅ | 🚫 Won't do | Custody = money-services business to resell a commodity at zero margin; dropped 2026-05-29 (see Tier 4) |
 
 ---
 
@@ -304,12 +305,20 @@ Reused the existing `/dock` wagmi/viem write infrastructure.
 6. ~~Subgraph health monitor with webhook / Discord / Slack alerting~~ — ✅ **SHIPPED** — non-custodial per-subgraph webhook alerts, edge-triggered, 15-min `check-subgraph-health` cron querying each indexer's `/status`.
 7. 🚫 **Won't do** — Indexer operator-address / ENS settings writes. Niche settings-writes that indexers do via their own agent/CLI/the ENS app, not a dashboard; not worth the on-chain write surface.
 
-### Tier 4 — Custodial gateway (gated)
-8. 🛠️ RFC-004 **Phase 2** — deposit watcher + prepaid balance + reserve-commit metering.
-   **This is the custody step. Blocked on a money-transmitter legal review + the
-   intelligence-layer bundling.** Do not start before both are resolved.
-9. 🛠️ RFC-004 **Phase 3** — reconciliation/refund cron + low-balance alerts.
-10. 🛠️ RFC-004 **Phase 4** — per-key domain/deployment restrictions, spend caps, rate recalibration.
+### Tier 4 — Custodial gateway — 🚫 WON'T DO (decided 2026-05-29)
+The whole custodial cluster (RFC-004 Phase B onward) is **dropped, not deferred.** Holding user
+GRT makes Lodestar a money-services business (custody + money-transmitter/regulatory exposure +
+treasury ops) to **resell a commodity at zero margin** that Studio already gives away. The
+non-custodial free-tier gateway (Phase A) stays; the paid pipe is not worth the risk. Lodestar's
+payable value is the **intelligence layer** (risk/REO/APY/advisor + Lodie + enriched data), not
+the query pipe.
+
+- 🚫 RFC-004 **Phase 2** — deposit watcher + prepaid balance + reserve-commit metering (custody).
+- 🚫 RFC-004 **Phase 3** — reconciliation/refund cron + low-balance alerts.
+- 🚫 RFC-004 **Phase 4** — per-key domain/deployment restrictions, spend caps, rate recalibration.
+
+Revisit only if the strategy changes (e.g. monetising the intelligence layer needs one billing
+surface, or a genuinely differentiated gateway angle emerges).
 
 ### 🔒 Out of scope / deferred
 - **Indexer operator-address / ENS settings writes** — won't do; indexers set these via their
