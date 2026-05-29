@@ -175,7 +175,7 @@ These are Lodestar's differentiators — don't lose them chasing parity.
 
 **Remaining:**
 
-6. **API key management** — Studio's primary developer feature. Even a basic version (create, view, delete, restrict by domain) would close a major gap for developers using Lodestar as a Studio alternative. Now the largest remaining Tier 1 gap.
+6. **API key management** — 🅿️ **explored & parked** (see `RFC-004`, branch `metered-gateway`). The metered prepaid-GRT gateway was designed and Phase 0 built, then parked: at-cost it's a **zero-margin resale of a commodity Studio offers directly** (mint keys, deposit GRT, see usage) while saddling Lodestar with fund custody + regulatory exposure. Conclusion: Lodestar's payable value is the **intelligence layer** (risk/REO/APY/advisor + Lodie AI + an enriched-data API), not the query pipe. Revisit only if monetising that intelligence or if a differentiated gateway angle emerges.
 
 ### Tier 2 — Meaningful gaps, moderate effort
 
