@@ -63,5 +63,10 @@
     "tsx": "^4.22.2",
     "typescript": "^5.9.3",
     "vitest": "^4.1.6"
+  },
+  "pnpm": {
+    "overrides": {
+      "axios": "^1.13.6"
+    }
   }
 }
