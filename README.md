@@ -196,6 +196,29 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Horizon event history (`/api/horizon/*`), Push notifications, and Seahorn all degrade gracefully when their env vars are absent.
 
+## Database Backups
+
+The lodestar Postgres database (on the primary VPS) is backed up nightly to a separate offsite VPS using a **pull model**: the backup box reaches into the primary and pulls a compressed `pg_dump`, rather than the primary pushing out. If the primary is ever compromised, the attacker has no path to the backups.
+
+```
+PRIMARY (DB host)                          BACKUP (offsite)
+  Postgres :5433        nightly 03:17 UTC    pull-lodestar-backup.sh (cron)
+  lodestar-dump-stdout.sh  ◀──── SSH ────────  pulls + verifies + retains
+        │                  forced-command key        ↓
+        └── pg_dump -Fc ──────────────────▶  daily/ (7) · weekly/ (4) · monthly/ (6)
+```
+
+- **`scripts/lodestar-dump-stdout.sh`** — runs on the primary. Emits a compressed `pg_dump -Fc` of `lodestar` to stdout via local peer auth (no DB password on disk). This is the *only* thing the backup key is permitted to run — it's wired as a forced command in the primary's `authorized_keys`, locked down with `no-pty,no-port-forwarding,...`, so a stolen key can do nothing but request a dump.
+- **`scripts/pull-lodestar-backup.sh`** — runs on the backup box via cron (daily 03:17 UTC). Pulls the dump, **verifies it before keeping it** (size, `PGDMP` magic, table count), files it into `daily/`, then hardlink-promotes to `weekly/` (Sundays) and `monthly/` (1st of month). Retention: **7 daily / 4 weekly / 6 monthly**.
+
+Dumps are custom-format (`-Fc`). Restore with:
+
+```bash
+pg_restore -h <host> -p <port> -U postgres -d <db> --no-owner --no-acl lodestar-<ts>.dump
+```
+
+Restores are periodically test-verified against a throwaway Postgres container. These are nightly logical dumps (no point-in-time recovery) — appropriate for an analytics DB that re-ingests from chain.
+
 ## Project Structure
 
 ```
