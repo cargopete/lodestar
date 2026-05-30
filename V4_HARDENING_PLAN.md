@@ -19,12 +19,13 @@
 | CI | **RED** — type-check (51 tsc errors in test files) + test:coverage (80% gate unmet) both failing |
 | Deps | Multiple **HIGH axios CVEs** (transitive) — SSRF, prototype pollution, credential theft, DoS |
 
-## Phase 1 — Stabilise the gate
+## Phase 1 — Stabilise the gate ✅ DONE (commit 39378cb)
 
-- [ ] Fix 51 `tsc` errors (all in `cron-auth.test.ts` + `routes-v2.test.ts`; NextRequest/NextResponse → Request/Response casts). Prod code is clean.
-- [ ] Reconfigure `vitest.config.ts` coverage to measure `lib` + API routes + hooks (+ critical components). Remove the lib-only blinkers.
-- [ ] Set the coverage threshold to the current **real** measured %, then ratchet upward — never let it regress.
-- [ ] All 4 CI jobs green (lint, type-check, test, build).
+- [x] Fix `tsc` errors — turned out to be 51 across 4 test files (`cron-auth`, `routes`, `routes-v2`, `routes-v3`) + fixtures; all NextRequest/NextResponse cast + missing score-breakdown fields. Prod code was clean.
+- [x] Fix lint — discovered **64 pre-existing errors** in production UI (eslint-config-next 16.2.6 React-Compiler rules: set-state-in-effect, purity, immutability, preserve-manual-memoization) + escapes/any/Links. Fixed properly: `Date.now()`-in-render hoisted to mount-stable `useState` initialisers (10×); legitimate effect/wallet/tx patterns given justified `eslint-disable` comments (24×); escapes/Links/`any`→typed (30×).
+- [x] Reconfigure `vitest.config.ts` coverage to measure `lib` + API routes + hooks; removed lib-only blinkers.
+- [x] Set ratcheting threshold to real baseline: **stmts 32 / branches 28 / funcs 30 / lines 32** (measured ~33/29/31/33). Raise in Phase 3.
+- [x] All 4 CI jobs green locally (lint, type-check, test:coverage, build). App verified running — all touched pages return 200, no runtime errors.
 
 ## Phase 2 — Security audit (skill-driven)
 
