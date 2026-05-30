@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useParameterHistory } from '@/hooks/useNetworkStats';
 import { formatPPM } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
@@ -37,6 +38,8 @@ function formatDate(isoDate: string): string {
 
 export function ParameterHistory({ address }: { address: string }) {
   const { data, isLoading } = useParameterHistory(address);
+  // Mount-stable "now" (ms) — keeps render pure (no Date.now() during render).
+  const [now] = useState(() => Date.now());
 
   if (isLoading) {
     return (
@@ -78,7 +81,6 @@ export function ParameterHistory({ address }: { address: string }) {
   }
 
   // Compute stability
-  const now = Date.now();
   const sixMonthsAgo = now - 180 * 86_400_000;
   const threeMonthsAgo = now - 90 * 86_400_000;
   const recentChanges = data.filter((c) => new Date(c.detected_at).getTime() > threeMonthsAgo);

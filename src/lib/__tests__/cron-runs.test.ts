@@ -94,7 +94,7 @@ describe('withCronTracking', () => {
     const sql = makeSql();
     const result = await withCronTracking(sql as never, 'snapshot', async () => ({
       written: true, // no ingested or count key
-    }));
+    }) as { ingested?: number; count?: number });
     expect(result).toHaveProperty('durationMs');
     expect(sql).toHaveBeenCalled();
   });

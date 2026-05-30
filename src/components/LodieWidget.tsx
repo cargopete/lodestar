@@ -211,6 +211,7 @@ export function LodieWidget() {
   // First visit onboarding
   useEffect(() => {
     if (!localStorage.getItem(ONBOARDING_KEY)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage hydration / async wallet check — intentional
       setToured(false);
       setOpen(true);
     }
@@ -218,6 +219,7 @@ export function LodieWidget() {
 
   // Reset on navigation
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage hydration / async wallet check — intentional
     setOpen(false);
     setDepth(0);
     setDataWarning(null);
@@ -259,6 +261,7 @@ export function LodieWidget() {
 
   // Wallet health check
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage hydration / async wallet check — intentional
     if (!walletAddress) { setWalletWarning(null); return; }
     fetch(`/api/portfolio?address=${walletAddress}&type=delegator`)
       .then((r) => r.json())
@@ -330,6 +333,7 @@ export function LodieWidget() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        // eslint-disable-next-line react-hooks/immutability -- streaming accumulator inside an async reader loop; intentional
         full += dec.decode(value, { stream: true });
         setMessages((m) => {
           const updated = [...m];
@@ -413,7 +417,7 @@ export function LodieWidget() {
             <div className="p-4">
               {showOnboarding && (
                 <p className="text-[12.5px] text-[var(--text-muted)] leading-relaxed">
-                  Welcome aboard. I'm Lodie — spirit of this lighthouse. Navigate to any page and I'll tell you what to look for. Press{' '}
+                  Welcome aboard. I&apos;m Lodie — spirit of this lighthouse. Navigate to any page and I&apos;ll tell you what to look for. Press{' '}
                   <kbd className="px-1 py-px rounded bg-[var(--bg)] text-[var(--text-faint)] text-[10px] font-mono">L</kbd>
                   {' '}to summon me anytime, or switch to <strong className="text-[var(--text)]">Ask</strong> to chat.
                 </p>
@@ -436,7 +440,7 @@ export function LodieWidget() {
                 <div className="flex items-center justify-between">
                   {showOnboarding ? (
                     <button onClick={completeTour} className="text-[11px] text-[var(--accent)] hover:opacity-80 transition-opacity">
-                      Got it, I'll explore →
+                      Got it, I&apos;ll explore →
                     </button>
                   ) : depth === 0 && hasDeep ? (
                     <button onClick={() => setDepth(1)} className="text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] transition-colors">

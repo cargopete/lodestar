@@ -64,6 +64,7 @@ export default function ApiKeysPanel() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetch on mount — intentional
     load();
   }, []);
 

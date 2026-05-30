@@ -381,6 +381,7 @@ function PublishWizard({
         ? (minedTxHash ?? '')
         : (extractSubgraphId(receipt.logs, CONTRACTS.gns) ?? minedTxHash ?? '');
       onPublished(result, versionLabel);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to wagmi tx-receipt confirmation — intentional
       setStep('done');
     }
   }, [txConfirmed, receipt, minedTxHash, onPublished, isNewVersion]);
@@ -714,6 +715,7 @@ function PostBountyWizard({
   const [approveTxHash, setApproveTxHash] = useState<`0x${string}` | undefined>();
   const [postTxHash, setPostTxHash] = useState<`0x${string}` | undefined>();
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- try/catch parse; intentionally hand-memoized
   const amountWei = useMemo(() => {
     try { return parseEther(amountGrt || '0'); } catch { return 0n; }
   }, [amountGrt]);
@@ -744,12 +746,14 @@ function PostBountyWizard({
   const { isSuccess: postConfirmed, data: postReceipt } = useWaitForTransactionReceipt({ hash: postTxHash });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to wagmi tx-receipt confirmation — intentional
     if (approveConfirmed) { refetchAllowance(); setStep('post'); }
   }, [approveConfirmed, refetchAllowance]);
 
   useEffect(() => {
     if (!postConfirmed || !postReceipt) return;
     const id = extractBountyId(postReceipt.logs, CONTRACTS.bountyBoard);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to wagmi tx-receipt confirmation — intentional
     setBountyId(id?.toString() ?? null);
     // Save to DB for discoverability (best-effort)
     if (sg.deployment_id) {
@@ -1101,6 +1105,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimTxHash });
   useEffect(() => {
     if (!claimConfirmed) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to wagmi tx-receipt confirmation — intentional
     setStep('done');
     // Best-effort DB update — fire and forget
     fetch(`/api/studio/bounties/${bounty.id}`, {
@@ -2009,6 +2014,8 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [refundHashes, setRefundHashes] = useState<Record<string, `0x${string}`>>({});
   const [queryOpenIds, setQueryOpenIds] = useState<Set<number>>(new Set());
+  // Mount-stable "now" (ms) — keeps render pure (no Date.now() during render).
+  const [nowMs] = useState(() => Date.now());
 
   const toggleQuery = (id: number) =>
     setQueryOpenIds((prev) => {
@@ -2167,11 +2174,11 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
               const isExpired =
                 !isClaimed &&
                 (b.status === 'expired' ||
-                  (!!b.expires_at && Date.now() > new Date(b.expires_at).getTime()));
+                  (!!b.expires_at && nowMs > new Date(b.expires_at).getTime()));
               const cancelTxHash = b.chain_bounty_id ? cancelHashes[b.chain_bounty_id] : undefined;
               const refundTxHash = b.chain_bounty_id ? refundHashes[b.chain_bounty_id] : undefined;
               const cancelUnlockAt = new Date(new Date(b.created_at).getTime() + 72 * 60 * 60 * 1000);
-              const cancelUnlocked = Date.now() >= cancelUnlockAt.getTime();
+              const cancelUnlocked = nowMs >= cancelUnlockAt.getTime();
               const isCancelling = cancellingId === b.chain_bounty_id;
               const isRefunding = refundingId === b.chain_bounty_id;
               const queryOpen = queryOpenIds.has(b.id);

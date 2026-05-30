@@ -43,6 +43,8 @@ export function DelegationCalculator({
   annualIssuance = 0,
 }: DelegationCalculatorProps) {
   const [delegationAmount, setDelegationAmount] = useState<string>('10000');
+  // Mount-stable "now" (seconds) — keeps render pure (no Date.now() during render).
+  const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   const selfStake = weiToGRT(indexer.stakedTokens) - weiToGRT(indexer.lockedTokens ?? '0');
   const currentDelegated = weiToGRT(indexer.delegatedTokens) - weiToGRT(indexer.delegatedThawingTokens ?? '0');
@@ -87,10 +89,9 @@ export function DelegationCalculator({
   const rawCut = indexer.indexingRewardCut / 1_000_000;
 
   // Check if parameters are locked (cooldown active)
-  const now = Math.floor(Date.now() / 1000);
   const cooldownEnd = indexer.lastDelegationParameterUpdate + indexer.delegatorParameterCooldown;
-  const isLocked = cooldownEnd > now;
-  const lockDaysRemaining = isLocked ? Math.ceil((cooldownEnd - now) / 86400) : 0;
+  const isLocked = cooldownEnd > nowSec;
+  const lockDaysRemaining = isLocked ? Math.ceil((cooldownEnd - nowSec) / 86400) : 0;
 
   // Determine if capacity is available
   const wouldExceedCapacity = newDelegation > capacity.availableCapacity;

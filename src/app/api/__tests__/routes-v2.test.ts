@@ -15,7 +15,7 @@ import { NextRequest } from 'next/server';
 const mockCacheGet = vi.fn(() => Promise.resolve(null));
 vi.mock('@/lib/cache', () => ({
   cached: vi.fn((_key: string, _ttl: number, fetcher: () => Promise<unknown>) => fetcher()),
-  cacheGet: (...args: unknown[]) => mockCacheGet(...args),
+  cacheGet: (...args: unknown[]) => (mockCacheGet as (...a: unknown[]) => unknown)(...args),
   cacheSet: vi.fn(),
   redis: { get: vi.fn(), set: vi.fn(), ping: vi.fn().mockResolvedValue('PONG') },
   hasRedis: vi.fn(() => true),
@@ -123,7 +123,7 @@ beforeEach(() => {
 
 // ---------- Helpers ----------
 
-function makeRequest(url: string, init?: RequestInit): NextRequest {
+function makeRequest(url: string, init?: ConstructorParameters<typeof NextRequest>[1]): NextRequest {
   return new NextRequest(new URL(url, 'http://localhost:3000'), init);
 }
 
@@ -136,11 +136,11 @@ async function getJson(response: Response) {
 // ============================================================
 
 describe('/api/portfolio', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/portfolio/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 400 when address missing', async () => {
@@ -214,11 +214,11 @@ describe('/api/portfolio', () => {
 // ============================================================
 
 describe('/api/provisions', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/provisions/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 400 when neither indexer nor service provided', async () => {
@@ -271,7 +271,7 @@ describe('/api/provisions', () => {
 // ============================================================
 
 describe('/api/indexer-status/[address]', () => {
-  let GET: (req: Request, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
+  let GET: (req: NextRequest, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/indexer-status/[address]/route');
@@ -338,11 +338,11 @@ describe('/api/indexer-status/[address]', () => {
 // ============================================================
 
 describe('/api/payments', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/payments/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 503 when no API key', async () => {
@@ -486,7 +486,7 @@ describe('/api/networks', () => {
 // ============================================================
 
 describe('/api/parameter-history/[address]', () => {
-  let GET: (req: Request, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
+  let GET: (req: NextRequest, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/parameter-history/[address]/route');
@@ -558,11 +558,11 @@ describe('/api/parameter-history/[address]', () => {
 // ============================================================
 
 describe('/api/vote GET', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/vote/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 503 when DB not configured', async () => {
@@ -606,11 +606,11 @@ describe('/api/vote GET', () => {
 });
 
 describe('/api/vote POST', () => {
-  let POST: (req: Request) => Promise<Response>;
+  let POST: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/vote/route');
-    POST = mod.POST as (req: Request) => Promise<Response>;
+    POST = mod.POST as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 503 when DB not configured', async () => {
@@ -808,11 +808,11 @@ describe('/api/vote POST', () => {
 // ============================================================
 
 describe('/api/token-metrics', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/token-metrics/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns { data: [] } when DB not configured', async () => {
@@ -871,11 +871,11 @@ describe('/api/token-metrics', () => {
 // ============================================================
 
 describe('/api/rewards-history', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/rewards-history/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 400 when address missing', async () => {
@@ -973,14 +973,14 @@ describe('/api/rewards-history', () => {
 // ============================================================
 
 describe('/api/health', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     // Reset mockDb queue — vi.clearAllMocks() does not flush onceImplementations
     mockDb.mockReset();
     mockDb.mockResolvedValue([]);
     const mod = await import('@/app/api/health/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns status with components shape', async () => {
@@ -1035,11 +1035,11 @@ describe('/api/health', () => {
 // ============================================================
 
 describe('/api/cron/refresh', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/cron/refresh/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 401 when CRON_SECRET is set and request is missing auth header', async () => {

@@ -577,7 +577,7 @@ function HyperliquidCard({
           <div>
             <div className="text-[10px] uppercase tracking-wider text-[var(--text-faint)]">
               <HelpTooltip label="Funding (ann.)">
-                Annualized funding rate (hourly funding × 24 × 365). Positive = longs pay shorts (long-biased venue). Negative = shorts pay longs. The sparkline below shows the last 24h of hourly rates with a dashed midline at zero. "At floor" means HL's per-asset baseline; not a directional signal.
+                Annualized funding rate (hourly funding × 24 × 365). Positive = longs pay shorts (long-biased venue). Negative = shorts pay longs. The sparkline below shows the last 24h of hourly rates with a dashed midline at zero. &quot;At floor&quot; means HL&apos;s per-asset baseline; not a directional signal.
               </HelpTooltip>
             </div>
             <div className={`tabular-nums mt-0.5 ${fundingClass}`}>
@@ -778,7 +778,7 @@ function LendingCard({
         <p className="mt-1 text-xs text-[var(--text-muted)] leading-snug">
           You can <span className="text-[var(--green)]">supply {symbol}</span> to earn yield, or post it as
           collateral to <span className="text-[var(--text)]">borrow</span> other assets. Each row below is the
-          same {symbol} market on a different chain — Aave's deployments price risk independently, so APRs vary.
+          same {symbol} market on a different chain — Aave&apos;s deployments price risk independently, so APRs vary.
         </p>
       </CardHeader>
       <CardContent>
@@ -862,7 +862,7 @@ function LendingCard({
                       label="Supplied"
                       className="justify-end"
                     >
-                      Total {symbol} (in USD) that lenders have deposited into this pool. The "of cap" line below is how full it is against Aave's per-asset supply ceiling.
+                      Total {symbol} (in USD) that lenders have deposited into this pool. The &quot;of cap&quot; line below is how full it is against Aave&apos;s per-asset supply ceiling.
                     </HelpTooltip>
                   </th>
                   <th className="text-right font-medium py-1.5 px-2">
@@ -870,7 +870,7 @@ function LendingCard({
                       label="Borrowed"
                       className="justify-end"
                     >
-                      Total {symbol} (in USD) currently being borrowed against this pool. The "of cap" line shows how close it is to the protocol's borrow ceiling.
+                      Total {symbol} (in USD) currently being borrowed against this pool. The &quot;of cap&quot; line shows how close it is to the protocol&apos;s borrow ceiling.
                     </HelpTooltip>
                   </th>
                   <th className="text-right font-medium py-1.5 px-2">
@@ -878,7 +878,7 @@ function LendingCard({
                       label="To borrow"
                       className="justify-end"
                     >
-                      USD liquidity that's actually borrowable from the pool right now (Supplied minus Borrowed, minus any reserves the protocol withholds).
+                      USD liquidity that&apos;s actually borrowable from the pool right now (Supplied minus Borrowed, minus any reserves the protocol withholds).
                     </HelpTooltip>
                   </th>
                   <th className="text-right font-medium py-1.5 px-2">

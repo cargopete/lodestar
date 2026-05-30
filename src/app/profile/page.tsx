@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import {
   type DelegatedStake,
@@ -435,7 +436,7 @@ export default function ProfilePage() {
                   This wallet has no delegations or signal positions on the network.
                   Visit the Indexer Directory to delegate GRT.
                 </p>
-                <a
+                <Link
                   href="/indexers"
                   className={cn(
                     'inline-flex items-center gap-2 mt-6 px-4 py-2 text-sm font-medium',
@@ -447,7 +448,7 @@ export default function ProfilePage() {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               </CardContent>
             </Card>
           )}

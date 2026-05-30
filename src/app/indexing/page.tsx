@@ -77,6 +77,8 @@ function useChainLag() {
 
 function ChainHealthPanel() {
   const { data, loading } = useChainLag();
+  // Mount-stable "now" (ms) — keeps render pure (no Date.now() during render).
+  const [nowMs] = useState(() => Date.now());
 
   if (loading) {
     return (
@@ -115,7 +117,7 @@ function ChainHealthPanel() {
     return b[1].sampledIndexers - a[1].sampledIndexers;
   });
 
-  const age = Math.round((Date.now() - data.computedAt) / 60_000);
+  const age = Math.round((nowMs - data.computedAt) / 60_000);
 
   return (
     <Card>
@@ -198,6 +200,7 @@ function useSubgraphSearch(query: string) {
 
     const trimmed = query.trim();
     if (trimmed.length < 2 || trimmed.startsWith('Qm') || trimmed.startsWith('bafy')) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced async search — intentional
       setResults([]);
       setIsSearching(false);
       return;

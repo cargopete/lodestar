@@ -51,6 +51,8 @@ export function IndexerComparison({
   delegationAmount = 10000,
 }: IndexerComparisonProps) {
   const [sortMetric, setSortMetric] = useState<MetricKey | null>(null);
+  // Mount-stable "now" (seconds) — keeps render pure (no Date.now() during render).
+  const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   // Process indexer data
   const processedIndexers = indexers.map((indexer) => {
@@ -70,9 +72,8 @@ export function IndexerComparison({
       delegationAmount
     );
 
-    const now = Math.floor(Date.now() / 1000);
     const cooldownEnd = indexer.lastDelegationParameterUpdate + indexer.delegatorParameterCooldown;
-    const isLocked = cooldownEnd > now;
+    const isLocked = cooldownEnd > nowSec;
 
     return {
       ...indexer,

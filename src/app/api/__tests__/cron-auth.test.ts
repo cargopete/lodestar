@@ -106,7 +106,7 @@ function authedRequest(url: string, secret = 'test-secret'): NextRequest {
  */
 async function assertCronAuth(
   routePath: string,
-  importFn: () => Promise<{ GET: (r: Request) => Promise<Response> }>,
+  importFn: () => Promise<{ GET: (r: NextRequest) => Promise<Response> }>,
 ) {
   const { GET } = await importFn();
 

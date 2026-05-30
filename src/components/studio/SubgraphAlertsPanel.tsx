@@ -64,6 +64,7 @@ export default function SubgraphAlertsPanel({
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetch on mount — intentional
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deploymentId]);

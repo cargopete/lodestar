@@ -211,6 +211,7 @@ export default function TokensPage() {
   // or sort change). Without this, narrowing a search can leave the user
   // stranded on an empty page 3.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset pagination when filters change — intentional
     setPage(1);
   }, [query, sortKey, sortDir]);
 

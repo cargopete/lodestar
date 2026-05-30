@@ -146,6 +146,7 @@ export default function DelegatorPortfolioPage({
   const portfolioValue = totalStaked + totalThawing + totalUnrealized;
 
   // CSV export handler
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- memoized closure over a money-export path; intentionally hand-memoized
   const handleExportCSV = useMemo(() => {
     if (!delegator) return () => '';
     return () => {

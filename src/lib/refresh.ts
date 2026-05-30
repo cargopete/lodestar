@@ -208,7 +208,7 @@ export async function refreshIndexers(opts: {
 
   // Step 3: Fetch recent delegation events (7d)
   const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
-  let delegationActivity: Record<string, { delegations: number; undelegations: number; netFlowGRT: number }> = {};
+  const delegationActivity: Record<string, { delegations: number; undelegations: number; netFlowGRT: number }> = {};
   try {
     let allEvents: DelegationEventData[] = [];
     let lastTimestamp = '999999999999';
@@ -256,7 +256,7 @@ export async function refreshIndexers(opts: {
   }
 
   // Step 4: Resolve ENS names
-  let ensNames: Record<string, string> = {};
+  const ensNames: Record<string, string> = {};
   try {
     const ENS_BATCH = 20;
     for (let i = 0; i < indexerIds.length; i += ENS_BATCH) {

@@ -106,6 +106,8 @@ export default function IndexerDetailPage({
   params: Promise<{ address: string }>;
 }) {
   const { address } = use(params);
+  // Mount-stable "now" (seconds) — keeps render pure (no Date.now() during render).
+  const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   if (address.toLowerCase() === '0xb43b2cccceada5292732a8c58ae134adefce09bb') {
     redirect('/indexers');
@@ -156,7 +158,7 @@ export default function IndexerDetailPage({
         <p className="text-[var(--text-muted)]">
           Could not find indexer with address {shortenAddress(address)}
         </p>
-        <a
+        <Link
           href="/indexers"
           className={cn(
             'inline-flex items-center gap-2 mt-6 px-4 py-2 text-sm font-medium',
@@ -165,7 +167,7 @@ export default function IndexerDetailPage({
           )}
         >
           Back to Directory
-        </a>
+        </Link>
       </div>
     );
   }
@@ -433,11 +435,10 @@ export default function IndexerDetailPage({
       {/* Reward Cut Change Alert */}
       {(() => {
         const lastUpdate = indexer.lastDelegationParameterUpdate;
-        const now = Math.floor(Date.now() / 1000);
-        const daysSinceChange = (now - lastUpdate) / 86400;
+        const daysSinceChange = (nowSec - lastUpdate) / 86400;
         const cooldown = indexer.delegatorParameterCooldown;
         const cooldownDays = cooldown / 86400;
-        const isLocked = cooldown > 0 && (now - lastUpdate) < cooldown;
+        const isLocked = cooldown > 0 && (nowSec - lastUpdate) < cooldown;
 
         if (daysSinceChange <= 30) {
           return (

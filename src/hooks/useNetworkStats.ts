@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import {
   fetchNetworkStats,
@@ -119,6 +120,9 @@ const L1_BLOCK_TIME = 12; // seconds
 
 export function useEpochInfo() {
   const { data: networkData } = useNetworkStats();
+  // Mount-stable "now" (seconds) — declared before any early return (rules of hooks)
+  // and keeps render pure (no Date.now() during render).
+  const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   const network = networkData?.graphNetwork;
 
@@ -137,8 +141,7 @@ export function useEpochInfo() {
   // still estimate it from wall-clock time. We anchor it to the estimate's *own* epoch
   // boundary rather than the subgraph epoch's, which keeps the fraction in [0, 100) and
   // resetting each epoch instead of pinning at 100% if the two sources disagree slightly.
-  const now = Math.floor(Date.now() / 1000);
-  const estimatedL1Block = ETH_MERGE_BLOCK + Math.floor((now - ETH_MERGE_TIMESTAMP) / L1_BLOCK_TIME);
+  const estimatedL1Block = ETH_MERGE_BLOCK + Math.floor((nowSec - ETH_MERGE_TIMESTAMP) / L1_BLOCK_TIME);
   const blocksIntoEpoch =
     (estimatedL1Block - network.lastLengthUpdateBlock) % network.epochLength;
   const progress = Math.min((blocksIntoEpoch / network.epochLength) * 100, 100);

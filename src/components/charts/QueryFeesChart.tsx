@@ -55,6 +55,8 @@ const TOOLTIP_STYLE = {
 
 export function QueryFeesChart() {
   const [timeWindow, setTimeWindow] = useState<TimeWindow>('7d');
+  // Mount-stable "now" — keeps the memos pure (no Date.now() during render).
+  const [now] = useState(() => Date.now());
   const isYearly = timeWindow === '1y';
   const windowDays = WINDOW_DAYS[timeWindow];
   // For comparison windows: fetch 2× the window so we have current + previous periods
@@ -74,7 +76,6 @@ export function QueryFeesChart() {
   // Non-yearly: label each epoch as current / previous / older
   const chartData: EpochFee[] = useMemo(() => {
     if (isYearly || !epochDuration) return [];
-    const now = Date.now();
     return epochs.map((ep) => {
       const epochsAgo = latestEpochId - Number(ep.id);
       const ageSeconds = epochsAgo * epochDuration;
@@ -85,12 +86,11 @@ export function QueryFeesChart() {
       else if (ageSeconds <= windowSeconds * 2) period = 'previous';
       return { epoch: ep.id, date, fees: weiToGRT(ep.totalQueryFees), period };
     });
-  }, [epochs, latestEpochId, epochDuration, windowSeconds, isYearly]);
+  }, [epochs, latestEpochId, epochDuration, windowSeconds, isYearly, now]);
 
   // Yearly: group epochs into calendar quarters
   const quarterData: QuarterFee[] = useMemo(() => {
     if (!isYearly || !epochDuration) return [];
-    const now = Date.now();
     const byQuarter = new Map<string, { fees: number; year: number; q: number; epochCount: number }>();
 
     for (const ep of epochs) {

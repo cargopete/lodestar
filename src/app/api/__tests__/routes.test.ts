@@ -11,10 +11,10 @@ import { NextRequest } from 'next/server';
 // ---------- Mocks ----------
 
 // Mock @/lib/cache — bypass Redis entirely
-const mockCacheGet = vi.fn(() => Promise.resolve(null));
+const mockCacheGet = vi.fn((): Promise<unknown> => Promise.resolve(null));
 vi.mock('@/lib/cache', () => ({
   cached: vi.fn((_key: string, _ttl: number, fetcher: () => Promise<unknown>) => fetcher()),
-  cacheGet: (...args: unknown[]) => mockCacheGet(...args),
+  cacheGet: (...args: unknown[]) => (mockCacheGet as (...a: unknown[]) => unknown)(...args),
   cacheSet: vi.fn(),
   redis: { get: vi.fn(), set: vi.fn() },
 }));
@@ -72,7 +72,7 @@ beforeEach(() => {
 
 // ---------- Helpers ----------
 
-function makeRequest(url: string, init?: RequestInit): NextRequest {
+function makeRequest(url: string, init?: ConstructorParameters<typeof NextRequest>[1]): NextRequest {
   return new NextRequest(new URL(url, 'http://localhost:3000'), init);
 }
 
@@ -229,11 +229,11 @@ describe('/api/network-stats', () => {
 // ============================================================
 
 describe('/api/indexers', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/indexers/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns { data } with indexers array', async () => {
@@ -331,11 +331,11 @@ describe('/api/indexers-enriched', () => {
 // ============================================================
 
 describe('/api/epochs', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/epochs/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns { data } with epochs array', async () => {
@@ -374,11 +374,11 @@ describe('/api/epochs', () => {
 // ============================================================
 
 describe('/api/ens', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/ens/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns { ensName } on success', async () => {
@@ -437,11 +437,11 @@ describe('/api/ens', () => {
 // ============================================================
 
 describe('/api/manifest', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/manifest/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 400 for invalid IPFS hash', async () => {
@@ -495,11 +495,11 @@ dataSources:
 // ============================================================
 
 describe('/api/reo', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/reo/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 400 when address missing', async () => {
@@ -527,11 +527,11 @@ describe('/api/reo', () => {
 // ============================================================
 
 describe('/api/poi', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/poi/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns overview with { data.summary, data.deployments }', async () => {
@@ -629,11 +629,11 @@ describe('/api/poi', () => {
 // ============================================================
 
 describe('/api/subgraph-deployments', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/subgraph-deployments/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns { data } with deployments array', async () => {
@@ -675,11 +675,11 @@ describe('/api/subgraph-deployments', () => {
 // ============================================================
 
 describe('/api/subgraph-search', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/subgraph-search/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns empty array for short query', async () => {
@@ -814,7 +814,7 @@ describe('/api/subgraph-search', () => {
 
 describe('/api/subgraph-versions/[hash]', () => {
   const VALID_HASH = 'QmNNqSFDNDhWPhscvpsyjAXTbHbpLpzyvhw51SxTx5mtwg';
-  let GET: (req: Request, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
+  let GET: (req: NextRequest, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/subgraph-versions/[hash]/route');
@@ -920,7 +920,7 @@ describe('/api/subgraph-versions/[hash]', () => {
 // ============================================================
 
 describe('/api/indexer/[address]', () => {
-  let GET: (req: Request, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
+  let GET: (req: NextRequest, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/indexer/[address]/route');
@@ -1007,7 +1007,7 @@ describe('/api/indexer/[address]', () => {
 // ============================================================
 
 describe('/api/indexing-status/[hash]', () => {
-  let GET: (req: Request, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
+  let GET: (req: NextRequest, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/indexing-status/[hash]/route');
@@ -1077,11 +1077,11 @@ describe('/api/indexing-status/[hash]', () => {
 // ============================================================
 
 describe('/api/delegation-events', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/delegation-events/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns empty data when no API key', async () => {
@@ -1101,11 +1101,11 @@ describe('/api/delegation-events', () => {
 // ============================================================
 
 describe('/api/subgraph', () => {
-  let POST: (req: Request) => Promise<Response>;
+  let POST: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/subgraph/route');
-    POST = mod.POST as (req: Request) => Promise<Response>;
+    POST = mod.POST as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns mock network data when no API key', async () => {
@@ -1161,7 +1161,7 @@ describe('/api/subgraph', () => {
 describe('Security: address validation', () => {
   it('/api/ens rejects GraphQL-injectable address (no format check)', async () => {
     const mod = await import('@/app/api/ens/route');
-    const GET = mod.GET as (req: Request) => Promise<Response>;
+    const GET = mod.GET as (req: NextRequest) => Promise<Response>;
 
     // Attempt to inject GraphQL syntax via address param
     const req = makeRequest('/api/ens?address=0x0000%22%7D%7B%20id%20%7D');
@@ -1176,7 +1176,7 @@ describe('Security: address validation', () => {
 
   it('/api/payments rejects non-address receiver', async () => {
     const mod = await import('@/app/api/payments/route');
-    const GET = mod.GET as (req: Request) => Promise<Response>;
+    const GET = mod.GET as (req: NextRequest) => Promise<Response>;
 
     const req = makeRequest('/api/payments?receiver=0xnot-an-address');
     const res = await GET(req);
@@ -1187,7 +1187,7 @@ describe('Security: address validation', () => {
 
   it('/api/portfolio rejects invalid address', async () => {
     const mod = await import('@/app/api/portfolio/route');
-    const GET = mod.GET as (req: Request) => Promise<Response>;
+    const GET = mod.GET as (req: NextRequest) => Promise<Response>;
 
     const req = makeRequest('/api/portfolio?address=notanaddress&type=delegator');
     const res = await GET(req);
@@ -1196,7 +1196,7 @@ describe('Security: address validation', () => {
 
   it('/api/subgraph-search rejects query with GraphQL special chars', async () => {
     const mod = await import('@/app/api/subgraph-search/route');
-    const GET = mod.GET as (req: Request) => Promise<Response>;
+    const GET = mod.GET as (req: NextRequest) => Promise<Response>;
 
     const req = makeRequest('/api/subgraph-search?q=uniswap%22%7D%7Badmin');
     const res = await GET(req);

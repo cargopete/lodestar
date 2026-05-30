@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useMemo } from 'react';
+import Link from 'next/link';
 import { type Signal, type Curator } from '@/lib/queries';
 import { useCuratorPortfolio } from '@/hooks/useNetworkStats';
 import {
@@ -112,12 +113,12 @@ export default function CuratorProfilePage({
           No curation data found for address <span className="font-mono">{shortenAddress(address)}</span>.
           The address may not have any signal positions.
         </p>
-        <a
+        <Link
           href="/curators"
           className="mt-6 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity"
         >
           Try Another Address
-        </a>
+        </Link>
       </div>
     );
   }

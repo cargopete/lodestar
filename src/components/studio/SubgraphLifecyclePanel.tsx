@@ -145,6 +145,7 @@ function LifecycleModal({
     // For 'deprecate' there is no schema field to flag; on-chain state is the
     // source of truth. We leave the DB row as-is and surface the deprecation
     // via the success screen only.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to wagmi tx-receipt — intentional
     setStep('done');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [txConfirmed]);

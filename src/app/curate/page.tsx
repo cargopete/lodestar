@@ -83,10 +83,12 @@ function SignalModal({
   const { isSuccess: signalSuccess } = useWaitForTransactionReceipt({ hash: signalTxHash });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to wagmi tx-receipt / URL params — intentional
     if (approveSuccess) { refetchAllowance(); setStep('signal'); }
   }, [approveSuccess]);
   useEffect(() => {
     if (signalSuccess) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to wagmi tx-receipt / URL params — intentional
       setStep('done');
       queryClient.invalidateQueries({ queryKey: ['curatorPortfolio'] });
     }
@@ -208,6 +210,7 @@ function UnsignalModal({
 
   const { writeContract, data: txHash, isPending } = useWriteContract();
   const { isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to wagmi tx-receipt / URL params — intentional
   useEffect(() => { if (isSuccess) setDone(true); }, [isSuccess]);
 
   return (
@@ -487,6 +490,7 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
   // When a deployment is passed from the Dock, pre-fill search and auto-open its Signal modal.
   useEffect(() => {
     if (!highlightDeployment || isLoading) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to wagmi tx-receipt / URL params — intentional
     setSearch(highlightDeployment);
     if (autoOpened.current) return;
     const match = ranked.find((d) => d.ipfsHash === highlightDeployment);
@@ -502,6 +506,7 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
     if (specificData?.data?.length) {
       autoOpened.current = true;
       const d = specificData.data[0];
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to wagmi tx-receipt / URL params — intentional
       setSignalTarget({ id: d.id, name: (d as { displayName?: string | null }).displayName ?? shortenAddress(d.ipfsHash, 6) });
     } else if (specificData !== undefined && !specificFetching) {
       autoOpened.current = true;
@@ -627,6 +632,7 @@ export default function CuratePage() {
     const params = new URLSearchParams(window.location.search);
     const d = params.get('deployment');
     if (d) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to wagmi tx-receipt / URL params — intentional
       setHighlightDeployment(d);
       setTab('discover');
     }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useNetworkStats } from '@/hooks/useNetworkStats';
 import { DelegatePanel } from '@/components/ui/DelegatePanel';
@@ -266,12 +267,12 @@ function CandidatePicker({
       })}
 
       {/* Escape hatch */}
-      <a
+      <Link
         href="/indexers"
         className="block px-4 py-3 text-xs text-center text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--bg-surface)] transition-colors"
       >
         None of these? Browse all indexers →
-      </a>
+      </Link>
     </div>
   );
 }
@@ -383,9 +384,9 @@ export default function DelegatePage() {
                 )}
               </button>
               <span className="text-[var(--border)] text-xs">·</span>
-              <a href="/indexers" className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
+              <Link href="/indexers" className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
                 Browse all indexers
-              </a>
+              </Link>
             </div>
           )}
 

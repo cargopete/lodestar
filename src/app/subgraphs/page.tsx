@@ -201,6 +201,7 @@ function SubgraphDirectory() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (!searchQuery || searchQuery.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced async search — intentional
       setSearchResults(null);
       return;
     }

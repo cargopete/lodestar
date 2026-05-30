@@ -46,6 +46,7 @@ export function HorizonActivity() {
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async slow-load timer — intentional
     if (!isFetching) { setSlowMessage(null); return; }
     const t = setTimeout(() => {
       setSlowMessage(SLOW_MESSAGES[Math.floor(Math.random() * SLOW_MESSAGES.length)]);

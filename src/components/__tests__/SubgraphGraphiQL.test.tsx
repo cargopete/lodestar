@@ -12,7 +12,7 @@ vi.mock('graphiql/style.css', () => ({}));
 
 const createFetcher = vi.fn(() => vi.fn());
 vi.mock('@graphiql/toolkit', () => ({
-  createGraphiQLFetcher: (...args: unknown[]) => createFetcher(...args),
+  createGraphiQLFetcher: (...args: unknown[]) => (createFetcher as (...a: unknown[]) => unknown)(...args),
 }));
 
 import SubgraphGraphiQL from '../SubgraphGraphiQL';

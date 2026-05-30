@@ -133,11 +133,11 @@ describe('/api/horizon/activity', () => {
 // ============================================================
 
 describe('/api/horizon/events', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/horizon/events/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 503 when Amp not configured', async () => {
@@ -198,11 +198,11 @@ describe('/api/horizon/events', () => {
 // ============================================================
 
 describe('/api/horizon/slashing', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/horizon/slashing/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 503 when Amp not configured', async () => {
@@ -237,11 +237,11 @@ describe('/api/horizon/slashing', () => {
 // ============================================================
 
 describe('/api/delegation-flows', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/delegation-flows/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns { data: [] } when DB not configured', async () => {
@@ -272,7 +272,7 @@ describe('/api/delegation-flows', () => {
 // ============================================================
 
 describe('/api/indexer-qos/[address]', () => {
-  let GET: (req: Request, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
+  let GET: (req: NextRequest, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/indexer-qos/[address]/route');
@@ -334,11 +334,11 @@ describe('/api/indexer-qos/[address]', () => {
 // ============================================================
 
 describe('/api/indexer-trends', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/indexer-trends/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 400 when indexer param is missing', async () => {
@@ -393,7 +393,7 @@ describe('/api/indexer-trends', () => {
 // ============================================================
 
 describe('/api/indexer-stake-history/[address]', () => {
-  let GET: (req: Request, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
+  let GET: (req: NextRequest, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/indexer-stake-history/[address]/route');
@@ -434,7 +434,7 @@ describe('/api/indexer-stake-history/[address]', () => {
 // ============================================================
 
 describe('/api/subgraph-curation/[hash]', () => {
-  let GET: (req: Request, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
+  let GET: (req: NextRequest, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/subgraph-curation/[hash]/route');
@@ -473,7 +473,7 @@ describe('/api/subgraph-curation/[hash]', () => {
 // ============================================================
 
 describe('/api/subgraph-history/[hash]', () => {
-  let GET: (req: Request, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
+  let GET: (req: NextRequest, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/subgraph-history/[hash]/route');
@@ -510,11 +510,11 @@ describe('/api/subgraph-history/[hash]', () => {
 // ============================================================
 
 describe('/api/subgraph-fees-30d', () => {
-  let GET: (req: Request) => Promise<Response>;
+  let GET: (req: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     const mod = await import('@/app/api/subgraph-fees-30d/route');
-    GET = mod.GET as (req: Request) => Promise<Response>;
+    GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
   it('returns 503 when no API key', async () => {
