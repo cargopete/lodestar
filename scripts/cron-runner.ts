@@ -12,7 +12,7 @@
  *   npx tsx scripts/cron-runner.ts compute-scores # score indexers → push to Redis
  *
  * Requires .env.local with: GRAPH_API_KEY, DATABASE_URL
- * For refresh: also needs UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
+ * For refresh: also needs REDIS_URL (rediss:// for the self-hosted TLS Redis)
  */
 
 import { readFileSync } from 'node:fs';
@@ -82,13 +82,13 @@ async function main() {
 
     switch (step) {
       case 'refresh': {
-        if (!process.env.UPSTASH_REDIS_REST_URL) {
-          log.cron.warn('UPSTASH_REDIS_REST_URL not set — skipping Redis write');
+        if (!process.env.REDIS_URL) {
+          log.cron.warn('REDIS_URL not set — skipping Redis write');
         }
         const { refreshIndexers } = await import('../src/lib/refresh.js');
         const result = await refreshIndexers({
           sql,
-          writeToRedis: !!process.env.UPSTASH_REDIS_REST_URL,
+          writeToRedis: !!process.env.REDIS_URL,
         });
         rowsAffected = result.count;
         log.cron.info({ step, count: result.count, durationMs: result.durationMs }, 'Step complete');

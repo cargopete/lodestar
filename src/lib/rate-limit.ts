@@ -1,5 +1,14 @@
 // Rate limiting runs in the Edge runtime where ioredis (TCP) is unavailable.
-// Without a Redis backend, all requests pass through (fail open).
+//
+// We use a process-local sliding-window counter. NOTE: this is PER-INSTANCE —
+// Vercel may run many edge instances, so the effective global limit is roughly
+// (configured limit × instance count). That's an accepted trade-off: it still
+// throttles a single IP hammering one warm instance (the common abuse shape)
+// with zero external dependencies, and is strictly better than the previous
+// always-allow stub. A globally-coordinated limit would need an HTTP-based
+// store (e.g. Upstash REST / Vercel KV); revisit if cross-instance accuracy
+// becomes necessary.
+//
 // [path pattern, requests per minute]
 const LIMITS: Array<[RegExp, number]> = [
   [/^\/api\/cron\//, 20],
@@ -12,10 +21,46 @@ const LIMITS: Array<[RegExp, number]> = [
   [/^\/api\//, 200],
 ];
 
+const WINDOW_MS = 60_000;
+
+// key -> sorted-ish list of request timestamps (ms) within the current window.
+const hits = new Map<string, number[]>();
+// Bound the map so a flood of unique IPs can't grow it without limit.
+const MAX_KEYS = 10_000;
+
+function limitFor(path: string): number {
+  return LIMITS.find(([re]) => re.test(path))?.[1] ?? 200;
+}
+
 export async function rateLimit(
   ip: string,
   path: string,
 ): Promise<{ allowed: boolean; remaining: number; limit: number }> {
-  const limit = LIMITS.find(([re]) => re.test(path))?.[1] ?? 200;
-  return { allowed: true, remaining: limit, limit };
+  const limit = limitFor(path);
+  const now = Date.now();
+  const windowStart = now - WINDOW_MS;
+
+  // Bucket by the matched limit tier so different paths don't share a counter.
+  const tier = LIMITS.find(([re]) => re.test(path))?.[0].source ?? 'default';
+  const key = `${ip}:${tier}`;
+
+  const prev = hits.get(key) ?? [];
+  // Drop timestamps outside the window.
+  const recent = prev.filter((t) => t > windowStart);
+
+  if (recent.length >= limit) {
+    hits.set(key, recent);
+    return { allowed: false, remaining: 0, limit };
+  }
+
+  recent.push(now);
+  // Opportunistic eviction to bound memory.
+  if (hits.size > MAX_KEYS) {
+    for (const [k, ts] of hits) {
+      if (ts.length === 0 || ts[ts.length - 1] <= windowStart) hits.delete(k);
+      if (hits.size <= MAX_KEYS) break;
+    }
+  }
+  hits.set(key, recent);
+  return { allowed: true, remaining: Math.max(0, limit - recent.length), limit };
 }

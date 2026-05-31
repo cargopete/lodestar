@@ -1,45 +1,64 @@
 import { describe, it, expect } from 'vitest';
 import { rateLimit } from '../rate-limit';
 
-describe('rateLimit', () => {
-  it('always allows requests (fail open — no Edge-compatible Redis)', async () => {
-    const result = await rateLimit('1.2.3.4', '/api/feed');
-    expect(result.allowed).toBe(true);
+// Each test uses a UNIQUE ip so the process-local counter doesn't bleed across cases.
+let ipCounter = 0;
+const freshIp = () => `10.0.0.${++ipCounter % 250}.${Date.now() % 1000}`;
+
+describe('rateLimit — tier limits', () => {
+  it.each([
+    ['/api/feed', 20],
+    ['/api/lodie/chat', 10],
+    ['/api/cron/refresh', 20],
+    ['/api/portfolio', 30],
+    ['/api/vote', 60],
+    ['/api/indexer-status/0xabc', 20],
+    ['/api/subgraph-playground/QmFoo', 20],
+    ['/api/epochs', 200], // fallback
+  ])('reports the right limit for %s', async (path, limit) => {
+    const r = await rateLimit(freshIp(), path);
+    expect(r.limit).toBe(limit);
+    expect(r.allowed).toBe(true);
+  });
+});
+
+describe('rateLimit — enforcement', () => {
+  it('allows up to the limit then blocks (429) within the window', async () => {
+    const ip = freshIp();
+    // /api/lodie/chat = 10 rpm
+    for (let i = 0; i < 10; i++) {
+      const r = await rateLimit(ip, '/api/lodie/chat');
+      expect(r.allowed, `request ${i + 1} should pass`).toBe(true);
+    }
+    const blocked = await rateLimit(ip, '/api/lodie/chat');
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.remaining).toBe(0);
   });
 
-  it('returns correct limit for /api/feed (20 rpm)', async () => {
-    const result = await rateLimit('1.2.3.4', '/api/feed');
-    expect(result.limit).toBe(20);
-    expect(result.remaining).toBe(20);
+  it('decrements remaining on each hit', async () => {
+    const ip = freshIp();
+    const r1 = await rateLimit(ip, '/api/vote'); // 60
+    const r2 = await rateLimit(ip, '/api/vote');
+    expect(r1.remaining).toBe(59);
+    expect(r2.remaining).toBe(58);
   });
 
-  it('returns correct limit for /api/lodie/chat (10 rpm)', async () => {
-    const result = await rateLimit('1.2.3.4', '/api/lodie/chat');
-    expect(result.limit).toBe(10);
+  it('isolates counters per IP', async () => {
+    const a = freshIp();
+    const b = freshIp();
+    for (let i = 0; i < 10; i++) await rateLimit(a, '/api/lodie/chat');
+    const aBlocked = await rateLimit(a, '/api/lodie/chat');
+    const bOk = await rateLimit(b, '/api/lodie/chat');
+    expect(aBlocked.allowed).toBe(false);
+    expect(bOk.allowed).toBe(true);
   });
 
-  it('returns correct limit for /api/cron/ routes (20 rpm)', async () => {
-    const result = await rateLimit('1.2.3.4', '/api/cron/refresh');
-    expect(result.limit).toBe(20);
-  });
-
-  it('returns correct limit for /api/portfolio (30 rpm)', async () => {
-    const result = await rateLimit('1.2.3.4', '/api/portfolio');
-    expect(result.limit).toBe(30);
-  });
-
-  it('returns correct limit for /api/vote (60 rpm)', async () => {
-    const result = await rateLimit('1.2.3.4', '/api/vote');
-    expect(result.limit).toBe(60);
-  });
-
-  it('returns correct limit for /api/subgraph-playground/ (20 rpm)', async () => {
-    const result = await rateLimit('1.2.3.4', '/api/subgraph-playground/QmFoo');
-    expect(result.limit).toBe(20);
-  });
-
-  it('returns fallback limit of 200 rpm for unmatched routes', async () => {
-    const result = await rateLimit('1.2.3.4', '/api/epochs');
-    expect(result.limit).toBe(200);
+  it('isolates counters per tier (different paths do not share a bucket)', async () => {
+    const ip = freshIp();
+    for (let i = 0; i < 10; i++) await rateLimit(ip, '/api/lodie/chat'); // exhaust 10
+    const chatBlocked = await rateLimit(ip, '/api/lodie/chat');
+    const feedOk = await rateLimit(ip, '/api/feed'); // separate tier
+    expect(chatBlocked.allowed).toBe(false);
+    expect(feedOk.allowed).toBe(true);
   });
 });

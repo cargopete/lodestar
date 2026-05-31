@@ -1,24 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
-
-function isSafeUrl(urlStr: string): boolean {
-  try {
-    const url = new URL(urlStr);
-    if (!['http:', 'https:'].includes(url.protocol)) return false;
-    const host = url.hostname.toLowerCase();
-    if (host === 'localhost') return false;
-    if (/^127\./.test(host)) return false;
-    if (/^10\./.test(host)) return false;
-    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
-    if (/^192\.168\./.test(host)) return false;
-    if (/^169\.254\./.test(host)) return false;
-    if (host === '::1' || host === '[::1]') return false;
-    if (/^fc|^fd/.test(host)) return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { isSafeUrlString } from '@/lib/ssrf';
 
 export interface NodeHealthSummary {
   reachable: boolean;
@@ -114,7 +96,7 @@ export async function GET(request: NextRequest) {
   if (!url || !addr) {
     return NextResponse.json({ error: 'Missing url or addr' }, { status: 400 });
   }
-  if (!isSafeUrl(url)) {
+  if (!isSafeUrlString(url)) {
     return NextResponse.json(
       { data: { reachable: false, totalDeployments: 0, syncedCount: 0 } as NodeHealthSummary },
       { headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=240' } },

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 
 // Exercise the IN-MEMORY fallback deterministically by ensuring REDIS_URL is
 // unset. hasRedis() is evaluated at call-time, so deleting the env var is
@@ -13,17 +13,17 @@ vi.mock('@/lib/logger', () => ({
 
 const ORIGINAL_REDIS_URL = process.env.REDIS_URL;
 
-// The in-memory cached() path memo-izes its in-flight compute promise and
-// attaches a *detached* `.finally()` to clear the map entry. When a fetcher
-// rejects, that detached chain raises an unhandledRejection even though our
-// callers below await and assert the rejection on the original promise. We
-// register a process-level guard (installed at module load so it is always
-// present when the async event fires) that swallows ONLY these expected
-// fetcher errors and rethrows anything genuinely unexpected.
-const EXPECTED_FETCHER_ERRORS = new Set(['upstream-down', 'boom', 'hard-refresh-failed']);
-process.on('unhandledRejection', (reason) => {
-  if (reason instanceof Error && EXPECTED_FETCHER_ERRORS.has(reason.message)) return;
-  throw reason;
+// REGRESSION GUARD: the in-memory cached() path memo-izes its in-flight compute
+// promise and attaches a detached `.finally()` to clear the map entry. That chain
+// MUST `.catch()` so a rejecting fetcher never produces an unhandled rejection
+// (which can crash the Node process in prod). If the source regresses, the
+// background-refresh / cold-miss rejection tests below will trip this guard.
+const unhandled: unknown[] = [];
+process.on('unhandledRejection', (reason) => { unhandled.push(reason); });
+afterAll(async () => {
+  // unhandledRejection fires on a later tick — let any pending ones surface.
+  await new Promise((r) => setTimeout(r, 50));
+  expect(unhandled, `cache.ts leaked ${unhandled.length} unhandled rejection(s)`).toEqual([]);
 });
 
 beforeEach(() => {

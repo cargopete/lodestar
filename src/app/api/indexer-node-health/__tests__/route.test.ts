@@ -67,18 +67,16 @@ describe('isSafeUrl SSRF guard (via route behaviour)', () => {
     });
   }
 
-  // NOTE: documents an actual gap in the guard — WHATWG URL.hostname keeps the
-  // brackets on IPv6 literals ("[fc00::1]"), so the /^fc|^fd/ ULA check never
-  // matches and these private addresses are treated as SAFE. Asserting current
-  // behaviour so a future fix to the guard intentionally flips this test.
-  it('FAILS to block bracketed IPv6 ULA literals (known guard gap)', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ data: { indexingStatuses: [] } }), { status: 200 }),
-    );
+  // The shared SSRF guard (lib/ssrf.ts) strips IPv6 brackets before matching, so
+  // bracketed ULA literals ARE now blocked (previously a documented gap).
+  it('blocks bracketed IPv6 ULA literals ([fc00::1])', async () => {
+    mockFetch.mockClear();
     const GET = await load();
     const res = await GET(req('?addr=0xabc&url=http://[fc00::1]/'));
-    expect(res.status).toBe(200);
-    expect(mockFetch).toHaveBeenCalled();
+    expect(res.status).toBe(200); // route returns reachable:false envelope, not an error
+    const json = await res.json();
+    expect(json.data.reachable).toBe(false);
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('does NOT reject 172.15.x (just outside the private 172.16-31 range)', async () => {

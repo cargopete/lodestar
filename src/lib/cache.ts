@@ -128,7 +128,10 @@ export async function cached<T>(
           }
         })();
         memInflight.set(key, refresh);
-        refresh.finally(() => memInflight.delete(key));
+        // Detach safely: the refresh rejection is already logged inside the IIFE,
+        // and we return the stale `entry.value` (not `refresh`) — so swallow here
+        // to avoid an unhandled promise rejection crashing the process.
+        refresh.catch(() => {}).finally(() => memInflight.delete(key));
       }
       return entry.value;
     }
@@ -156,7 +159,9 @@ export async function cached<T>(
 
   if (!hasRedis()) {
     memInflight.set(key, compute);
-    compute.finally(() => memInflight.delete(key));
+    // The returned `compute` propagates rejection to the caller; this detached
+    // bookkeeping chain must swallow it so it isn't an unhandled rejection.
+    compute.catch(() => {}).finally(() => memInflight.delete(key));
   }
 
   return compute;

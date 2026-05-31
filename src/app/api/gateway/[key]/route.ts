@@ -23,6 +23,7 @@ import {
   getOwnerUsage,
   incrementKeyUsage,
 } from '@/lib/studio/db';
+import { log } from '@/lib/logger';
 
 const GATEWAY = process.env.GRAPH_API_KEY
   ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}`
@@ -127,9 +128,13 @@ export async function POST(
 
     return NextResponse.json(data, { status: upstream.ok ? 200 : upstream.status });
   } catch (err) {
-    return NextResponse.json(
-      { error: `Gateway error: ${err instanceof Error ? err.message : String(err)}` },
-      { status: 502 },
-    );
+    // NEVER surface the raw error: fetch failures often embed the target URL,
+    // which contains our GRAPH_API_KEY. Return a generic message; log detail
+    // server-side with the key redacted.
+    const raw = err instanceof Error ? err.message : String(err);
+    const apiKey = process.env.GRAPH_API_KEY;
+    const safe = apiKey ? raw.split(apiKey).join('***') : raw;
+    log.api.error({ err: safe }, 'Gateway upstream fetch failed');
+    return NextResponse.json({ error: 'Gateway upstream request failed' }, { status: 502 });
   }
 }

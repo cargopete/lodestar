@@ -2,26 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { log } from '@/lib/logger';
-
-// Block requests to private/loopback/link-local ranges (SSRF prevention)
-function isSafeIndexerUrl(urlStr: string): boolean {
-  try {
-    const url = new URL(urlStr);
-    if (!['http:', 'https:'].includes(url.protocol)) return false;
-    const host = url.hostname.toLowerCase();
-    if (host === 'localhost') return false;
-    if (/^127\./.test(host)) return false;
-    if (/^10\./.test(host)) return false;
-    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
-    if (/^192\.168\./.test(host)) return false;
-    if (/^169\.254\./.test(host)) return false;
-    if (host === '::1' || host === '[::1]') return false;
-    if (/^fc|^fd/.test(host)) return false; // IPv6 private (ULA)
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { isSafeUrlString } from '@/lib/ssrf';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -224,7 +205,7 @@ export async function GET(
 
         // 2. Query the indexer's status endpoint for all deployments at once
         const ipfsHashes = allAllocations.map((a) => a.subgraphDeployment.ipfsHash);
-        const statusMap = indexerUrl && isSafeIndexerUrl(indexerUrl)
+        const statusMap = indexerUrl && isSafeUrlString(indexerUrl)
           ? await queryBatchStatus(indexerUrl, ipfsHashes)
           : new Map<string, StatusEntry>();
 

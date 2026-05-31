@@ -1,33 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { isSafeUrlResolved } from '@/lib/ssrf';
 
 const INDEXER_AGENT_URL = process.env.INDEXER_AGENT_URL;
 // Optional Basic auth credentials for the management API proxy (format: "user:password")
 const INDEXER_AGENT_TOKEN = process.env.INDEXER_AGENT_TOKEN;
-
-function isSafeUrl(raw: string): boolean {
-  try {
-    const u = new URL(raw);
-    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
-    let h = u.hostname.toLowerCase();
-    // strip IPv6 brackets / zone id
-    h = h.replace(/^\[|\]$/g, '').split('%')[0];
-    // localhost forms
-    if (h === 'localhost' || h.endsWith('.localhost')) return false;
-    // IPv4 private / loopback / link-local / unspecified / cloud-metadata
-    if (/^127\./.test(h)) return false;
-    if (/^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h)) return false;
-    if (/^169\.254\./.test(h)) return false;          // link-local incl. 169.254.169.254 (cloud metadata)
-    if (/^0\./.test(h) || h === '0.0.0.0') return false;
-    if (/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(h)) return false; // CGNAT 100.64/10
-    // IPv6 loopback / link-local / unique-local
-    if (h === '::1' || h === '::') return false;
-    if (/^fe80:/.test(h) || /^f[cd][0-9a-f]{2}:/.test(h)) return false;   // link-local + ULA fc00::/7
-    if (/^::ffff:/.test(h)) return false;             // IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1)
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 // POST — queue a presentPOI action on the indexer-agent management API.
 // Body: { deploymentId: string, allocationId: string }
@@ -78,7 +54,7 @@ export async function POST(req: NextRequest) {
       { status: 503 }
     );
   }
-  if (agentUrl && !isSafeUrl(agentUrl)) {
+  if (agentUrl && !(await isSafeUrlResolved(agentUrl))) {
     return NextResponse.json(
       { error: 'Invalid agentUrl — must be a public http/https URL' },
       { status: 503 },
