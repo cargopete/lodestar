@@ -51,7 +51,9 @@ Lower-severity hardening: swap `!==`→`crypto.timingSafeEqual` for the HMAC and
 
 ## Infrastructure findings (live — verified against the running VPS 2026-05-30)
 
-### I1. Postgres exposed to the public internet — HIGH
+> **UPDATE 2026-05-30: I1 + I2 REMEDIATED.** Postgres: prod `DATABASE_URL` forced to `sslmode=require` (TLSv1.3). Redis: TLS enabled on a new port 6380 (`rediss://`, self-signed cert), prod repointed, deployed + verified (`/api/health` redis up), plaintext **6379 closed in UFW**. `cache.ts` updated to accept the self-signed cert. (Note: the Upstash fallback was quota-dead — 500k/500k — hence self-hosted TLS rather than switching to Upstash.) I3 stray ports still open (low priority).
+
+### I1. Postgres exposed to the public internet — HIGH → FORCED-TLS (sslmode=require)
 The lodestar DB on `167.235.29.213:5433` is bound to `0.0.0.0` AND UFW allows `5433/tcp ALLOW Anywhere`. Confirmed reachable from an external laptop. `pg_hba.conf` has `host lodestar lodestar 0.0.0.0/0 scram-sha-256` — so the whole internet can reach the DB and attempt auth. Mitigated only by the SCRAM password (no `trust` rules — verified). Still: this exposes the DB to credential brute-force and any future Postgres CVE.
 **Fix:** Vercel is serverless (no fixed egress IPs), so the app needs remote access — but lock it down. Options, best first: (a) require TLS + move to an allowlist if a static egress is available; (b) at minimum restrict UFW `5433` to known sources and force `sslmode=require` (currently `prefer`); (c) put it behind a WireGuard/Tailscale tunnel. The cron-runner (on the VPS) uses the local socket so isn't affected.
 
