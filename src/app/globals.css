@@ -211,6 +211,17 @@ body::after {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Slide-over drawer (data services catalogue) */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 /* Line clamp utilities */
 .line-clamp-2 {
   display: -webkit-box;
