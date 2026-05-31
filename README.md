@@ -153,7 +153,7 @@ Code: [`src/app/delegate/`](src/app/delegate/) · API: [`src/app/api/delegate/re
 - wagmi v3 + viem (Arbitrum One)
 - @tanstack/react-query + @tanstack/react-table
 - Recharts (area charts, donut charts)
-- Self-hosted Postgres 16 (postgres.js) + Upstash Redis
+- Self-hosted Postgres 16 (postgres.js, forced TLS) + self-hosted Redis (TLS / `rediss://`), with an in-memory cache fallback
 - CoinGecko + DefiLlama (price/TVL data)
 - The Graph Network subgraph (Arbitrum, inline fetch)
 - Alchemy — Arbitrum One RPC for on-chain contract reads
@@ -174,11 +174,9 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Description | Required |
 |---|---|---|
 | `GRAPH_API_KEY` | API key from [The Graph Studio](https://thegraph.com/studio/apikeys/) | Yes |
-| `DATABASE_URL` | Postgres connection string (`postgresql://user:pass@host:port/db`) | Yes |
-| `KV_REST_API_URL` | Upstash Redis REST URL | Yes |
-| `KV_REST_API_TOKEN` | Upstash Redis REST token | Yes |
-| `KV_REST_API_READ_ONLY_TOKEN` | Upstash Redis read-only token | Yes |
-| `CRON_SECRET` | Random string to protect cron endpoints | Yes |
+| `DATABASE_URL` | Postgres connection string (`postgresql://user:pass@host:port/db?sslmode=require`) | Yes |
+| `REDIS_URL` | Redis connection string (`rediss://` for TLS — self-hosted or managed). Falls back to a process-local in-memory cache when unset | No |
+| `CRON_SECRET` | Random string to protect cron endpoints (auth fails closed if unset) | Yes |
 | `ARBITRUM_RPC_URL` | Arbitrum One RPC URL (Alchemy, Infura, etc.) | Yes |
 | `GITHUB_TOKEN` | GitHub PAT for the Intel Feed (forum/GIP data) | Yes |
 | `NEXT_PUBLIC_SITE_URL` | Production URL e.g. `https://lodestar-dashboard.com` | Yes |
