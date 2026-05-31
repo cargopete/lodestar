@@ -7,15 +7,15 @@
 
 | # | Finding | Agent rating | **Verified rating** | Status |
 |---|---|---|---|---|
-| 1 | `present-poi` — unauthenticated open proxy w/ caller-supplied `agentUrl`+`agentToken` | Critical | **High** | open |
-| 2 | Cron/health auth fails **open** when `CRON_SECRET` unset (`!cronSecret \|\|`) | Critical | **Medium** | open |
-| 3 | Gateway: `deployment`/`subgraphId` unvalidated → path injection into gateway URL | High | **Medium** | open |
-| 4 | `rateLimit()` is a no-op (always `allowed:true`) — per-route limits decorative | Medium | **Medium** | open |
-| 5 | HMAC session sig compared with `!==` not `timingSafeEqual` | Critical | **Low** | open |
-| 6 | `DELETE /push/subscribe` — no ownership check (anyone can unsubscribe anyone) | Critical | **Low** | open |
-| 7 | `SESSION_SECRET` has no length/entropy validation | Medium | **Low** | open |
-| 8 | Gateway `GRAPH_API_KEY` (in upstream URL) could leak via fetch error message | Medium | **Low** | open |
-| 9 | `isSafeUrl` (present-poi, indexer-node-health) vulnerable to DNS rebinding | Medium | **Low** | open |
+| 1 | `present-poi` — caller-supplied `agentUrl`+`agentToken` (BYO-endpoint by design) + GraphQL injection via ids | Critical | **High** | ✅ FIXED (bf5869d) — id regex validation (blocks injection) + hardened `isSafeUrl` (IPv6/CGNAT/metadata); BYO-override kept (intended feature). Tested. |
+| 2 | Cron/health auth fails **open** when `CRON_SECRET` unset (`!cronSecret \|\|`) | Critical | **Medium** | ✅ FIXED — new `lib/cron-auth.ts` (fail-closed + timing-safe), wired into check-conversions/check-subgraph-health/health. Tested. |
+| 3 | Gateway: `deployment`/`subgraphId` unvalidated → path injection into gateway URL | High | **Medium** | ✅ FIXED — CIDv0 / 0x64-hex regex before URL build. |
+| 4 | `rateLimit()` is a no-op (always `allowed:true`) — per-route limits decorative | Medium | **Medium** | ⏳ open — needs Edge-compatible backend (Upstash REST/Vercel KV). Deferred. |
+| 5 | HMAC session sig compared with `!==` not `timingSafeEqual` | Critical | **Low** | ✅ FIXED — `timingSafeEqual` in `parseSession`. |
+| 6 | `DELETE /push/subscribe` — no ownership check (anyone can unsubscribe anyone) | Critical | **Low** | ✅ FIXED — now requires EIP-191 sig (hook + route updated). |
+| 7 | `SESSION_SECRET` has no length/entropy validation | Medium | **Low** | ✅ FIXED — throws if <32 chars (prod is 64, safe). |
+| 8 | Gateway `GRAPH_API_KEY` (in upstream URL) could leak via fetch error message | Medium | **Low** | ⏳ open — sanitize error messages. Minor, deferred. |
+| 9 | `isSafeUrl` vulnerable to DNS rebinding | Medium | **Low** | 🟡 PARTIAL — static private/metadata/IPv6 ranges now blocked; true DNS-rebinding (resolve-and-check) not done. |
 | 10 | Studio session `secure` cookie flag only in production | Medium | **Info** | accepted |
 
 **Verified false positives / corrections:**
