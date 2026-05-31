@@ -424,6 +424,131 @@ describe('polymarket', () => {
   });
 });
 
+describe('filterFeeOutliers (via normalizeMessariDex)', () => {
+  it('drops a snapshot whose fee exceeds 50x the median', async () => {
+    // 5 snapshots: fees 1,1,1,1, and one absurd 1000. Median = 1, 1000 > 50.
+    const days = [0, 1, 2, 3, 4].map((i) => ({
+      timestamp: String(TS_OLD + i * DAY),
+      totalValueLockedUSD: '1',
+      dailyVolumeUSD: '1',
+      dailyTotalRevenueUSD: i === 4 ? '1000' : '1',
+    }));
+    mockFetch.mockResolvedValue(
+      graphOk({
+        dexAmmProtocols: [{ totalValueLockedUSD: '1', cumulativeVolumeUSD: '5', cumulativeTotalRevenueUSD: '4' }],
+        financialsDailySnapshots: days,
+      }),
+    );
+    const d = await fetchProtocolDetail(cfg('messari-dex'));
+    // The 1000-fee outlier is filtered, leaving 4 clean snapshots.
+    expect(d.snapshots).toHaveLength(4);
+    expect(d.snapshots.every((s) => s.feesUSD === 1)).toBe(true);
+  });
+
+  it('keeps all snapshots when fewer than 3 are present', async () => {
+    mockFetch.mockResolvedValue(
+      graphOk({
+        dexAmmProtocols: [{ totalValueLockedUSD: '1', cumulativeVolumeUSD: '5', cumulativeTotalRevenueUSD: '4' }],
+        financialsDailySnapshots: [
+          { timestamp: String(TS_OLD), totalValueLockedUSD: '1', dailyVolumeUSD: '1', dailyTotalRevenueUSD: '1' },
+          { timestamp: String(TS_OLD + DAY), totalValueLockedUSD: '1', dailyVolumeUSD: '1', dailyTotalRevenueUSD: '9999' },
+        ],
+      }),
+    );
+    const d = await fetchProtocolDetail(cfg('messari-dex'));
+    expect(d.snapshots).toHaveLength(2);
+  });
+
+  it('keeps all snapshots when the median fee is 0 (cannot scale outlier threshold)', async () => {
+    mockFetch.mockResolvedValue(
+      graphOk({
+        dexAmmProtocols: [{ totalValueLockedUSD: '1', cumulativeVolumeUSD: '5', cumulativeTotalRevenueUSD: '4' }],
+        financialsDailySnapshots: [0, 1, 2, 3].map((i) => ({
+          timestamp: String(TS_OLD + i * DAY),
+          totalValueLockedUSD: '1',
+          dailyVolumeUSD: '1',
+          dailyTotalRevenueUSD: i === 3 ? '500' : '0',
+        })),
+      }),
+    );
+    const d = await fetchProtocolDetail(cfg('messari-dex'));
+    // median is 0 -> no filtering, the 500-fee day survives.
+    expect(d.snapshots).toHaveLength(4);
+  });
+});
+
+describe('polymarket outcome classification + title decoding', () => {
+  // Helper to build the 4-deployment + CLOB fetch impl with one resolution row.
+  function polymarketWith(priceWei: string, ancillaryHex: string, wasDisputed = false) {
+    return (url: string, opts: { body: string }) => {
+      const body = opts?.body ? JSON.parse(opts.body).query : '';
+      if (typeof url === 'string' && url.startsWith('https://clob.polymarket.com')) {
+        return Promise.resolve(new Response('not found', { status: 404 }));
+      }
+      if (body.includes('ordersMatchedGlobals')) {
+        return Promise.resolve(graphOk({ ordersMatchedGlobals: [{ tradesQuantity: '1', scaledCollateralVolume: '1', totalFees: '0', averageTradeSize: '1' }] }));
+      }
+      if (body.includes('marketOpenInterests')) {
+        return Promise.resolve(graphOk({ marketOpenInterests: [], globalOpenInterests: [{ marketCount: 0 }] }));
+      }
+      if (body.includes('globals')) {
+        return Promise.resolve(graphOk({ globals: [{ numConditions: '1', numOpenConditions: '0', numClosedConditions: '1', numTraders: '1' }] }));
+      }
+      if (body.includes('marketResolutions')) {
+        return Promise.resolve(graphOk({
+          recentResolutions: [{ id: 'r', status: 'resolved', flagged: false, wasDisputed, price: priceWei, lastUpdateTimestamp: String(TS_RECENT), ancillaryData: ancillaryHex }],
+          disputedSample: [],
+        }));
+      }
+      return Promise.resolve(graphOk({}));
+    };
+  }
+
+  function hexAncillary(s: string): string {
+    return '0x' + Buffer.from(s, 'utf-8').toString('hex');
+  }
+
+  it('classifies a price near 0 as NO', async () => {
+    mockFetch.mockImplementation(polymarketWith(String(5n * 10n ** 15n), '0x')); // 0.005
+    const d = await fetchProtocolDetail(cfg('polymarket'));
+    expect(d.predictionMarkets!.recentResolutions[0].outcome).toBe('NO');
+  });
+
+  it('classifies a mid price as PARTIAL', async () => {
+    mockFetch.mockImplementation(polymarketWith(String(5n * 10n ** 17n), '0x')); // 0.5
+    const d = await fetchProtocolDetail(cfg('polymarket'));
+    const r = d.predictionMarkets!.recentResolutions[0];
+    expect(r.outcome).toBe('PARTIAL');
+    expect(r.outcomePrice).toBeCloseTo(0.5, 6);
+  });
+
+  it('treats a non-numeric price as 0 (parseF fallback), classifying it as NO', async () => {
+    // parseF coalesces an unparseable string to 0, so p = 0/1e18 = 0, which is
+    // finite and <= 0.01 -> NO. The UNRESOLVED branch is only reachable with a
+    // genuinely non-finite price, which parseF never produces.
+    mockFetch.mockImplementation(polymarketWith('not-a-number', '0x'));
+    const d = await fetchProtocolDetail(cfg('polymarket'));
+    const r = d.predictionMarkets!.recentResolutions[0];
+    expect(r.outcome).toBe('NO');
+    expect(r.outcomePrice).toBe(0);
+  });
+
+  it('decodes the UMA ancillary title and preserves the disputed flag', async () => {
+    const ancillary = hexAncillary('q: title: Will it rain tomorrow?, description: weather market');
+    mockFetch.mockImplementation(polymarketWith(String(10n ** 18n), ancillary, true));
+    const d = await fetchProtocolDetail(cfg('polymarket'));
+    const r = d.predictionMarkets!.recentResolutions[0];
+    expect(r.title).toBe('Will it rain tomorrow?');
+    expect(r.wasDisputed).toBe(true);
+  });
+
+  it('yields an empty title for ancillary data without a 0x prefix', async () => {
+    mockFetch.mockImplementation(polymarketWith(String(10n ** 18n), 'no-hex-here'));
+    const d = await fetchProtocolDetail(cfg('polymarket'));
+    expect(d.predictionMarkets!.recentResolutions[0].title).toBe('');
+  });
+});
+
 describe('fetchProtocolSummary', () => {
   it('returns just the summary on success', async () => {
     mockFetch.mockResolvedValue(

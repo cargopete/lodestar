@@ -83,4 +83,23 @@ describe('recordDeficiency', () => {
     // The in-memory record still landed.
     expect(listDeficiencies()).toContain('CODE_D::noisy disk');
   });
+
+  it('warns to the console with the code and detail on first record', async () => {
+    const { recordDeficiency } = await importFresh();
+    recordDeficiency('CODE_E', 'console please');
+    expect(warnSpy).toHaveBeenCalledWith('[token-api-deficiency] CODE_E: console please');
+  });
+
+  it('does not write the header again when the log already exists', async () => {
+    existsSync.mockReturnValue(true);
+    const { recordDeficiency } = await importFresh();
+    recordDeficiency('CODE_F', 'no header rewrite');
+    expect(writeFileSync).not.toHaveBeenCalled();
+    expect(appendFileSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts each fresh module load with an empty seen set', async () => {
+    const { listDeficiencies } = await importFresh();
+    expect(listDeficiencies()).toEqual([]);
+  });
 });

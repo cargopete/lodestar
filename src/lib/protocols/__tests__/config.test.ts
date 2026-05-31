@@ -64,6 +64,28 @@ describe('PROTOCOLS registry invariants', () => {
     expect(aave3.length).toBeGreaterThan(1);
     expect(new Set(aave3.map((p) => p.familyLabel))).toEqual(new Set(['Aave V3']));
   });
+
+  it('only uses known schemaType values', () => {
+    const known = new Set([
+      'messari-dex', 'messari-lending', 'messari-rwa', 'messari-staking',
+      'messari-yield', 'messari-bridge', 'messari-perp', 'gmx-v2-synthetics',
+      'balancer-v2', 'uniswap-v2', 'uniswap-v3', 'algebra-v1',
+      'etherfi-native', 'polymarket',
+    ]);
+    for (const p of PROTOCOLS) {
+      expect(known.has(p.schemaType), `${p.slug} -> ${p.schemaType}`).toBe(true);
+    }
+  });
+
+  it('only uses known category values', () => {
+    const known = new Set([
+      'DEX', 'Lending', 'Liquid Staking', 'Yield Aggregator',
+      'Prediction Markets', 'Bridge', 'RWA', 'Perpetuals',
+    ]);
+    for (const p of PROTOCOLS) {
+      expect(known.has(p.category), `${p.slug} -> ${p.category}`).toBe(true);
+    }
+  });
 });
 
 describe('Polymarket deployment hashes', () => {
