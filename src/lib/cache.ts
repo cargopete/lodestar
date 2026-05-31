@@ -4,10 +4,17 @@ import { log } from './logger';
 // Edge runtime (used by opengraph-image and middleware routes).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _redis: any | null = null;
+// Cache the in-flight connect promise so concurrent first-callers share one
+// client and all await the same (TLS) handshake instead of racing it.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _redisConnecting: Promise<any> | null = null;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getRedisClient(): Promise<any> {
-  if (!_redis) {
+  if (_redis) return _redis;
+  if (_redisConnecting) return _redisConnecting;
+
+  _redisConnecting = (async () => {
     const { default: Redis } = await import('ioredis');
     const url = process.env.REDIS_URL!;
     // For rediss:// with a self-signed cert (self-hosted VPS Redis), skip CA
@@ -15,9 +22,25 @@ async function getRedisClient(): Promise<any> {
     // don't have a public CA chain. Managed providers (Upstash) verify fine, but
     // rejectUnauthorized:false is harmless there too.
     const tls = url.startsWith('rediss://') ? { tls: { rejectUnauthorized: false } } : {};
-    _redis = new Redis(url, { lazyConnect: false, enableOfflineQueue: false, ...tls });
-  }
-  return _redis;
+    // lazyConnect + explicit connect(): the first caller awaits the full
+    // (TLS) handshake before issuing a command, so the very first ping()
+    // doesn't race the connection. enableOfflineQueue stays false so later
+    // commands against a dropped connection fail fast (fall back to memory).
+    const client = new Redis(url, { lazyConnect: true, enableOfflineQueue: false, ...tls });
+    try {
+      await client.connect();
+      _redis = client;
+      return client;
+    } catch (e) {
+      log.cache.warn({ err: String(e) }, 'Redis connect failed — falling back to in-memory cache');
+      try { client.disconnect(); } catch { /* noop */ }
+      throw e;
+    } finally {
+      _redisConnecting = null;
+    }
+  })();
+
+  return _redisConnecting;
 }
 
 // Sync accessor for health endpoint (it awaits ping() itself).
