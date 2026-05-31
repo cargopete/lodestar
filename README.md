@@ -44,6 +44,7 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 
 ### Shipped
 
+- [x] **v4.0.0 — Hardening campaign complete.** Logic-tier test coverage lifted 33% → **86%** (1,500+ tests across lib/API/hooks) with a ratcheting CI gate; full security audit (`SECURITY_AUDIT_V4.md`) with every actionable finding fixed — SSRF defence (shared guard + DNS-rebinding check), real per-instance rate limiting, gateway error redaction, an unhandled-rejection fix in the cache layer; plus the v3.4.0 infra/security work below.
 - [x] Security & infra hardening (v3.4.0) — forced-TLS Postgres (`sslmode=require`) and TLS-only Redis (`rediss://`, plaintext port firewalled); fixed all high-severity `axios` CVEs; fail-closed timing-safe cron auth; GraphQL-injection + SSRF guards on the indexer-agent proxy; gateway deployment-id validation; timing-safe session HMAC; signature-gated push unsubscribe; offsite pull-model Postgres backups. Green CI gate (lint/type-check/tests/build) with ratcheting coverage. See `SECURITY_AUDIT_V4.md`
 - [x] Subgraph health alerting — per-subgraph Discord/Slack webhook alerts, edge-triggered (lagging/failed/recovered), via a 15-min cron that queries each indexer's `/status` endpoint (see `GAP_ANALYSIS.md`)
 - [x] Metered query gateway (RFC-004 Phase A) — non-custodial: mint `lod_live_` keys in the Dock, metered proxy at `/api/gateway/[key]`, free-tier caps (5k/user, 90k global kill-switch), per-key usage dashboard. No deposits/billing — the paid prepaid-GRT step is gated on a legal review (see `GAP_ANALYSIS.md`)

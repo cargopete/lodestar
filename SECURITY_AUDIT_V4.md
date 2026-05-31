@@ -10,12 +10,12 @@
 | 1 | `present-poi` — caller-supplied `agentUrl`+`agentToken` (BYO-endpoint by design) + GraphQL injection via ids | Critical | **High** | ✅ FIXED (bf5869d) — id regex validation (blocks injection) + hardened `isSafeUrl` (IPv6/CGNAT/metadata); BYO-override kept (intended feature). Tested. |
 | 2 | Cron/health auth fails **open** when `CRON_SECRET` unset (`!cronSecret \|\|`) | Critical | **Medium** | ✅ FIXED — new `lib/cron-auth.ts` (fail-closed + timing-safe), wired into check-conversions/check-subgraph-health/health. Tested. |
 | 3 | Gateway: `deployment`/`subgraphId` unvalidated → path injection into gateway URL | High | **Medium** | ✅ FIXED — CIDv0 / 0x64-hex regex before URL build. |
-| 4 | `rateLimit()` is a no-op (always `allowed:true`) — per-route limits decorative | Medium | **Medium** | ⏳ open — needs Edge-compatible backend (Upstash REST/Vercel KV). Deferred. |
+| 4 | `rateLimit()` is a no-op (always `allowed:true`) — per-route limits decorative | Medium | **Medium** | ✅ FIXED (52bab00) — real per-instance sliding-window limiter (Edge-safe, no deps). Per-instance not global (documented trade-off); throttles single-IP bursts. Tested. |
 | 5 | HMAC session sig compared with `!==` not `timingSafeEqual` | Critical | **Low** | ✅ FIXED — `timingSafeEqual` in `parseSession`. |
 | 6 | `DELETE /push/subscribe` — no ownership check (anyone can unsubscribe anyone) | Critical | **Low** | ✅ FIXED — now requires EIP-191 sig (hook + route updated). |
 | 7 | `SESSION_SECRET` has no length/entropy validation | Medium | **Low** | ✅ FIXED — throws if <32 chars (prod is 64, safe). |
-| 8 | Gateway `GRAPH_API_KEY` (in upstream URL) could leak via fetch error message | Medium | **Low** | ⏳ open — sanitize error messages. Minor, deferred. |
-| 9 | `isSafeUrl` vulnerable to DNS rebinding | Medium | **Low** | 🟡 PARTIAL — static private/metadata/IPv6 ranges now blocked; true DNS-rebinding (resolve-and-check) not done. |
+| 8 | Gateway `GRAPH_API_KEY` (in upstream URL) could leak via fetch error message | Medium | **Low** | ✅ FIXED (52bab00) — generic 502 message; detail logged server-side with key redacted. |
+| 9 | `isSafeUrl` vulnerable to DNS rebinding | Medium | **Low** | ✅ FIXED (52bab00) — shared `lib/ssrf.ts`: `isSafeUrlString` (static, all routes) + `isSafeUrlResolved` (DNS resolve-and-check, on the unauthenticated present-poi). Tested. |
 | 10 | Studio session `secure` cookie flag only in production | Medium | **Info** | accepted |
 
 **Verified false positives / corrections:**

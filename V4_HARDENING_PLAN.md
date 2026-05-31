@@ -1,7 +1,12 @@
 # Lodestar v4.0.0 — Hardening Campaign
 
-> Started 2026-05-30 · from v3.3.1
+> Started 2026-05-30 · from v3.3.1 · **✅ COMPLETE — shipped as v4.0.0 (2026-05-31)**
 > Three goals: **test coverage**, **security** (UI + API + backend), **general hardening**.
+>
+> **Outcome:** CI gate restored & ratcheting; full security audit with every actionable
+> finding fixed (10/10 — incl. the originally-deferred rate-limit, SSRF/DNS-rebinding,
+> gateway error redaction); VPS data tier locked down (Postgres forced-TLS, Redis TLS-only);
+> offsite backups; coverage **33% → 86%** (1,500+ tests). All four CI jobs green.
 
 ## Decisions
 
