@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import {
   DATA_SERVICES,
   TIERS,
@@ -78,9 +78,128 @@ function StackChips({ stack }: { stack: string[] }) {
   );
 }
 
-function ServiceCard({ service, onOpen }: { service: DataService; onOpen: () => void }) {
+// ── Expandable detail body ─────────────────────────────────────────────────────
+function StepList({ title, steps }: { title: string; steps?: string[] }) {
+  if (!steps || steps.length === 0) return null;
   return (
-    <Card hover onClick={onOpen} className="flex flex-col gap-3 h-full">
+    <div>
+      <h4 className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-2">{title}</h4>
+      <ol className="space-y-1.5">
+        {steps.map((step, i) => (
+          <li key={i} className="flex gap-2 text-xs text-[var(--text-muted)] leading-relaxed">
+            <span className="font-mono text-[var(--accent)] shrink-0">{i + 1}.</span>
+            <span>{step}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function DetailBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <h4 className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-2">{label}</h4>
+      <p className="text-xs text-[var(--text-muted)] leading-relaxed">{value}</p>
+    </div>
+  );
+}
+
+function ServiceDetail({ service }: { service: DataService }) {
+  return (
+    // Stop clicks inside the detail (links etc.) from toggling the card shut.
+    <div className="space-y-4 pt-3 mt-3 border-t border-[var(--border)]" onClick={(e) => e.stopPropagation()}>
+      <p className="text-xs text-[var(--text-muted)] leading-relaxed">{service.description}</p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <DetailBlock label="Stage" value={service.stage} />
+        <DetailBlock label="Min provision" value={service.minProvision ?? '—'} />
+      </div>
+
+      <DetailBlock label="Provider status" value={service.providerNote} />
+
+      {service.contracts && service.contracts.length > 0 && (
+        <div>
+          <h4 className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-2">Contracts</h4>
+          <div className="space-y-2">
+            {service.contracts.map((c) => {
+              const url = explorerUrl(c);
+              return (
+                <div key={c.address} className="text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[var(--text-muted)]">{c.label}</span>
+                    {c.unverified && (
+                      <span
+                        className="text-[9px] px-1 py-0.5 rounded bg-[var(--amber-dim)] text-[var(--amber)] leading-none"
+                        title="Sourced from repo config / forum — verify on a block explorer before relying on it"
+                      >
+                        unverified
+                      </span>
+                    )}
+                  </div>
+                  {url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-[10px] text-[var(--accent)] hover:underline break-all"
+                    >
+                      {c.address}
+                    </a>
+                  ) : (
+                    <span className="font-mono text-[10px] text-[var(--text-faint)] break-all">{c.address}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <StepList title="Become a provider" steps={service.becomeProvider} />
+      <StepList title="Consume" steps={service.consume} />
+
+      {service.fees && <DetailBlock label="Fees" value={service.fees} />}
+      {service.notable && <DetailBlock label="Notable" value={service.notable} />}
+
+      <div>
+        <h4 className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-2">Links</h4>
+        <div className="flex flex-wrap gap-2">
+          {service.links.map((l) => (
+            <a
+              key={l.url}
+              href={l.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)]/30 hover:text-[var(--accent)] transition-colors"
+            >
+              {l.label}
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ServiceCard({
+  service,
+  expanded,
+  onToggle,
+}: {
+  service: DataService;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Card
+      hover
+      onClick={onToggle}
+      className={cn('flex flex-col gap-3 h-full', expanded && 'ring-1 ring-[var(--accent)]/30')}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -104,7 +223,21 @@ function ServiceCard({ service, onOpen }: { service: DataService; onOpen: () => 
           </div>
           <p className="text-[10px] text-[var(--text-faint)] mt-0.5">{service.builtBy}</p>
         </div>
-        <ProviderLight status={service.providerStatus} withLabel={false} />
+        <div className="flex items-center gap-2 shrink-0">
+          <ProviderLight status={service.providerStatus} withLabel={false} />
+          <svg
+            className={cn(
+              'w-4 h-4 text-[var(--text-faint)] transition-transform duration-200',
+              expanded && 'rotate-180'
+            )}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </div>
 
       <p className="text-xs text-[var(--text-muted)] leading-relaxed flex-1">{service.tagline}</p>
@@ -118,198 +251,19 @@ function ServiceCard({ service, onOpen }: { service: DataService; onOpen: () => 
         <ChainChip service={service} />
         <StackChips stack={service.stack} />
       </div>
+
+      {expanded && (
+        <div className="animate-[lodie-panel-in_160ms_ease-out]">
+          <ServiceDetail service={service} />
+        </div>
+      )}
     </Card>
-  );
-}
-
-// ── Slide-over drawer ──────────────────────────────────────────────────────────
-function StepList({ title, steps }: { title: string; steps?: string[] }) {
-  if (!steps || steps.length === 0) return null;
-  return (
-    <div>
-      <h4 className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-2">{title}</h4>
-      <ol className="space-y-1.5">
-        {steps.map((step, i) => (
-          <li key={i} className="flex gap-2 text-xs text-[var(--text-muted)] leading-relaxed">
-            <span className="font-mono text-[var(--accent)] shrink-0">{i + 1}.</span>
-            <span>{step}</span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-function ServiceDrawer({ service, onClose }: { service: DataService | null; onClose: () => void }) {
-  // Lock body scroll + close on Escape while the drawer is open.
-  useEffect(() => {
-    if (!service) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [service, onClose]);
-
-  if (!service) return null;
-  const m = PROVIDER_META[service.providerStatus];
-
-  return (
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`${service.name} details`}>
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-[1px] animate-[fadeIn_150ms_ease-out]"
-        onClick={onClose}
-      />
-      <div className="absolute right-0 top-0 h-full w-full max-w-md bg-[var(--bg-surface)] border-l border-[var(--border)] shadow-2xl overflow-y-auto animate-[slideInRight_180ms_ease-out]">
-        <div className="sticky top-0 z-10 bg-[var(--bg-surface)]/95 backdrop-blur border-b border-[var(--border)] px-5 py-4 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-semibold text-[var(--text)]" style={{ fontFamily: 'var(--font-display)' }}>
-                {service.name}
-              </h2>
-              {service.grc && <span className="text-[11px] font-mono text-[var(--text-faint)]">{service.grc}</span>}
-            </div>
-            <p className="text-[11px] text-[var(--text-faint)] mt-0.5">{service.builtBy}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[var(--text-faint)] hover:text-[var(--text)] transition-colors shrink-0"
-            aria-label="Close"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="px-5 py-4 space-y-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={service.statusVariant}>{service.statusLabel}</Badge>
-            <span className={cn('inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-[var(--radius-badge)] bg-[var(--bg-elevated)]', m.text)}>
-              <span className={cn('w-2 h-2 rounded-full', m.dot)} />
-              {m.label}
-            </span>
-            {service.homeTeam && <Badge variant="accent">Home team</Badge>}
-          </div>
-
-          <p className="text-sm text-[var(--text-muted)] leading-relaxed">{service.description}</p>
-
-          <div className="grid grid-cols-2 gap-3">
-            <DetailField label="Stage" value={service.stage} />
-            <DetailField label="Min provision" value={service.minProvision ?? '—'} />
-          </div>
-
-          <div>
-            <h4 className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-2">Chain</h4>
-            <ChainChip service={service} />
-          </div>
-
-          <div>
-            <h4 className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-2">Stack</h4>
-            <StackChips stack={service.stack} />
-          </div>
-
-          <div>
-            <h4 className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-2">Provider status</h4>
-            <p className="text-xs text-[var(--text-muted)] leading-relaxed">{service.providerNote}</p>
-          </div>
-
-          {service.contracts && service.contracts.length > 0 && (
-            <div>
-              <h4 className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-2">Contracts</h4>
-              <div className="space-y-2">
-                {service.contracts.map((c) => {
-                  const url = explorerUrl(c);
-                  return (
-                    <div key={c.address} className="text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[var(--text-muted)]">{c.label}</span>
-                        {c.unverified && (
-                          <span
-                            className="text-[9px] px-1 py-0.5 rounded bg-[var(--amber-dim)] text-[var(--amber)] leading-none"
-                            title="Sourced from repo config / forum — verify on a block explorer before relying on it"
-                          >
-                            unverified
-                          </span>
-                        )}
-                      </div>
-                      {url ? (
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-mono text-[10px] text-[var(--accent)] hover:underline break-all"
-                        >
-                          {c.address}
-                        </a>
-                      ) : (
-                        <span className="font-mono text-[10px] text-[var(--text-faint)] break-all">{c.address}</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <StepList title="Become a provider" steps={service.becomeProvider} />
-          <StepList title="Consume" steps={service.consume} />
-
-          {service.fees && <DetailBlock label="Fees" value={service.fees} />}
-          {service.notable && <DetailBlock label="Notable" value={service.notable} />}
-
-          <div>
-            <h4 className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-2">Links</h4>
-            <div className="flex flex-wrap gap-2">
-              {service.links.map((l) => (
-                <a
-                  key={l.url}
-                  href={l.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)]/30 hover:text-[var(--accent)] transition-colors"
-                >
-                  {l.label}
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                  </svg>
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-xs text-[var(--text)]">{value}</p>
-    </div>
-  );
-}
-
-function DetailBlock({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <h4 className="text-[11px] font-semibold text-[var(--text-faint)] uppercase tracking-wide mb-2">{label}</h4>
-      <p className="text-xs text-[var(--text-muted)] leading-relaxed">{value}</p>
-    </div>
   );
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function DataServicesPage() {
-  const [selected, setSelected] = useState<DataService | null>(null);
+  const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
   const stats = useMemo(() => catalogueStats(), []);
 
   const byTier = useMemo(() => {
@@ -329,16 +283,15 @@ export default function DataServicesPage() {
         </p>
       </div>
 
-      <StatGrid>
+      <StatGrid className="lg:grid-cols-3 xl:grid-cols-3">
         <StatCard label="Services tracked" value={String(stats.total)} subtitle="across 4 maturity tiers" />
         <StatCard label="Live on Arbitrum One" value={String(stats.mainnetLive)} subtitle="Subgraph · Seahorn · Dispatch" />
         <StatCard
           label="With active providers"
           value={String(stats.activeProviders)}
-          subtitle={`+${stats.selfRunProviders} self-run (Dispatch)`}
-          tooltip="Only the Subgraph Service has a substantial active indexer set. Dispatch runs a single self-hosted provider; everyone else is zero."
+          subtitle="Subgraph Service only"
+          tooltip="Only the Subgraph Service has a substantial active indexer set serving paid queries. Every other service has zero active providers."
         />
-        <StatCard label="Built by Lodestar" value={String(stats.homeTeam)} subtitle="lodestar-team / cargopete" tag="home" />
       </StatGrid>
 
       {TIERS.map((tier) => {
@@ -353,9 +306,14 @@ export default function DataServicesPage() {
               </h2>
               <span className="text-xs text-[var(--text-faint)]">{tier.blurb}</span>
             </div>
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-start">
               {services.map((service) => (
-                <ServiceCard key={service.slug} service={service} onOpen={() => setSelected(service)} />
+                <ServiceCard
+                  key={service.slug}
+                  service={service}
+                  expanded={expandedSlug === service.slug}
+                  onToggle={() => setExpandedSlug((cur) => (cur === service.slug ? null : service.slug))}
+                />
               ))}
             </div>
           </section>
@@ -366,8 +324,6 @@ export default function DataServicesPage() {
         Curated research · reviewed {DATA_SERVICES_LAST_REVIEWED} · provider counts and addresses are point-in-time
         snapshots — verify on-chain before relying on them.
       </p>
-
-      <ServiceDrawer service={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }

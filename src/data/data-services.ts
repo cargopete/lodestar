@@ -170,12 +170,12 @@ export const DATA_SERVICES: DataService[] = [
     description:
       'A decentralized JSON-RPC data service. Indexers stake GRT, register to serve specific chains, and get paid per request via GraphTally. The canonical reference for Lodestar\'s "How to Build a Horizon Data Service" guide.',
     tier: 2,
-    statusLabel: 'Live · 1 self-run provider',
+    statusLabel: 'Live · unexercised',
     statusVariant: 'warning',
     stage: 'Production-ready / deployed',
-    providerStatus: 'single-self-run',
+    providerStatus: 'none',
     providerNote:
-      'One self-run provider on mainnet (rpc.cargopete.com). collect() reaches chain but has not settled GRT — no consumer has funded escrow yet. Effectively no third-party providers.',
+      'Contract live on Arbitrum One, but no active providers. collect() reaches chain yet has never settled GRT — no consumer has funded escrow. No completed paid-query loop on mainnet.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: '10 chains served', isMainnet: true },
     stack: ['TypeScript', 'Rust', 'Solidity'],
     links: [
