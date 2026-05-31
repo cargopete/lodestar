@@ -9,7 +9,13 @@ let _redis: any | null = null;
 async function getRedisClient(): Promise<any> {
   if (!_redis) {
     const { default: Redis } = await import('ioredis');
-    _redis = new Redis(process.env.REDIS_URL!, { lazyConnect: false, enableOfflineQueue: false });
+    const url = process.env.REDIS_URL!;
+    // For rediss:// with a self-signed cert (self-hosted VPS Redis), skip CA
+    // verification — the AUTH password + TLS still encrypt the channel, we just
+    // don't have a public CA chain. Managed providers (Upstash) verify fine, but
+    // rejectUnauthorized:false is harmless there too.
+    const tls = url.startsWith('rediss://') ? { tls: { rejectUnauthorized: false } } : {};
+    _redis = new Redis(url, { lazyConnect: false, enableOfflineQueue: false, ...tls });
   }
   return _redis;
 }
