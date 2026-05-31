@@ -30,10 +30,10 @@ export default defineConfig({
       // Ratcheting baseline — set to the current real measured floor so CI passes
       // but never regresses. Raise these as Phase 3 coverage work lands.
       thresholds: {
-        statements: 55,
-        branches: 48,
-        functions: 53,
-        lines: 56,
+        statements: 70,
+        branches: 62,
+        functions: 70,
+        lines: 71,
       },
     },
   },
