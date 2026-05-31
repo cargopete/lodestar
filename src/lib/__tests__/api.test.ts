@@ -15,6 +15,23 @@ import {
   fetchTokenMetrics,
   fetchDelegationFlows,
   fetchWithRetry,
+  fetchTVL,
+  fetchSubgraphDeployments30d,
+  fetchPOIOverview,
+  fetchPOIDeployment,
+  fetchIndexingStatus,
+  fetchIndexerStatus,
+  fetchNetworksRegistry,
+  fetchRewardsHistory,
+  fetchPayments,
+  fetchIndexerPayments,
+  fetchIndexerTrends,
+  fetchIndexerQoS,
+  fetchIndexerStakeHistory,
+  fetchParameterHistory,
+  fetchSubgraphCuration,
+  fetchSubgraphSchema,
+  fetchCuratorLeaderboard,
 } from '@/lib/api';
 import type { VoteMessage } from '@/lib/voting';
 
@@ -191,6 +208,241 @@ describe('api: submitVote', () => {
   it('falls back to generic message when server omits error', async () => {
     mockFetch.mockResolvedValue(jsonResponse({}, 400));
     await expect(submitVote(message, '0xsig')).rejects.toThrow('Failed to submit vote');
+  });
+});
+
+describe('api: raw-json (no envelope) endpoints', () => {
+  it('fetchTVL returns the raw json on success', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ tvl: 1234 }));
+    expect(await fetchTVL()).toEqual({ tvl: 1234 });
+    expect(mockFetch).toHaveBeenCalledWith('/api/tvl');
+  });
+
+  it('fetchTVL throws the static message on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 500));
+    await expect(fetchTVL()).rejects.toThrow('Failed to fetch TVL');
+  });
+
+  it('fetchNetworksRegistry returns the raw json on success', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ networks: [{ chainId: 1 }] }));
+    expect(await fetchNetworksRegistry()).toEqual({ networks: [{ chainId: 1 }] });
+    expect(mockFetch).toHaveBeenCalledWith('/api/networks');
+  });
+
+  it('fetchNetworksRegistry throws the static message on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 503));
+    await expect(fetchNetworksRegistry()).rejects.toThrow('Failed to fetch networks registry');
+  });
+
+  it('fetchRewardsHistory builds the address+days query and returns raw json', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ history: [] }));
+    expect(await fetchRewardsHistory('0xDeL', 45)).toEqual({ history: [] });
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('/api/rewards-history?');
+    expect(url).toContain('address=0xDeL');
+    expect(url).toContain('days=45');
+  });
+
+  it('fetchRewardsHistory defaults days to 90 and throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 404));
+    await expect(fetchRewardsHistory('0xabc')).rejects.toThrow('Rewards history failed: 404');
+    expect(mockFetch.mock.calls[0][0]).toContain('days=90');
+  });
+});
+
+describe('api: .data-envelope endpoints (happy + error)', () => {
+  it('fetchSubgraphDeployments30d unwraps .data and hits the right path', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'd1' }] }));
+    expect(await fetchSubgraphDeployments30d()).toEqual([{ id: 'd1' }]);
+    expect(mockFetch).toHaveBeenCalledWith('/api/subgraph-fees-30d');
+  });
+
+  it('fetchSubgraphDeployments30d throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 500));
+    await expect(fetchSubgraphDeployments30d()).rejects.toThrow('30d fees fetch failed: 500');
+  });
+
+  it('fetchPOIOverview unwraps .data', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: { deployments: [] } }));
+    expect(await fetchPOIOverview()).toEqual({ deployments: [] });
+    expect(mockFetch).toHaveBeenCalledWith('/api/poi');
+  });
+
+  it('fetchPOIOverview throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 502));
+    await expect(fetchPOIOverview()).rejects.toThrow('POI overview failed: 502');
+  });
+
+  it('fetchPOIDeployment encodes the deployment and unwraps .data', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: { id: 'Qm1' } }));
+    expect(await fetchPOIDeployment('Qm/with slash')).toEqual({ id: 'Qm1' });
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('deployment=');
+    expect(url).toContain(encodeURIComponent('Qm/with slash'));
+  });
+
+  it('fetchPOIDeployment throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 404));
+    await expect(fetchPOIDeployment('Qm')).rejects.toThrow('POI detail failed: 404');
+  });
+
+  it('fetchIndexingStatus encodes the hash into the path segment', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: { status: 'synced' } }));
+    expect(await fetchIndexingStatus('Qm Hash&x')).toEqual({ status: 'synced' });
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toBe(`/api/indexing-status/${encodeURIComponent('Qm Hash&x')}`);
+  });
+
+  it('fetchIndexingStatus throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 500));
+    await expect(fetchIndexingStatus('Qm')).rejects.toThrow('Indexing status failed: 500');
+  });
+
+  it('fetchIndexerStatus encodes the address into the path and unwraps .data', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: { totalAllocations: 3 } }));
+    expect(await fetchIndexerStatus('0xABC')).toEqual({ totalAllocations: 3 });
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/indexer-status/0xABC');
+  });
+
+  it('fetchIndexerStatus throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 503));
+    await expect(fetchIndexerStatus('0xabc')).rejects.toThrow('Indexer status failed: 503');
+  });
+
+  it('fetchPayments unwraps .data', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: { escrow: '1' } }));
+    expect(await fetchPayments()).toEqual({ escrow: '1' });
+    expect(mockFetch).toHaveBeenCalledWith('/api/payments');
+  });
+
+  it('fetchPayments throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 500));
+    await expect(fetchPayments()).rejects.toThrow('Payments failed: 500');
+  });
+
+  it('fetchIndexerPayments adds the receiver query param', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: { escrow: '2' } }));
+    expect(await fetchIndexerPayments('0xRecv&evil')).toEqual({ escrow: '2' });
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('receiver=');
+    expect(url).toContain(encodeURIComponent('0xRecv&evil'));
+    expect(url).not.toContain('&evil');
+  });
+
+  it('fetchIndexerPayments throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 404));
+    await expect(fetchIndexerPayments('0xabc')).rejects.toThrow('Indexer payments failed: 404');
+  });
+
+  it('fetchIndexerTrends builds indexer+days query and unwraps .data', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: { points: [] } }));
+    expect(await fetchIndexerTrends('0xidx', 14)).toEqual({ points: [] });
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('indexer=0xidx');
+    expect(url).toContain('days=14');
+  });
+
+  it('fetchIndexerTrends defaults days to 30 and throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 500));
+    await expect(fetchIndexerTrends('0xidx')).rejects.toThrow('Indexer trends failed: 500');
+    expect(mockFetch.mock.calls[0][0]).toContain('days=30');
+  });
+
+  it('fetchIndexerQoS encodes the address into the path and unwraps .data', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: { qos: [] } }));
+    expect(await fetchIndexerQoS('0xQoS')).toEqual({ qos: [] });
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/indexer-qos/0xQoS');
+  });
+
+  it('fetchIndexerQoS throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 502));
+    await expect(fetchIndexerQoS('0xabc')).rejects.toThrow('QoS fetch failed: 502');
+  });
+
+  it('fetchIndexerStakeHistory unwraps .data from the path endpoint', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: { history: [{ date: 'd' }] } }));
+    expect(await fetchIndexerStakeHistory('0xStk')).toEqual({ history: [{ date: 'd' }] });
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/indexer-stake-history/0xStk');
+  });
+
+  it('fetchIndexerStakeHistory throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 500));
+    await expect(fetchIndexerStakeHistory('0xabc')).rejects.toThrow('Stake history failed: 500');
+  });
+
+  it('fetchParameterHistory falls back to [] when data is missing', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}));
+    expect(await fetchParameterHistory('0xPrm')).toEqual([]);
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/parameter-history/0xPrm');
+  });
+
+  it('fetchParameterHistory returns the data array when present', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: [{ param_name: 'cut' }] }));
+    expect(await fetchParameterHistory('0xabc')).toEqual([{ param_name: 'cut' }]);
+  });
+
+  it('fetchParameterHistory throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 500));
+    await expect(fetchParameterHistory('0xabc')).rejects.toThrow('Parameter history failed: 500');
+  });
+
+  it('fetchSubgraphCuration unwraps .data from the path endpoint', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: { signals: [] } }));
+    expect(await fetchSubgraphCuration('QmHash')).toEqual({ signals: [] });
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/subgraph-curation/QmHash');
+  });
+
+  it('fetchSubgraphCuration throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 404));
+    await expect(fetchSubgraphCuration('Qm')).rejects.toThrow('Subgraph curation failed: 404');
+  });
+
+  it('fetchSubgraphSchema unwraps .data', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: { schemaText: 'type X', schemaHash: 'h' } }));
+    expect(await fetchSubgraphSchema('QmSchema')).toEqual({ schemaText: 'type X', schemaHash: 'h' });
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/subgraph-schema/QmSchema');
+  });
+
+  it('fetchSubgraphSchema throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 500));
+    await expect(fetchSubgraphSchema('Qm')).rejects.toThrow('Schema fetch failed: 500');
+  });
+
+  it('fetchCuratorLeaderboard applies first/skip defaults and unwraps .data', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: [{ curator: '0x1' }] }));
+    expect(await fetchCuratorLeaderboard()).toEqual([{ curator: '0x1' }]);
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('first=50');
+    expect(url).toContain('skip=0');
+  });
+
+  it('fetchCuratorLeaderboard forwards provided first/skip', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: [] }));
+    await fetchCuratorLeaderboard({ first: 5, skip: 20 });
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('first=5');
+    expect(url).toContain('skip=20');
+  });
+
+  it('fetchCuratorLeaderboard throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 500));
+    await expect(fetchCuratorLeaderboard()).rejects.toThrow('Curator leaderboard failed: 500');
+  });
+
+  it('fetchTokenMetrics returns the data array when present and builds count query', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: [{ epoch: 1 }] }));
+    expect(await fetchTokenMetrics(7)).toEqual([{ epoch: 1 }]);
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/token-metrics?count=7');
+  });
+
+  it('fetchTokenMetrics throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 500));
+    await expect(fetchTokenMetrics()).rejects.toThrow('Token metrics failed: 500');
+  });
+
+  it('fetchDelegationFlows throws with status on failure', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 500));
+    await expect(fetchDelegationFlows()).rejects.toThrow('Delegation flows failed: 500');
   });
 });
 

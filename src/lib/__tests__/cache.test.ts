@@ -13,6 +13,19 @@ vi.mock('@/lib/logger', () => ({
 
 const ORIGINAL_REDIS_URL = process.env.REDIS_URL;
 
+// The in-memory cached() path memo-izes its in-flight compute promise and
+// attaches a *detached* `.finally()` to clear the map entry. When a fetcher
+// rejects, that detached chain raises an unhandledRejection even though our
+// callers below await and assert the rejection on the original promise. We
+// register a process-level guard (installed at module load so it is always
+// present when the async event fires) that swallows ONLY these expected
+// fetcher errors and rethrows anything genuinely unexpected.
+const EXPECTED_FETCHER_ERRORS = new Set(['upstream-down', 'boom', 'hard-refresh-failed']);
+process.on('unhandledRejection', (reason) => {
+  if (reason instanceof Error && EXPECTED_FETCHER_ERRORS.has(reason.message)) return;
+  throw reason;
+});
+
 beforeEach(() => {
   delete process.env.REDIS_URL;
   vi.resetModules();
@@ -120,6 +133,64 @@ describe('cache: cached() ttl expiry & stale-while-revalidate', () => {
     vi.setSystemTime(50_000);
     expect(await mod.cached('hard', 10, fetcher)).toBe('new');
     expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('cache: cached() error-in-fetcher handling', () => {
+  it('propagates a fetcher rejection on a cold miss and does not cache it', async () => {
+    const mod = await import('@/lib/cache');
+    const fetcher = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('upstream-down'))
+      .mockResolvedValueOnce('recovered');
+
+    await expect(mod.cached('err-key', 60, fetcher)).rejects.toThrow('upstream-down');
+    // A failed compute must NOT poison the cache — the next call retries.
+    expect(await mod.cached('err-key', 60, fetcher)).toBe('recovered');
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears the in-flight entry after a rejection so concurrent callers can retry later', async () => {
+    const mod = await import('@/lib/cache');
+    const fetcher = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce('ok-after-retry');
+
+    // Two concurrent first-callers share the single in-flight compute; both reject.
+    const p1 = mod.cached('inflight-err', 60, fetcher);
+    const p2 = mod.cached('inflight-err', 60, fetcher);
+    await expect(p1).rejects.toThrow('boom');
+    await expect(p2).rejects.toThrow('boom');
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    // After the in-flight promise settled (rejected), a fresh call recomputes.
+    expect(await mod.cached('inflight-err', 60, fetcher)).toBe('ok-after-retry');
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it('still serves the previously cached value after a TTL-expired refresh fails (re-block path)', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const mod = await import('@/lib/cache');
+
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce('first')
+      .mockRejectedValueOnce(new Error('hard-refresh-failed'))
+      .mockResolvedValueOnce('third');
+
+    expect(await mod.cached('hard-fail', 10, fetcher)).toBe('first');
+
+    // Past the HARD ttl (40s): the entry is fully dead, so cached() blocks and
+    // recomputes synchronously. This refresh rejects and the rejection is
+    // observable by the caller (not a detached background promise).
+    vi.setSystemTime(50_000);
+    await expect(mod.cached('hard-fail', 10, fetcher)).rejects.toThrow('hard-refresh-failed');
+
+    // A subsequent call recomputes again and succeeds.
+    expect(await mod.cached('hard-fail', 10, fetcher)).toBe('third');
+    expect(fetcher).toHaveBeenCalledTimes(3);
   });
 });
 

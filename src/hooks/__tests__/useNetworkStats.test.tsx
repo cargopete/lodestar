@@ -49,6 +49,31 @@ import {
   useRecentDelegations,
   useNetworkDelegations,
   useIndexerDisputes,
+  useGRTPrice,
+  useTVL,
+  useIndexers,
+  useSubgraphDeployments30d,
+  useNetworksRegistry,
+  useManifestAnalysis,
+  usePOIOverview,
+  usePOIDeployment,
+  useIndexingStatus,
+  useSubgraphCuration,
+  useDelegatorPortfolio,
+  useCuratorPortfolio,
+  useRewardsHistory,
+  useIndexerStatus,
+  usePayments,
+  useIndexerPayments,
+  useIndexerTrends,
+  useIndexerQoS,
+  useIndexerStakeHistory,
+  useDelegationFlows,
+  useTokenMetrics,
+  useSubgraphSchema,
+  useCuratorLeaderboard,
+  useREOStatus,
+  useENSName,
 } from '../useNetworkStats';
 
 function wrapper() {
@@ -231,5 +256,269 @@ describe('raw-fetch hooks', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockFetch).toHaveBeenCalledWith('/api/indexer-disputes/0xabcdef');
     expect(result.current.data).toEqual({ disputes: [] });
+  });
+});
+
+describe('always-on (un-gated) query hooks', () => {
+  it('useGRTPrice returns price data from the fetcher', async () => {
+    vi.mocked(api.fetchGRTPrice).mockResolvedValue({ price: 0.2, change24h: 1 } as never);
+    const { result } = renderHook(() => useGRTPrice(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual({ price: 0.2, change24h: 1 });
+  });
+
+  it('useTVL surfaces a fetcher error', async () => {
+    vi.mocked(api.fetchTVL).mockRejectedValue(new Error('tvl-down'));
+    const { result } = renderHook(() => useTVL(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect((result.current.error as Error).message).toBe('tvl-down');
+  });
+
+  it('useIndexers forwards params to the fetcher', async () => {
+    vi.mocked(api.fetchIndexers).mockResolvedValue({ indexers: [] } as never);
+    const params = { first: 10, orderBy: 'score', orderDirection: 'asc' as const };
+    const { result } = renderHook(() => useIndexers(params), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.fetchIndexers).toHaveBeenCalledWith(params);
+  });
+
+  it('useNetworksRegistry returns the registry payload', async () => {
+    vi.mocked(api.fetchNetworksRegistry).mockResolvedValue({ networks: [{ chainId: 1 }] } as never);
+    const { result } = renderHook(() => useNetworksRegistry(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual({ networks: [{ chainId: 1 }] });
+  });
+
+  it('usePOIOverview returns overview data', async () => {
+    vi.mocked(api.fetchPOIOverview).mockResolvedValue({ deployments: [] } as never);
+    const { result } = renderHook(() => usePOIOverview(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual({ deployments: [] });
+  });
+
+  it('usePayments returns payment data', async () => {
+    vi.mocked(api.fetchPayments).mockResolvedValue({ escrow: '1' } as never);
+    const { result } = renderHook(() => usePayments(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual({ escrow: '1' });
+  });
+
+  it('useDelegationFlows forwards days+compare to the fetcher', async () => {
+    vi.mocked(api.fetchDelegationFlows).mockResolvedValue([] as never);
+    const { result } = renderHook(() => useDelegationFlows(7, true), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.fetchDelegationFlows).toHaveBeenCalledWith(7, true);
+  });
+
+  it('useTokenMetrics passes the default count of 100', async () => {
+    vi.mocked(api.fetchTokenMetrics).mockResolvedValue([] as never);
+    const { result } = renderHook(() => useTokenMetrics(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.fetchTokenMetrics).toHaveBeenCalledWith(100);
+  });
+
+  it('useSubgraphDeployments30d is gated off when enabled=false', () => {
+    const { result } = renderHook(() => useSubgraphDeployments30d(false), { wrapper: wrapper() });
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(api.fetchSubgraphDeployments30d).not.toHaveBeenCalled();
+  });
+
+  it('useSubgraphDeployments30d runs when enabled (the default)', async () => {
+    vi.mocked(api.fetchSubgraphDeployments30d).mockResolvedValue([] as never);
+    const { result } = renderHook(() => useSubgraphDeployments30d(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.fetchSubgraphDeployments30d).toHaveBeenCalledTimes(1);
+  });
+
+  it('useCuratorLeaderboard forwards params', async () => {
+    vi.mocked(api.fetchCuratorLeaderboard).mockResolvedValue([] as never);
+    const { result } = renderHook(() => useCuratorLeaderboard({ first: 5 }), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.fetchCuratorLeaderboard).toHaveBeenCalledWith({ first: 5 });
+  });
+});
+
+describe('enabled-gated query hooks (no arg → idle, arg → fetch)', () => {
+  it('useManifestAnalysis stays idle when hash is null and runs with a hash', async () => {
+    const off = renderHook(() => useManifestAnalysis(null), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+    expect(api.fetchManifestAnalysis).not.toHaveBeenCalled();
+
+    vi.mocked(api.fetchManifestAnalysis).mockResolvedValue({ complexity: 'Light' } as never);
+    const on = renderHook(() => useManifestAnalysis('QmX'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchManifestAnalysis).toHaveBeenCalledWith('QmX');
+  });
+
+  it('usePOIDeployment is idle for null and fetches for a deployment id', async () => {
+    const off = renderHook(() => usePOIDeployment(null), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchPOIDeployment).mockResolvedValue({ id: 'd' } as never);
+    const on = renderHook(() => usePOIDeployment('Qm'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchPOIDeployment).toHaveBeenCalledWith('Qm');
+  });
+
+  it('useIndexingStatus is idle for null and fetches for a hash', async () => {
+    const off = renderHook(() => useIndexingStatus(null), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchIndexingStatus).mockResolvedValue({ status: 'synced' } as never);
+    const on = renderHook(() => useIndexingStatus('Qm'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchIndexingStatus).toHaveBeenCalledWith('Qm');
+  });
+
+  it('useSubgraphCuration is idle for null and fetches for a hash', async () => {
+    const off = renderHook(() => useSubgraphCuration(null), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchSubgraphCuration).mockResolvedValue({ signals: [] } as never);
+    const on = renderHook(() => useSubgraphCuration('Qm'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchSubgraphCuration).toHaveBeenCalledWith('Qm');
+  });
+
+  it('useDelegatorPortfolio is idle for undefined and fetches for an address', async () => {
+    const off = renderHook(() => useDelegatorPortfolio(undefined), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchDelegatorPortfolio).mockResolvedValue({ positions: [] } as never);
+    const on = renderHook(() => useDelegatorPortfolio('0xdel'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchDelegatorPortfolio).toHaveBeenCalledWith('0xdel');
+  });
+
+  it('useCuratorPortfolio is idle for undefined and fetches for an address', async () => {
+    const off = renderHook(() => useCuratorPortfolio(undefined), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchCuratorPortfolio).mockResolvedValue({ positions: [] } as never);
+    const on = renderHook(() => useCuratorPortfolio('0xcur'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchCuratorPortfolio).toHaveBeenCalledWith('0xcur');
+  });
+
+  it('useRewardsHistory is idle for undefined and forwards address+days', async () => {
+    const off = renderHook(() => useRewardsHistory(undefined), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchRewardsHistory).mockResolvedValue({ history: [] } as never);
+    const on = renderHook(() => useRewardsHistory('0xr', 30), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchRewardsHistory).toHaveBeenCalledWith('0xr', 30);
+  });
+
+  it('useIndexerStatus is idle for null and fetches for an address', async () => {
+    const off = renderHook(() => useIndexerStatus(null), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchIndexerStatus).mockResolvedValue({ totalAllocations: 0 } as never);
+    const on = renderHook(() => useIndexerStatus('0xidx'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchIndexerStatus).toHaveBeenCalledWith('0xidx');
+  });
+
+  it('useIndexerPayments is idle for empty receiver and fetches otherwise', async () => {
+    const off = renderHook(() => useIndexerPayments(''), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchIndexerPayments).mockResolvedValue({ escrow: '1' } as never);
+    const on = renderHook(() => useIndexerPayments('0xrecv'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchIndexerPayments).toHaveBeenCalledWith('0xrecv');
+  });
+
+  it('useIndexerTrends is idle for null and forwards indexer+days', async () => {
+    const off = renderHook(() => useIndexerTrends(null), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchIndexerTrends).mockResolvedValue({ points: [] } as never);
+    const on = renderHook(() => useIndexerTrends('0xidx', 14), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchIndexerTrends).toHaveBeenCalledWith('0xidx', 14);
+  });
+
+  it('useIndexerQoS is idle for null and fetches for an address', async () => {
+    const off = renderHook(() => useIndexerQoS(null), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchIndexerQoS).mockResolvedValue({ qos: [] } as never);
+    const on = renderHook(() => useIndexerQoS('0xqos'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchIndexerQoS).toHaveBeenCalledWith('0xqos');
+  });
+
+  it('useIndexerStakeHistory is idle for null and fetches for an address', async () => {
+    const off = renderHook(() => useIndexerStakeHistory(null), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchIndexerStakeHistory).mockResolvedValue({ history: [] } as never);
+    const on = renderHook(() => useIndexerStakeHistory('0xstk'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchIndexerStakeHistory).toHaveBeenCalledWith('0xstk');
+  });
+
+  it('useSubgraphSchema is idle for null and fetches for a hash', async () => {
+    const off = renderHook(() => useSubgraphSchema(null), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+
+    vi.mocked(api.fetchSubgraphSchema).mockResolvedValue({ schemaText: 't', schemaHash: 'h' } as never);
+    const on = renderHook(() => useSubgraphSchema('Qm'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(api.fetchSubgraphSchema).toHaveBeenCalledWith('Qm');
+  });
+
+  it('useIndexerProvisions fetches once an indexer is supplied', async () => {
+    vi.mocked(api.fetchIndexerProvisions).mockResolvedValue({ provisions: [] } as never);
+    const { result } = renderHook(() => useIndexerProvisions('0xprov'), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.fetchIndexerProvisions).toHaveBeenCalledWith('0xprov');
+  });
+});
+
+describe('raw-fetch enabled-gated hooks', () => {
+  it('useREOStatus is idle for empty address and unwraps json on fetch', async () => {
+    const off = renderHook(() => useREOStatus(''), { wrapper: wrapper() });
+    expect(off.result.current.fetchStatus).toBe('idle');
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ status: 'eligible' }), { status: 200 }));
+    const on = renderHook(() => useREOStatus('0xreo'), { wrapper: wrapper() });
+    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
+    expect(on.result.current.data).toEqual({ status: 'eligible' });
+    expect(mockFetch).toHaveBeenCalledWith('/api/reo?address=0xreo');
+  });
+
+  it('useREOStatus throws on a non-ok response', async () => {
+    mockFetch.mockResolvedValue(new Response('nope', { status: 500 }));
+    const { result } = renderHook(() => useREOStatus('0xreo'), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it('useENSName returns { ensName: null } on a non-ok response (no throw)', async () => {
+    mockFetch.mockResolvedValue(new Response('nope', { status: 404 }));
+    const { result } = renderHook(() => useENSName('0xens'), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual({ ensName: null });
+  });
+
+  it('useENSName returns the resolved name on success', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ensName: 'foo.eth' }), { status: 200 }));
+    const { result } = renderHook(() => useENSName('0xens'), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual({ ensName: 'foo.eth' });
+  });
+
+  it('useNetworkDelegations omits the indexer param when none is given', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify({ data: { delegationEvents: [] } }), { status: 200 }),
+    );
+    const { result } = renderHook(() => useNetworkDelegations(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('first=50');
+    expect(url).not.toContain('indexer=');
   });
 });

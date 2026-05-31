@@ -17,6 +17,31 @@ vi.mock('@/lib/amp', () => ({
   hexLit: (h: string) => `x'${h}'`,
 }));
 
+// Mock the node socket/dns boundaries so the endpoint-set probe path can be
+// exercised without opening real sockets. resolve4 + a tcp socket that emits
+// 'error' lets us drive DNS-ok / TCP-fail / TLS-skipped deterministically.
+const resolve4 = vi.fn();
+vi.mock('node:dns/promises', () => ({
+  resolve4: (...a: unknown[]) => resolve4(...a),
+}));
+
+// A Socket whose connect() schedules an 'error' emit on next tick.
+class FakeSocket {
+  private handlers: Record<string, (arg?: unknown) => void> = {};
+  on(ev: string, cb: (arg?: unknown) => void) { this.handlers[ev] = cb; return this; }
+  setTimeout() { /* noop */ }
+  destroy() { /* noop */ }
+  connect() {
+    queueMicrotask(() => this.handlers['error']?.(new Error('ECONNREFUSED')));
+  }
+}
+vi.mock('node:net', () => ({
+  Socket: class { constructor() { return new FakeSocket(); } },
+}));
+vi.mock('node:tls', () => ({
+  connect: () => { throw new Error('TLS should not be reached when TCP fails'); },
+}));
+
 const SECRET = 'debug-secret';
 
 async function load() {
@@ -72,5 +97,53 @@ describe('horizon/debug report', () => {
     expect(body.ping).toBe('AMP_ENDPOINT or AMP_TOKEN not set');
     expect(body.query).toBe('skipped');
     expect(ampQuery).not.toHaveBeenCalled();
+  });
+
+  it('runs DNS+TCP probes when AMP_ENDPOINT is set; TLS/ping/query skipped on TCP failure', async () => {
+    process.env.AMP_ENDPOINT = 'https://amp.example.com:8443';
+    resolve4.mockResolvedValue(['203.0.113.5']);
+    const GET = await load();
+    const res = await GET(req(`Bearer ${SECRET}`));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    // env reflects the configured endpoint (token still unset → "(not set)")
+    expect(body.env.AMP_ENDPOINT).toBe('https://amp.example.com:8443');
+
+    // DNS resolved against the parsed hostname
+    expect(resolve4).toHaveBeenCalledWith('amp.example.com');
+    expect(body.dns).toEqual(['203.0.113.5']);
+
+    // TCP probe ran (our fake socket emits an error → ok:false), TLS skipped
+    expect(body.tcp.ok).toBe(false);
+    expect(body.tcp.error).toBe('ECONNREFUSED');
+    expect(body.tls).toMatchObject({ ok: false, error: 'TCP failed' });
+
+    // hasAmpAccess is false → ping reports missing config; query never runs
+    expect(body.ping).toBe('AMP_ENDPOINT or AMP_TOKEN not set');
+    expect(body.query).toBe('skipped');
+    expect(ampQuery).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a DNS resolution failure as a string in the dns field', async () => {
+    process.env.AMP_ENDPOINT = 'https://broken.example.com';
+    resolve4.mockRejectedValue(new Error('ENOTFOUND'));
+    const GET = await load();
+    const res = await GET(req(`Bearer ${SECRET}`));
+    const body = await res.json();
+    expect(typeof body.dns).toBe('string');
+    expect(body.dns).toContain('DNS error');
+    expect(body.dns).toContain('ENOTFOUND');
+  });
+
+  it('masks the AMP_TOKEN to its first 8 chars when set', async () => {
+    process.env.AMP_ENDPOINT = 'https://amp.example.com';
+    process.env.AMP_TOKEN = 'supersecrettoken1234';
+    resolve4.mockResolvedValue(['198.51.100.7']);
+    const GET = await load();
+    const res = await GET(req(`Bearer ${SECRET}`));
+    const body = await res.json();
+    expect(body.env.AMP_TOKEN).toBe('supersec…');
+    expect(body.env.AMP_TOKEN).not.toContain('token1234');
   });
 });
