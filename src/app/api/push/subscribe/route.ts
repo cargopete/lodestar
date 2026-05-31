@@ -67,17 +67,41 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ subscribed: true });
 }
 
-/** DELETE /api/push/subscribe — opt out (no signature required — removing is harmless) */
+/** DELETE /api/push/subscribe — opt out. Requires an EIP-191 signature over the
+ * subscribe message so a caller can only unsubscribe their OWN address. */
 export async function DELETE(request: NextRequest) {
   if (!db) return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
 
-  const address = request.nextUrl.searchParams.get('address')?.toLowerCase();
-  if (!address || !ETH_ADDRESS_RE.test(address)) {
-    return NextResponse.json({ error: 'Invalid address' }, { status: 400 });
+  let body: { address?: string; signature?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  const address = body.address?.toLowerCase();
+  const signature = body.signature;
+  if (!address || !ETH_ADDRESS_RE.test(address) || !signature) {
+    return NextResponse.json({ error: 'Missing address or signature' }, { status: 400 });
+  }
+
+  const normalised = address as `0x${string}`;
+  let valid = false;
+  try {
+    valid = await verifyMessage({
+      address: normalised,
+      message: subscribeMessage(normalised),
+      signature: signature as `0x${string}`,
+    });
+  } catch {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+  }
+  if (!valid) {
+    return NextResponse.json({ error: 'Signature mismatch' }, { status: 403 });
   }
 
   await db`
-    UPDATE push_subscriptions SET is_active = FALSE WHERE address = ${address}
+    UPDATE push_subscriptions SET is_active = FALSE WHERE address = ${normalised}
   `;
 
   return NextResponse.json({ subscribed: false });

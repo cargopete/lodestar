@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes } from 'crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { verifyMessage } from 'viem';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -9,6 +9,9 @@ const AUTH_WINDOW = 300; // 5 minutes — max age of sign-in message
 function secret(): string {
   const s = process.env.SESSION_SECRET;
   if (!s) throw new Error('SESSION_SECRET env var not set');
+  if (s.length < 32) {
+    throw new Error('SESSION_SECRET must be at least 32 characters (use a random 32+ byte value)');
+  }
   return s;
 }
 
@@ -47,7 +50,10 @@ export function parseSession(token: string): string | null {
   if (isNaN(issuedAt)) return null;
   if (Math.floor(Date.now() / 1000) - issuedAt > SESSION_TTL) return null;
   const expected = createHmac('sha256', secret()).update(payload).digest('hex');
-  if (expected !== sig) return null;
+  // Constant-time comparison to avoid leaking the signature via response timing.
+  const expBuf = Buffer.from(expected);
+  const sigBuf = Buffer.from(sig);
+  if (expBuf.length !== sigBuf.length || !timingSafeEqual(expBuf, sigBuf)) return null;
   return address;
 }
 

@@ -36,11 +36,9 @@ import {
   sendWebhook,
   type DeploymentHealth,
 } from '@/lib/studio/alerts';
+import { isCronAuthorized } from '@/lib/cron-auth';
 
-function isAuthorized(req: NextRequest): boolean {
-  const cronSecret = process.env.CRON_SECRET;
-  return !cronSecret || req.headers.get('authorization') === `Bearer ${cronSecret}`;
-}
+const isAuthorized = isCronAuthorized;
 
 // ---------------------------------------------------------------------------
 // Network-subgraph resolution (same query shapes as /api/indexing-status/[hash])

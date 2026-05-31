@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { getRedisClient, hasRedis } from '@/lib/cache';
 import { log } from '@/lib/logger';
+import { isCronAuthorized } from '@/lib/cron-auth';
 
 // Staleness thresholds in minutes per ingestion type
 const FRESHNESS_THRESHOLDS: Record<string, number> = {
@@ -28,8 +29,7 @@ export async function GET(request: NextRequest) {
 
   // Verbose mode requires auth
   const verbose = request.nextUrl.searchParams.get('verbose') === 'true';
-  const cronSecret = process.env.CRON_SECRET;
-  const isAuthed = !cronSecret || request.headers.get('authorization') === `Bearer ${cronSecret}`;
+  const isAuthed = isCronAuthorized(request);
 
   // ── Postgres probe ──
   let postgres: ComponentStatus;

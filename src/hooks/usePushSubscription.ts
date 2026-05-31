@@ -34,7 +34,14 @@ export function useTogglePushSubscription() {
       const normalised = address.toLowerCase();
 
       if (currentlySubscribed) {
-        const res = await fetch(`/api/push/subscribe?address=${normalised}`, { method: 'DELETE' });
+        // Require a signature to unsubscribe too, so one user can't disable
+        // another's alerts by guessing their address.
+        const signature = await signMessageAsync({ message: SUBSCRIBE_MESSAGE(normalised) });
+        const res = await fetch('/api/push/subscribe', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: normalised, signature }),
+        });
         if (!res.ok) throw new Error('Failed to unsubscribe');
         return false;
       }

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { isCronAuthorized } from '@/lib/cron-auth';
 
 const UNI_V3_URL = process.env.GRAPH_API_KEY
   ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV`
   : null;
 
-function isAuthorized(req: NextRequest): boolean {
-  const cronSecret = process.env.CRON_SECRET;
-  return !cronSecret || req.headers.get('authorization') === `Bearer ${cronSecret}`;
-}
+const isAuthorized = isCronAuthorized;
 
 interface Swap {
   id: string;
