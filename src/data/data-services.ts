@@ -176,7 +176,7 @@ export const DATA_SERVICES: DataService[] = [
     providerStatus: 'none',
     providerNote:
       'Contract live on Arbitrum One, but no active providers. collect() reaches chain yet has never settled GRT — no consumer has funded escrow. No completed paid-query loop on mainnet.',
-    chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: '10 chains served', isMainnet: true },
+    chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: '10 chains supported', isMainnet: true },
     stack: ['TypeScript', 'Rust', 'Solidity'],
     links: [
       { label: 'Repo', url: 'https://github.com/cargopete/dispatch' },
@@ -185,14 +185,13 @@ export const DATA_SERVICES: DataService[] = [
     contracts: [
       {
         label: 'RPCDataService',
-        address: '0x73846272813065c3e4efdb3fb82e0d128c8c2364',
+        address: '0x7101d5c1a5c89c3647f5118da118e56c023ba0b9',
         network: 'arbitrum-one',
-        unverified: true,
       },
     ],
-    minProvision: '25,000 GRT',
+    minProvision: '555 GRT',
     becomeProvider: [
-      'Stake ≥25,000 GRT, provision with ≥14-day thawing.',
+      'Stake ≥555 GRT, provision with ≥14-day thawing.',
       'Run dispatch-service pointing at an Ethereum node.',
       'Register via the indexer-agent npm package or directly (register → startService per (chainId, tier)).',
     ],
@@ -201,7 +200,7 @@ export const DATA_SERVICES: DataService[] = [
       'Or via dispatch-gateway (QoS-scored selection, quorum).',
       'Endpoint: POST /rpc/{chain_id} with a signed TAP-Receipt header.',
     ],
-    fees: 'Data service cut 2% (1% burn + 1% retained). Permissionless chain registration via 100k GRT bond.',
+    fees: 'Data service cut 2% (1% burn + 1% retained).',
     notable:
       'Three verification tiers (Tier 1 Merkle/EIP-1186 fraud-proof slashing implemented, Tier 2 quorum, Tier 3 reputation). Serves Ethereum, Arbitrum, Optimism, Base, Polygon, BNB, Avalanche, zkSync Era, Linea, Scroll.',
   },
@@ -232,7 +231,6 @@ export const DATA_SERVICES: DataService[] = [
         label: 'SolanaDataService (proxy)',
         address: '0xdDE3F913cb6D1332Bc018Eb63647020a87dD7B37',
         network: 'arbitrum-one',
-        unverified: true,
       },
     ],
     minProvision: '555 GRT',
