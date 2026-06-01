@@ -50,3 +50,6 @@ next-env.d.ts
 /logs/
 /.playwright-screens/
 /.playwright-cli/
+
+# claude runtime locks
+/.claude/scheduled_tasks.lock
