@@ -14,6 +14,16 @@ interface SbMessage {
 }
 
 const NAME_KEY = 'scuttlebutt:name';
+// Cap how many messages we keep in memory / the DOM. A tab left open in a busy
+// room would otherwise accumulate nodes without limit. Older messages stay in
+// Postgres; this only bounds what's rendered in the current session.
+const MAX_RENDERED = 300;
+
+function appendCapped(prev: SbMessage[], msg: SbMessage): SbMessage[] {
+  if (prev.some((m) => m.id === msg.id)) return prev;
+  const next = [...prev, msg];
+  return next.length > MAX_RENDERED ? next.slice(-MAX_RENDERED) : next;
+}
 
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
@@ -98,7 +108,7 @@ export default function ScuttlebuttPage() {
       }
       if (evt.type === 'message' && evt.message) {
         const msg = evt.message;
-        setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+        setMessages((prev) => appendCapped(prev, msg));
         if (atBottomRef.current) requestAnimationFrame(scrollToBottom);
       } else if (evt.type === 'delete' && typeof evt.id === 'number') {
         setMessages((prev) => prev.filter((m) => m.id !== evt.id));
@@ -126,9 +136,7 @@ export default function ScuttlebuttPage() {
         setBody('');
         // The SSE echo will append it; if Redis is down, append optimistically.
         if (!connected && data.message) {
-          setMessages((prev) =>
-            prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message],
-          );
+          setMessages((prev) => appendCapped(prev, data.message));
           requestAnimationFrame(scrollToBottom);
         }
       }
