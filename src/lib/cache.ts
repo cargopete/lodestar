@@ -250,4 +250,37 @@ export async function cacheSetSwr<T>(key: string, value: T, ttlSeconds: number):
   await redisSet(key, entry, ttlSeconds * 4);
 }
 
+// ---------------------------------------------------------------------------
+// Pub/Sub — used by Scuttlebutt to fan a new message out to every open SSE
+// stream. Postgres is the source of truth; Redis is just the town crier.
+// ---------------------------------------------------------------------------
+
+/** Publish a message to a Redis pub/sub channel. No-op when Redis is absent. */
+export async function publish(channel: string, message: string): Promise<void> {
+  if (!hasRedis()) return;
+  try {
+    const client = await getRedisClient();
+    await client.publish(channel, message);
+  } catch (e) {
+    log.cache.warn({ err: e, channel }, 'Redis publish failed');
+  }
+}
+
+/**
+ * Create a DEDICATED ioredis connection for subscribing. A connection in
+ * subscribe mode cannot issue ordinary commands, so this must never be the
+ * shared client. The caller owns the returned connection and must `.quit()` it
+ * when the stream closes. Returns null when Redis isn't configured.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function createRedisSubscriber(): Promise<any | null> {
+  if (!hasRedis()) return null;
+  const { default: Redis } = await import('ioredis');
+  const url = process.env.REDIS_URL!;
+  const tls = url.startsWith('rediss://') ? { tls: { rejectUnauthorized: false } } : {};
+  const client = new Redis(url, { lazyConnect: true, ...tls });
+  await client.connect();
+  return client;
+}
+
 export { getRedis, getRedisClient, hasRedis };

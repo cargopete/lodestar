@@ -18,6 +18,10 @@ const LIMITS: Array<[RegExp, number]> = [
   [/^\/api\/feed/, 20],
   [/^\/api\/vote/, 60],
   [/^\/api\/subgraph-playground\//, 20],
+  // Scuttlebutt: chatty by nature, but the in-route flood guard is the real
+  // throttle. The SSE stream is long-lived (one request), so this mainly bounds
+  // POST/GET history calls.
+  [/^\/api\/scuttlebutt\//, 60],
   [/^\/api\//, 200],
 ];
 

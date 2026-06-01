@@ -193,8 +193,14 @@ Open [http://localhost:3000](http://localhost:3000).
 | `DISPATCH_GATEWAY_URL` | PostgREST endpoint for Seahorn swap data | No |
 | `INDEXER_AGENT_URL` | Indexer agent management API URL | No |
 | `INDEXER_AGENT_TOKEN` | Basic auth credentials for indexer agent (`user:pass`) | No |
+| `SCUTTLEBUTT_ADMIN_SECRET` | Admin login password for Scuttlebutt (moderation). Auth fails closed if unset | No |
+| `SCUTTLEBUTT_TRIP_SALT` | HMAC salt for tripcodes — without it trips are guessable | No |
+| `SCUTTLEBUTT_IP_PEPPER` | HMAC pepper for hashing poster IPs (raw IPs are never stored) | No |
+| `SCUTTLEBUTT_EXTRA_BLOCKWORDS` | Comma-separated extra words for the profanity mask | No |
 
 Horizon event history (`/api/horizon/*`), Push notifications, and Seahorn all degrade gracefully when their env vars are absent.
+
+Scuttlebutt (`/scuttlebutt`) is the anonymous chat: persistent history in Postgres, live delivery via Redis pub/sub → SSE, old-school `Name#secret` tripcodes, a flood/profanity guard, and admin (cookie signed with `SESSION_SECRET`) moderation — soft-delete and ban by IP-hash or tripcode. With no `DATABASE_URL` the page reports unavailable; with no `REDIS_URL` it falls back to history reads only (no live push).
 
 ## Database Backups
 
