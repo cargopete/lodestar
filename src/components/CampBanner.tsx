@@ -45,7 +45,7 @@ export function CampBanner() {
           Camp
         </span>{' '}
         — a free community Amp node for Arbitrum One. Read blocks, txs &amp; decoded events over a simple REST API.{' '}
-        <span className="hidden md:inline text-[var(--text-muted)]">No signup, no API key.</span>
+        <span className="hidden md:inline text-[var(--text-muted)]">No signup, no API key, no middleman.</span>
       </p>
 
       <a
