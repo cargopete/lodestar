@@ -281,6 +281,56 @@ export const DATA_SERVICES: DataService[] = [
       'Components: Consumer Sidecar, Provider Gateway, Horizon package (EIP-712 RAV/Receipt), Oracle-backed provider discovery. Go 1.25+, PostgreSQL 18, Redis. Owned by the graphprotocol org.',
   },
   {
+    slug: 'sdsce',
+    name: 'Substreams Data Service — Community Edition (SDSCE)',
+    builtBy: 'lodestar-team',
+    homeTeam: true,
+    tagline: 'A community edition of the Substreams Data Service — live on Arbitrum One, with a fixed 1% burn.',
+    description:
+      'A community-maintained payment layer for Substreams on Horizon: a consumer sidecar signs EIP-712 RAVs over a persistent payment session, a provider gateway meters usage authoritatively from the Firehose plugin path, and an on-chain SubstreamsDataService settles via GraphTally. Forked from the graphprotocol MVP and hardened to a live, upgradeable mainnet contract.',
+    tier: 3,
+    statusLabel: 'Live contract · needs providers',
+    statusVariant: 'warning',
+    stage: 'Deployed on Arbitrum One; no hosted provider gateway yet',
+    providerStatus: 'none',
+    providerNote:
+      'Contract live on Arbitrum One — proven end-to-end on a mainnet fork (provision → register → collect → burn) plus a full streaming → metered-RAV → collect run. No provider gateway is hosted yet, so no completed paid stream on mainnet. Unaudited (internal review only); owner is currently an EOA.',
+    chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Substreams (firecore)', isMainnet: true },
+    stack: ['Go', 'Solidity'],
+    links: [
+      { label: 'Repo', url: 'https://github.com/lodestar-team/SDSCE' },
+      { label: 'Announcement', url: 'https://www.lodestar-dashboard.com/blog/substreams-data-service-community-edition' },
+      { label: 'Deployment runbook', url: 'https://github.com/lodestar-team/SDSCE/blob/main/docs/arb-one-deployment-runbook.md' },
+    ],
+    contracts: [
+      {
+        label: 'SubstreamsDataService (proxy)',
+        address: '0x1c3e9cca124ad19b9ed3c202d2e6cd106944640c',
+        network: 'arbitrum-one',
+      },
+      {
+        label: 'GraphTallyCollector',
+        address: '0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e',
+        network: 'arbitrum-one',
+      },
+    ],
+    minProvision: '0 GRT (soft launch)',
+    becomeProvider: [
+      'HorizonStaking: stake, then provision(addr, 0x1c3e9cca…, tokens, maxVerifierCut, thawingPeriod) toward the SubstreamsDataService proxy.',
+      'SubstreamsDataService.register(addr, abi.encode(paymentsDestination)).',
+      'Run the stack: firecore (Substreams data plane, sds:// plugins) + sds provider gateway + Postgres.',
+      'Run sds provider operator collect-daemon to auto-collect RAVs (the 1% cut is burned).',
+    ],
+    consume: [
+      'Fund escrow (sds consumer funding deposit) and authorize a signer (sds consumer signer authorize).',
+      'Run sds consumer sidecar at the provider endpoint; point substreams run … -e localhost:9002 --plaintext at it.',
+      'EIP-712 RAVs are signed in request headers over a persistent bidirectional payment session.',
+    ],
+    fees: 'Fixed 1% data-service cut, burned (0% retained by the deployer).',
+    notable:
+      'Experimental, community-led — explicitly not affiliated with the Graph Foundation or Edge & Node. UUPS-upgradeable (Ownable2Step), ERC1967 proxy. Distinct from the official Substreams Data Service. Unaudited; not yet usable end-to-end (no live provider).',
+  },
+  {
     slug: 'mainline-firehose',
     name: 'Mainline (Firehose)',
     grc: 'GRC-006',
