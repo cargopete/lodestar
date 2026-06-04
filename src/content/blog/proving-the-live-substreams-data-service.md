@@ -7,7 +7,7 @@ category: "Infrastructure"
 excerpt: "When we announced SDSCE we said the payment loop was proven on a fork. A fork isn't mainnet. So we staked real GRT against the live contract, registered a provider, and collected a real signed RAV on Arbitrum One — and the 1% burn reconciled to the wei. Here's exactly how we did it, and what it proves about the live service."
 ---
 
-When we [announced SDSCE](/blog/substreams-data-service-community-edition) last week, we wrote that the payment loop was "proven on mainnet." That was *almost* true, and the gap matters. What we had actually done was prove the whole path against a **fork** of Arbitrum One — provision, register, collect, burn — using forked state and conjured GRT. It's a genuinely good test. But a fork is a copy. It runs the real bytecode, but with state we control and money that isn't real. The base fee never bites, the GRT costs nothing, and nothing you do is visible to anyone.
+When we [announced SDSCE](/blog/substreams-data-service-community-edition) yesterday, we wrote that the payment loop was "proven on mainnet." That was *almost* true, and the gap matters. What we had actually done was prove the whole path against a **fork** of Arbitrum One — provision, register, collect, burn — using forked state and conjured GRT. It's a genuinely good test. But a fork is a copy. It runs the real bytecode, but with state we control and money that isn't real. The base fee never bites, the GRT costs nothing, and nothing you do is visible to anyone.
 
 There is one test a fork can never be: the real one.
 
