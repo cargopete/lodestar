@@ -104,6 +104,26 @@ export interface DataService {
   consume?: string[];
   fees?: string;
   notable?: string;
+  /** Interactive playground — live sample query, example code, prerequisites. */
+  playground?: PlaygroundConfig;
+}
+
+/** Interactive "try it" config for a live, queryable service. */
+export interface PlaygroundConfig {
+  /** Public endpoint shown to the user. */
+  endpoint: string;
+  /** Whether the dashboard can run a live sample query (false = code-only, e.g. gRPC). */
+  runnable: boolean;
+  /** Human label for the sample query, e.g. "eth_blockNumber on Arbitrum One". */
+  sampleLabel: string;
+  /** What must be true before a real consumer (not this demo) can query. */
+  prerequisites: string[];
+  /** Language tag for the example snippet. */
+  exampleLang: string;
+  /** Copy-pasteable example of how to call the service for real. */
+  exampleCode: string;
+  /** Optional note rendered under the runner (e.g. why it's code-only). */
+  note?: string;
 }
 
 export const DATA_SERVICES: DataService[] = [
@@ -170,12 +190,12 @@ export const DATA_SERVICES: DataService[] = [
     description:
       'A decentralized JSON-RPC data service. Indexers stake GRT, register to serve specific chains, and get paid per request via GraphTally. The canonical reference for Lodestar\'s "How to Build a Horizon Data Service" guide.',
     tier: 2,
-    statusLabel: 'Live · unexercised',
-    statusVariant: 'warning',
+    statusLabel: 'Live · 1 self-run provider',
+    statusVariant: 'accent',
     stage: 'Production-ready / deployed',
-    providerStatus: 'none',
+    providerStatus: 'single-self-run',
     providerNote:
-      'Contract live on Arbitrum One, but no active providers. collect() reaches chain yet has never settled GRT — no consumer has funded escrow. No completed paid-query loop on mainnet.',
+      'Live: a self-run provider serves Arbitrum One + Base JSON-RPC at rpc.cargopete.com via the Lodestar gateway (try it in the playground below). On-chain collect proven historically (18.44 GRT settled). Open to more providers.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: '10 chains supported', isMainnet: true },
     stack: ['TypeScript', 'Rust', 'Solidity'],
     links: [
@@ -203,6 +223,25 @@ export const DATA_SERVICES: DataService[] = [
     fees: 'Data service cut 2% (1% burn + 1% retained).',
     notable:
       'Three verification tiers (Tier 1 Merkle/EIP-1186 fraud-proof slashing implemented, Tier 2 quorum, Tier 3 reputation). Serves Ethereum, Arbitrum, Optimism, Base, Polygon, BNB, Avalanche, zkSync Era, Linea, Scroll.',
+    playground: {
+      endpoint: 'https://rpc.cargopete.com/rpc/42161',
+      runnable: true,
+      sampleLabel: 'eth_blockNumber via the Dispatch gateway (Arbitrum One)',
+      prerequisites: [
+        'For this demo the Lodestar gateway pays on your behalf — nothing required.',
+        'To integrate your own app: deposit GRT into PaymentsEscrow keyed to (you, GraphTallyCollector, provider), then either run the dispatch-proxy locally or use @lodestar-dispatch/consumer-sdk, which signs a TAP receipt per request.',
+        'The gateway path (shown here) needs only an X-Consumer-Address header — the gateway holds the escrow and signs receipts for you.',
+      ],
+      exampleLang: 'bash',
+      exampleCode: `# Via the gateway — it pays + signs receipts for you (just identify yourself):
+curl -s https://rpc.cargopete.com/rpc/42161 \\
+  -H 'content-type: application/json' \\
+  -H 'X-Consumer-Address: 0xYourAddress' \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}'
+
+# Trustless path (your own escrow + receipts):
+npm i @lodestar-dispatch/consumer-sdk`,
+    },
   },
   {
     slug: 'seahorn',
@@ -214,12 +253,12 @@ export const DATA_SERVICES: DataService[] = [
     description:
       'Indexes Solana program activity (Pump.fun, Raydium CLMM, Jupiter v6) into typed, fork-correct, queryable entities served over a PostgREST REST API, gating access via TAP v2 micropayments.',
     tier: 2,
-    statusLabel: 'Live contract · pipeline TODO',
-    statusVariant: 'warning',
-    stage: 'Deployed/proven contract; off-chain pipeline not running end-to-end',
-    providerStatus: 'none',
+    statusLabel: 'Live · real Solana data',
+    statusVariant: 'accent',
+    stage: 'Live: Yellowstone → Postgres → TAP-gated gateway, serving real Solana',
+    providerStatus: 'single-self-run',
     providerNote:
-      'Lodestar is registered on-chain as a provider, but the live Yellowstone→Postgres→PostgREST pipeline and the first paid query on mainnet are both TODO.',
+      'Live: a self-run provider indexes real Solana (Pump.fun/Raydium/Jupiter) via Alchemy Yellowstone and serves it over HTTPS, TAP-gated (try it in the playground below). Single self-run provider; unaudited.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Solana mainnet data', isMainnet: true },
     stack: ['Rust', 'Solidity'],
     links: [
@@ -247,6 +286,26 @@ export const DATA_SERVICES: DataService[] = [
     fees: '1% burn + 1% data service cut per collect().',
     notable:
       'Experimental, community-led — explicitly not endorsed by Graph Foundation or Edge & Node. Axum 0.8 gateway, UUPS proxy, 37 contract tests.',
+    playground: {
+      endpoint: 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3',
+      runnable: true,
+      sampleLabel: 'Latest Pump.fun buys — live Solana, indexed via Yellowstone',
+      prerequisites: [
+        'Sign an EIP-712 TAP v2 receipt (GraphTallyCollector domain, chainId 42161) and pass it as the TAP-Receipt header on every request.',
+        'For on-chain settlement the payer must fund PaymentsEscrow keyed to (payer, GraphTallyCollector, provider 0xCfBB…5C5b) and authorise the signing key on GraphTallyCollector.',
+        'This demo signs an ephemeral receipt server-side so you can try it with no wallet.',
+      ],
+      exampleLang: 'bash',
+      exampleCode: `# Each query carries a signed EIP-712 TAP receipt in the TAP-Receipt header:
+curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
+  -H "TAP-Receipt: $RECEIPT_JSON"
+
+# Build $RECEIPT_JSON by EIP-712 signing this struct (viem):
+# domain  = { name:'GraphTallyCollector', version:'1', chainId:42161,
+#             verifyingContract:'0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e' }
+# Receipt = { data_service:'0xdDE3F913…7B37', service_provider:'0xCfBB…5C5b',
+#             timestamp_ns, nonce, value, metadata:<payer 20 bytes> }`,
+    },
   },
   {
     slug: 'substreams-data-service',
@@ -288,13 +347,13 @@ export const DATA_SERVICES: DataService[] = [
     tagline: 'A community edition of the Substreams Data Service — live on Arbitrum One, with a fixed 1% burn.',
     description:
       'A community-maintained payment layer for Substreams on Horizon: a consumer sidecar signs EIP-712 RAVs over a persistent payment session, a provider gateway meters usage authoritatively from the Firehose plugin path, and an on-chain SubstreamsDataService settles via GraphTally. Forked from the graphprotocol MVP and hardened to a live, upgradeable mainnet contract.',
-    tier: 3,
-    statusLabel: 'Live contract · needs providers',
-    statusVariant: 'warning',
-    stage: 'Deployed on Arbitrum One; no hosted provider gateway yet',
-    providerStatus: 'none',
+    tier: 2,
+    statusLabel: 'Live · 1 self-run provider',
+    statusVariant: 'accent',
+    stage: 'Live: self-run provider streaming substreams + on-chain collect',
+    providerStatus: 'single-self-run',
     providerNote:
-      'Contract live on Arbitrum One — proven end-to-end on a mainnet fork (provision → register → collect → burn) plus a full streaming → metered-RAV → collect run. No provider gateway is hosted yet, so no completed paid stream on mainnet. Unaudited (internal review only); owner is currently an EOA.',
+      'Live: a self-run provider serves Substreams via a firehose data plane (clock-demo substrate) with a proven streaming → metered-RAV → on-chain collect loop (real GRT settled, ~2% burned). Single self-run provider; unaudited.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Substreams (firecore)', isMainnet: true },
     stack: ['Go', 'Solidity'],
     links: [
@@ -329,6 +388,27 @@ export const DATA_SERVICES: DataService[] = [
     fees: 'Fixed 1% data-service cut, burned (0% retained by the deployer).',
     notable:
       'Experimental, community-led — explicitly not affiliated with the Graph Foundation or Edge & Node. UUPS-upgradeable (Ownable2Step), ERC1967 proxy. Distinct from the official Substreams Data Service. Unaudited; not yet usable end-to-end (no live provider).',
+    playground: {
+      endpoint: 'substreams gRPC via consumer sidecar (localhost:9002)',
+      runnable: false,
+      sampleLabel: 'Stream a Substreams package (gRPC)',
+      note: 'Substreams is a server-streaming gRPC protocol — run it from the substreams CLI through the consumer sidecar, not from a browser.',
+      prerequisites: [
+        'Deposit GRT into PaymentsEscrow for the provider and authorise your signer on GraphTallyCollector.',
+        'Run the consumer sidecar locally (sds consumer sidecar) — it signs RAVs and proxies the stream.',
+        'Point the substreams CLI at the sidecar endpoint.',
+      ],
+      exampleLang: 'bash',
+      exampleCode: `# 1. fund escrow + authorise signer (once)
+sds consumer funding deposit --receiver-address <PROVIDER> --amount "1 GRT" ...
+sds consumer signer authorize --signer-address <SIGNER> ...
+
+# 2. run the sidecar (signs RAVs, proxies the gRPC stream)
+sds consumer sidecar --grpc-listen-addr :9002 --provider-control-plane-endpoint <PROVIDER_URL> ...
+
+# 3. stream a package through it
+substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +20`,
+    },
   },
   {
     slug: 'mainline-firehose',
@@ -414,17 +494,17 @@ export const DATA_SERVICES: DataService[] = [
     tagline: 'Monetizes a self-hosted camp instance — pay per request in GRT for decoded Arbitrum One data.',
     description:
       'Puts a TAP/GraphTally payment layer in front of camp (a free REST API for decoded Arbitrum One data backed by an Amp node). "The ThinkPad running ampd becomes an indexer on Horizon, and anyone who wants decoded Arbitrum One data pays in GRT to query it."',
-    tier: 3,
-    statusLabel: 'Testnet · functional',
-    statusVariant: 'default',
-    stage: 'Active dev / testnet',
-    providerStatus: 'none',
-    providerNote: 'None (testnet experiment). Gateway, contract, RAV aggregation, and hourly on-chain collection are implemented and tested. Not audited.',
+    tier: 2,
+    statusLabel: 'Live · 1 self-run provider',
+    statusVariant: 'accent',
+    stage: 'Live on Arbitrum One via a self-hosted engine.camp node',
+    providerStatus: 'single-self-run',
+    providerNote: 'Live: CampDataService deployed to Arbitrum One; a self-run provider proxies a self-hosted Amp-backed camp node (engine.camp) over HTTPS, TAP-gated (try it in the playground below). Single self-run provider; unaudited.',
     chain: {
-      payment: 'arbitrum-sepolia',
-      paymentLabel: 'Arbitrum Sepolia (payments)',
+      payment: 'arbitrum-one',
+      paymentLabel: 'Arbitrum One',
       dataLabel: 'Real Arbitrum One mainnet data',
-      isMainnet: false,
+      isMainnet: true,
     },
     stack: ['Rust', 'Solidity', 'TypeScript'],
     links: [
@@ -432,8 +512,9 @@ export const DATA_SERVICES: DataService[] = [
       { label: 'camp REST API', url: 'https://github.com/lodestar-team/camp' },
     ],
     contracts: [
-      { label: 'HorizonStaking (testnet)', address: '0xFf2Ee30de92F276018642A59Fb7Be95b3F9088Af', network: 'arbitrum-sepolia' },
-      { label: 'GraphTallyCollector (testnet)', address: '0xacC71844EF6beEF70106ABe6E51013189A1f3738', network: 'arbitrum-sepolia' },
+      { label: 'CampDataService (proxy)', address: '0x8ED612666ad1853AdB050f4c4c54082decA605b8', network: 'arbitrum-one' },
+      { label: 'GraphTallyCollector', address: '0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e', network: 'arbitrum-one' },
+
     ],
     minProvision: '555 GRT',
     becomeProvider: [
@@ -449,6 +530,25 @@ export const DATA_SERVICES: DataService[] = [
     ],
     notable:
       'Payment contracts on Sepolia but the data served is real Arbitrum One mainnet data — real data paid for with testnet GRT. No graph-node needed — proxies to Amp directly. TAP aggregation built into camp-gateway (no indexer-tap-agent).',
+    playground: {
+      endpoint: 'https://camp.89.167.109.4.sslip.io/v1/status',
+      runnable: true,
+      sampleLabel: 'Arbitrum One indexing status from the Amp-backed camp node',
+      prerequisites: [
+        'Sign an EIP-712 TAP v2 receipt (GraphTallyCollector domain, chainId 42161) and pass it as the TAP-Receipt header.',
+        'For on-chain settlement the payer funds PaymentsEscrow keyed to the provider (0xCfBB…5C5b) and authorises the signing key on GraphTallyCollector.',
+        'This demo signs an ephemeral receipt server-side so you can try it with no wallet.',
+      ],
+      exampleLang: 'bash',
+      exampleCode: `# Free REST endpoints proxied to a self-hosted Amp node, gated by a TAP receipt:
+curl -s 'https://camp.89.167.109.4.sslip.io/v1/status' \\
+  -H "TAP-Receipt: $RECEIPT_JSON"
+curl -s 'https://camp.89.167.109.4.sslip.io/v1/transfers?token=0xaf88…&limit=10' \\
+  -H "TAP-Receipt: $RECEIPT_JSON"
+
+# $RECEIPT_JSON = EIP-712 signed Receipt under the GraphTallyCollector domain,
+# with data_service = 0x8ED612666ad1853AdB050f4c4c54082decA605b8.`,
+    },
   },
   {
     slug: 'vince-data-service',
