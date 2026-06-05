@@ -349,6 +349,34 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* The Night's Watch — permanent community CTA */}
+      <div className="px-3 pt-3">
+        <a
+          href="https://discord.gg/484vgDETEZ"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block rounded-[var(--radius-card)] border p-3 transition-colors active:scale-[0.98] group"
+          style={{
+            background: 'color-mix(in srgb, var(--accent) 12%, var(--bg-surface))',
+            borderColor: 'color-mix(in srgb, var(--accent) 45%, transparent)',
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-[15px] leading-none" aria-hidden="true">⚔️</span>
+            <span className="text-[13px] font-semibold text-[var(--text)]">The Night&apos;s Watch</span>
+          </div>
+          <p className="mt-1 text-[11px] text-[var(--text-muted)] leading-snug">
+            An open community holding The Graph&apos;s data layer. Hold the wall.
+          </p>
+          <span
+            className="mt-2 inline-flex items-center justify-center w-full px-3 py-1.5 text-[12px] font-medium rounded-[var(--radius-button)] transition-[filter] group-hover:brightness-110"
+            style={{ background: 'var(--accent)', color: '#fff' }}
+          >
+            Join the Watch →
+          </span>
+        </a>
+      </div>
+
       {/* Address search */}
       <div className="p-3 border-t-[0.5px] border-[var(--border)]">
         <form onSubmit={handleSearch} className="relative">
