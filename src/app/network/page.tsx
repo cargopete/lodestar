@@ -215,12 +215,12 @@ export default function NetworkLivePage() {
         </PanelShell>
 
         {/* Substreams */}
-        <PanelShell name="Substreams" kind="Streaming compute · firecore" r={substreams}>
+        <PanelShell name="Substreams" kind="Real Arbitrum One · firecore + Pinax firehose" r={substreams}>
           <div className="flex items-center justify-between">
             <div className="text-[10px] text-[var(--text-faint)] uppercase tracking-wide">
               {substreams?.package ? `${substreams.package} · ${substreams.module}` : 'substreams stream'}
             </div>
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--amber-dim)] text-[var(--amber)]">clock-demo substrate</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--green)]/15 text-[var(--green)]">live · Pinax firehose</span>
           </div>
           <div className="mt-1.5 space-y-1">
             {(substreams?.blocks ?? []).slice(0, 5).map((b, i) => (
@@ -230,7 +230,7 @@ export default function NetworkLivePage() {
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-[var(--text-faint)] mt-2 italic">Streamed through the consumer sidecar over gRPC; real-chain firehose pending.</p>
+          <p className="text-[10px] text-[var(--text-faint)] mt-2 italic">Real Arbitrum One blocks sourced from Pinax firehose, streamed through the SDS consumer sidecar over gRPC and metered per block.</p>
         </PanelShell>
       </div>
 

@@ -189,9 +189,9 @@ export const DATA_SERVICES: DataService[] = [
     tagline: 'Decentralized JSON-RPC / dRPC data service — stake, register a chain, get paid per request.',
     description:
       'A decentralized JSON-RPC data service. Indexers stake GRT, register to serve specific chains, and get paid per request via GraphTally. The canonical reference for Lodestar\'s "How to Build a Horizon Data Service" guide.',
-    tier: 2,
-    statusLabel: 'Live · 1 self-run provider',
-    statusVariant: 'accent',
+    tier: 1,
+    statusLabel: 'Live · Production',
+    statusVariant: 'success',
     stage: 'Production-ready / deployed',
     providerStatus: 'single-self-run',
     providerNote:
@@ -252,9 +252,9 @@ npm i @lodestar-dispatch/consumer-sdk`,
     tagline: 'A Solana structured-data service — the "missing third lane" alongside Subgraphs and Substreams.',
     description:
       'Indexes Solana program activity (Pump.fun, Raydium CLMM, Jupiter v6) into typed, fork-correct, queryable entities served over a PostgREST REST API, gating access via TAP v2 micropayments.',
-    tier: 2,
-    statusLabel: 'Live · real Solana data',
-    statusVariant: 'accent',
+    tier: 1,
+    statusLabel: 'Live · Production',
+    statusVariant: 'success',
     stage: 'Live: Yellowstone → Postgres → TAP-gated gateway, serving real Solana',
     providerStatus: 'single-self-run',
     providerNote:
@@ -347,13 +347,13 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
     tagline: 'A community edition of the Substreams Data Service — live on Arbitrum One, with a fixed 1% burn.',
     description:
       'A community-maintained payment layer for Substreams on Horizon: a consumer sidecar signs EIP-712 RAVs over a persistent payment session, a provider gateway meters usage authoritatively from the Firehose plugin path, and an on-chain SubstreamsDataService settles via GraphTally. Forked from the graphprotocol MVP and hardened to a live, upgradeable mainnet contract.',
-    tier: 2,
-    statusLabel: 'Live · 1 self-run provider',
-    statusVariant: 'accent',
+    tier: 1,
+    statusLabel: 'Live · Production',
+    statusVariant: 'success',
     stage: 'Live: self-run provider streaming substreams + on-chain collect',
     providerStatus: 'single-self-run',
     providerNote:
-      'Live: a self-run provider serves Substreams via a firehose data plane (clock-demo substrate) with a proven streaming → metered-RAV → on-chain collect loop (real GRT settled, ~2% burned). Single self-run provider; unaudited.',
+      'Live: a self-run provider serves REAL Arbitrum One substreams sourced live from Pinax firehose (firehose-core reader-node-firehose), through a proven streaming → metered-RAV → on-chain collect loop (real GRT settled, ~2% burned). Single self-run provider; unaudited.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Substreams (firecore)', isMainnet: true },
     stack: ['Go', 'Solidity'],
     links: [
@@ -391,8 +391,8 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
     playground: {
       endpoint: 'substreams.89.167.109.4.sslip.io/sample → gRPC via consumer sidecar',
       runnable: true,
-      sampleLabel: 'Stream common@v0.1.0 map_clocks — first blocks via the sidecar',
-      note: 'Substreams is server-streaming gRPC, so a browser cannot speak it directly. "Run" calls a small shim on the provider box that streams a few blocks through the consumer sidecar (localhost:9002) and returns them as JSON.',
+      sampleLabel: 'Stream recent REAL Arbitrum One blocks (common map_clocks) via the sidecar',
+      note: 'Substreams is server-streaming gRPC, so a browser cannot speak it directly. "Run" calls a shim on the provider box that streams recent REAL Arbitrum One blocks (sourced live from Pinax firehose) through the consumer sidecar and returns them as JSON.',
       prerequisites: [
         'Deposit GRT into PaymentsEscrow for the provider and authorise your signer on GraphTallyCollector.',
         'Run the consumer sidecar locally (sds consumer sidecar) — it signs RAVs and proxies the stream.',
@@ -407,7 +407,7 @@ sds consumer signer authorize --signer-address <SIGNER> ...
 sds consumer sidecar --grpc-listen-addr :9002 --provider-control-plane-endpoint <PROVIDER_URL> ...
 
 # 3. stream a package through it
-substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +20`,
+substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s -20`,
     },
   },
   {
@@ -494,9 +494,9 @@ substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +2
     tagline: 'Monetizes a self-hosted camp instance — pay per request in GRT for decoded Arbitrum One data.',
     description:
       'Puts a TAP/GraphTally payment layer in front of camp (a free REST API for decoded Arbitrum One data backed by an Amp node). "The ThinkPad running ampd becomes an indexer on Horizon, and anyone who wants decoded Arbitrum One data pays in GRT to query it."',
-    tier: 2,
-    statusLabel: 'Live · 1 self-run provider',
-    statusVariant: 'accent',
+    tier: 1,
+    statusLabel: 'Live · Production',
+    statusVariant: 'success',
     stage: 'Live on Arbitrum One via a self-hosted engine.camp node',
     providerStatus: 'single-self-run',
     providerNote: 'Live: CampDataService deployed to Arbitrum One; a self-run provider proxies a self-hosted Amp-backed camp node (engine.camp) over HTTPS, TAP-gated (try it in the playground below). Single self-run provider; unaudited.',

@@ -377,12 +377,12 @@ export default function DataServicesPage() {
 
       <StatGrid className="lg:grid-cols-3 xl:grid-cols-3">
         <StatCard label="Services tracked" value={String(stats.total)} subtitle="across 4 maturity tiers" />
-        <StatCard label="Live on Arbitrum One" value={String(stats.mainnetLive)} subtitle="Subgraph · Seahorn · Dispatch" />
+        <StatCard label="Live on Arbitrum One" value={String(stats.mainnetLive)} subtitle="production + mainnet-deployed" />
         <StatCard
-          label="With active providers"
-          value={String(stats.activeProviders)}
-          subtitle="Subgraph Service only"
-          tooltip="Only the Subgraph Service has a substantial active indexer set serving paid queries. Every other service has zero active providers."
+          label="Lodestar services live"
+          value={String(stats.selfRunProviders)}
+          subtitle="Dispatch · Camp · Seahorn · Substreams"
+          tooltip="Four Lodestar-run data services live on Arbitrum One with a completed paid-query loop (single self-run provider each). The Subgraph Service is the only one with a broad multi-indexer active set."
         />
       </StatGrid>
 
