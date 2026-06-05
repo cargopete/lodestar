@@ -19,6 +19,7 @@ interface Snapshot {
     seahorn: ServiceResult;
     substreams: ServiceResult;
     mainline: ServiceResult;
+    wsaas: ServiceResult;
   };
 }
 
@@ -36,6 +37,7 @@ const SERVICES = [
   { key: 'seahorn', name: 'Seahorn', kind: 'Structured Solana' },
   { key: 'substreams', name: 'Substreams', kind: 'Streaming compute' },
   { key: 'mainline', name: 'Mainline', kind: 'Firehose · Ethereum' },
+  { key: 'wsaas', name: 'WSaaS', kind: 'WebSocket · events' },
 ] as const;
 
 function Stamp({ r }: { r: ServiceResult }) {
@@ -115,6 +117,7 @@ export default function NetworkLivePage() {
   const seahorn = s?.seahorn as (ServiceResult & { buys?: Rec[] }) | undefined;
   const substreams = s?.substreams as (ServiceResult & { blocks?: Rec[]; package?: string; module?: string }) | undefined;
   const mainline = s?.mainline as (ServiceResult & { chain?: string; attestationsVerified?: boolean; blocks?: Rec[] }) | undefined;
+  const wsaas = s?.wsaas as (ServiceResult & { authorised?: boolean; messages?: string[] }) | undefined;
 
   return (
     <div className="space-y-6">
@@ -254,6 +257,23 @@ export default function NetworkLivePage() {
             ))}
           </div>
           <p className="text-[10px] text-[var(--text-faint)] mt-2 italic">Real Ethereum mainnet firehose, proxied from Pinax, each block EIP-712 attested by the operator and TAP-gated.</p>
+        </PanelShell>
+
+        {/* WSaaS */}
+        <PanelShell name="WSaaS" kind="WebSocket data service · pre-parsed events" r={wsaas}>
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] text-[var(--text-faint)] uppercase tracking-wide">pre-parsed transfers / swaps over WebSocket</div>
+            {wsaas?.authorised && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--green)]/15 text-[var(--green)]">WS · TAP authorised</span>
+            )}
+          </div>
+          <div className="mt-1.5 space-y-1">
+            {(wsaas?.messages ?? []).slice(0, 3).map((m, i) => (
+              <div key={i} className="text-[10px] font-mono text-[var(--text-muted)] break-all leading-relaxed">{m}…</div>
+            ))}
+            {wsaas?.ok && (wsaas?.messages?.length ?? 0) === 0 && <div className="text-[11px] text-[var(--text-faint)]">connected — awaiting next event</div>}
+          </div>
+          <p className="text-[10px] text-[var(--text-faint)] mt-2 italic">A signed TAP receipt opens the WebSocket; the gateway relays a live upstream Pinax stream and bills per message.</p>
         </PanelShell>
       </div>
 

@@ -147,13 +147,38 @@ async function mainlinePanel() {
   };
 }
 
+const WSAAS_DS = '0x9e1eB4c907b6b8e92830e036B9Fc64E5ae5278Bd' as Hex;
+
+async function wsaasPanel() {
+  const receipt = await tapHeader(WSAAS_DS);
+  const url = `wss://ws.89.167.109.4.sslip.io/ws/eth/transfers?receipt=${encodeURIComponent(receipt)}`;
+  return await new Promise<Record<string, unknown>>((resolve) => {
+    const messages: string[] = [];
+    let settled = false;
+    const finish = (extra: Record<string, unknown> = {}) => {
+      if (settled) return;
+      settled = true;
+      try { ws.close(); } catch { /* noop */ }
+      resolve({ endpoint: 'ws.89.167.109.4.sslip.io/ws/{chain}/{topic}', authorised: true, messages, ...extra });
+    };
+    const ws = new WebSocket(url);
+    ws.onmessage = (e: MessageEvent) => {
+      messages.push(String(e.data).slice(0, 220));
+      if (messages.length >= 2) finish();
+    };
+    ws.onerror = () => finish({ error: 'ws error' });
+    setTimeout(() => finish(), 12_000);
+  });
+}
+
 export async function GET() {
-  const [dispatch, camp, seahorn, substreams, mainline] = await Promise.all([
+  const [dispatch, camp, seahorn, substreams, mainline, wsaas] = await Promise.all([
     timed(dispatchPanel),
     timed(campPanel),
     timed(seahornPanel),
     timed(substreamsPanel),
     timed(mainlinePanel),
+    timed(wsaasPanel),
   ]);
-  return NextResponse.json({ generatedAt: Date.now(), services: { dispatch, camp, seahorn, substreams, mainline } });
+  return NextResponse.json({ generatedAt: Date.now(), services: { dispatch, camp, seahorn, substreams, mainline, wsaas } });
 }

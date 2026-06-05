@@ -468,6 +468,58 @@ cargo run --example stream_blocks -- \\
     },
   },
   {
+    slug: 'wsaas',
+    name: 'WSaaS (WebSocket)',
+    builtBy: 'lodestar-team',
+    homeTeam: true,
+    tagline: 'A WebSocket data service — pre-parsed transfers, swaps and exchange events over one connection, billed per message.',
+    description:
+      'A Horizon data service that streams pre-parsed transfers / swaps / exchange events over a single WebSocket, gated by TAP v2 and settled on-chain. It sits in front of an upstream Pinax WebSocket feed: a consumer opens a WS with a signed TAP receipt, and the gateway relays every pre-parsed message back, billing per message.',
+    tier: 1,
+    statusLabel: 'Live \u00b7 Production',
+    statusVariant: 'success',
+    stage: 'Live on Arbitrum One \u2014 WebSocket relay over a Pinax feed',
+    providerStatus: 'single-self-run',
+    providerNote:
+      'Live: WebSocketDataService deployed to Arbitrum One; a self-run provider relays pre-parsed transfers/swaps from an upstream Pinax WebSocket, TAP-gated (receipt in the ?receipt= query). Single self-run provider; unaudited.',
+    chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Multi-chain pre-parsed events', isMainnet: true },
+    stack: ['Rust', 'Solidity'],
+    links: [
+      { label: 'Repo', url: 'https://github.com/lodestar-team/wsaas' },
+      { label: 'Pinax WebSockets', url: 'https://pinax.network/products/websockets' },
+    ],
+    contracts: [
+      { label: 'WebSocketDataService', address: '0x9e1eB4c907b6b8e92830e036B9Fc64E5ae5278Bd', network: 'arbitrum-one' },
+      { label: 'GraphTallyCollector', address: '0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e', network: 'arbitrum-one' },
+    ],
+    minProvision: '0 GRT (self-run)',
+    becomeProvider: [
+      'Stake + provision GRT to WebSocketDataService, register, startService.',
+      'Run ws-gateway pointed at an upstream WebSocket feed (e.g. Pinax) with your JWT.',
+      'Get paid per message via GraphTally; collect() hourly.',
+    ],
+    consume: [
+      'Open wss://<gateway>/ws/{chain}/{topic}?receipt=<url-encoded EIP-712 TAP receipt>.',
+      'No receipt -> 400/402. Messages are pre-parsed transfers/swaps relayed from upstream.',
+    ],
+    fees: 'Per-message (Pinax beta reference: $0.00005/msg); ~2% data-service cut on collect.',
+    playground: {
+      endpoint: 'wss://ws.89.167.109.4.sslip.io/ws/{chain}/{topic}',
+      runnable: false,
+      sampleLabel: 'Stream pre-parsed events over WebSocket (transfers / swaps)',
+      note: 'WebSocket + a signed TAP receipt \u2014 open it from a WS client, not a plain browser fetch. The Network Live page shows it streaming live.',
+      prerequisites: [
+        'Sign an EIP-712 TAP v2 receipt and url-encode it into the ?receipt= query parameter.',
+        'For settlement, the payer funds PaymentsEscrow for the provider and authorises the signer on GraphTallyCollector.',
+        'Billing is per relayed message (heartbeats/protocol frames are free).',
+      ],
+      exampleLang: 'bash',
+      exampleCode: `# sign an EIP-712 TAP receipt (GraphTallyCollector domain), url-encode it, then:
+wscat -c "wss://ws.89.167.109.4.sslip.io/ws/eth/transfers?receipt=$RECEIPT_JSON"
+# or /ws/solana/swaps, /ws/eth/swaps ... messages are pre-parsed events relayed from Pinax.`,
+    },
+  },
+  {
     slug: 'compass',
     name: 'Compass',
     grc: 'GRC-007',
