@@ -18,6 +18,7 @@ import type { Hex } from 'viem';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 const GRAPH_TALLY_COLLECTOR = '0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e' as const;
 
@@ -51,7 +52,10 @@ type RestTapSpec = {
   dataService: Hex;
   serviceProvider: Hex;
 };
-type QuerySpec = JsonRpcSpec | RestTapSpec;
+// Substreams is gRPC — a shim on the provider box runs the CLI through the
+// consumer sidecar and returns a few clock blocks as JSON over plain HTTP.
+type ShimSpec = { kind: 'shim'; url: string };
+type QuerySpec = JsonRpcSpec | RestTapSpec | ShimSpec;
 
 // Server-authoritative registry — the client only sends a slug.
 const REGISTRY: Record<string, QuerySpec> = {
@@ -72,6 +76,10 @@ const REGISTRY: Record<string, QuerySpec> = {
     url: 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc',
     dataService: '0xdDE3F913cb6D1332Bc018Eb63647020a87dD7B37',
     serviceProvider: '0xCfBB471617Ae3F6fDa2D9F142115d59deAB50C5b',
+  },
+  sdsce: {
+    kind: 'shim',
+    url: 'https://substreams.89.167.109.4.sslip.io/sample',
   },
 };
 
@@ -123,7 +131,7 @@ export async function POST(req: Request) {
   }
 
   const started = Date.now();
-  const ctl = AbortSignal.timeout(15_000);
+  const ctl = AbortSignal.timeout(spec.kind === 'shim' ? 50_000 : 15_000);
 
   try {
     let res: Response;
@@ -134,6 +142,8 @@ export async function POST(req: Request) {
         body: JSON.stringify(spec.body),
         signal: ctl,
       });
+    } else if (spec.kind === 'shim') {
+      res = await fetch(spec.url, { signal: ctl });
     } else {
       const receipt = await signReceipt(spec.dataService, spec.serviceProvider);
       res = await fetch(spec.url, { headers: { 'TAP-Receipt': receipt }, signal: ctl });

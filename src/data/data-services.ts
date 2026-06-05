@@ -389,10 +389,10 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
     notable:
       'Experimental, community-led — explicitly not affiliated with the Graph Foundation or Edge & Node. UUPS-upgradeable (Ownable2Step), ERC1967 proxy. Distinct from the official Substreams Data Service. Unaudited; not yet usable end-to-end (no live provider).',
     playground: {
-      endpoint: 'substreams gRPC via consumer sidecar (localhost:9002)',
-      runnable: false,
-      sampleLabel: 'Stream a Substreams package (gRPC)',
-      note: 'Substreams is a server-streaming gRPC protocol — run it from the substreams CLI through the consumer sidecar, not from a browser.',
+      endpoint: 'substreams.89.167.109.4.sslip.io/sample → gRPC via consumer sidecar',
+      runnable: true,
+      sampleLabel: 'Stream common@v0.1.0 map_clocks — first blocks via the sidecar',
+      note: 'Substreams is server-streaming gRPC, so a browser cannot speak it directly. "Run" calls a small shim on the provider box that streams a few blocks through the consumer sidecar (localhost:9002) and returns them as JSON.',
       prerequisites: [
         'Deposit GRT into PaymentsEscrow for the provider and authorise your signer on GraphTallyCollector.',
         'Run the consumer sidecar locally (sds consumer sidecar) — it signs RAVs and proxies the stream.',
