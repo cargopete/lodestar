@@ -419,24 +419,21 @@ substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s -20`,
     tagline: 'A decentralized Firehose data service — raw, fork-aware, cursor-resumable block streams over gRPC.',
     description:
       'Reference implementation for GRC-006 "Mainline". Positioned as the decentralized substrate beneath Substreams / Subgraphs / Tycho / Token API / Dispatch. Wraps streamingfast/firehose-core unchanged.',
-    tier: 3,
-    statusLabel: 'Testnet · Phase 0',
-    statusVariant: 'default',
-    stage: 'Reference impl / Phase 0 deployment',
-    providerStatus: 'none',
-    providerNote: 'None — deploy/operator rollout pending. 8/8 on-chain verification checks passing on testnet; 99 workspace tests pass.',
-    chain: { payment: 'arbitrum-sepolia', paymentLabel: 'Arbitrum Sepolia', dataLabel: 'Ethereum mainnet blocks', isMainnet: false },
+    tier: 1,
+    statusLabel: 'Live · Production',
+    statusVariant: 'success',
+    stage: 'Live on Arbitrum One — serving Ethereum mainnet firehose',
+    providerStatus: 'single-self-run',
+    providerNote: 'Live: FirehoseDataService deployed to Arbitrum One; a self-run operator serves REAL Ethereum mainnet firehose (proxied from Pinax), each block EIP-712 attested + TAP-gated, verified end-to-end by the SDK consumer. Single self-run provider; unaudited.',
+    chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Ethereum mainnet blocks', isMainnet: true },
     stack: ['Solidity', 'Rust', 'TypeScript'],
     links: [
       { label: 'Repo', url: 'https://github.com/PaulieB14/firehose-data-service' },
       { label: 'GRC-006', url: 'https://forum.thegraph.com/t/grc-006-mainline-a-firehose-data-service-on-horizon/6920' },
     ],
     contracts: [
-      {
-        label: 'FirehoseDataService',
-        address: '0xD9242fa6Eed1aBFD649C7ee868B1eD37DAb98c77',
-        network: 'arbitrum-sepolia',
-      },
+      { label: 'FirehoseDataService', address: '0x12C722149804a8C1Bb5924374e675956315B4456', network: 'arbitrum-one' },
+      { label: 'GraphTallyCollector', address: '0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e', network: 'arbitrum-one' },
     ],
     becomeProvider: [
       'Stake GRT, provision to FirehoseDataService, register chains served.',
@@ -450,6 +447,25 @@ substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s -20`,
     ],
     notable:
       'Reuses HorizonStaking, GraphTallyCollector, PaymentsEscrow unchanged. Intended to be transferred to graphprotocol/ when ready. GPL-2.0-or-later.',
+    playground: {
+      endpoint: 'mainline.89.167.109.4.sslip.io (gRPC firehose)',
+      runnable: true,
+      sampleLabel: 'Stream real Ethereum mainnet firehose blocks (attested)',
+      prerequisites: [
+        'Sign an EIP-712 TAP v2 receipt and pass it in the x-tap-receipt gRPC metadata (118 bytes).',
+        'For settlement, the payer funds PaymentsEscrow for the provider and authorises the signer on GraphTallyCollector.',
+        'Verify each MainlineAttestation (201 bytes) against the operator signing address from the network subgraph.',
+        'This demo signs an ephemeral receipt server-side, streams a few blocks, and verifies their attestations.',
+      ],
+      exampleLang: 'bash',
+      exampleCode: `# gRPC consumer (mainline-sdk, Rust/TS) — TAP receipt rides in x-tap-receipt metadata:
+cargo run --example stream_blocks -- \\
+  --operator https://<operator-endpoint> \\
+  --fds-address 0x12C722149804a8C1Bb5924374e675956315B4456 \\
+  --operator-address 0x<operator-signing-address>
+# each Stream.Blocks response carries raw fork-aware firehose data + a
+# verifiable MainlineAttestation (chain_id|block_num|block_hash|state_root|payload_hash|sig).`,
+    },
   },
   {
     slug: 'compass',

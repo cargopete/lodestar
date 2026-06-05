@@ -18,6 +18,7 @@ interface Snapshot {
     camp: ServiceResult;
     seahorn: ServiceResult;
     substreams: ServiceResult;
+    mainline: ServiceResult;
   };
 }
 
@@ -34,6 +35,7 @@ const SERVICES = [
   { key: 'camp', name: 'Camp', kind: 'Decoded Arbitrum One' },
   { key: 'seahorn', name: 'Seahorn', kind: 'Structured Solana' },
   { key: 'substreams', name: 'Substreams', kind: 'Streaming compute' },
+  { key: 'mainline', name: 'Mainline', kind: 'Firehose · Ethereum' },
 ] as const;
 
 function Stamp({ r }: { r: ServiceResult }) {
@@ -112,6 +114,7 @@ export default function NetworkLivePage() {
   const camp = s?.camp as (ServiceResult & { status?: Rec; transfers?: Rec[] }) | undefined;
   const seahorn = s?.seahorn as (ServiceResult & { buys?: Rec[] }) | undefined;
   const substreams = s?.substreams as (ServiceResult & { blocks?: Rec[]; package?: string; module?: string }) | undefined;
+  const mainline = s?.mainline as (ServiceResult & { chain?: string; attestationsVerified?: boolean; blocks?: Rec[] }) | undefined;
 
   return (
     <div className="space-y-6">
@@ -231,6 +234,26 @@ export default function NetworkLivePage() {
             ))}
           </div>
           <p className="text-[10px] text-[var(--text-faint)] mt-2 italic">Real Arbitrum One blocks sourced from Pinax firehose, streamed through the SDS consumer sidecar over gRPC and metered per block.</p>
+        </PanelShell>
+
+        {/* Mainline */}
+        <PanelShell name="Mainline" kind="Firehose data service · Ethereum mainnet" r={mainline}>
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] text-[var(--text-faint)] uppercase tracking-wide">raw fork-aware firehose blocks</div>
+            {mainline?.attestationsVerified && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--green)]/15 text-[var(--green)]">attestations ✓ verified</span>
+            )}
+          </div>
+          <div className="mt-1.5 space-y-1">
+            {(mainline?.blocks ?? []).slice(0, 5).map((b, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 text-[11px] font-mono">
+                <span className="text-[var(--text-faint)]">block #{String(b.n)}</span>
+                <span className="text-[var(--text)]">{fmt(Number(b.bytes), 0)} bytes</span>
+                <span className="text-[var(--text-muted)]">sha {String(b.sha256)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-[var(--text-faint)] mt-2 italic">Real Ethereum mainnet firehose, proxied from Pinax, each block EIP-712 attested by the operator and TAP-gated.</p>
         </PanelShell>
       </div>
 

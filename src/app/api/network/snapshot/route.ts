@@ -136,12 +136,24 @@ async function substreamsPanel() {
   };
 }
 
+async function mainlinePanel() {
+  const sig = AbortSignal.timeout(50_000);
+  const j = await (await fetch('https://mainline.89.167.109.4.sslip.io/sample', { signal: sig })).json();
+  return {
+    endpoint: 'mainline.89.167.109.4.sslip.io (gRPC firehose)',
+    chain: j.chain,
+    attestationsVerified: j.attestations_verified,
+    blocks: (j.blocks ?? []).map((b: Record<string, unknown>) => ({ n: b.n, bytes: b.bytes, sha256: b.sha256 })),
+  };
+}
+
 export async function GET() {
-  const [dispatch, camp, seahorn, substreams] = await Promise.all([
+  const [dispatch, camp, seahorn, substreams, mainline] = await Promise.all([
     timed(dispatchPanel),
     timed(campPanel),
     timed(seahornPanel),
     timed(substreamsPanel),
+    timed(mainlinePanel),
   ]);
-  return NextResponse.json({ generatedAt: Date.now(), services: { dispatch, camp, seahorn, substreams } });
+  return NextResponse.json({ generatedAt: Date.now(), services: { dispatch, camp, seahorn, substreams, mainline } });
 }

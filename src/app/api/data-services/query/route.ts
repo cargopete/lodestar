@@ -81,6 +81,10 @@ const REGISTRY: Record<string, QuerySpec> = {
     kind: 'shim',
     url: 'https://substreams.89.167.109.4.sslip.io/sample',
   },
+  'mainline-firehose': {
+    kind: 'shim',
+    url: 'https://mainline.89.167.109.4.sslip.io/sample',
+  },
 };
 
 async function signReceipt(dataService: Hex, serviceProvider: Hex): Promise<string> {
