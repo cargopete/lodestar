@@ -38,11 +38,7 @@
     },
     {
       "path": "/api/cron/warm-tokens",
-      "schedule": "*/4 * * * *"
-    },
-    {
-      "path": "/api/cron/warm-token-details",
-      "schedule": "*/8 * * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/warm-protocols",
