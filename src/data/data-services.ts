@@ -515,8 +515,8 @@ cargo run --example stream_blocks -- \\
       ],
       exampleLang: 'bash',
       exampleCode: `# sign an EIP-712 TAP receipt (GraphTallyCollector domain), url-encode it, then:
-wscat -c "wss://ws.89.167.109.4.sslip.io/ws/eth/transfers?receipt=$RECEIPT_JSON"
-# or /ws/solana/swaps, /ws/eth/swaps ... messages are pre-parsed events relayed from Pinax.`,
+wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
+# or /ws/eth/erc20_transfers, /ws/eth/swaps, /ws/solana/spl_transfer ... messages are pre-parsed events relayed from Pinax.`,
     },
   },
   {

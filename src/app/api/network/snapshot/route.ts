@@ -151,7 +151,7 @@ const WSAAS_DS = '0x9e1eB4c907b6b8e92830e036B9Fc64E5ae5278Bd' as Hex;
 
 async function wsaasPanel() {
   const receipt = await tapHeader(WSAAS_DS);
-  const url = `wss://ws.89.167.109.4.sslip.io/ws/eth/transfers?receipt=${encodeURIComponent(receipt)}`;
+  const url = `wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=${encodeURIComponent(receipt)}`;
   return await new Promise<Record<string, unknown>>((resolve) => {
     const messages: string[] = [];
     let settled = false;
