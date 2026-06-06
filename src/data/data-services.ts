@@ -353,7 +353,7 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
     stage: 'Live: self-run provider streaming substreams + on-chain collect',
     providerStatus: 'single-self-run',
     providerNote:
-      'Live: a self-run provider serves REAL Arbitrum One substreams sourced live from Pinax firehose (firehose-core reader-node-firehose), through a proven streaming → metered-RAV → on-chain collect loop (real GRT settled, ~2% burned). Single self-run provider; unaudited.',
+      'Live: streaming + paid loop proven (streaming → metered-RAV → on-chain collect, real GRT settled, ~2% burned). Currently on a clock-demo substrate to avoid upstream firehose cost; real Arbitrum via Pinax firehose runs on demand. Single self-run provider; unaudited.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Substreams (firecore)', isMainnet: true },
     stack: ['Go', 'Solidity'],
     links: [
@@ -391,8 +391,8 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
     playground: {
       endpoint: 'substreams.89.167.109.4.sslip.io/sample → gRPC via consumer sidecar',
       runnable: true,
-      sampleLabel: 'Stream recent REAL Arbitrum One blocks (common map_clocks) via the sidecar',
-      note: 'Substreams is server-streaming gRPC, so a browser cannot speak it directly. "Run" calls a shim on the provider box that streams recent REAL Arbitrum One blocks (sourced live from Pinax firehose) through the consumer sidecar and returns them as JSON.',
+      sampleLabel: 'Stream common map_clocks via the sidecar (clock-demo substrate)',
+      note: 'Substreams is server-streaming gRPC, so a browser cannot speak it directly. "Run" calls a shim that streams a few blocks through the consumer sidecar. Currently a clock-demo substrate (zero upstream cost); a real Pinax-backed firehose can be enabled on demand.',
       prerequisites: [
         'Deposit GRT into PaymentsEscrow for the provider and authorise your signer on GraphTallyCollector.',
         'Run the consumer sidecar locally (sds consumer sidecar) — it signs RAVs and proxies the stream.',
@@ -407,7 +407,7 @@ sds consumer signer authorize --signer-address <SIGNER> ...
 sds consumer sidecar --grpc-listen-addr :9002 --provider-control-plane-endpoint <PROVIDER_URL> ...
 
 # 3. stream a package through it
-substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s -20`,
+substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +20`,
     },
   },
   {

@@ -171,14 +171,29 @@ async function wsaasPanel() {
   });
 }
 
+// Cost guard: the Pinax-backed panels (Mainline firehose, WSaaS WebSocket) cost
+// per sample, so cache them for 10 min — dashboard traffic / auto-refresh can't
+// multiply the upstream Pinax bill. The cheap panels (Dispatch=Alchemy, Camp=
+// engine.camp, Seahorn=our DB, Substreams=local clock) stay live every call.
+const PINAX_TTL_MS = 600_000;
+type Cached = { ts: number; val: Record<string, unknown> };
+const cache: Record<string, Cached> = {};
+async function pinaxCached(key: string, fn: () => Promise<Record<string, unknown>>) {
+  const hit = cache[key];
+  if (hit && Date.now() - hit.ts < PINAX_TTL_MS) return { ...hit.val, cached: true };
+  const val = await timed(fn);
+  cache[key] = { ts: Date.now(), val };
+  return val;
+}
+
 export async function GET() {
   const [dispatch, camp, seahorn, substreams, mainline, wsaas] = await Promise.all([
     timed(dispatchPanel),
     timed(campPanel),
     timed(seahornPanel),
     timed(substreamsPanel),
-    timed(mainlinePanel),
-    timed(wsaasPanel),
+    pinaxCached('mainline', mainlinePanel),
+    pinaxCached('wsaas', wsaasPanel),
   ]);
   return NextResponse.json({ generatedAt: Date.now(), services: { dispatch, camp, seahorn, substreams, mainline, wsaas } });
 }
