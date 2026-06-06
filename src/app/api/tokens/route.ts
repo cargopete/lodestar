@@ -6,10 +6,11 @@ export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export const TOKENS_CACHE_KEY = 'lodestar:tokens:directory:v1';
-// 20-min soft TTL (SWR keeps a 4× hard window). The warm-tokens cron runs
-// every 15 min, so the directory is rebuilt once per warm cycle rather than
-// ~2.5× per TTL as it was at the old 4-min/600s pairing.
-export const TOKENS_CACHE_TTL = 1200;
+// 60-min soft TTL (SWR keeps a 4× hard window). Matched to the hourly
+// warm-tokens cron so the cron is the sole refresher: the entry stays fresh
+// for the full hour between runs, so on-demand visits never trigger an extra
+// background fan-out in the gaps.
+export const TOKENS_CACHE_TTL = 3600;
 
 export async function GET() {
   try {
