@@ -99,7 +99,7 @@ Setup, identical for both: a from-empty backfill of the **same** 5,000-block Arb
 | Peak RSS | **150 MB** | 157 MB | ~4% lower |
 | CPU-seconds | **2.0 s** | 2.6 s | ~23% lower |
 | On-disk bytes/block | **1931** | 1990 | ~3% smaller |
-| Parquet files (post-compaction) | **3** | uncompacted (compaction off) | — |
+| Parquet files (compaction on for both) | **3** | 3 | parity — both compact |
 
 Per-run throughput spread: camp **113.2 / 115.8 / 110.7** (tight). amp **97.7 / 99.6 / 81.7**. That amp run-3 dip to 81.7 is **RPC-provider variance, not an indexer regression** — which is exactly why you report this axis with its dispersion and treat it as RPC-bound rather than quietly using the worst amp run to flatter camp. I'm telling you about the 81.7 *because* it's the number a dishonest benchmark would bury.
 
@@ -108,8 +108,8 @@ Per-run throughput spread: camp **113.2 / 115.8 / 110.7** (tight). amp **97.7 / 
 The temptation is to read "~16% faster" as "camp's engine is 16% better." It isn't, and here's why I won't let you believe that:
 
 - **Backfill speed is RPC-bound.** Both spend nearly all their wall-clock waiting on the *same* RPC, with the *same* `evm-rpc` client lineage (camp forked amp's). The result is dominated by the provider, not the indexer. camp's edge is small and comes from newer deps and better write/compaction overlap — not a fundamentally faster fetch. This is parity-by-inheritance, not a moat. The real backfill lever is a HyperSync extractor that bypasses per-block RPC entirely, and that isn't built yet.
-- **Bytes/block is near-identical by construction.** Same schema, same Parquet writer, same `zstd(1)`. The interesting bit is that camp's default-on Bloom filters add a few KB per file and bytes/block *still* comes out roughly equal — i.e. the index overhead is negligible and compaction keeps it from ballooning.
-- **File count is the real operational win.** Compaction on by default merged the window into ~3 files; amp v0.0.36, shipping compaction off, would accumulate many small files that rot query planning over a long-running deployment. Doesn't show in a short backfill. Matters enormously in production.
+- **Bytes/block is near-identical by construction.** Same schema, same Parquet writer, same `zstd(1)`. The interesting bit is that camp's default-on Bloom filters add a few KB per file and bytes/block *still* comes out roughly equal — i.e. the index overhead is negligible.
+- **File count is a defaults story, not a result from this run.** With compaction enabled for both, camp and amp v0.0.36 each settled to exactly 3 files — amp's compactor works when it's on, so this backfill shows no file-count difference. The real distinction is the *default*: camp ships compactor+collector on, amp ships them off. That matters for a long-running tip-following deployment, where each poll writes a small file and they pile up without default-on compaction (exactly camp's old prod file-count problem) — but a one-shot bulk backfill writes few files regardless, so it doesn't exercise that difference. I'm not going to claim a file-count win from a benchmark that didn't show one.
 
 ### Read this before you quote a single number
 
