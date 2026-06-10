@@ -14,6 +14,7 @@ import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
+import { qosGrade } from '@/lib/qos-score';
 
 interface QosScoreLatest {
   day: string | null;
@@ -30,14 +31,6 @@ interface QosScoreResponse {
     latest: QosScoreLatest | null;
     daily: { day: string | null; q_score: number | null }[];
   };
-}
-
-export function qosGrade(q: number): { grade: string; variant: 'success' | 'accent' | 'warning' | 'error' } {
-  if (q >= 75) return { grade: 'A', variant: 'success' };
-  if (q >= 60) return { grade: 'B', variant: 'accent' };
-  if (q >= 45) return { grade: 'C', variant: 'warning' };
-  if (q >= 30) return { grade: 'D', variant: 'warning' };
-  return { grade: 'F', variant: 'error' };
 }
 
 function Bar({ label, value, hint }: { label: string; value: number | null; hint?: string }) {

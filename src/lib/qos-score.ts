@@ -50,6 +50,15 @@ export function blockTimeSec(chainId: string | null | undefined): number {
   return BLOCK_TIME_SEC[chainId.toLowerCase()] ?? 12;
 }
 
+/** Map a 0–100 Q-score to a letter grade + UI badge variant. */
+export function qosGrade(q: number): { grade: string; variant: 'success' | 'accent' | 'warning' | 'error' } {
+  if (q >= 75) return { grade: 'A', variant: 'success' };
+  if (q >= 60) return { grade: 'B', variant: 'accent' };
+  if (q >= 45) return { grade: 'C', variant: 'warning' };
+  if (q >= 30) return { grade: 'D', variant: 'warning' };
+  return { grade: 'F', variant: 'error' };
+}
+
 // ── Primitives ───────────────────────────────────────────────────────────────
 
 /**
