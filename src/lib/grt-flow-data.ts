@@ -7,10 +7,10 @@
 
 export const GENESIS_SUPPLY = 10_000_000_000; // 10B GRT minted at genesis on Ethereum mainnet (2020-12-14)
 
-// Ethereum L1 blocks per year at 12s slots (post-Merge). Arbitrum issuance is keyed on
-// block.number, which on Arbitrum returns the L1 block number — so we use L1 cadence.
-// Matches the dashboard-wide convention (365 × 24 × 3600 ÷ 12) used on the home & indexer pages.
-export const BLOCKS_PER_YEAR = 2_628_000;
+// External-source circulating supply (Graph Explorer / aggregators), against which the commonly
+// cited ~2.77% issuance rate is computed. The network subgraph's totalSupply is a different,
+// L2-scoped (net mint−burn) basis — see the CAVEATS and the issuance-rate note on the page.
+export const CIRCULATING_SUPPLY_APPROX = 11_500_000_000;
 
 export interface ContractRow {
   name: string;

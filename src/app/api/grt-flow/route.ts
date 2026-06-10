@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT, ppmToPercent } from '@/lib/utils';
-import { BLOCKS_PER_YEAR } from '@/lib/grt-flow-data';
+import { annualIssuancePercent, L1_BLOCKS_PER_YEAR } from '@/lib/network-math';
 import { log } from '@/lib/logger';
 
 // GraphNetwork singleton on graph-network-arbitrum — the authoritative aggregate.
@@ -74,10 +74,13 @@ export async function GET() {
       const n = resp.graphNetwork;
       if (!n) throw new Error('graphNetwork entity missing');
 
+      // NB: the network subgraph's totalSupply tracks L2 net mint−burn (~3.6B), NOT the global
+      // ~11.5B circulating supply external sources cite. We use it for consistency with the rest
+      // of the dashboard (home page uses the same basis); the page labels it accordingly.
       const supply = grt(n.totalSupply);
       const issuancePerBlock = grt(n.networkGRTIssuancePerBlock);
-      const annualIssuance = issuancePerBlock * BLOCKS_PER_YEAR;
-      const issuanceRatePct = supply > 0 ? (annualIssuance / supply) * 100 : 0;
+      const annualIssuance = issuancePerBlock * L1_BLOCKS_PER_YEAR;
+      const issuanceRatePct = annualIssuancePercent(issuancePerBlock, supply);
 
       return {
         blockNumber: resp._meta?.block?.number ?? null,

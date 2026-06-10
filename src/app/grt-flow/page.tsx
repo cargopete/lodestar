@@ -119,8 +119,8 @@ export default function GrtFlowPage() {
       )}
 
       <StatGrid>
-        <StatCard label="Token Supply" value={fmt(d?.supply)} subtitle="on-chain totalSupply" loading={isLoading} tooltip="On-chain token supply per the network subgraph. Differs from circulating supply (aggregators) and from cumulative minted." />
-        <StatCard label="Annual Issuance" value={d ? `${d.issuanceRatePct.toFixed(2)}%` : '—'} subtitle={d ? `${formatGRT(d.annualIssuance)} GRT/yr` : undefined} loading={isLoading} tag="live" />
+        <StatCard label="L2 Net Supply" value={fmt(d?.supply)} subtitle="Arbitrum mint − burn" loading={isLoading} tooltip="The network subgraph's totalSupply: GRT minted minus burned on Arbitrum (net tokens present on L2). This is NOT the global token supply — external sources cite ~11.5B circulating." />
+        <StatCard label="Annual Issuance" value={d ? `${d.issuanceRatePct.toFixed(2)}%` : '—'} subtitle={d ? `${formatGRT(d.annualIssuance)} GRT/yr` : undefined} loading={isLoading} tag="live" tooltip="Per-block issuance annualised over L2 net supply, consistent with the rest of the dashboard. Against the ~11.5B global circulating supply the equivalent rate is ~2.8% (see issuance-rate note)." />
         <StatCard label="Issuance / Block" value={d ? d.issuancePerBlock.toFixed(2) : '—'} subtitle="GRT, linear (GIP-0037)" loading={isLoading} />
         <StatCard label="Cumulative Indexing Rewards" value={fmt(d?.indexingRewards)} subtitle="lifetime issued to indexers + delegators" loading={isLoading} />
         <StatCard label="Cumulative Query Fees" value={fmt(d?.queryFees)} subtitle="GRT collected" loading={isLoading} />
@@ -148,7 +148,7 @@ export default function GrtFlowPage() {
             {/* Pool */}
             <div className="space-y-3">
               <p className="text-[10px] uppercase tracking-wide text-[var(--text-faint)] font-medium">Supply pool</p>
-              <FlowNode tone="pool" label="GRT Token Supply" value={fmt(d?.supply)} sub={d ? `staked ${formatGRT(d.staked)} · delegated ${formatGRT(d.delegated)}` : undefined} />
+              <FlowNode tone="pool" label="L2 Net Supply (mint−burn)" value={fmt(d?.supply)} sub={d ? `staked ${formatGRT(d.staked)} · delegated ${formatGRT(d.delegated)}` : undefined} />
               <FlowNode tone="neutral" label="Signalled (curation)" value={fmt(d?.signalled)} sub="directs reward split" />
             </div>
 
@@ -170,13 +170,14 @@ export default function GrtFlowPage() {
           <CardContent className="py-5">
             <h2 className="text-sm font-semibold text-[var(--text)] mb-3">Supply Composition</h2>
             <div className="space-y-2.5">
-              <Bar label="Genesis (Ethereum, 2020)" value={GENESIS_SUPPLY} max={Math.max(GENESIS_SUPPLY, d?.supply ?? 0)} color="var(--accent)" />
-              <Bar label="Current token supply" value={d?.supply ?? 0} max={Math.max(GENESIS_SUPPLY, d?.supply ?? 0)} color="var(--green)" />
-              <Bar label="Cumulative indexing rewards" value={d?.indexingRewards ?? 0} max={Math.max(GENESIS_SUPPLY, d?.supply ?? 0)} color="var(--amber)" />
+              <Bar label="Genesis (Ethereum L1, 2020)" value={GENESIS_SUPPLY} max={GENESIS_SUPPLY} color="var(--accent)" />
+              <Bar label="L2 net supply (mint − burn)" value={d?.supply ?? 0} max={GENESIS_SUPPLY} color="var(--green)" />
+              <Bar label="Cumulative indexing rewards" value={d?.indexingRewards ?? 0} max={GENESIS_SUPPLY} color="var(--amber)" />
             </div>
             <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
-              Genesis is a fixed 10B mint on L1. Current supply moves with net issuance minus burns.
-              Cumulative indexing rewards is the all-time GRT issued to indexers and delegators.
+              Genesis is a fixed 10B mint on Ethereum L1. L2 net supply is the GRT minted minus burned on
+              Arbitrum — not the global token supply (~11.5B circulating). Cumulative indexing rewards is the
+              all-time GRT issued to indexers and delegators.
             </p>
           </CardContent>
         </Card>
@@ -215,23 +216,21 @@ export default function GrtFlowPage() {
       <Card>
         <CardContent className="py-5">
           <h2 className="text-sm font-semibold text-[var(--text)] mb-1">Annualized Issuance Rate</h2>
-          <p className="text-[11px] text-[var(--text-muted)] mb-4">Reported quarterly (Messari / Graph Explorer). Live current rate shown for contrast.</p>
+          <p className="text-[11px] text-[var(--text-muted)] mb-4">Reported quarterly by Messari / Graph Explorer, against the ~11.5B circulating supply.</p>
           <div className="flex items-end gap-3 h-32">
             {ISSUANCE_RATE_HISTORY.map((p) => (
               <div key={p.period} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end" title={p.note}>
                 <span className="text-[11px] font-mono text-[var(--text)]">{p.rate.toFixed(2)}%</span>
-                <div className="w-full rounded-t bg-[var(--accent)]" style={{ height: `${(p.rate / 3.2) * 100}%` }} />
+                <div className={cn('w-full rounded-t', p.note ? 'bg-[var(--text-faint)]' : 'bg-[var(--accent)]')} style={{ height: `${(p.rate / 3.2) * 100}%` }} />
                 <span className="text-[10px] text-[var(--text-faint)] whitespace-nowrap">{p.period}</span>
               </div>
             ))}
-            {d && (
-              <div className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                <span className="text-[11px] font-mono text-[var(--green)]">{d.issuanceRatePct.toFixed(2)}%</span>
-                <div className="w-full rounded-t bg-[var(--green)]" style={{ height: `${(d.issuanceRatePct / 3.2) * 100}%` }} />
-                <span className="text-[10px] text-[var(--green)] whitespace-nowrap">live</span>
-              </div>
-            )}
           </div>
+          <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
+            These use the global circulating supply as denominator. The live <strong className="text-[var(--text-muted)]">{d ? `${d.issuanceRatePct.toFixed(2)}%` : '—'}</strong> stat
+            above is computed against the subgraph&apos;s L2 net supply, so the percentages aren&apos;t directly comparable
+            — same numerator ({d ? `${formatGRT(d.annualIssuance)} GRT/yr` : '~317M GRT/yr'}), different denominators.
+          </p>
         </CardContent>
       </Card>
 
@@ -329,8 +328,9 @@ export default function GrtFlowPage() {
 
       <p className="text-[11px] text-[var(--text-faint)] leading-relaxed max-w-3xl">
         Live aggregates from the graph-network-arbitrum GraphNetwork entity, cached 30 minutes. Issuance rate is
-        derived as per-block issuance × 2,628,000 L1-equivalent blocks/yr ÷ token supply. Reference contracts,
-        timeline and GIPs are static; verify Horizon payment-contract names on Arbiscan before relying on them.
+        derived as per-block issuance × L1-equivalent blocks/yr ÷ L2 net supply (shared dashboard convention).
+        Reference contracts, timeline and GIPs are static; verify Horizon payment-contract names on Arbiscan
+        before relying on them.
       </p>
     </div>
   );
