@@ -33,17 +33,18 @@ export async function GET(
 
   try {
     const data = await cached(`lodestar:indexer:qos-score:${addr}`, 1800, async () => {
-      const series = await db!<ScoreRow[]>`
-        SELECT day_number, day::text, reliability, lat_util, fresh_util,
-               coverage, served_gap, efficiency, q_score
+      const rows = await db!<ScoreRow[]>`
+        SELECT day_number, day::text,
+               reliability::float8, lat_util::float8, fresh_util::float8,
+               coverage::float8, served_gap::float8, efficiency::float8, q_score::float8
         FROM indexer_qos_score
         WHERE indexer_address = ${addr}
         ORDER BY day_number ASC
       `;
-      const latest = series.length ? series[series.length - 1] : null;
+      const latest = rows.length ? rows[rows.length - 1] : null;
       return {
         latest,
-        daily: series.map((s) => ({ day: s.day, q_score: s.q_score })),
+        daily: rows.map((s) => ({ day: s.day, q_score: s.q_score })),
       };
     });
 

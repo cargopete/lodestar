@@ -72,7 +72,7 @@ export function QosQualityPanel({ indexer }: { indexer: string }) {
     .filter((d) => d.q_score != null)
     .map((d) => ({ date: d.day ? new Date(d.day).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '', q: d.q_score as number }));
 
-  const q = latest?.q_score ?? null;
+  const q = latest?.q_score != null ? Number(latest.q_score) : null;
   const grade = q != null ? qosGrade(q) : null;
 
   return (
