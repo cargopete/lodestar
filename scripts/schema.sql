@@ -17,7 +17,8 @@ INSERT INTO ingestion_state (key) VALUES
   ('epochs'),
   ('allocations'),
   ('delegation_events'),
-  ('disputes')
+  ('disputes'),
+  ('rav')
 ON CONFLICT (key) DO NOTHING;
 
 -- ── On-chain data ─────────────────────────────────────────────────────────────
@@ -116,6 +117,27 @@ CREATE TABLE IF NOT EXISTS allocations (
 
 CREATE INDEX IF NOT EXISTS idx_allocations_indexer ON allocations (indexer_address);
 CREATE INDEX IF NOT EXISTS idx_allocations_status  ON allocations (status);
+
+-- RAV redemptions — historical query-fee revenue (GraphTallyCollector collections
+-- + legacy rebates). Time-series behind indexer P&L. Stores COLLECTED tokens only.
+CREATE TABLE IF NOT EXISTS rav_redemptions (
+  id              TEXT PRIMARY KEY,
+  indexer_address TEXT        NOT NULL,
+  payer           TEXT,
+  allocation_id   TEXT,
+  deployment_id   TEXT,
+  tokens_grt      NUMERIC     NOT NULL,
+  source          TEXT        NOT NULL DEFAULT 'graphtally',  -- 'graphtally' | 'legacy_rebate'
+  collected_at    TIMESTAMPTZ,
+  block           INTEGER,
+  chain_id        INTEGER     NOT NULL DEFAULT 42161,
+  ingested_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_rav_indexer_collected
+  ON rav_redemptions (indexer_address, collected_at DESC);
+CREATE INDEX IF NOT EXISTS idx_rav_deployment_collected
+  ON rav_redemptions (deployment_id, collected_at DESC);
 
 CREATE TABLE IF NOT EXISTS delegation_events (
   id          TEXT PRIMARY KEY,

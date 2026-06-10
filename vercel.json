@@ -21,6 +21,10 @@
       "schedule": "0 */6 * * *"
     },
     {
+      "path": "/api/cron/ingest-rav",
+      "schedule": "20 * * * *"
+    },
+    {
       "path": "/api/cron/snapshot-network",
       "schedule": "*/5 * * * *"
     },
