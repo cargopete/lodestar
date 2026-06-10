@@ -42,11 +42,21 @@ interface Concentration {
   lowValueShare: number;
   productiveUpliftFactor: number;
 }
+interface Cluster {
+  id: string;
+  members: string[];
+  tier: number;
+  size: number;
+  avgJaccard: number;
+  sharedEpoch: number | null;
+  signals: string[];
+}
 interface Resp {
   data: {
     indexers: Row[];
     summary: { total: number; medianQ: number; flaggedGap: number; failing: number };
     concentration: Concentration;
+    clusters: Cluster[];
   };
 }
 
@@ -89,6 +99,11 @@ export default function NetworkHealthPage() {
   const indexers = (data?.data.indexers ?? []).filter((r) => r.q_score != null);
   const summary = data?.data.summary;
   const conc = data?.data.concentration;
+  const clusters = data?.data.clusters ?? [];
+  const nameOf = (addr: string) => {
+    const r = indexers.find((x) => x.address.toLowerCase() === addr.toLowerCase());
+    return r?.ens_name || r?.name || shortenAddress(addr);
+  };
   const fmtGrt = (g: number) =>
     g >= 1e6 ? `${(g / 1e6).toFixed(1)}M` : g >= 1e3 ? `${(g / 1e3).toFixed(0)}K` : g.toFixed(0);
   const rows = [...indexers].sort((a, b) =>
@@ -230,6 +245,54 @@ export default function NetworkHealthPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Behaviorally-correlated clusters — handled with explicit liability discipline */}
+      <Card>
+        <CardContent className="py-5">
+          <h2 className="text-sm font-semibold text-[var(--text)] mb-1">Behaviorally Correlated Clusters</h2>
+          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[var(--amber-dim)] border border-[var(--amber)] mb-4">
+            <svg className="w-4 h-4 flex-shrink-0 mt-0.5 text-[var(--amber)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+              <strong className="text-[var(--text)]">Correlation is not common control.</strong> These groups share
+              behavioural signals (allocation overlap + registration cohort or identical cut parameters) — a
+              <em> working hypothesis for human review</em>, not an accusation. Shared infrastructure providers
+              produce correlated signatures legitimately. No punitive action is taken on this basis. Tier 3
+              (shared on-chain funding) is intentionally not shown until funding-graph analysis ships.
+            </p>
+          </div>
+
+          {clusters.length === 0 ? (
+            <p className="text-sm text-[var(--text-faint)]">
+              No behaviorally-correlated clusters detected at current thresholds.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {clusters.map((c) => (
+                <div key={c.id} className="rounded-lg border border-[var(--border)] p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-[var(--text)]">{c.size} indexers</span>
+                    <Badge variant="warning">Tier 2 · behavioral</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {c.members.map((m) => (
+                      <Link key={m} href={`/indexers/${m}`} className="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
+                        {nameOf(m)}
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {c.signals.map((s, i) => (
+                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--amber-dim)] text-[var(--amber)]">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

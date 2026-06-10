@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { db, hasDbAccess } from '@/lib/db';
 import { computeConcentration, type IndexerAllocation } from '@/lib/concentration';
+import { detectClusters, type ClusterInput } from '@/lib/clustering';
 import { log } from '@/lib/logger';
 
 interface LeaderboardRow {
@@ -69,6 +70,24 @@ export async function GET() {
       `;
       const concentration = computeConcentration(allocRows);
 
+      // Behaviorally-correlated clusters (allocation overlap + cohort/param corroboration).
+      const clusterInput = await db!<ClusterInput[]>`
+        SELECT i.address,
+               i.created_at_epoch AS "createdAtEpoch",
+               i.reward_cut::float8 AS "rewardCut",
+               i.query_fee_cut::float8 AS "queryFeeCut",
+               i.allocation_count AS "allocationCount",
+               COALESCE(
+                 array_agg(DISTINCT a.deployment_id) FILTER (WHERE a.deployment_id IS NOT NULL),
+                 '{}'
+               ) AS deployments
+        FROM indexers i
+        LEFT JOIN allocations a ON a.indexer_address = i.address AND a.status = 'open'
+        WHERE i.allocation_count >= 3
+        GROUP BY i.address, i.created_at_epoch, i.reward_cut, i.query_fee_cut, i.allocation_count
+      `;
+      const clusters = detectClusters(clusterInput);
+
       return {
         indexers: rows,
         summary: {
@@ -78,6 +97,7 @@ export async function GET() {
           failing, // Q < 30
         },
         concentration,
+        clusters,
       };
     });
 
