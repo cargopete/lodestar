@@ -23,17 +23,55 @@ interface Row {
   old_grade: string | null;
   allocation_count: number | null;
 }
+interface TierCapture {
+  tier: 'zero' | 'low' | 'fair' | 'good' | 'unscored';
+  label: string;
+  indexers: number;
+  alloc_grt: number;
+  alloc_share: number;
+}
+interface Concentration {
+  totalAllocatedGrt: number;
+  indexerCount: number;
+  gini: number;
+  nakamoto: number;
+  topNShare: number;
+  topN: number;
+  tiers: TierCapture[];
+  lowValueGrt: number;
+  lowValueShare: number;
+  productiveUpliftFactor: number;
+}
 interface Resp {
   data: {
     indexers: Row[];
     summary: { total: number; medianQ: number; flaggedGap: number; failing: number };
+    concentration: Concentration;
   };
 }
+
+const TIER_COLOR: Record<TierCapture['tier'], string> = {
+  zero: 'var(--red)',
+  low: 'var(--amber)',
+  unscored: 'var(--text-faint)',
+  fair: 'var(--accent)',
+  good: 'var(--green)',
+};
 
 type SortKey = 'q_score' | 'served_gap';
 
 function pct(v: number | null): string {
   return v == null ? '—' : `${Math.round(v * 100)}`;
+}
+
+function ConcStat({ label, value, sub, bad }: { label: string; value: string; sub?: string; bad?: boolean }) {
+  return (
+    <div className="rounded-lg bg-[var(--bg-elevated)] px-3 py-2.5">
+      <p className="text-[10px] text-[var(--text-faint)] mb-0.5">{label}</p>
+      <p className={cn('text-lg font-semibold font-mono', bad ? 'text-[var(--red)]' : 'text-[var(--text)]')}>{value}</p>
+      {sub && <p className="text-[10px] text-[var(--text-faint)] mt-0.5">{sub}</p>}
+    </div>
+  );
 }
 
 export default function NetworkHealthPage() {
@@ -50,6 +88,9 @@ export default function NetworkHealthPage() {
 
   const indexers = (data?.data.indexers ?? []).filter((r) => r.q_score != null);
   const summary = data?.data.summary;
+  const conc = data?.data.concentration;
+  const fmtGrt = (g: number) =>
+    g >= 1e6 ? `${(g / 1e6).toFixed(1)}M` : g >= 1e3 ? `${(g / 1e3).toFixed(0)}K` : g.toFixed(0);
   const rows = [...indexers].sort((a, b) =>
     sort === 'q_score'
       ? (b.q_score ?? 0) - (a.q_score ?? 0)
@@ -74,6 +115,49 @@ export default function NetworkHealthPage() {
           <StatCard label="Low Quality (Q<30)" value={String(summary.failing)} subtitle="poor / barely-serving" />
           <StatCard label="Routed-Around" value={String(summary.flaggedGap)} subtitle="served-gap > 30%" />
         </StatGrid>
+      )}
+
+      {conc && conc.totalAllocatedGrt > 0 && (
+        <Card>
+          <CardContent className="py-5">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-sm font-semibold text-[var(--text)]">Reward Distribution by Service Quality</h2>
+              <span className="text-[11px] text-[var(--text-faint)]">{fmtGrt(conc.totalAllocatedGrt)} GRT allocated · {conc.indexerCount} indexers</span>
+            </div>
+            <p className="text-[11px] text-[var(--text-muted)] mb-4">
+              Share of allocated stake (which earns indexing rewards) by QoS quality band.
+            </p>
+
+            {/* The harm chart: stacked allocation share by quality tier */}
+            <div className="flex w-full h-8 rounded-lg overflow-hidden border border-[var(--border)]">
+              {conc.tiers.map((t) => (
+                <div
+                  key={t.tier}
+                  style={{ width: `${t.alloc_share * 100}%`, backgroundColor: TIER_COLOR[t.tier] }}
+                  className="h-full"
+                  title={`${t.label}: ${(t.alloc_share * 100).toFixed(1)}% · ${t.indexers} indexers · ${fmtGrt(t.alloc_grt)} GRT`}
+                />
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+              {conc.tiers.map((t) => (
+                <div key={t.tier} className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: TIER_COLOR[t.tier] }} />
+                  <span className="text-[11px] text-[var(--text-muted)]">{t.label}</span>
+                  <span className="text-[11px] font-mono text-[var(--text)]">{(t.alloc_share * 100).toFixed(0)}%</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Concentration + crowding-out stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+              <ConcStat label="Low-value capture" value={`${(conc.lowValueShare * 100).toFixed(0)}%`} sub={`${fmtGrt(conc.lowValueGrt)} GRT to ~0-value`} bad={conc.lowValueShare > 0.2} />
+              <ConcStat label="Counterfactual uplift" value={conc.productiveUpliftFactor === Infinity ? '∞' : `${conc.productiveUpliftFactor.toFixed(2)}×`} sub="if redistributed to productive" />
+              <ConcStat label={`Top ${conc.topN} share`} value={`${(conc.topNShare * 100).toFixed(0)}%`} sub="stake concentration" bad={conc.topNShare > 0.5} />
+              <ConcStat label="Gini / Nakamoto" value={`${conc.gini.toFixed(2)} / ${conc.nakamoto}`} sub="inequality · entities >50%" />
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <Card>

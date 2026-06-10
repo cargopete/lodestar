@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { db, hasDbAccess } from '@/lib/db';
+import { computeConcentration, type IndexerAllocation } from '@/lib/concentration';
 import { log } from '@/lib/logger';
 
 interface LeaderboardRow {
@@ -56,6 +57,18 @@ export async function GET() {
       const flaggedGap = scored.filter((r) => (r.served_gap ?? 0) > 0.3).length;
       const failing = scored.filter((r) => (r.q_score as number) < 30).length;
 
+      // Concentration + crowding-out over ALL allocated indexers (incl. unscored / never-routed),
+      // left-joined to their latest QoS score.
+      const allocRows = await db!<IndexerAllocation[]>`
+        SELECT i.allocated_grt::float8 AS allocated_grt, s.q_score::float8 AS q_score
+        FROM indexers i
+        LEFT JOIN indexer_qos_score s
+          ON s.indexer_address = i.address
+         AND s.day_number = (SELECT MAX(day_number) FROM indexer_qos_score)
+        WHERE i.allocated_grt > 0
+      `;
+      const concentration = computeConcentration(allocRows);
+
       return {
         indexers: rows,
         summary: {
@@ -64,6 +77,7 @@ export async function GET() {
           flaggedGap, // routed-around / crowding suspects
           failing, // Q < 30
         },
+        concentration,
       };
     });
 
