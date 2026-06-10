@@ -41,10 +41,16 @@ describe('aggregateIndexerMetrics', () => {
       row({ indexer_address: '0xb', deployment_id: 'X', day_number: 100, query_count: 1000, success_count: 1000, avg_latency_ms: 150 }),
       row({ indexer_address: '0xc', deployment_id: 'X', day_number: 100, query_count: 1000, success_count: 1000, avg_latency_ms: 250 }),
     ];
-    const metrics = aggregateIndexerMetrics(rows, [], { todayDayNumber: today });
+    // τ multiplier off (1) to assert the raw cohort median directly.
+    const metrics = aggregateIndexerMetrics(rows, [], { todayDayNumber: today, latencyTauMult: 1 });
     // median(50,150,250) = 150 → every indexer on X gets τ=150
     for (const m of metrics.values()) {
       expect(m[0].latencyTauMs).toBeCloseTo(150, 6);
+    }
+    // With the default 2.5× leniency multiplier, τ = 375.
+    const lenient = aggregateIndexerMetrics(rows, [], { todayDayNumber: today });
+    for (const m of lenient.values()) {
+      expect(m[0].latencyTauMs).toBeCloseTo(375, 6);
     }
   });
 
