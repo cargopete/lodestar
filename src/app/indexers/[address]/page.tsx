@@ -31,6 +31,7 @@ import dynamic from 'next/dynamic';
 const IndexerTrendsChart = dynamic(() => import('@/components/charts/IndexerTrendsChart').then(m => ({ default: m.IndexerTrendsChart })), { ssr: false });
 const StakeHistoryChart = dynamic(() => import('@/components/charts/StakeHistoryChart').then(m => ({ default: m.StakeHistoryChart })), { ssr: false });
 const IndexerQoSChart = dynamic(() => import('@/components/charts/IndexerQoSChart').then(m => ({ default: m.IndexerQoSChart })), { ssr: false });
+const PnlPanel = dynamic(() => import('@/components/indexer/PnlPanel').then(m => ({ default: m.PnlPanel })), { ssr: false });
 import { ParameterHistory } from '@/components/ParameterHistory';
 import { calculateIndexerScore, SCORE_WEIGHTS, SCORE_LABELS, type IndexerScore } from '@/lib/risk-score';
 
@@ -497,6 +498,9 @@ export default function IndexerDetailPage({
 
       {/* Query Performance — full width, QoS oracle */}
       <IndexerQoSChart indexer={address} />
+
+      {/* Indexer P&L — query-fee (RAV) + indexing-reward revenue net of infra cost */}
+      <PnlPanel indexer={address} grtPrice={grtPrice} />
 
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
