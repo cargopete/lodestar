@@ -25,6 +25,10 @@
       "schedule": "20 * * * *"
     },
     {
+      "path": "/api/cron/ingest-qos",
+      "schedule": "0 */6 * * *"
+    },
+    {
       "path": "/api/cron/snapshot-network",
       "schedule": "*/5 * * * *"
     },

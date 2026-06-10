@@ -18,7 +18,8 @@ INSERT INTO ingestion_state (key) VALUES
   ('allocations'),
   ('delegation_events'),
   ('disputes'),
-  ('rav')
+  ('rav'),
+  ('qos')
 ON CONFLICT (key) DO NOTHING;
 
 -- ── On-chain data ─────────────────────────────────────────────────────────────
@@ -138,6 +139,56 @@ CREATE INDEX IF NOT EXISTS idx_rav_indexer_collected
   ON rav_redemptions (indexer_address, collected_at DESC);
 CREATE INDEX IF NOT EXISTS idx_rav_deployment_collected
   ON rav_redemptions (deployment_id, collected_at DESC);
+
+-- QoS quality scoring (see migrations/011_qos_scoring.sql for full notes).
+-- Source: QoS Oracle subgraph (V1). day_number = oracle Unix-day index.
+CREATE TABLE IF NOT EXISTS qos_daily (
+  indexer_address      TEXT        NOT NULL,
+  deployment_id        TEXT        NOT NULL,
+  day_number           INTEGER     NOT NULL,
+  day                  DATE,
+  query_count          BIGINT      NOT NULL DEFAULT 0,
+  success_count        NUMERIC     NOT NULL DEFAULT 0,
+  avg_latency_ms       NUMERIC,
+  stdev_latency_ms     NUMERIC,
+  blocks_behind        NUMERIC,
+  total_query_fees_grt NUMERIC,
+  gateway_id           TEXT        NOT NULL DEFAULT '',
+  chain_id             TEXT,
+  ingested_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (indexer_address, deployment_id, day_number, gateway_id)
+);
+CREATE INDEX IF NOT EXISTS idx_qos_daily_indexer_day    ON qos_daily (indexer_address, day_number DESC);
+CREATE INDEX IF NOT EXISTS idx_qos_daily_deployment_day ON qos_daily (deployment_id, day_number DESC);
+
+CREATE TABLE IF NOT EXISTS deployment_daily (
+  deployment_id        TEXT        NOT NULL,
+  day_number           INTEGER     NOT NULL,
+  day                  DATE,
+  total_query_count    BIGINT      NOT NULL DEFAULT 0,
+  gateway_success_rate NUMERIC,
+  gateway_id           TEXT        NOT NULL DEFAULT '',
+  chain_id             TEXT,
+  ingested_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (deployment_id, day_number, gateway_id)
+);
+CREATE INDEX IF NOT EXISTS idx_deployment_daily_day ON deployment_daily (deployment_id, day_number DESC);
+
+CREATE TABLE IF NOT EXISTS indexer_qos_score (
+  indexer_address TEXT        NOT NULL,
+  day_number      INTEGER     NOT NULL,
+  day             DATE,
+  reliability     NUMERIC,
+  lat_util        NUMERIC,
+  fresh_util      NUMERIC,
+  coverage        NUMERIC,
+  served_gap      NUMERIC,
+  efficiency      NUMERIC,
+  q_score         NUMERIC,
+  computed_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (indexer_address, day_number)
+);
+CREATE INDEX IF NOT EXISTS idx_indexer_qos_score_day_q ON indexer_qos_score (day_number DESC, q_score DESC);
 
 CREATE TABLE IF NOT EXISTS delegation_events (
   id          TEXT PRIMARY KEY,
