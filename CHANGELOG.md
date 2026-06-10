@@ -2,6 +2,32 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.9.0] — 2026-06-10
+
+A new **GRT Issuance & Flow** page: a research-grade, live trace of GRT supply, issuance, and burns
+across Ethereum mainnet and Arbitrum One.
+
+### Added
+- **`/grt-flow` page** — live supply / issuance / burn aggregates from the `graph-network-arbitrum`
+  GraphNetwork entity (cached 30m): stat cards, a conceptual issuance → distribution → burn flow
+  diagram, supply-composition bars, and an annualized issuance-rate history.
+- **Reference explainers** — collapsible sections on how issuance works, canonical contract
+  addresses (L1 / L2 / Horizon, linked to Etherscan / Arbiscan), the L2 migration timeline, key
+  GIPs, and caveats on supply definitions.
+- **GRT Flow nav link** in both the desktop sidebar and the mobile bottom-nav "More" sheet.
+
+### Notes
+- The page distinguishes the subgraph's **L2 net supply** (mint − burn, ~3.6B) from the global
+  ~11.5B circulating supply external sources cite. The live issuance rate is computed against L2 net
+  supply — consistent with the rest of the dashboard — with the differing denominators explained
+  inline so the reported ~2.8% (vs circulating) isn't conflated with it.
+- On Arbitrum, gross mint/burn is dominated by bridge flows; cumulative indexing rewards and the
+  per-block rate are the honest issuance figures, and are labelled as such.
+
+### Internal
+- New route `/api/grt-flow`; new static reference module `grt-flow-data`; reuses the shared
+  `annualIssuancePercent` / `L1_BLOCKS_PER_YEAR` helpers.
+
 ## [4.8.0] — 2026-06-10
 
 Two major additions: **indexer revenue & P&L**, and a **Network Health / QoS quality suite**.
