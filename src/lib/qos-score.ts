@@ -25,6 +25,12 @@ export const DEFAULTS = {
   halfLifeDays: 10, // EWMA half-life for day weighting
   minCredibleN: 100, // queries/deployment to count toward coverage
   coverageK: 3, // coverage saturation constant
+  // Display calibration: the weighted product of sub-1 utilities caps a strong indexer's raw
+  // composite well below 1. Dividing by this "excellent reference" stretches the score to the
+  // full 0–100 range so the network's best read as A/B (ranking is unchanged — monotonic scale).
+  // ≈ the composite an excellent indexer achieves; calibrated so the top decile reads A and the
+  // median lands around B/C (keeps A selective rather than inflating the whole field).
+  scale: 0.65,
 } as const;
 
 // Approximate block times (seconds) by the oracle's chain_id string. Default 12s.
@@ -130,6 +136,7 @@ export interface QualityOpts {
   minCredibleN?: number;
   coverageK?: number;
   z?: number;
+  scale?: number;
 }
 
 export interface QualityResult {
@@ -157,6 +164,7 @@ export function computeQuality(rows: DeploymentMetrics[], opts: QualityOpts = {}
   const minCredibleN = opts.minCredibleN ?? DEFAULTS.minCredibleN;
   const coverageK = opts.coverageK ?? DEFAULTS.coverageK;
   const z = opts.z ?? DEFAULTS.z;
+  const scale = opts.scale ?? DEFAULTS.scale;
 
   const empty: QualityResult = {
     qScore: 0,
@@ -201,7 +209,7 @@ export function computeQuality(rows: DeploymentMetrics[], opts: QualityOpts = {}
   const coverage = 0.5 + 0.5 * (credibleDeployments / (credibleDeployments + coverageK));
 
   return {
-    qScore: 100 * aggregate * coverage,
+    qScore: Math.min(100, (100 * aggregate * coverage) / scale),
     reliability: rBlend / wSum,
     latUtil: latBlend / wSum,
     freshUtil: freshBlend / wSum,
