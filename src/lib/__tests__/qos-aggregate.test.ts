@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   aggregateIndexerMetrics,
   scoreIndexers,
+  computePhase2Metrics,
   type QosDailyRow,
+  type AllocationRow,
 } from '../qos-aggregate';
 
 const row = (o: Partial<QosDailyRow> & Pick<QosDailyRow, 'indexer_address' | 'deployment_id' | 'day_number'>): QosDailyRow => ({
@@ -59,6 +61,51 @@ describe('aggregateIndexerMetrics', () => {
     ];
     const metrics = aggregateIndexerMetrics(rows, [], { todayDayNumber: today });
     expect(metrics.get('0xa')).toHaveLength(2);
+  });
+});
+
+describe('computePhase2Metrics (ServedGap + efficiency)', () => {
+  it('THE leech tell: allocated heavily but routed around → large positive ServedGap', () => {
+    const allocations: AllocationRow[] = [
+      { indexer_address: '0xleech', deployment_id: 'X', allocated_grt: 900_000 }, // 90% of alloc
+      { indexer_address: '0xworker', deployment_id: 'X', allocated_grt: 100_000 }, // 10% of alloc
+    ];
+    const qos: QosDailyRow[] = [
+      // The worker serves ~all the queries; the leech serves almost none.
+      { indexer_address: '0xworker', deployment_id: 'X', day_number: 100, query_count: 9900, success_count: 9900, avg_latency_ms: 50, blocks_behind: 5, chain_id: 'arbitrum-one' },
+      { indexer_address: '0xleech', deployment_id: 'X', day_number: 100, query_count: 100, success_count: 50, avg_latency_ms: 3000, blocks_behind: 9000, chain_id: 'arbitrum-one' },
+    ];
+    const totals = [{ deployment_id: 'X', total_query_count: 10000 }];
+    const m = computePhase2Metrics(allocations, qos, totals);
+
+    const leech = m.get('0xleech')!;
+    const worker = m.get('0xworker')!;
+    // Leech: 90% alloc share − 1% served share ≈ +0.89 gap.
+    expect(leech.servedGap).toBeGreaterThan(0.8);
+    // Worker: 10% alloc share − 99% served share ≈ −0.89 (serves more than it's allocated for).
+    expect(worker.servedGap).toBeLessThan(0);
+    // Leech parks far more GRT per useful query.
+    expect(leech.efficiency).toBeGreaterThan(worker.efficiency);
+  });
+
+  it('efficiency = allocated GRT per useful query', () => {
+    const m = computePhase2Metrics(
+      [{ indexer_address: '0xa', deployment_id: 'X', allocated_grt: 1000 }],
+      [{ indexer_address: '0xa', deployment_id: 'X', day_number: 100, query_count: 100, success_count: 99, avg_latency_ms: 10, blocks_behind: 1, chain_id: 'arbitrum-one' }],
+      [{ deployment_id: 'X', total_query_count: 100 }],
+    );
+    expect(m.get('0xa')!.efficiency).toBeCloseTo(1000 / (99 + 1), 6); // 10
+  });
+
+  it('an indexer allocated but never served has the maximum gap (allocShare, served 0)', () => {
+    const m = computePhase2Metrics(
+      [{ indexer_address: '0xghost', deployment_id: 'X', allocated_grt: 500 }],
+      [], // no QoS data at all
+      [{ deployment_id: 'X', total_query_count: 5000 }],
+    );
+    const g = m.get('0xghost')!;
+    expect(g.servedGap).toBeCloseTo(1, 6); // 100% alloc share − 0 served
+    expect(g.successfulQueries).toBe(0);
   });
 });
 

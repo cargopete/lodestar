@@ -21,6 +21,8 @@ interface QosScoreLatest {
   lat_util: number | null;
   fresh_util: number | null;
   coverage: number | null;
+  served_gap: number | null;
+  efficiency: number | null;
   q_score: number | null;
 }
 interface QosScoreResponse {
@@ -118,6 +120,32 @@ export function QosQualityPanel({ indexer }: { indexer: string }) {
               <Bar label="Freshness" value={latest.fresh_util} hint="Closeness to chain head (seconds behind)" />
               <Bar label="Coverage" value={latest.coverage} hint="Breadth of deployments served with credible volume" />
             </div>
+
+            {/* Selection-bias: served-vs-allocated gap (the routed-around / crowding signal) */}
+            {latest.served_gap != null && (() => {
+              const gap = Number(latest.served_gap);
+              const flagged = gap > 0.3;
+              return (
+                <div className={cn(
+                  'flex items-start gap-2.5 p-2.5 mb-4 rounded-lg border',
+                  flagged ? 'bg-[var(--red-dim)] border-[var(--red)]' : 'bg-[var(--bg-elevated)] border-[var(--border)]',
+                )}>
+                  <span className={cn('text-sm font-mono font-semibold mt-0.5', flagged ? 'text-[var(--red)]' : gap < 0 ? 'text-[var(--green)]' : 'text-[var(--text-muted)]')}>
+                    {gap >= 0 ? '+' : ''}{(gap * 100).toFixed(0)}%
+                  </span>
+                  <div>
+                    <p className="text-xs font-medium text-[var(--text)]">Served-vs-allocated gap</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                      {flagged
+                        ? 'Holds allocation but the gateway routes queries around it — capturing rewards without serving proportional traffic.'
+                        : gap < 0
+                          ? 'Serves more query traffic than its allocation share — pulling its weight.'
+                          : 'Served share roughly tracks allocation share.'}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
 
             {series.length > 1 ? (
               <div className="h-[140px]">
