@@ -1,5 +1,5 @@
 /**
- * Network Live — one snapshot, four data services, in parallel.
+ * Horizon Live — one snapshot, four data services, in parallel.
  *
  * Each field on this page is a real, TAP-metered paid query to a different
  * Horizon data service running on Lodestar infrastructure:

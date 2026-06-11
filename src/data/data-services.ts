@@ -507,7 +507,7 @@ cargo run --example stream_blocks -- \\
       endpoint: 'wss://ws.89.167.109.4.sslip.io/ws/{chain}/{topic}',
       runnable: false,
       sampleLabel: 'Stream pre-parsed events over WebSocket (transfers / swaps)',
-      note: 'WebSocket + a signed TAP receipt \u2014 open it from a WS client, not a plain browser fetch. The Network Live page shows it streaming live.',
+      note: 'WebSocket + a signed TAP receipt \u2014 open it from a WS client, not a plain browser fetch. The Horizon Live page shows it streaming live.',
       prerequisites: [
         'Sign an EIP-712 TAP v2 receipt and url-encode it into the ?receipt= query parameter.',
         'For settlement, the payer funds PaymentsEscrow for the provider and authorises the signer on GraphTallyCollector.',

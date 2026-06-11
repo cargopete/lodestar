@@ -50,6 +50,8 @@ const nextConfig: NextConfig = {
     return [
       // Page renamed to Indexer QoS (v4.10.0); preserve old bookmarks/links.
       { source: '/network-health', destination: '/indexer-qos', permanent: true },
+      // Page renamed to Horizon Live (v4.11.0); preserve old bookmarks/links.
+      { source: '/network', destination: '/horizon-live', permanent: true },
     ];
   },
 };

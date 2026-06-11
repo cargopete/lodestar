@@ -124,7 +124,7 @@ export default function NetworkLivePage() {
       {/* ── Hero / explainer ─────────────────────────────────────────────── */}
       <div className="pb-2 border-b border-[var(--border)]">
         <div className="flex items-center gap-2.5">
-          <h1 className="text-2xl font-semibold text-[var(--text)]">Network Live</h1>
+          <h1 className="text-2xl font-semibold text-[var(--text)]">Horizon Live</h1>
           <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--green)]">
             <span className="w-2 h-2 rounded-full bg-[var(--green)] animate-pulse" />
             live
