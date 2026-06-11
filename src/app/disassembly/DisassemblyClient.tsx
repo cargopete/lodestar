@@ -76,12 +76,11 @@ interface ApiResponse {
   error?: string;
 }
 
-type Mode = 'inspect' | 'compare' | 'verify';
+type Mode = 'inspect' | 'compare';
 
 const MODE_LABEL: Record<Mode, string> = {
   inspect: 'Inspect',
   compare: 'Compare versions',
-  verify: 'Verify source',
 };
 
 export function DisassemblyClient({ initialId }: { initialId?: string }) {
@@ -138,7 +137,6 @@ export function DisassemblyClient({ initialId }: { initialId?: string }) {
 
       {mode === 'inspect' && <InspectPanel initialId={initialId} />}
       {mode === 'compare' && <ComparePanel />}
-      {mode === 'verify' && <VerifyPanel initialId={initialId} />}
     </div>
   );
 }
@@ -221,6 +219,7 @@ function InspectPanel({ initialId }: { initialId?: string }) {
 
       {data && <ShareLink id={target} />}
       {data && <Report report={data} />}
+      {data && <SourceVerification deploymentId={target} />}
     </>
   );
 }
@@ -400,8 +399,10 @@ const MODULE_STATUS_META: Record<ModuleStatus, { label: string; color: string }>
   'only-deployed': { label: 'only deployed', color: 'var(--amber)' },
 };
 
-function VerifyPanel({ initialId }: { initialId?: string }) {
-  const [deploymentId, setDeploymentId] = useState(initialId ?? '');
+// Optional source verification, folded into the Inspect view. The deployed WASM
+// is already in hand (fetched from the Qm hash); supplying a repo only adds the
+// "does this match the public source?" check, so it lives behind a disclosure.
+function SourceVerification({ deploymentId }: { deploymentId: string }) {
   const [repoUrl, setRepoUrl] = useState('');
   const [ref, setRef] = useState('');
   const [manifestPath, setManifestPath] = useState('');
@@ -413,7 +414,7 @@ function VerifyPanel({ initialId }: { initialId?: string }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          deploymentId: deploymentId.trim(),
+          deploymentId,
           repoUrl: repoUrl.trim(),
           ref: ref.trim() || undefined,
           manifestPath: manifestPath.trim() || undefined,
@@ -428,54 +429,56 @@ function VerifyPanel({ initialId }: { initialId?: string }) {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (deploymentId.trim() && repoUrl.trim() && !isPending) mutate();
+    if (repoUrl.trim() && !isPending) mutate();
   };
 
   const inputCls =
     'px-3 py-2 rounded-[var(--radius-button)] bg-[var(--bg-surface)] border-[0.5px] border-[var(--border)] text-[var(--text)] text-sm font-mono placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--border-mid)]';
 
   return (
-    <>
-      <form onSubmit={submit} className="space-y-2">
-        <input value={deploymentId} onChange={(e) => setDeploymentId(e.target.value)} placeholder="Deployment ID (Qm…)" spellCheck={false} className={`w-full ${inputCls}`} />
-        <input value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="Source repo URL (https://github.com/org/repo)" spellCheck={false} className={`w-full ${inputCls}`} />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Ref — branch / tag / commit (optional)" spellCheck={false} className={inputCls} />
-          <input value={manifestPath} onChange={(e) => setManifestPath(e.target.value)} placeholder="Manifest path (default subgraph.yaml)" spellCheck={false} className={inputCls} />
-        </div>
-        <input value={prepareCommand} onChange={(e) => setPrepareCommand(e.target.value)} placeholder="Prepare command (advanced — e.g. yarn prepare:mainnet)" spellCheck={false} className={`w-full ${inputCls}`} />
-        <button
-          type="submit"
-          className="px-4 py-2 rounded-[var(--radius-button)] bg-[var(--accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-          disabled={!deploymentId.trim() || !repoUrl.trim() || isPending}
-        >
-          {isPending ? 'Building & verifying… (may take a few minutes)' : 'Verify source'}
-        </button>
-        <p className="text-[11px] text-[var(--text-faint)]">
-          Clones and builds the source in an ephemeral sandbox, then compares the produced WASM against the deployed
-          artifact. Templated manifests are auto-generated via the repo&apos;s prepare script; for bespoke pipelines,
-          set a custom prepare command. Public github.com / gitlab.com / bitbucket.org repos only.
-        </p>
-      </form>
+    <Card>
+      <details>
+        <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
+          <span className="font-semibold text-[var(--text)] text-sm">Verify against source <span className="text-[var(--text-faint)] font-normal">(optional)</span></span>
+          <span className="text-[11px] text-[var(--text-muted)]">does the deployed WASM match the public repo?</span>
+        </summary>
 
-      {error && (
-        <Card className="border-[var(--red-dim)]">
-          <p className="text-sm text-[var(--red)] font-mono">{error.message}</p>
-        </Card>
-      )}
-
-      {!data && !error && !isPending && (
-        <Card>
-          <p className="text-sm text-[var(--text-muted)]">
-            Source verification answers a question nothing else in the ecosystem does: <em>does the deployed WASM
-            actually correspond to the public source repo it claims to?</em> Paste a deployment ID and its source
-            repo, and we&apos;ll build it in isolation and compare.
+        <div className="mt-3 space-y-3">
+          <p className="text-[12px] text-[var(--text-muted)]">
+            The deployed WASM above came straight from the deployment hash. To check it against its source, point us at
+            the public repo — we build it in an ephemeral sandbox and compare the produced WASM byte-for-byte.
           </p>
-        </Card>
-      )}
 
-      {data && <VerifyReport result={data} />}
-    </>
+          <form onSubmit={submit} className="space-y-2">
+            <input value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="Source repo URL (https://github.com/org/repo)" spellCheck={false} className={`w-full ${inputCls}`} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Ref — branch / tag / commit (optional)" spellCheck={false} className={inputCls} />
+              <input value={manifestPath} onChange={(e) => setManifestPath(e.target.value)} placeholder="Manifest path (default subgraph.yaml)" spellCheck={false} className={inputCls} />
+            </div>
+            <input value={prepareCommand} onChange={(e) => setPrepareCommand(e.target.value)} placeholder="Prepare command (advanced — e.g. yarn prepare:mainnet)" spellCheck={false} className={`w-full ${inputCls}`} />
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-[var(--radius-button)] bg-[var(--accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              disabled={!repoUrl.trim() || isPending}
+            >
+              {isPending ? 'Building & verifying… (may take a few minutes)' : 'Verify against source'}
+            </button>
+            <p className="text-[11px] text-[var(--text-faint)]">
+              Templated manifests are auto-generated via the repo&apos;s prepare script; for bespoke pipelines, set a
+              custom prepare command. Public github.com / gitlab.com / bitbucket.org repos only.
+            </p>
+          </form>
+
+          {error && (
+            <Card className="border-[var(--red-dim)]">
+              <p className="text-sm text-[var(--red)] font-mono">{error.message}</p>
+            </Card>
+          )}
+
+          {data && <VerifyReport result={data} />}
+        </div>
+      </details>
+    </Card>
   );
 }
 
