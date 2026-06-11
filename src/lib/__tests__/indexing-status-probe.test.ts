@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyServeResponse, withServeProbe, type IndexerStatusResult } from '../indexing-status';
+import { classifyServeResponse, classifyPaidResponse, withServeProbe, type IndexerStatusResult } from '../indexing-status';
 
 const JSON_CT = 'application/json';
 
@@ -46,6 +46,28 @@ describe('classifyServeResponse', () => {
   });
 });
 
+describe('classifyPaidResponse (past the payment gate)', () => {
+  const JSON_CT = 'application/json';
+
+  it('confirms serving when a paid query returns data', () => {
+    expect(classifyPaidResponse(200, JSON_CT, '{"data":{"_meta":{"block":{"number":42}}}}')).toBe('serving');
+  });
+
+  it('catches the iExec mode: a paid query that fails past the gate is broken', () => {
+    // This is the case the receipt-less probe could NOT see.
+    expect(classifyPaidResponse(400, JSON_CT, '{"error":"BadResponse"}')).toBe('broken');
+    expect(classifyPaidResponse(200, JSON_CT, '{"errors":[{"message":"indexing error"}]}')).toBe('broken');
+    expect(classifyPaidResponse(200, JSON_CT, '{"data":null}')).toBe('broken');
+    expect(classifyPaidResponse(500, JSON_CT, '{"error":"boom"}')).toBe('broken');
+  });
+
+  it('treats a receipt/escrow rejection as inconclusive (we just could not pay)', () => {
+    expect(classifyPaidResponse(402, JSON_CT, '{"message":"No Tap receipt was found in the request"}')).toBe('payment_unfunded');
+    expect(classifyPaidResponse(400, JSON_CT, '{"message":"insufficient escrow balance"}')).toBe('payment_unfunded');
+    expect(classifyPaidResponse(401, 'text/plain', 'payment required')).toBe('payment_unfunded');
+  });
+});
+
 describe('withServeProbe', () => {
   const base: IndexerStatusResult = {
     indexerId: '0xabc',
@@ -55,7 +77,8 @@ describe('withServeProbe', () => {
     status: 'synced',
   };
 
-  it('maps alive_paid → servable true, everything else false', () => {
+  it('maps serving + alive_paid → servable true, broken + unreachable → false', () => {
+    expect(withServeProbe(base, 'serving')).toMatchObject({ serveProbe: 'serving', servable: true });
     expect(withServeProbe(base, 'alive_paid')).toMatchObject({ serveProbe: 'alive_paid', servable: true });
     expect(withServeProbe(base, 'broken')).toMatchObject({ serveProbe: 'broken', servable: false });
     expect(withServeProbe(base, 'unreachable')).toMatchObject({ serveProbe: 'unreachable', servable: false });

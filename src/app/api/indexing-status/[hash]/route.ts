@@ -155,7 +155,9 @@ export async function GET(
         const statusPromises = withUrl.map(async (alloc) => {
           const [raw, probe] = await Promise.all([
             queryIndexerStatus(alloc.indexer.url!, ipfsHash),
-            probeServing(alloc.indexer.url!, ipfsHash),
+            // indexer.id is the on-chain address — enables a paid (receipt-backed)
+            // probe where escrow is funded, else falls back to receipt-less.
+            probeServing(alloc.indexer.url!, ipfsHash, alloc.indexer.id),
           ]);
           const built = buildIndexerStatus(
             alloc.indexer.id,

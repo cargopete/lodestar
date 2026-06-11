@@ -9,6 +9,7 @@
  */
 
 import { isSafeUrlResolved } from './ssrf';
+import { signTapReceipt, hasTapSigner } from './tap';
 import type { ServabilityVerdict } from './servability';
 
 // ---------------------------------------------------------------------------
@@ -16,12 +17,15 @@ import type { ServabilityVerdict } from './servability';
 // ---------------------------------------------------------------------------
 
 /**
- * Result of a single receipt-less query-path probe:
- *  - alive_paid  — serving stack is up (answered, or correctly demanded a TAP receipt)
- *  - broken      — refused / timeout / 5xx / HTML / bare 4xx: not serving
+ * Result of a single query-path probe:
+ *  - serving     — a PAID probe (TAP receipt) got real data back: confirmed serving
+ *  - alive_paid  — serving stack is up but unverified (gate demanded a receipt and
+ *                  we couldn't pay / receipt-less probe). Conservative: counts as servable.
+ *  - broken      — refused / timeout / 5xx / HTML / bare 4xx, or a PAID probe got a
+ *                  deployment error past the payment gate (the iExec mode): not serving
  *  - unreachable — could not safely attempt (no URL / SSRF-blocked / DNS fail)
  */
-export type ServeProbe = 'alive_paid' | 'broken' | 'unreachable';
+export type ServeProbe = 'serving' | 'alive_paid' | 'broken' | 'unreachable';
 
 export interface IndexerStatusResult {
   indexerId: string;
@@ -280,33 +284,94 @@ export function classifyServeResponse(
   return 'broken';
 }
 
+// A receipt/escrow rejection means OUR payment didn't go through — it says
+// nothing about whether the deployment serves, so it's inconclusive (we fall
+// back to the receipt-less reading: the gate is up).
+const PAYMENT_REJECT =
+  /no\s*tap\s*receipt|receipt\s*was\s*(not\s*)?found|escrow|insufficient\s*(escrow|funds|balance)|receipt.*(invalid|expired|missing|reject)|payment\s*required/i;
+
 /**
- * Probe an indexer's paid query path for a deployment, without a receipt.
- * SSRF-guarded (resolves DNS, rejects private targets — fail closed).
- * Returns a single-probe classification; the "non-serving" verdict requires
- * persistence (N consecutive broken), applied by the caller (RFC-006 D2/D5).
+ * Pure classifier for a PAID (receipt-bearing) probe response:
+ *  - serving          — 2xx JSON with `data` and no GraphQL errors: confirmed.
+ *  - payment_unfunded — our receipt/escrow was rejected: inconclusive.
+ *  - broken           — a deployment/query error past the gate (BadResponse, 5xx,
+ *                       null data / errors, HTML): the iExec mode.
+ */
+export function classifyPaidResponse(
+  status: number,
+  contentType: string,
+  body: string,
+): 'serving' | 'payment_unfunded' | 'broken' {
+  if (status === 402 || PAYMENT_REJECT.test(body)) return 'payment_unfunded';
+
+  const looksHtml = /^\s*</.test(body) || contentType.toLowerCase().includes('text/html');
+  if (status >= 200 && status < 300 && !looksHtml) {
+    try {
+      const j = JSON.parse(body) as { data?: unknown; errors?: unknown[] };
+      const hasErrors = Array.isArray(j.errors) && j.errors.length > 0;
+      if (j.data != null && !hasErrors) return 'serving';
+      return 'broken';
+    } catch {
+      return 'broken';
+    }
+  }
+  return 'broken';
+}
+
+/**
+ * Probe an indexer's paid query path for a deployment. When an indexer address
+ * is given and a TAP signer is configured, sends a signed 1-wei receipt to get
+ * PAST the payment gate — the only way to see deployment-level failures (the
+ * iExec mode). Where escrow isn't funded the receipt is rejected (402) and we
+ * fall back to the receipt-less reading. SSRF-guarded (fail closed).
+ *
+ * Single-probe classification; the "non-serving" verdict requires persistence
+ * (N consecutive broken), applied by the caller (RFC-006 D2/D5).
  */
 export async function probeServing(
   indexerUrl: string,
   ipfsHash: string,
-  timeoutMs = 4000,
+  indexerAddress?: string,
+  timeoutMs = 5000,
 ): Promise<ServeProbe> {
   const base = indexerUrl?.replace(/\/+$/, '');
   if (!base || !(await isSafeUrlResolved(base))) return 'unreachable';
 
   const url = `${base}/subgraphs/id/${ipfsHash}`;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  let paid = false;
+  if (indexerAddress && hasTapSigner()) {
+    try {
+      const receipt = await signTapReceipt(indexerAddress);
+      if (receipt) {
+        headers['TAP-Receipt'] = receipt;
+        paid = true;
+      }
+    } catch {
+      /* signing failed — fall back to a receipt-less probe */
+    }
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ query: '{ _meta { block { number } } }' }),
       signal: controller.signal,
     });
+    const ct = res.headers.get('content-type') ?? '';
     const body = await res.text();
-    return classifyServeResponse(res.status, res.headers.get('content-type') ?? '', body);
+
+    if (paid) {
+      const v = classifyPaidResponse(res.status, ct, body);
+      if (v === 'serving') return 'serving';
+      if (v === 'broken') return 'broken';
+      // payment_unfunded — gate is up, we just couldn't pay: unverified-but-alive.
+      return 'alive_paid';
+    }
+    return classifyServeResponse(res.status, ct, body);
   } catch {
     // Refused / reset / timeout — DNS failures were already caught by the guard.
     return 'broken';
@@ -315,7 +380,7 @@ export async function probeServing(
   }
 }
 
-/** Fold a probe into an existing status result. */
+/** Fold a probe into an existing status result. `serving` and `alive_paid` both count as servable. */
 export function withServeProbe(result: IndexerStatusResult, probe: ServeProbe): IndexerStatusResult {
-  return { ...result, serveProbe: probe, servable: probe === 'alive_paid' };
+  return { ...result, serveProbe: probe, servable: probe === 'serving' || probe === 'alive_paid' };
 }
