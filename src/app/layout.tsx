@@ -9,6 +9,7 @@ import { IntelFeed } from '@/components/layout/IntelFeed';
 import { Footer } from '@/components/layout/Footer';
 import { StarPrompt } from '@/components/StarPrompt';
 import { CampBanner } from '@/components/CampBanner';
+import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
@@ -34,12 +35,20 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: 'cover',
+  themeColor: '#141034',
 };
 
 export const metadata: Metadata = {
   title: 'Lodestar | The Graph Protocol Analytics',
   description: 'Stay oriented. Staking analytics, indexer intelligence, and portfolio tracking for The Graph Protocol.',
   metadataBase: new URL('https://lodestar-dashboard.com'),
+  applicationName: 'Lodestar',
+  appleWebApp: {
+    capable: true,
+    title: 'Lodestar',
+    statusBarStyle: 'black-translucent',
+  },
+  formatDetection: { telephone: false },
   openGraph: {
     title: 'Lodestar — Stay oriented.',
     description: 'Analytics dashboard for The Graph Protocol ecosystem.',
@@ -85,6 +94,7 @@ export default function RootLayout({
         </Providers>
         <Analytics />
         <SpeedInsights />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
