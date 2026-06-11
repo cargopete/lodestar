@@ -5,14 +5,18 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/Badge';
+import { formatGRT } from '@/lib/utils';
 import type {
   DataSourceReport,
   DisassemblyReport,
   FlagLevel,
   HandlerAnalysis,
   HostCategory,
+  SignalContext,
+  SignalExposure,
 } from '@/lib/disassembly/types';
 import type { DisassemblyDiff, HandlerDiffEntry, HandlerStatus } from '@/lib/disassembly/diff';
+import { riskPriority, worstFlagLevel, type RiskPriority } from '@/lib/disassembly/signal';
 
 const CATEGORY_META: Record<HostCategory, { label: string; variant: 'default' | 'accent' | 'success' | 'warning' | 'error' }> = {
   store: { label: 'store', variant: 'default' },
@@ -41,6 +45,22 @@ const GRADE_COLOR: Record<string, string> = {
   C: 'var(--amber)',
   D: 'var(--red)',
   F: 'var(--red)',
+};
+
+const FLAG_RANK: Record<FlagLevel, number> = { critical: 0, warn: 1, info: 2 };
+
+const PRIORITY_META: Record<RiskPriority, { label: string; variant: 'default' | 'success' | 'warning' | 'error'; color: string }> = {
+  low: { label: 'Low priority', variant: 'success', color: 'var(--green)' },
+  medium: { label: 'Medium priority', variant: 'warning', color: 'var(--amber)' },
+  high: { label: 'High priority', variant: 'error', color: 'var(--red)' },
+  critical: { label: 'Critical priority', variant: 'error', color: 'var(--red)' },
+};
+
+const EXPOSURE_LABEL: Record<SignalExposure, string> = {
+  none: 'no signal',
+  low: 'low exposure',
+  medium: 'medium exposure',
+  high: 'high exposure',
 };
 
 // The Graph's own GNS / network subgraph — 6 data sources, reads IPFS metadata.
@@ -269,13 +289,14 @@ function ComparePanel() {
         </Card>
       )}
 
-      {data && <DiffReport diff={data.diff} />}
+      {data && <DiffReport diff={data.diff} baseSignal={data.base.signal} targetSignal={data.target.signal} />}
     </>
   );
 }
 
 function Report({ report }: { report: DisassemblyReport }) {
-  const { scorecard, manifest, totals, dataSources, caveats } = report;
+  const { scorecard, manifest, totals, dataSources, caveats, signal } = report;
+  const sortedFlags = [...scorecard.flags].sort((a, b) => FLAG_RANK[a.level] - FLAG_RANK[b.level]);
 
   return (
     <div className="space-y-6">
@@ -300,9 +321,9 @@ function Report({ report }: { report: DisassemblyReport }) {
                 </div>
               ))}
             </div>
-            {scorecard.flags.length > 0 ? (
+            {sortedFlags.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
-                {scorecard.flags.map((f, i) => (
+                {sortedFlags.map((f, i) => (
                   <Badge key={i} variant={FLAG_VARIANT[f.level]} title={f.detail}>{f.title}</Badge>
                 ))}
               </div>
@@ -312,6 +333,9 @@ function Report({ report }: { report: DisassemblyReport }) {
           </div>
         </div>
       </Card>
+
+      {/* Signal-weighted exposure (Phase 1.5b) */}
+      <SignalExposureCard signal={signal} flagLevels={scorecard.flags.map((f) => f.level)} flagCount={scorecard.flags.filter((f) => f.level !== 'info').length} />
 
       {/* Totals */}
       <StatGrid>
@@ -352,6 +376,60 @@ function Report({ report }: { report: DisassemblyReport }) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function SignalExposureCard({
+  signal,
+  flagLevels,
+  flagCount,
+}: {
+  signal: SignalContext | null | undefined;
+  flagLevels: FlagLevel[];
+  flagCount: number;
+}) {
+  if (signal === null || signal === undefined) {
+    return (
+      <Card>
+        <CardContent className="py-2">
+          <p className="text-[12px] text-[var(--text-faint)]">
+            Curation signal unavailable — risk flags can&apos;t be weighted by stake right now.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const priority = riskPriority(worstFlagLevel(flagLevels), signal.exposure);
+  const pm = PRIORITY_META[priority];
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle>Signal-weighted exposure</CardTitle>
+          <Badge variant={pm.variant} title={`worst flag × ${EXPOSURE_LABEL[signal.exposure]}`}>{pm.label}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <StatGrid>
+          <StatCard
+            label="Signalled"
+            value={`${formatGRT(signal.signalledGRT)} GRT`}
+            subtitle={`${signal.curatorCount}${signal.curatorCountCapped ? '+' : ''} curator(s) · ${EXPOSURE_LABEL[signal.exposure]}`}
+          />
+          <StatCard label="Query Fees" value={`${formatGRT(signal.queryFeesGRT)} GRT`} subtitle="cumulative on deployment" />
+          <StatCard label="Risk Flags" value={String(flagCount)} subtitle="warn + critical" />
+        </StatGrid>
+        {flagCount > 0 && signal.signalledGRT > 0 ? (
+          <p className="text-[12px] mt-3" style={{ color: pm.color }}>
+            {formatGRT(signal.signalledGRT)} GRT signalled is exposed to {flagCount} risk flag{flagCount === 1 ? '' : 's'}.
+          </p>
+        ) : flagCount === 0 ? (
+          <p className="text-[12px] text-[var(--green)] mt-3">No warn/critical flags — nothing at stake here regardless of signal.</p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -482,7 +560,15 @@ const HANDLER_STATUS_META: Record<HandlerStatus, { label: string; color: string;
   unchanged: { label: 'unchanged', color: 'var(--text-faint)', symbol: '=' },
 };
 
-function DiffReport({ diff }: { diff: DisassemblyDiff }) {
+function DiffReport({
+  diff,
+  baseSignal,
+  targetSignal,
+}: {
+  diff: DisassemblyDiff;
+  baseSignal?: SignalContext | null;
+  targetSignal?: SignalContext | null;
+}) {
   const { scorecard, manifest, summary, hostSurface, handlers, dataSources, strings } = diff;
   const riskUp = scorecard.riskDelta > 0;
   const riskColor = scorecard.riskDelta === 0 ? 'var(--text-muted)' : riskUp ? 'var(--red)' : 'var(--green)';
@@ -558,6 +644,14 @@ function DiffReport({ diff }: { diff: DisassemblyDiff }) {
             to={manifest.graftTo ? `${short(manifest.graftTo.base)} @ ${manifest.graftTo.block.toLocaleString()}` : 'none'}
             changed={JSON.stringify(manifest.graftFrom) !== JSON.stringify(manifest.graftTo)}
           />
+          {(baseSignal || targetSignal) && (
+            <DiffRow
+              label="Signalled GRT"
+              from={baseSignal ? `${formatGRT(baseSignal.signalledGRT)} GRT` : '—'}
+              to={targetSignal ? `${formatGRT(targetSignal.signalledGRT)} GRT` : '—'}
+              changed={(baseSignal?.signalledGRT ?? -1) !== (targetSignal?.signalledGRT ?? -1)}
+            />
+          )}
           <div className="sm:col-span-2 flex flex-wrap items-center gap-1.5 pt-1">
             <span className="text-[var(--text-muted)] text-[12px] mr-1">Host APIs:</span>
             {hostSurface.added.length === 0 && hostSurface.removed.length === 0 && (

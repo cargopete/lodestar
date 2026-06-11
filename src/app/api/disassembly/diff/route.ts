@@ -2,16 +2,22 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { runDisassembly } from '@/lib/disassembly';
 import { diffReports } from '@/lib/disassembly/diff';
+import { fetchDeploymentSignal } from '@/lib/disassembly/signal';
 import { IPFS_HASH_RE } from '@/lib/disassembly/ipfs';
 import { log } from '@/lib/logger';
 
 // Deployments are immutable, so the underlying reports cache hard. We reuse the
-// exact same cache key as the single-report route so a report viewed there is
-// reused here (and vice versa).
+// exact same cache keys as the single-report route so a report (and its signal)
+// viewed there is reused here (and vice versa).
 const TTL = 7 * 24 * 60 * 60; // 7 days
+const SIGNAL_TTL = 300; // 5 min — curation signal is dynamic
 
 function report(id: string) {
   return cached(`lodestar:disasm:v1:${id}`, TTL, () => runDisassembly(id));
+}
+
+function signal(id: string) {
+  return cached(`lodestar:disasm-signal:${id}`, SIGNAL_TTL, () => fetchDeploymentSignal(id));
 }
 
 export async function GET(request: NextRequest) {
@@ -32,11 +38,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [base, target] = await Promise.all([report(a), report(b)]);
+    const [baseReport, targetReport, sigA, sigB] = await Promise.all([
+      report(a), report(b), signal(a), signal(b),
+    ]);
+    const base = { ...baseReport, signal: sigA };
+    const target = { ...targetReport, signal: sigB };
     const diff = diffReports(base, target);
     return NextResponse.json(
       { data: { diff, base, target } },
-      { headers: { 'Cache-Control': `public, s-maxage=${TTL}, stale-while-revalidate=${TTL * 2}` } },
+      { headers: { 'Cache-Control': `public, s-maxage=${SIGNAL_TTL}, stale-while-revalidate=${TTL}` } },
     );
   } catch (error) {
     log.api.error({ err: error, a, b }, 'Subgraph disassembly diff error');
