@@ -120,6 +120,23 @@ export interface Scorecard {
   categories: CategoryScore[];
 }
 
+/** How much GRT rides on a deployment — context for weighting its risk flags. */
+export type SignalExposure = 'none' | 'low' | 'medium' | 'high';
+
+export interface SignalContext {
+  /** raw wei from the network subgraph */
+  signalledTokens: string;
+  queryFeesAmount: string;
+  /** human GRT */
+  signalledGRT: number;
+  queryFeesGRT: number;
+  /** active curators (capped — see curatorCountCapped) */
+  curatorCount: number;
+  curatorCountCapped: boolean;
+  /** bucket derived from signalledGRT */
+  exposure: SignalExposure;
+}
+
 export interface DisassemblyReport {
   deploymentId: string;
   manifest: DeployManifestInfo;
@@ -133,5 +150,10 @@ export interface DisassemblyReport {
     wasmBytes: number;
     hostCategories: HostCategory[];
   };
+  /**
+   * Current curation signal, attached at the route layer (NOT by runDisassembly,
+   * which stays pure/immutable-cacheable). null when the gateway is unavailable.
+   */
+  signal?: SignalContext | null;
   caveats: string[];
 }
