@@ -2,6 +2,28 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.18.0] — 2026-06-11
+
+Servability & network integrity (RFC-006, first deltas): the dashboard now measures
+whether the *paid query path* actually answers — not just whether an indexer is syncing.
+
+### Added
+- **Live serving probe + "effectively dead" verdict** — a subgraph's indexing health now
+  reflects whether queries can actually be served, not just sync state. The subgraph page
+  shows a clear warning — *"all allocated stake belongs to operators with no working serving
+  path; queries will fail despite reported sync"* — when no allocated indexer can serve,
+  catching the case where every indexer reports 100% synced yet the deployment is dead. A
+  fragility warning also flags deployments whose serving stake sits with a single operator.
+- **Split-invariant served-gap** feeding the indexer risk score — measures how much of the
+  query volume an indexer's allocation implies it should serve versus what it actually serves.
+  Replaces the old raw-fee "query volume" signal, so the score no longer rewards a
+  high-volume leech.
+
+### Internal
+- Receipt-less and paid (TAP-receipt) serving probes, SSRF-guarded; pure, unit-tested
+  classifiers and verdict logic. Foundation for the starved-subgraph feed and serving-collapse
+  owner alerts (RFC-006 D5/D6).
+
 ## [4.17.0] — 2026-06-11
 
 Subgraph Disassembly gets a much friendlier front door and a one-click verify.
