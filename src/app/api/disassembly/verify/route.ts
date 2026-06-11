@@ -41,6 +41,10 @@ export async function POST(request: NextRequest) {
     typeof body?.manifestPath === 'string' && body.manifestPath.length <= 200 && !body.manifestPath.includes('..')
       ? body.manifestPath
       : undefined;
+  const prepareCommand =
+    typeof body?.prepareCommand === 'string' && body.prepareCommand.length <= 500
+      ? body.prepareCommand
+      : undefined;
 
   if (!deploymentId || !IPFS_HASH_RE.test(deploymentId)) {
     return NextResponse.json({ error: 'Invalid deployment ID (expected a CIDv0 Qm… hash)' }, { status: 400 });
@@ -63,7 +67,7 @@ export async function POST(request: NextRequest) {
     const report = await cached(`lodestar:disasm:v1:${deploymentId}`, TTL, () => runDisassembly(deploymentId));
 
     // Build the source in a disposable sandbox.
-    const build = await buildSubgraphInSandbox({ repoUrl, ref, manifestPath });
+    const build = await buildSubgraphInSandbox({ repoUrl, ref, manifestPath, prepareCommand });
     if (!build.ok) {
       return NextResponse.json({
         data: {

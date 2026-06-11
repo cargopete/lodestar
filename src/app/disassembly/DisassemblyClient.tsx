@@ -390,6 +390,7 @@ function VerifyPanel({ initialId }: { initialId?: string }) {
   const [repoUrl, setRepoUrl] = useState('');
   const [ref, setRef] = useState('');
   const [manifestPath, setManifestPath] = useState('');
+  const [prepareCommand, setPrepareCommand] = useState('');
 
   const { mutate, data, error, isPending } = useMutation<VerifyData, Error>({
     mutationFn: async () => {
@@ -401,6 +402,7 @@ function VerifyPanel({ initialId }: { initialId?: string }) {
           repoUrl: repoUrl.trim(),
           ref: ref.trim() || undefined,
           manifestPath: manifestPath.trim() || undefined,
+          prepareCommand: prepareCommand.trim() || undefined,
         }),
       });
       const json: VerifyApiResponse = await r.json();
@@ -426,6 +428,7 @@ function VerifyPanel({ initialId }: { initialId?: string }) {
           <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Ref — branch / tag / commit (optional)" spellCheck={false} className={inputCls} />
           <input value={manifestPath} onChange={(e) => setManifestPath(e.target.value)} placeholder="Manifest path (default subgraph.yaml)" spellCheck={false} className={inputCls} />
         </div>
+        <input value={prepareCommand} onChange={(e) => setPrepareCommand(e.target.value)} placeholder="Prepare command (advanced — e.g. yarn prepare:mainnet)" spellCheck={false} className={`w-full ${inputCls}`} />
         <button
           type="submit"
           className="px-4 py-2 rounded-[var(--radius-button)] bg-[var(--accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
@@ -435,7 +438,8 @@ function VerifyPanel({ initialId }: { initialId?: string }) {
         </button>
         <p className="text-[11px] text-[var(--text-faint)]">
           Clones and builds the source in an ephemeral sandbox, then compares the produced WASM against the deployed
-          artifact. Public github.com / gitlab.com / bitbucket.org repos only.
+          artifact. Templated manifests are auto-generated via the repo&apos;s prepare script; for bespoke pipelines,
+          set a custom prepare command. Public github.com / gitlab.com / bitbucket.org repos only.
         </p>
       </form>
 
