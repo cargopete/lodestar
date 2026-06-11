@@ -14,9 +14,18 @@ import {
   CAVEATS,
 } from '@/lib/grt-flow-data';
 
+interface SupplyBreakdown {
+  l1TotalSupply: number;
+  l2TotalSupply: number;
+  bridgeEscrow: number;
+  globalSupply: number;
+}
 interface FlowData {
   blockNumber: number | null;
   supply: number;
+  globalSupply: number;
+  supplyBasis: 'onchain' | 'approx';
+  supplyBreakdown: SupplyBreakdown | null;
   minted: number;
   burned: number;
   indexingRewards: number;
@@ -119,8 +128,20 @@ export default function GrtFlowPage() {
       )}
 
       <StatGrid>
-        <StatCard label="L2 Net Supply" value={fmt(d?.supply)} subtitle="Arbitrum mint − burn" loading={isLoading} tooltip="The network subgraph's totalSupply: GRT minted minus burned on Arbitrum (net tokens present on L2). This is NOT the global token supply — external sources cite ~11.5B circulating." />
-        <StatCard label="Annual Issuance" value={d ? `${d.issuanceRatePct.toFixed(2)}%` : '—'} subtitle={d ? `${formatGRT(d.annualIssuance)} GRT/yr` : undefined} loading={isLoading} tag="live" tooltip="Per-block issuance annualised over L2 net supply, consistent with the rest of the dashboard. Against the ~11.5B global circulating supply the equivalent rate is ~2.8% (see issuance-rate note)." />
+        <StatCard
+          label="Global GRT Supply"
+          value={fmt(d?.globalSupply)}
+          subtitle="L1 + L2 − bridge escrow"
+          loading={isLoading}
+          tag={d?.supplyBasis === 'onchain' ? 'live' : undefined}
+          tooltip={
+            d?.supplyBreakdown
+              ? `Total GRT across both chains, on-chain and de-double-counted: L1 GraphToken ${formatGRT(d.supplyBreakdown.l1TotalSupply)} + L2GraphToken ${formatGRT(d.supplyBreakdown.l2TotalSupply)} − bridge escrow ${formatGRT(d.supplyBreakdown.bridgeEscrow)} (locked on L1, also minted on L2, so subtracted to avoid double-counting). Matches Graph Explorer's ~11.5B on-chain supply.`
+              : 'Total GRT across Ethereum L1 and Arbitrum L2, de-double-counted for the bridge escrow. On-chain reads were unavailable, so this is the ~11.5B circulating-supply approximation.'
+          }
+        />
+        <StatCard label="Annual Issuance" value={d ? `${d.issuanceRatePct.toFixed(2)}%` : '—'} subtitle={d ? `${formatGRT(d.annualIssuance)} GRT/yr` : undefined} loading={isLoading} tag="live" tooltip="Per-block protocol issuance annualised over the global GRT supply (L1 + L2 − bridge escrow). This is the basis Messari / Graph Explorer use, so it is directly comparable to the ~2.8% they report." />
+        <StatCard label="L2 Net Supply" value={fmt(d?.supply)} subtitle="Arbitrum mint − burn" loading={isLoading} tooltip="The network subgraph's totalSupply: GRT minted minus burned on Arbitrum (net tokens present on L2). A subset of global supply, shown here as the L2 footprint — NOT the issuance denominator." />
         <StatCard label="Issuance / Block" value={d ? d.issuancePerBlock.toFixed(2) : '—'} subtitle="GRT, linear (GIP-0037)" loading={isLoading} />
         <StatCard label="Cumulative Indexing Rewards" value={fmt(d?.indexingRewards)} subtitle="lifetime issued to indexers + delegators" loading={isLoading} />
         <StatCard label="Cumulative Query Fees" value={fmt(d?.queryFees)} subtitle="GRT collected" loading={isLoading} />
@@ -169,15 +190,23 @@ export default function GrtFlowPage() {
         <Card>
           <CardContent className="py-5">
             <h2 className="text-sm font-semibold text-[var(--text)] mb-3">Supply Composition</h2>
-            <div className="space-y-2.5">
-              <Bar label="Genesis (Ethereum L1, 2020)" value={GENESIS_SUPPLY} max={GENESIS_SUPPLY} color="var(--accent)" />
-              <Bar label="L2 net supply (mint − burn)" value={d?.supply ?? 0} max={GENESIS_SUPPLY} color="var(--green)" />
-              <Bar label="Cumulative indexing rewards" value={d?.indexingRewards ?? 0} max={GENESIS_SUPPLY} color="var(--amber)" />
-            </div>
+            {(() => {
+              const b = d?.supplyBreakdown;
+              const max = d?.globalSupply || GENESIS_SUPPLY;
+              return (
+                <div className="space-y-2.5">
+                  <Bar label="Global supply (L1 + L2 − escrow)" value={d?.globalSupply ?? 0} max={max} color="var(--accent)" />
+                  <Bar label="L1 GraphToken total (incl. escrow)" value={b?.l1TotalSupply ?? 0} max={max} color="var(--green)" />
+                  <Bar label="L2GraphToken total" value={b?.l2TotalSupply ?? d?.supply ?? 0} max={max} color="var(--green)" />
+                  <Bar label="Bridge escrow (locked on L1)" value={b?.bridgeEscrow ?? 0} max={max} color="var(--text-faint)" />
+                </div>
+              );
+            })()}
             <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
-              Genesis is a fixed 10B mint on Ethereum L1. L2 net supply is the GRT minted minus burned on
-              Arbitrum — not the global token supply (~11.5B circulating). Cumulative indexing rewards is the
-              all-time GRT issued to indexers and delegators.
+              Global supply is the L1 GraphToken total plus the L2GraphToken total minus the GRT locked in the L1
+              bridge escrow — the escrow backs the bridged L2 tokens, so it is subtracted to avoid double-counting.
+              Genesis was a fixed {formatGRT(GENESIS_SUPPLY)} mint on Ethereum L1 (2020); the rest is net protocol
+              issuance since.
             </p>
           </CardContent>
         </Card>
@@ -227,9 +256,10 @@ export default function GrtFlowPage() {
             ))}
           </div>
           <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
-            These use the global circulating supply as denominator. The live <strong className="text-[var(--text-muted)]">{d ? `${d.issuanceRatePct.toFixed(2)}%` : '—'}</strong> stat
-            above is computed against the subgraph&apos;s L2 net supply, so the percentages aren&apos;t directly comparable
-            — same numerator ({d ? `${formatGRT(d.annualIssuance)} GRT/yr` : '~317M GRT/yr'}), different denominators.
+            These use the global circulating supply as denominator — the same basis as the live{' '}
+            <strong className="text-[var(--text-muted)]">{d ? `${d.issuanceRatePct.toFixed(2)}%` : '—'}</strong> stat
+            above ({d ? `${formatGRT(d.annualIssuance)} GRT/yr` : '~317M GRT/yr'} over ~11.5B global supply), so the
+            figures are directly comparable.
           </p>
         </CardContent>
       </Card>
@@ -328,9 +358,9 @@ export default function GrtFlowPage() {
 
       <p className="text-[11px] text-[var(--text-faint)] leading-relaxed max-w-3xl">
         Live aggregates from the graph-network-arbitrum GraphNetwork entity, cached 30 minutes. Issuance rate is
-        derived as per-block issuance × L1-equivalent blocks/yr ÷ L2 net supply (shared dashboard convention).
-        Reference contracts, timeline and GIPs are static; verify Horizon payment-contract names on Arbiscan
-        before relying on them.
+        derived as per-block issuance × L1-equivalent blocks/yr ÷ global GRT supply, where global supply is read
+        on-chain as L1 + L2 totalSupply minus the bridge-escrow balance. Reference contracts, timeline and GIPs are
+        static; verify Horizon payment-contract names on Arbiscan before relying on them.
       </p>
     </div>
   );

@@ -112,6 +112,36 @@ export async function fetchTotalSupply(
   }
 }
 
+/**
+ * On-chain ERC-20 `balanceOf(holder)` reader, decimal-adjusted to whole tokens.
+ * Reuses the same batched/fallback client as {@link fetchTotalSupply}. Used to
+ * read the L1 BridgeEscrow's GRT balance for de-double-counting global supply.
+ * Not cached — balances move far more often than total supply.
+ */
+export async function fetchErc20Balance(
+  chain: ChainKey,
+  contract: string,
+  holder: string,
+  decimals = 18
+): Promise<number | null> {
+  const client = clientFor(chain);
+  try {
+    const raw = await client.readContract({
+      address: contract as `0x${string}`,
+      abi: erc20Abi,
+      functionName: 'balanceOf',
+      args: [holder as `0x${string}`],
+    });
+    const divisor = parseUnits('1', decimals);
+    const whole = raw / divisor;
+    const frac = Number(raw % divisor) / Number(divisor);
+    const total = Number(whole) + frac;
+    return Number.isFinite(total) && total >= 0 ? total : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchTotalSupplies(
   items: Array<{ chain: ChainKey; contract: string; decimals?: number }>
 ): Promise<Map<string, number>> {

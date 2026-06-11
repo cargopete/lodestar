@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { NetworkStatsResponse } from '@/lib/queries';
+import { fetchGrtSupplyBreakdown } from '@/lib/grt-supply';
 import { log } from '@/lib/logger';
 
 const QUERY = `{
@@ -45,9 +46,15 @@ export async function GET() {
   }
 
   try {
-    const data = await cached('lodestar:network-stats', 300, () =>
-      subgraphQuery<NetworkStatsResponse>(QUERY)
-    );
+    const data = await cached('lodestar:network-stats', 300, async () => {
+      const [stats, grtSupply] = await Promise.all([
+        subgraphQuery<NetworkStatsResponse>(QUERY),
+        fetchGrtSupplyBreakdown(),
+      ]);
+      // grtSupply carries the de-double-counted global GRT supply (L1 + L2 − bridge escrow ≈ 11.5B),
+      // the correct denominator for issuance. null if the on-chain reads were unavailable.
+      return { ...stats, grtSupply };
+    });
 
     return NextResponse.json({ data }, {
       headers: {

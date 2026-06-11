@@ -483,6 +483,13 @@ export interface Indexer {
   provisionedTokens?: string;
 }
 
+export interface GrtSupplyBreakdown {
+  l1TotalSupply: number;
+  l2TotalSupply: number;
+  bridgeEscrow: number;
+  globalSupply: number;
+}
+
 export interface NetworkStatsResponse {
   graphNetwork: GraphNetwork;
   _meta?: {
@@ -490,6 +497,8 @@ export interface NetworkStatsResponse {
       number: number;
     };
   };
+  /** De-double-counted global GRT supply (L1 + L2 − bridge escrow), read on-chain. null if unavailable. */
+  grtSupply?: GrtSupplyBreakdown | null;
 }
 
 export interface EpochHistoryResponse {

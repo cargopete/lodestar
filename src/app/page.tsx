@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useNetworkStats, useGRTPrice, useTVL, useEpochInfo, useEpochHistory, useSubgraphDeployments30d } from '@/hooks/useNetworkStats';
 import { EpochTable } from '@/components/EpochTable';
 import { annualIssuancePercent } from '@/lib/network-math';
+import { CIRCULATING_SUPPLY_APPROX } from '@/lib/grt-flow-data';
 import { weiToGRT, formatGRT, formatUSD, formatNumber, formatPPM } from '@/lib/utils';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
@@ -33,9 +34,12 @@ export default function ProtocolOverview() {
   const totalSignalled = network ? weiToGRT(network.totalTokensSignalled) : 0;
   const totalAllocated = network ? weiToGRT(network.totalTokensAllocated) : 0;
   const totalQueryFees = network ? weiToGRT(network.totalQueryFees) : 0;
-  const totalSupply = network?.totalSupply ? weiToGRT(network.totalSupply) : 0;
+  // Global GRT supply (L1 + L2 − bridge escrow ≈ 11.5B), read on-chain — the correct denominator for
+  // issuance. The subgraph's totalSupply is L2-only (~3.6B) and overstates the rate ~3×, so it is not used
+  // here. Fall back to the static circulating-supply approximation if the on-chain reads were unavailable.
+  const globalSupply = networkData?.grtSupply?.globalSupply ?? (network ? CIRCULATING_SUPPLY_APPROX : 0);
   const issuancePerBlockGrt = network?.networkGRTIssuancePerBlock ? weiToGRT(network.networkGRTIssuancePerBlock) : 0;
-  const issuancePct = totalSupply > 0 && issuancePerBlockGrt > 0 ? annualIssuancePercent(issuancePerBlockGrt, totalSupply) : null;
+  const issuancePct = globalSupply > 0 && issuancePerBlockGrt > 0 ? annualIssuancePercent(issuancePerBlockGrt, globalSupply) : null;
 
   const { epoch: actualEpoch, progress: epochProgress, epochLength } = useEpochInfo();
   const { data: epochHistory } = useEpochHistory(20);
@@ -101,7 +105,8 @@ export default function ProtocolOverview() {
         />
         <StatCard
           label="Total Supply"
-          value={networkLoading || totalSupply === 0 ? '—' : `${formatGRT(totalSupply)} GRT`}
+          value={networkLoading || globalSupply === 0 ? '—' : `${formatGRT(globalSupply)} GRT`}
+          subtitle="L1 + L2 − bridge escrow"
           loading={networkLoading}
         />
         <StatCard

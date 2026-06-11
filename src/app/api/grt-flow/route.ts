@@ -3,6 +3,8 @@ import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT, ppmToPercent } from '@/lib/utils';
 import { annualIssuancePercent, L1_BLOCKS_PER_YEAR } from '@/lib/network-math';
+import { fetchGrtSupplyBreakdown } from '@/lib/grt-supply';
+import { CIRCULATING_SUPPLY_APPROX } from '@/lib/grt-flow-data';
 import { log } from '@/lib/logger';
 
 // GraphNetwork singleton on graph-network-arbitrum — the authoritative aggregate.
@@ -70,21 +72,31 @@ export async function GET() {
 
   try {
     const data = await cached('lodestar:grt-flow:aggregates', 1800, async () => {
-      const resp = await subgraphQuery<RawResp>(GRT_FLOW_QUERY);
+      const [resp, supplyBreakdown] = await Promise.all([
+        subgraphQuery<RawResp>(GRT_FLOW_QUERY),
+        fetchGrtSupplyBreakdown(),
+      ]);
       const n = resp.graphNetwork;
       if (!n) throw new Error('graphNetwork entity missing');
 
-      // NB: the network subgraph's totalSupply tracks L2 net mint−burn (~3.6B), NOT the global
-      // ~11.5B circulating supply external sources cite. We use it for consistency with the rest
-      // of the dashboard (home page uses the same basis); the page labels it accordingly.
+      // The network subgraph's totalSupply tracks L2 net mint−burn (~3.6B) only — useful as an L2
+      // footprint, but NOT the denominator for issuance. The honest rate is per-block issuance over
+      // the *global* supply (L1 + L2 − bridge escrow ≈ 11.5B), read on-chain. If those reads fail we
+      // fall back to the static circulating-supply approximation — never to the L2-only basis, which
+      // overstates the rate ~3× (the 8.6% confusion).
       const supply = grt(n.totalSupply);
+      const globalSupply = supplyBreakdown?.globalSupply ?? CIRCULATING_SUPPLY_APPROX;
+      const supplyBasis: 'onchain' | 'approx' = supplyBreakdown ? 'onchain' : 'approx';
       const issuancePerBlock = grt(n.networkGRTIssuancePerBlock);
       const annualIssuance = issuancePerBlock * L1_BLOCKS_PER_YEAR;
-      const issuanceRatePct = annualIssuancePercent(issuancePerBlock, supply);
+      const issuanceRatePct = annualIssuancePercent(issuancePerBlock, globalSupply);
 
       return {
         blockNumber: resp._meta?.block?.number ?? null,
         supply,
+        globalSupply,
+        supplyBasis,
+        supplyBreakdown,
         minted: grt(n.totalGRTMinted),
         burned: grt(n.totalGRTBurned),
         indexingRewards: grt(n.totalIndexingRewards),
