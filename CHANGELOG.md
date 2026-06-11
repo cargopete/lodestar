@@ -2,6 +2,22 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.17.0] — 2026-06-11
+
+Subgraph Disassembly gets a much friendlier front door and a one-click verify.
+
+### Added
+- **Searchable subgraph picker** — type a subgraph name and pick it from a dropdown (ranked by
+  signal) instead of hunting for and pasting a `Qm…` deployment hash. Pasting a hash still works.
+- **Auto-resolved source repo** — when a subgraph records its `codeRepository` on-chain, the
+  "Verify against source" box now pre-fills the repo URL automatically (green "repo auto-resolved"
+  badge), turning verification into nearly one click.
+
+### Changed
+- **Source verification folded into Inspect.** The standalone "Verify source" tab is gone; since the
+  deployed WASM is already fetched from the hash, verifying against a repo is now an optional
+  disclosure beneath the Inspect report rather than a separate mode.
+
 ## [4.16.0] — 2026-06-11
 
 ### Removed
