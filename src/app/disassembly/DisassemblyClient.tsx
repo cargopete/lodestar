@@ -98,6 +98,21 @@ export function DisassemblyClient({ initialId }: { initialId?: string }) {
 
   return (
     <div className="space-y-6">
+      <div
+        className="flex items-center gap-2 rounded-[var(--radius-card)] border px-3 py-2 text-[12px]"
+        style={{
+          borderColor: 'var(--amber)',
+          background: 'color-mix(in srgb, var(--amber) 10%, var(--bg-surface))',
+          color: 'var(--amber)',
+        }}
+      >
+        <span aria-hidden>⚗️</span>
+        <span>
+          <strong>Experimental.</strong> Subgraph Disassembly is under active development — results may be
+          incomplete and the feature may change.
+        </span>
+      </div>
+
       <header className="pb-2 border-b border-[var(--border)]">
         <h1 className="text-2xl font-semibold text-[var(--text)]">Subgraph Disassembly</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1 max-w-3xl">
