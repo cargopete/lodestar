@@ -2,6 +2,15 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.10.0] — 2026-06-11
+
+### Changed
+- **Renamed "Network Health" → "Indexer QoS"** across the UI: desktop sidebar + mobile bottom-nav
+  labels, the page heading (now "Indexer QoS & Integrity"), the opengraph feature pill, and the
+  QoS column tooltip in the indexer table.
+- **Route renamed** `/network-health` → `/indexer-qos`, with a permanent redirect preserving old
+  bookmarks and links. The internal `/api/network-health` endpoint is unchanged.
+
 ## [4.9.1] — 2026-06-11
 
 ### Fixed
