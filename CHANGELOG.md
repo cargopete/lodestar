@@ -2,6 +2,17 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.16.0] — 2026-06-11
+
+### Removed
+- **Horizon Live page** (`/horizon-live`) and its nav entries, the `/network` redirect, and the
+  now-orphaned `/api/network/snapshot` endpoint that only it consumed.
+
+### Changed
+- **Subgraph Disassembly** now carries an "Experimental" banner — the feature is under active
+  development and results may be incomplete or change.
+- Respect the top safe-area inset (Dynamic Island) in the topbar, sidebar, and feed.
+
 ## [4.15.1] — 2026-06-11
 
 ### Changed
