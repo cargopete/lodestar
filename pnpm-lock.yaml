@@ -17,6 +17,9 @@ importers:
       '@capacitor/ios':
         specifier: ^8.4.0
         version: 8.4.0(@capacitor/core@8.4.0)
+      '@capacitor/push-notifications':
+        specifier: ^8.1.1
+        version: 8.1.1(@capacitor/core@8.4.0)
       '@graphiql/toolkit':
         specifier: ^0.12.0
         version: 0.12.0(@types/node@20.19.41)(graphql@16.14.0)
@@ -284,6 +287,11 @@ packages:
     resolution: {integrity: sha512-tnwstEdbTJ2nHAfoAwnurXgYRscWeLY+IIGdz69o24gN2Crfj9Xc0TWo8L5uFLF1LmpbUywH1IT0U1oHV8c+CA==}
     peerDependencies:
       '@capacitor/core': ^8.4.0
+
+  '@capacitor/push-notifications@8.1.1':
+    resolution: {integrity: sha512-WqzjPKIbYbARMN+GC0XMAJcxJpUUzqgzS/Ny8RODLrro38pQhm3GXYwX2Mwd+LZlLY39rGImkCkrKyQSNfuikA==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   '@codemirror/language@6.0.0':
     resolution: {integrity: sha512-rtjk5ifyMzOna1c7PBu7J1VCt0PvA5wy3o8eMVnxMKb7z8KA7JFecvD04dSn14vj/bBaAbqRsGed5OjtofEnLA==}
@@ -6263,6 +6271,10 @@ snapshots:
       tslib: 2.8.1
 
   '@capacitor/ios@8.4.0(@capacitor/core@8.4.0)':
+    dependencies:
+      '@capacitor/core': 8.4.0
+
+  '@capacitor/push-notifications@8.1.1(@capacitor/core@8.4.0)':
     dependencies:
       '@capacitor/core': 8.4.0
 

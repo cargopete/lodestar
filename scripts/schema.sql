@@ -342,6 +342,20 @@ CREATE TABLE IF NOT EXISTS notification_log (
 
 CREATE INDEX IF NOT EXISTS idx_notification_log_notified_at ON notification_log (notified_at DESC);
 
+-- Native push device tokens (iOS APNs; room for fcm later). One row per device,
+-- bound to the wallet address that opted in (proved by an EIP-191 signature over
+-- the push-subscribe message). Many devices may map to one address.
+CREATE TABLE IF NOT EXISTS device_tokens (
+  token        TEXT PRIMARY KEY,
+  address      TEXT NOT NULL,
+  platform     TEXT NOT NULL DEFAULT 'ios',
+  is_active    BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_device_tokens_address ON device_tokens (address) WHERE is_active;
+
 -- ── Operations ────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS cron_runs (
