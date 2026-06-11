@@ -2,6 +2,14 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.11.0] — 2026-06-11
+
+### Changed
+- **Renamed "Network Live" → "Horizon Live"** across the UI: desktop sidebar + mobile bottom-nav
+  labels, the page heading, and the Data Services note that references it.
+- **Route renamed** `/network` → `/horizon-live`, with a permanent redirect preserving old
+  bookmarks and links. The internal `/api/network/snapshot` endpoint is unchanged.
+
 ## [4.10.0] — 2026-06-11
 
 ### Changed
