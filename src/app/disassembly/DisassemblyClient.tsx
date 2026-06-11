@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/Badge';
-import { formatGRT } from '@/lib/utils';
+import { formatGRT, weiToGRT } from '@/lib/utils';
 import type {
   DataSourceReport,
   DisassemblyReport,
@@ -141,6 +141,95 @@ export function DisassemblyClient({ initialId }: { initialId?: string }) {
   );
 }
 
+interface SubgraphSearchResult {
+  id: string;
+  metadata: { displayName: string; description: string | null } | null;
+  currentVersion: { subgraphDeployment: { ipfsHash: string; signalledTokens: string; stakedTokens: string } } | null;
+}
+
+const QM_HASH_RE = /^Qm[1-9A-HJ-NP-Za-km-z]{44}$/;
+
+// A searchable subgraph picker: type a name to get a dropdown of matches (by
+// signal), or paste a deployment hash directly. Selecting one disassembles it.
+function SubgraphPicker({
+  value,
+  onChange,
+  onPick,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onPick: (ipfsHash: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [debounced, setDebounced] = useState('');
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setDebounced(value.trim()), 250);
+    return () => { if (timer.current) clearTimeout(timer.current); };
+  }, [value]);
+
+  const isFullHash = QM_HASH_RE.test(value.trim());
+
+  const { data: results, isFetching } = useQuery<SubgraphSearchResult[]>({
+    queryKey: ['subgraph-search', debounced],
+    enabled: debounced.length >= 2 && !QM_HASH_RE.test(debounced),
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const r = await fetch(`/api/subgraph-search?q=${encodeURIComponent(debounced)}`);
+      const json: { data?: SubgraphSearchResult[] } = await r.json();
+      return json.data ?? [];
+    },
+  });
+
+  const hits = (results ?? []).filter((s) => s.currentVersion?.subgraphDeployment?.ipfsHash).slice(0, 12);
+  const show = open && !isFullHash && debounced.length >= 2;
+
+  return (
+    <div className="relative flex-1">
+      <input
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Search a subgraph by name, or paste a deployment ID (Qm…)"
+        spellCheck={false}
+        className="w-full px-3 py-2 rounded-[var(--radius-button)] bg-[var(--bg-surface)] border-[0.5px] border-[var(--border)] text-[var(--text)] text-sm font-mono placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--border-mid)]"
+      />
+      {show && (
+        <ul className="absolute z-20 mt-1 w-full max-h-72 overflow-auto rounded-[var(--radius-card)] border-[0.5px] border-[var(--border)] bg-[var(--bg-surface)] shadow-lg">
+          {hits.length === 0 ? (
+            <li className="px-3 py-2 text-[12px] text-[var(--text-faint)]">{isFetching ? 'Searching…' : 'No subgraphs found'}</li>
+          ) : (
+            hits.map((s) => {
+              const hash = s.currentVersion!.subgraphDeployment.ipfsHash;
+              const name = s.metadata?.displayName || 'Unnamed subgraph';
+              const signal = formatGRT(weiToGRT(s.currentVersion!.subgraphDeployment.signalledTokens || '0'));
+              return (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { onPick(hash); setOpen(false); }}
+                    className="w-full text-left px-3 py-2 hover:bg-[var(--bg-elevated)] transition-colors flex items-center justify-between gap-3"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm text-[var(--text)] truncate">{name}</span>
+                      <span className="block text-[11px] font-mono text-[var(--text-faint)] truncate">{short(hash)}</span>
+                    </span>
+                    <span className="text-[11px] text-[var(--text-muted)] shrink-0">{signal} GRT</span>
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function InspectPanel({ initialId }: { initialId?: string }) {
   const [input, setInput] = useState(initialId ?? '');
   const [target, setTarget] = useState(initialId ?? '');
@@ -176,12 +265,10 @@ function InspectPanel({ initialId }: { initialId?: string }) {
   return (
     <>
       <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2">
-        <input
+        <SubgraphPicker
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Deployment ID (Qm…)"
-          spellCheck={false}
-          className="flex-1 px-3 py-2 rounded-[var(--radius-button)] bg-[var(--bg-surface)] border-[0.5px] border-[var(--border)] text-[var(--text)] text-sm font-mono placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--border-mid)]"
+          onChange={setInput}
+          onPick={(hash) => { setInput(hash); setTarget(hash); }}
         />
         <div className="flex gap-2">
           <button
@@ -210,9 +297,10 @@ function InspectPanel({ initialId }: { initialId?: string }) {
       {!target && !error && (
         <Card>
           <p className="text-sm text-[var(--text-muted)]">
-            Paste a subgraph deployment ID (the <span className="font-mono text-[var(--text)]">Qm…</span> hash). The
-            deployment ID <em>is</em> the IPFS hash of the manifest, so the compiled mapping modules are fetched and
-            disassembled directly — no source repository required.
+            Search for a subgraph by name and pick it from the list — or paste a deployment ID (the
+            <span className="font-mono text-[var(--text)]"> Qm… </span>hash) directly. The deployment ID <em>is</em> the
+            IPFS hash of the manifest, so the compiled mapping modules are fetched and disassembled directly — no
+            source repository required.
           </p>
         </Card>
       )}
