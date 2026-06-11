@@ -224,10 +224,12 @@ CREATE TABLE IF NOT EXISTS disputes (
   tokens_slashed_grt  NUMERIC,
   tokens_burned_grt   NUMERIC,
   created_at          TIMESTAMPTZ,
-  closed_at           TIMESTAMPTZ
+  closed_at           TIMESTAMPTZ,
+  push_notified       BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE INDEX IF NOT EXISTS idx_disputes_indexer ON disputes (indexer_address);
+CREATE INDEX IF NOT EXISTS idx_disputes_unnotified ON disputes (created_at) WHERE NOT push_notified;
 
 CREATE TABLE IF NOT EXISTS parameter_changes (
   id               SERIAL PRIMARY KEY,
