@@ -2,6 +2,34 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.14.0] — 2026-06-11
+
+Subgraph Disassembly grows up: compare versions, weight risk by stake, and share a
+report as a link that unfurls. Plus native push notifications land on iOS.
+
+### Added
+- **Cross-version diff** (`/disassembly` → "Compare versions") — paste two deployment
+  IDs and see exactly what changed between versions: handlers added/removed, handlers
+  that gained or lost an `eth_call`/IPFS reach, scorecard grade and risk movement,
+  manifest/apiVersion/graft changes, and recovered-string deltas. New
+  `/api/disassembly/diff?a=…&b=…` endpoint backed by a pure, unit-tested `diffReports`.
+- **Signal-weighted risk** — the disassembly scorecard now overlays the deployment's
+  current curation signal. A new "Signal-weighted exposure" card turns *(worst flag
+  severity × GRT signalled)* into a single priority (low → critical), so a flag on a
+  heavily-signalled subgraph outranks the same flag on a near-empty one. Flags are
+  sorted by severity. Signal is fetched fresh (5-min cache) while the immutable static
+  analysis stays cached for 7 days; degrades gracefully when the gateway is unavailable.
+- **Shareable report URLs** — canonical `/disassembly/<deploymentId>` route with rich
+  OpenGraph metadata (grade, risk, host APIs, signal) and a generated 1200×630 OG card,
+  so a shared link unfurls in Discord/Slack/Twitter. A "Copy share link" button is in
+  the Inspect view; the existing `?id=` and `?a=&b=` deep-links keep working.
+- **Native push notifications (iOS)** — APNs transport + device registration and the
+  matching iOS capability, building on the Capacitor shell.
+
+### Internal
+- **RFC-005** documents the Subgraph Disassembly roadmap (Phases 1.5 / 2 / 3); the
+  entire Phase 1.5 static-enrichment tier (diff + signal + shareable URLs) is now shipped.
+
 ## [4.13.0] — 2026-06-11
 
 Lodestar goes mobile: an installable PWA and a native iOS shell, so the dashboard
