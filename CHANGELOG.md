@@ -2,6 +2,24 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.12.0] — 2026-06-11
+
+### Added
+- **Subgraph Disassembly** (`/disassembly`) — Phase 1 of a subgraph transparency tool. Paste a
+  deployment ID (Qm…) and it fetches the compiled mapping WASM + manifest straight from IPFS
+  (no build, no sandbox, no execution) and statically disassembles each module:
+  - **Per-handler host-API reachability** — builds each module's call graph and maps every handler
+    to the host imports it can reach (`store`, `ethereum.call`, `ipfs`, `json`, `crypto`, `bigInt`,
+    `bigDecimal`, `typeConversion`, `dataSource`, `log`), so you can see exactly which handlers do
+    eth_calls or touch IPFS.
+  - **Transparency scorecard** — grade + Determinism/Performance/Transparency scores and risk flags
+    (eth_call hotspots, IPFS non-determinism, fulltext, grafting, wildcard indexing, dynamic data
+    sources), grounded in real graph-node cost/failure modes.
+  - **Recovered names & strings** — handler/function names from the WASM name section and entity
+    types, event signatures and abort messages from the data segments.
+  - Graceful degradation: the WASM parser flags `incomplete` rather than silently mis-reporting when
+    it meets opcodes outside the modelled set. Nav link added under Developers (sidebar + mobile).
+
 ## [4.11.0] — 2026-06-11
 
 ### Changed
