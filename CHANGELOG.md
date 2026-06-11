@@ -2,6 +2,46 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.15.1] — 2026-06-11
+
+### Changed
+- **Source verification now handles templated manifests.** Many subgraphs don't commit
+  `subgraph.yaml` — they generate it from a mustache template via a `prepare` script. The
+  sandbox builder now detects and runs the repo's `prepare` / `prepare:<network>` scripts
+  (and enables corepack so bare `yarn`/`pnpm` resolve) before building. For bespoke
+  pipelines, an optional **prepare command** can be supplied. Build failures now list the
+  repo's available scripts to make the next step obvious. Verification now works on the
+  majority of real subgraphs, not just those with a committed manifest.
+
+## [4.15.0] — 2026-06-11
+
+Subgraph Disassembly Phase 2: prove a deployment actually corresponds to its
+public source. Build the source in an isolated sandbox and compare it to the
+deployed WASM — a trust primitive nothing else in the ecosystem offers.
+
+### Added
+- **Source-to-deployment verification** (`/disassembly` → "Verify source") — paste a
+  deployment ID and its public git repo (github / gitlab / bitbucket). We clone and
+  build the source in an **ephemeral Vercel Sandbox** (Firecracker microVM, so the
+  untrusted build runs in isolation), then compare every produced WASM module against
+  the deployed artifact:
+  - **Verified — byte-identical**: the deployed WASM is byte-for-byte the source build.
+  - **Verified — structural match**: bytes differ by build-toolchain noise, but every
+    module exposes an identical reachable host-API surface.
+  - **Diverged**: the deployed WASM can reach host APIs the source can't (or a module
+    is missing on one side) — shown as a per-module host-API delta.
+  - **Unbuildable**: the source couldn't be built; the full build log is surfaced.
+- **Build-cost guard rails** — the verify endpoint is rate-limited per IP (8/hr) and
+  globally (60/hr) with a cross-instance Redis-backed cap, plus a tighter per-instance
+  middleware limit. Builds only run for allowlisted public git hosts.
+- **Dispute notification dispatcher** — subscribed delegators are alerted via APNs when
+  a dispute affecting their indexer is opened.
+
+### Internal
+- Pure, unit-tested verdict engine (`verify.ts`) reuses the Phase 1 WASM parser for the
+  structural comparison. Completes Phase 2 of RFC-005; only the in-browser replay
+  (Phase 3) remains.
+
 ## [4.14.0] — 2026-06-11
 
 Subgraph Disassembly grows up: compare versions, weight risk by stake, and share a

@@ -19,6 +19,13 @@ export interface BuildInput {
   ref?: string;
   /** path to the subgraph manifest within the repo; defaults to subgraph.yaml */
   manifestPath?: string;
+  /**
+   * Optional shell command to generate the manifest, run in the manifest's
+   * directory before the build (e.g. "yarn prep:addresses:mainnet && yarn
+   * prepare:mainnet"). For repos whose prepare pipeline auto-detection can't
+   * infer. Runs inside the disposable sandbox like everything else.
+   */
+  prepareCommand?: string;
 }
 
 export interface BuildResult {
@@ -124,27 +131,58 @@ export async function buildSubgraphInSandbox(input: BuildInput): Promise<BuildRe
       : `git clone --depth 1 ${shq(input.repoUrl)} repo 2>&1`;
     if ((await step('git clone', clone)).code !== 0) return fail('git clone failed');
 
-    // 2. Manifest present?
-    if ((await exec(`test -f ${shq(`${base}/${manifestFile}`)}`)).code !== 0) {
-      return fail(`Subgraph manifest not found at "${manifestPath}"`);
+    // 2. Detect the package manager from lockfiles.
+    const pm = (await exec(
+      `cd ${shq(base)} && if [ -f yarn.lock ]; then echo yarn; elif [ -f pnpm-lock.yaml ]; then echo pnpm; else echo npm; fi`,
+    )).out.trim();
+    const installCmd =
+      pm === 'yarn'
+        ? 'corepack yarn install --frozen-lockfile 2>&1 || corepack yarn install 2>&1'
+        : pm === 'pnpm'
+          ? 'corepack pnpm install --frozen-lockfile 2>&1 || corepack pnpm install 2>&1'
+          : 'npm ci 2>&1 || npm install 2>&1';
+    const runPrefix = pm === 'yarn' ? 'corepack yarn run' : pm === 'pnpm' ? 'corepack pnpm run' : 'npm run';
+
+    // Enable corepack shims so bare `yarn`/`pnpm` resolve on PATH — custom
+    // prepare commands commonly use them. Best-effort.
+    await exec('sudo corepack enable 2>/dev/null || corepack enable 2>/dev/null || true');
+
+    // 3. Install deps. This also fires the `prepare` lifecycle for repos that
+    //    generate their manifest there.
+    if ((await step('install deps', `cd ${shq(base)} && ${installCmd}`)).code !== 0) {
+      return fail('dependency install failed');
     }
 
-    // 3. Install deps with the repo's own package manager.
-    const install =
-      `cd ${shq(base)} && ` +
-      `if [ -f yarn.lock ]; then corepack yarn install --frozen-lockfile 2>&1 || yarn install 2>&1; ` +
-      `elif [ -f pnpm-lock.yaml ]; then corepack pnpm install --frozen-lockfile 2>&1 || corepack pnpm install 2>&1; ` +
-      `else npm ci 2>&1 || npm install 2>&1; fi`;
-    if ((await step('install deps', install)).code !== 0) return fail('dependency install failed');
+    // 4. Many subgraphs don't commit subgraph.yaml — they generate it from a
+    //    mustache template via a prepare/prepare:<network> script. A custom
+    //    prepareCommand takes precedence; otherwise auto-detect prepare scripts.
+    const manifestThere = async () => (await exec(`test -f ${shq(`${base}/${manifestFile}`)}`)).code === 0;
+    if (input.prepareCommand) {
+      await step('prepare (custom)', `cd ${shq(base)} && ${input.prepareCommand} 2>&1`);
+    } else if (!(await manifestThere())) {
+      const scripts = await readScripts(exec, base);
+      for (const name of pickPrepareScripts(scripts)) {
+        await step(`${pm} run ${name}`, `cd ${shq(base)} && ${runPrefix} ${shq(name)} 2>&1`);
+        if (await manifestThere()) break;
+      }
+    }
+    if (!(await manifestThere())) {
+      const names = Object.keys(await readScripts(exec, base));
+      return fail(
+        `Subgraph manifest "${manifestPath}" not found, and no prepare step produced it` +
+          (names.length ? ` — available scripts: ${names.slice(0, 20).join(', ')}. ` : '. ') +
+          'Try setting a custom prepare command.',
+      );
+    }
 
-    // 4. codegen + build with the repo-pinned graph-cli (falls back to npx fetch).
+    // 5. codegen + build with the repo-pinned graph-cli (falls back to npx fetch).
     const codegen = `cd ${shq(base)} && (npx --no-install graph codegen ${shq(manifestFile)} 2>&1 || npx --yes @graphprotocol/graph-cli codegen ${shq(manifestFile)} 2>&1)`;
     if ((await step('graph codegen', codegen)).code !== 0) return fail('graph codegen failed');
 
     const build = `cd ${shq(base)} && (npx --no-install graph build ${shq(manifestFile)} 2>&1 || npx --yes @graphprotocol/graph-cli build ${shq(manifestFile)} 2>&1)`;
     if ((await step('graph build', build)).code !== 0) return fail('graph build failed');
 
-    // 5. Read the built manifest to map data-source name → wasm file.
+    // 6. Read the built manifest to map data-source name → wasm file.
     const builtManifestPath = `${base}/build/subgraph.yaml`;
     const manifestRead = await exec(`cat ${shq(builtManifestPath)}`);
     if (manifestRead.code !== 0) return fail('build/subgraph.yaml not produced');
@@ -159,7 +197,7 @@ export async function buildSubgraphInSandbox(input: BuildInput): Promise<BuildRe
     const sources = extractMappings(parsed).slice(0, MAX_MODULES);
     if (sources.length === 0) return fail('built manifest declared no mapping modules');
 
-    // 6. Read each wasm back as base64.
+    // 7. Read each wasm back as base64.
     const modules: { name: string; bytes: Uint8Array }[] = [];
     for (const s of sources) {
       const wasmPath = `${base}/build/${s.file}`;
@@ -188,6 +226,35 @@ export async function buildSubgraphInSandbox(input: BuildInput): Promise<BuildRe
       log.api.warn({ err: msg(e) }, 'sandbox stop failed');
     }
   }
+}
+
+type Exec = (cmd: string) => Promise<{ code: number; out: string }>;
+
+/** Read the repo's package.json scripts from inside the sandbox. */
+async function readScripts(exec: Exec, base: string): Promise<Record<string, string>> {
+  const r = await exec(`cat ${shq(`${base}/package.json`)}`);
+  if (r.code !== 0) return {};
+  try {
+    const pkg = JSON.parse(r.out) as { scripts?: Record<string, string> };
+    return pkg.scripts ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Pick the scripts most likely to generate a templated manifest, in priority
+ * order: `prepare`, `prep`, then the first network-specific `prepare:<network>`
+ * / `prepare-<network>`. We deliberately don't run `build`/`deploy` scripts.
+ */
+export function pickPrepareScripts(scripts: Record<string, string>): string[] {
+  const names = Object.keys(scripts);
+  const out: string[] = [];
+  if (scripts.prepare) out.push('prepare');
+  if (scripts.prep) out.push('prep');
+  const networked = names.find((n) => /^prepare[:-]/.test(n));
+  if (networked && !out.includes(networked)) out.push(networked);
+  return out;
 }
 
 /** Pull { name, wasm-file } from both dataSources and templates of a built manifest. */
