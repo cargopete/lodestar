@@ -14,6 +14,8 @@
     "db:backfill": "tsx scripts/backfill.ts"
   },
   "dependencies": {
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0",
     "@graphiql/toolkit": "^0.12.0",
     "@logtail/pino": "^0.5.8",
     "@pinax/graph-networks-registry": "^0.7.1",
@@ -46,6 +48,7 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
