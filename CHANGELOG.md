@@ -2,6 +2,26 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.13.0] — 2026-06-11
+
+Lodestar goes mobile: an installable PWA and a native iOS shell, so the dashboard
+lives on the home screen and survives a dropped connection.
+
+### Added
+- **Progressive Web App** — Lodestar is now installable to the home screen on any
+  platform. A web manifest (`src/app/manifest.ts`) declares the app name, theme, and
+  maskable icons (192 / 512); a service worker (`public/sw.js`) caches the shell and
+  serves an `offline.html` fallback when the network drops; a client-side
+  `ServiceWorkerRegister` registers it on load.
+- **iOS app** — a Capacitor native shell wrapping the production site, with its own
+  Xcode project, app icon, and launch/splash assets. Lays the groundwork for an
+  App Store build without forking the web codebase.
+
+### Changed
+- **Night's Watch CTA dismissal now persists** — closing the Night's Watch banner is
+  remembered across reloads and future visits via `localStorage`, matching the camp
+  banner's behaviour (previously it returned every new browser session).
+
 ## [4.12.0] — 2026-06-11
 
 ### Added
