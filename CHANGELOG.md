@@ -2,6 +2,13 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.9.1] — 2026-06-11
+
+### Fixed
+- **Mobile nav parity** — the mobile bottom-nav "More" sheet was missing two destinations that the
+  desktop sidebar had: **Network Live** (`/network`, Overview) and **Network Health**
+  (`/network-health`, Indexers). Both are now present, matching the desktop sidebar's routes and icons.
+
 ## [4.9.0] — 2026-06-10
 
 A new **GRT Issuance & Flow** page: a research-grade, live trace of GRT supply, issuance, and burns
