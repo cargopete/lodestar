@@ -2,11 +2,25 @@
  * Indexing status types and helpers.
  * Queries individual indexer /status endpoints (graph-node status API proxy)
  * to aggregate sync state, health, and error data for a given deployment.
+ *
+ * Also hosts the live SERVING probe (RFC-006 D1): /status tells us whether an
+ * indexer is *indexing*; the serving probe tells us whether the paid query path
+ * actually answers right now — the question the iExec page got wrong.
  */
+
+import { isSafeUrlResolved } from './ssrf';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+/**
+ * Result of a single receipt-less query-path probe:
+ *  - alive_paid  — serving stack is up (answered, or correctly demanded a TAP receipt)
+ *  - broken      — refused / timeout / 5xx / HTML / bare 4xx: not serving
+ *  - unreachable — could not safely attempt (no URL / SSRF-blocked / DNS fail)
+ */
+export type ServeProbe = 'alive_paid' | 'broken' | 'unreachable';
 
 export interface IndexerStatusResult {
   indexerId: string;
@@ -14,6 +28,10 @@ export interface IndexerStatusResult {
   url: string;
   allocatedTokens: string;
   status: 'synced' | 'syncing' | 'failed' | 'unreachable';
+  /** single-probe serving classification (RFC-006 D1); persistence is applied downstream */
+  serveProbe?: ServeProbe;
+  /** convenience: serveProbe === 'alive_paid' */
+  servable?: boolean;
   health?: 'healthy' | 'unhealthy' | 'failed';
   synced?: boolean;
   chainHeadBlock?: number;
@@ -211,4 +229,90 @@ export function buildIndexerStatus(
     syncProgress,
     blocksBehind,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Live serving probe (RFC-006 D1)
+// ---------------------------------------------------------------------------
+
+// The shape a healthy-but-unpaid indexer-service returns when it wants a TAP
+// receipt. indexer-service-rs versions phrase this differently, so the matcher
+// is deliberately broad — real-indexer fixtures should tighten it during the
+// D5 cron rollout (calibrate against a known-good indexer AND the leech).
+const PAYMENT_SHAPE =
+  /receipt|payment\s*(is\s*)?required|requires?\s*payment|x-payment|\btap\b|paid\s*quer|free\s*quer|insufficient|unpaid|402/i;
+
+/**
+ * Pure classifier for a serving-path response. Separated from IO so the decision
+ * logic is exhaustively unit-testable without network or DNS. Never returns
+ * 'unreachable' — that's decided before a response exists.
+ */
+export function classifyServeResponse(
+  status: number,
+  contentType: string,
+  body: string,
+): Exclude<ServeProbe, 'unreachable'> {
+  // 402 Payment Required is the canonical "serving stack up, needs a receipt".
+  if (status === 402) return 'alive_paid';
+
+  const looksHtml = /^\s*</.test(body) || contentType.toLowerCase().includes('text/html');
+
+  if (status >= 200 && status < 300) {
+    // A JSON body (data OR GraphQL errors) means the query stack answered. HTML
+    // on a 200 is a proxy / landing page, not the serving path.
+    if (looksHtml) return 'broken';
+    try {
+      JSON.parse(body);
+      return 'alive_paid';
+    } catch {
+      return 'broken';
+    }
+  }
+
+  // Non-2xx: only the specific payment/receipt 4xx counts as alive. A bare 400,
+  // a 404, a 5xx, or an HTML error page is a broken serving path.
+  if (status >= 400 && status < 500 && !looksHtml && PAYMENT_SHAPE.test(body)) {
+    return 'alive_paid';
+  }
+  return 'broken';
+}
+
+/**
+ * Probe an indexer's paid query path for a deployment, without a receipt.
+ * SSRF-guarded (resolves DNS, rejects private targets — fail closed).
+ * Returns a single-probe classification; the "non-serving" verdict requires
+ * persistence (N consecutive broken), applied by the caller (RFC-006 D2/D5).
+ */
+export async function probeServing(
+  indexerUrl: string,
+  ipfsHash: string,
+  timeoutMs = 4000,
+): Promise<ServeProbe> {
+  const base = indexerUrl?.replace(/\/+$/, '');
+  if (!base || !(await isSafeUrlResolved(base))) return 'unreachable';
+
+  const url = `${base}/subgraphs/id/${ipfsHash}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: '{ _meta { block { number } } }' }),
+      signal: controller.signal,
+    });
+    const body = await res.text();
+    return classifyServeResponse(res.status, res.headers.get('content-type') ?? '', body);
+  } catch {
+    // Refused / reset / timeout — DNS failures were already caught by the guard.
+    return 'broken';
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Fold a probe into an existing status result. */
+export function withServeProbe(result: IndexerStatusResult, probe: ServeProbe): IndexerStatusResult {
+  return { ...result, serveProbe: probe, servable: probe === 'alive_paid' };
 }
