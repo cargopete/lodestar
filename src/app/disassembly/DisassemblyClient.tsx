@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/Badge';
@@ -17,6 +17,7 @@ import type {
 } from '@/lib/disassembly/types';
 import type { DisassemblyDiff, HandlerDiffEntry, HandlerStatus } from '@/lib/disassembly/diff';
 import { riskPriority, worstFlagLevel, type RiskPriority } from '@/lib/disassembly/signal';
+import type { VerifyComparison, ModuleComparison, ModuleStatus, OverallVerdict } from '@/lib/disassembly/verify';
 
 const CATEGORY_META: Record<HostCategory, { label: string; variant: 'default' | 'accent' | 'success' | 'warning' | 'error' }> = {
   store: { label: 'store', variant: 'default' },
@@ -75,7 +76,13 @@ interface ApiResponse {
   error?: string;
 }
 
-type Mode = 'inspect' | 'compare';
+type Mode = 'inspect' | 'compare' | 'verify';
+
+const MODE_LABEL: Record<Mode, string> = {
+  inspect: 'Inspect',
+  compare: 'Compare versions',
+  verify: 'Verify source',
+};
 
 export function DisassemblyClient({ initialId }: { initialId?: string }) {
   const [mode, setMode] = useState<Mode>('inspect');
@@ -101,7 +108,7 @@ export function DisassemblyClient({ initialId }: { initialId?: string }) {
       </header>
 
       <div className="inline-flex rounded-[var(--radius-button)] border-[0.5px] border-[var(--border)] p-0.5 bg-[var(--bg-surface)]">
-        {(['inspect', 'compare'] as Mode[]).map((m) => (
+        {(Object.keys(MODE_LABEL) as Mode[]).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
@@ -109,12 +116,14 @@ export function DisassemblyClient({ initialId }: { initialId?: string }) {
               mode === m ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
             }`}
           >
-            {m === 'inspect' ? 'Inspect' : 'Compare versions'}
+            {MODE_LABEL[m]}
           </button>
         ))}
       </div>
 
-      {mode === 'inspect' ? <InspectPanel initialId={initialId} /> : <ComparePanel />}
+      {mode === 'inspect' && <InspectPanel initialId={initialId} />}
+      {mode === 'compare' && <ComparePanel />}
+      {mode === 'verify' && <VerifyPanel initialId={initialId} />}
     </div>
   );
 }
@@ -324,6 +333,224 @@ function ComparePanel() {
 
       {data && <DiffReport diff={data.diff} baseSignal={data.base.signal} targetSignal={data.target.signal} />}
     </>
+  );
+}
+
+// ── Source verification (Phase 2) ────────────────────────────────────────────
+
+type Verdict = OverallVerdict | 'unbuildable';
+
+interface VerifyData {
+  verdict: Verdict;
+  comparison: VerifyComparison | null;
+  build: { log: string; durationMs: number; moduleCount?: number; error?: string };
+}
+interface VerifyApiResponse {
+  data?: VerifyData;
+  error?: string;
+}
+
+const VERDICT_META: Record<Verdict, { label: string; color: string; borderClass: string; blurb: string }> = {
+  'verified-exact': {
+    label: '✓ Verified — byte-identical',
+    color: 'var(--green)',
+    borderClass: 'border-[var(--green-dim)]',
+    blurb: 'Every deployed module is byte-for-byte the build of this source. The strongest possible proof.',
+  },
+  'verified-structural': {
+    label: '✓ Verified — structural match',
+    color: 'var(--green)',
+    borderClass: 'border-[var(--green-dim)]',
+    blurb: 'Bytes differ (build-toolchain noise) but every module exposes an identical reachable host-API surface.',
+  },
+  diverged: {
+    label: '✗ Diverged',
+    color: 'var(--red)',
+    borderClass: 'border-[var(--red-dim)]',
+    blurb: 'The deployed WASM differs from this source in ways that change which host APIs are reachable — or a module is missing on one side.',
+  },
+  unbuildable: {
+    label: '⚠ Unbuildable',
+    color: 'var(--amber)',
+    borderClass: 'border-[var(--amber)]',
+    blurb: 'The source could not be built in the sandbox. See the build log below.',
+  },
+};
+
+const MODULE_STATUS_META: Record<ModuleStatus, { label: string; color: string }> = {
+  exact: { label: 'byte-exact', color: 'var(--green)' },
+  structural: { label: 'structural', color: 'var(--green)' },
+  diverged: { label: 'diverged', color: 'var(--red)' },
+  'only-built': { label: 'only in source', color: 'var(--amber)' },
+  'only-deployed': { label: 'only deployed', color: 'var(--amber)' },
+};
+
+function VerifyPanel({ initialId }: { initialId?: string }) {
+  const [deploymentId, setDeploymentId] = useState(initialId ?? '');
+  const [repoUrl, setRepoUrl] = useState('');
+  const [ref, setRef] = useState('');
+  const [manifestPath, setManifestPath] = useState('');
+
+  const { mutate, data, error, isPending } = useMutation<VerifyData, Error>({
+    mutationFn: async () => {
+      const r = await fetch('/api/disassembly/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deploymentId: deploymentId.trim(),
+          repoUrl: repoUrl.trim(),
+          ref: ref.trim() || undefined,
+          manifestPath: manifestPath.trim() || undefined,
+        }),
+      });
+      const json: VerifyApiResponse = await r.json();
+      if (!r.ok || !json.data) throw new Error(json.error ?? 'Verification failed');
+      return json.data;
+    },
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (deploymentId.trim() && repoUrl.trim() && !isPending) mutate();
+  };
+
+  const inputCls =
+    'px-3 py-2 rounded-[var(--radius-button)] bg-[var(--bg-surface)] border-[0.5px] border-[var(--border)] text-[var(--text)] text-sm font-mono placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--border-mid)]';
+
+  return (
+    <>
+      <form onSubmit={submit} className="space-y-2">
+        <input value={deploymentId} onChange={(e) => setDeploymentId(e.target.value)} placeholder="Deployment ID (Qm…)" spellCheck={false} className={`w-full ${inputCls}`} />
+        <input value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="Source repo URL (https://github.com/org/repo)" spellCheck={false} className={`w-full ${inputCls}`} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Ref — branch / tag / commit (optional)" spellCheck={false} className={inputCls} />
+          <input value={manifestPath} onChange={(e) => setManifestPath(e.target.value)} placeholder="Manifest path (default subgraph.yaml)" spellCheck={false} className={inputCls} />
+        </div>
+        <button
+          type="submit"
+          className="px-4 py-2 rounded-[var(--radius-button)] bg-[var(--accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          disabled={!deploymentId.trim() || !repoUrl.trim() || isPending}
+        >
+          {isPending ? 'Building & verifying… (may take a few minutes)' : 'Verify source'}
+        </button>
+        <p className="text-[11px] text-[var(--text-faint)]">
+          Clones and builds the source in an ephemeral sandbox, then compares the produced WASM against the deployed
+          artifact. Public github.com / gitlab.com / bitbucket.org repos only.
+        </p>
+      </form>
+
+      {error && (
+        <Card className="border-[var(--red-dim)]">
+          <p className="text-sm text-[var(--red)] font-mono">{error.message}</p>
+        </Card>
+      )}
+
+      {!data && !error && !isPending && (
+        <Card>
+          <p className="text-sm text-[var(--text-muted)]">
+            Source verification answers a question nothing else in the ecosystem does: <em>does the deployed WASM
+            actually correspond to the public source repo it claims to?</em> Paste a deployment ID and its source
+            repo, and we&apos;ll build it in isolation and compare.
+          </p>
+        </Card>
+      )}
+
+      {data && <VerifyReport result={data} />}
+    </>
+  );
+}
+
+function VerifyReport({ result }: { result: VerifyData }) {
+  const meta = VERDICT_META[result.verdict];
+  const c = result.comparison;
+
+  return (
+    <div className="space-y-6">
+      <Card className={meta.borderClass}>
+        <div className="flex flex-col gap-1">
+          <span className="text-lg font-semibold" style={{ color: meta.color }}>{meta.label}</span>
+          <span className="text-sm text-[var(--text-muted)]">{meta.blurb}</span>
+        </div>
+      </Card>
+
+      {c && (
+        <>
+          <StatGrid>
+            <StatCard label="Byte-exact" value={String(c.summary.exact)} subtitle="identical modules" />
+            <StatCard label="Structural" value={String(c.summary.structural)} subtitle="same host surface" />
+            <StatCard label="Diverged" value={String(c.summary.diverged)} subtitle="behaviour differs" />
+            <StatCard label="Modules" value={String(c.summary.total)} subtitle={`${result.build.moduleCount ?? c.summary.total} built`} />
+          </StatGrid>
+
+          <Card>
+            <CardHeader><CardTitle>Per-module comparison</CardTitle></CardHeader>
+            <CardContent>
+              <ModuleTable modules={c.modules} />
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>Build log</CardTitle>
+            <span className="text-[11px] text-[var(--text-muted)]">{(result.build.durationMs / 1000).toFixed(1)}s</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {result.build.error && <p className="text-[12px] text-[var(--red)] mb-2">{result.build.error}</p>}
+          <pre className="max-h-80 overflow-auto text-[11px] font-mono text-[var(--text-muted)] whitespace-pre-wrap bg-[var(--bg-elevated)] rounded-[var(--radius-button)] p-3">
+            {result.build.log || '(no output)'}
+          </pre>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ModuleTable({ modules }: { modules: ModuleComparison[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-[12px]">
+        <thead>
+          <tr className="text-[var(--text-muted)] text-left">
+            <th className="font-medium py-1 pr-3">Data source</th>
+            <th className="font-medium py-1 pr-3">Status</th>
+            <th className="font-medium py-1 pr-3">Built</th>
+            <th className="font-medium py-1 pr-3">Deployed</th>
+            <th className="font-medium py-1">Host-API delta</th>
+          </tr>
+        </thead>
+        <tbody>
+          {modules.map((m) => {
+            const sm = MODULE_STATUS_META[m.status];
+            return (
+              <tr key={m.name} className="border-t border-[var(--border)]/40 align-top">
+                <td className="py-1.5 pr-3 font-mono text-[var(--text)]">{m.name}</td>
+                <td className="py-1.5 pr-3 font-mono font-semibold" style={{ color: sm.color }}>{sm.label}</td>
+                <td className="py-1.5 pr-3 font-mono text-[var(--text-faint)]">{m.builtBytes != null ? `${(m.builtBytes / 1024).toFixed(0)}KB` : '—'}</td>
+                <td className="py-1.5 pr-3 font-mono text-[var(--text-faint)]">{m.deployedBytes != null ? `${(m.deployedBytes / 1024).toFixed(0)}KB` : '—'}</td>
+                <td className="py-1.5">
+                  {m.hostImportsAdded.length === 0 && m.hostImportsRemoved.length === 0 ? (
+                    <span className="text-[var(--text-faint)]">{m.status === 'exact' || m.status === 'structural' ? '—' : 'n/a'}</span>
+                  ) : (
+                    <span className="flex flex-wrap gap-1 items-center">
+                      {m.hostImportsAdded.map((h) => (
+                        <span key={`+${h}`} className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'var(--green-dim)', color: 'var(--green)' }}>+ {h}</span>
+                      ))}
+                      {m.hostImportsRemoved.map((h) => (
+                        <span key={`-${h}`} className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'var(--red-dim)', color: 'var(--red)' }}>− {h}</span>
+                      ))}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
