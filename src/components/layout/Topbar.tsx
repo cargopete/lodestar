@@ -59,8 +59,8 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="fixed top-0 left-0 md:left-[var(--sidebar-width)] right-0 h-[var(--topbar-height)] bg-[var(--bg)]/80 backdrop-blur-md border-b-[0.5px] border-[var(--border)] z-30">
-      <div className="h-full px-4 md:px-6 flex items-center justify-between">
+    <header className="fixed top-0 left-0 md:left-[var(--sidebar-width)] right-0 pt-[var(--safe-top)] bg-[var(--bg)]/80 backdrop-blur-md border-b-[0.5px] border-[var(--border)] z-30">
+      <div className="h-[var(--topbar-height)] px-4 md:px-6 flex items-center justify-between">
         {/* Left side — page title */}
         <span className="text-[15px] font-semibold tracking-tight text-[var(--text)]" style={{ fontFamily: 'var(--font-display)' }}>
           {getPageTitle(pathname)}

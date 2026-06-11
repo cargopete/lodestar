@@ -302,7 +302,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="hidden md:flex fixed left-0 top-0 h-screen w-[var(--sidebar-width)] bg-[var(--bg-surface)] border-r border-[var(--border)] flex-col z-30" style={{ backgroundImage: 'radial-gradient(ellipse 200% 25% at 50% 0%, rgba(111, 76, 255, 0.10) 0%, transparent 70%)' }}>
+    <aside className="hidden md:flex fixed left-0 top-0 h-screen w-[var(--sidebar-width)] pt-[var(--safe-top)] bg-[var(--bg-surface)] border-r border-[var(--border)] flex-col z-30" style={{ backgroundImage: 'radial-gradient(ellipse 200% 25% at 50% 0%, rgba(111, 76, 255, 0.10) 0%, transparent 70%)' }}>
       {/* Logo */}
       <div className="flex items-center px-5 py-3 border-b-[0.5px] border-[var(--border)]">
         <Link href="/" className="flex flex-col group">

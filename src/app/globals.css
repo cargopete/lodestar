@@ -47,6 +47,7 @@
   --topbar-height: 48px;
   --bottom-nav-height: 64px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
   --feed-width: 320px;
   --feed-width-collapsed: 52px;
   --feed-active-width: var(--feed-width);

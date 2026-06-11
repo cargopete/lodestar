@@ -83,7 +83,7 @@ export default function RootLayout({
             <Topbar />
             <BottomNav />
             <IntelFeed />
-            <main className="md:pl-[var(--sidebar-width)] lg:pr-[var(--feed-active-width)] pt-[var(--topbar-height)] pb-[calc(var(--bottom-nav-height)+var(--safe-bottom))] md:pb-0 transition-[padding] duration-200">
+            <main className="md:pl-[var(--sidebar-width)] lg:pr-[var(--feed-active-width)] pt-[calc(var(--safe-top)+var(--topbar-height))] pb-[calc(var(--bottom-nav-height)+var(--safe-bottom))] md:pb-0 transition-[padding] duration-200">
               <div className="p-4 md:p-6 max-w-[1440px] mx-auto">
                 <CampBanner />
                 {children}

@@ -32,7 +32,7 @@ export function IntelFeed() {
       {/* ── Desktop panel ── */}
       <aside
         className={cn(
-          'hidden lg:flex fixed right-0 top-[var(--topbar-height)] bottom-0 z-20 flex-col',
+          'hidden lg:flex fixed right-0 top-[calc(var(--safe-top)+var(--topbar-height))] bottom-0 z-20 flex-col',
           'bg-[var(--bg-surface)] border-l border-[var(--border)] transition-all duration-200',
           collapsed ? 'w-[var(--feed-width-collapsed)]' : 'w-[var(--feed-width)]'
         )}
