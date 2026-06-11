@@ -74,15 +74,6 @@ const moreSections: MoreSection[] = [
           </svg>
         ),
       },
-      {
-        label: 'Horizon Live',
-        href: '/horizon-live',
-        icon: (
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h3l2.25 6 4.5-13.5L15.75 12h4.5" />
-          </svg>
-        ),
-      },
     ],
   },
   {
