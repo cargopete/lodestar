@@ -2,6 +2,17 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.15.1] — 2026-06-11
+
+### Changed
+- **Source verification now handles templated manifests.** Many subgraphs don't commit
+  `subgraph.yaml` — they generate it from a mustache template via a `prepare` script. The
+  sandbox builder now detects and runs the repo's `prepare` / `prepare:<network>` scripts
+  (and enables corepack so bare `yarn`/`pnpm` resolve) before building. For bespoke
+  pipelines, an optional **prepare command** can be supplied. Build failures now list the
+  repo's available scripts to make the next step obvious. Verification now works on the
+  majority of real subgraphs, not just those with a committed manifest.
+
 ## [4.15.0] — 2026-06-11
 
 Subgraph Disassembly Phase 2: prove a deployment actually corresponds to its
