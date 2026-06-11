@@ -18,6 +18,9 @@ const LIMITS: Array<[RegExp, number]> = [
   [/^\/api\/feed/, 20],
   [/^\/api\/vote/, 60],
   [/^\/api\/subgraph-playground\//, 20],
+  // Source verification spins a sandbox microVM + full build per call — very
+  // expensive. Keep it tight; the route also enforces a global Redis-backed cap.
+  [/^\/api\/disassembly\/verify/, 4],
   // Scuttlebutt: chatty by nature, but the in-route flood guard is the real
   // throttle. The SSE stream is long-lived (one request), so this mainly bounds
   // POST/GET history calls.

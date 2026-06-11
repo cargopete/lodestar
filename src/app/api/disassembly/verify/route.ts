@@ -4,6 +4,8 @@ import { runDisassembly } from '@/lib/disassembly';
 import { ipfsCatBytes, IPFS_HASH_RE } from '@/lib/disassembly/ipfs';
 import { buildSubgraphInSandbox } from '@/lib/disassembly/build-sandbox';
 import { compareBuild, type NamedModule } from '@/lib/disassembly/verify';
+import { verifyRateLimit } from '@/lib/disassembly/verify-limit';
+import { clientIp, hashIp } from '@/lib/scuttlebutt-ip';
 import { log } from '@/lib/logger';
 
 // The sandbox build is the slow part — give the function room.
@@ -48,6 +50,12 @@ export async function POST(request: NextRequest) {
       { error: 'repoUrl must be an https URL on github.com, gitlab.com, or bitbucket.org' },
       { status: 400 },
     );
+  }
+
+  // Gate the expensive sandbox build behind a cross-instance rate limit.
+  const rl = await verifyRateLimit(hashIp(clientIp(request)), Date.now());
+  if (!rl.allowed) {
+    return NextResponse.json({ error: rl.reason }, { status: 429 });
   }
 
   try {
