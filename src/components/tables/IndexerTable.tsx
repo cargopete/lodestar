@@ -472,7 +472,7 @@ export function IndexerTable() {
         sortUndefined: 'last',
       }),
       columnHelper.accessor('qScore', {
-        header: () => <HeaderTip label="QoS" tip="Selection-bias-aware service-quality score (0–100): Wilson-reliability × latency × freshness, normalised per-deployment. Measures actual served quality, not raw volume. See Network Health." />,
+        header: () => <HeaderTip label="QoS" tip="Selection-bias-aware service-quality score (0–100): Wilson-reliability × latency × freshness, normalised per-deployment. Measures actual served quality, not raw volume. See Indexer QoS." />,
         cell: (info) => {
           const q = info.getValue();
           if (q === null) return <span className="text-[var(--text-faint)]">—</span>;

@@ -86,7 +86,7 @@ export default function OGImage() {
 
           {/* Feature pills */}
           <div style={{ display: 'flex', gap: 12, marginTop: 44 }}>
-            {['Indexer Analytics', 'Delegation Tracking', 'Subgraph Explorer', 'Network Health'].map(
+            {['Indexer Analytics', 'Delegation Tracking', 'Subgraph Explorer', 'Indexer QoS'].map(
               (label) => (
                 <div
                   key={label}

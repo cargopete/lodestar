@@ -115,7 +115,7 @@ export default function NetworkHealthPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-[var(--text)]">Network Health &amp; Integrity</h1>
+        <h1 className="text-2xl font-semibold text-[var(--text)]">Indexer QoS &amp; Integrity</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1 max-w-3xl">
           Selection-bias-aware QoS quality scoring across all indexers the gateway routed traffic to.
           Ranks on actual service quality — Wilson-reliability, latency, freshness — not raw query volume,

@@ -46,6 +46,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // Page renamed to Indexer QoS (v4.10.0); preserve old bookmarks/links.
+      { source: '/network-health', destination: '/indexer-qos', permanent: true },
+    ];
+  },
 };
 
 export default withSentryConfig(nextConfig, {
