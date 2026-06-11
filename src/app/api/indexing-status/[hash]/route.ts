@@ -4,10 +4,16 @@ import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import {
   queryIndexerStatus,
   buildIndexerStatus,
+  probeServing,
+  withServeProbe,
   type DeploymentIndexingStatus,
   type IndexerStatusResult,
 } from '@/lib/indexing-status';
+import { assessServability } from '@/lib/servability';
 import { log } from '@/lib/logger';
+
+// probeServing resolves DNS (node:dns); this route must run on Node, not Edge.
+export const runtime = 'nodejs';
 
 // ---------------------------------------------------------------------------
 // Subgraph types for allocation + deployment resolution
@@ -144,15 +150,21 @@ export async function GET(
         const withUrl = allocations.filter((a) => a.indexer.url);
         const withoutUrl = allocations.filter((a) => !a.indexer.url);
 
+        // /status (is it indexing?) and the serving probe (does the paid path
+        // answer right now? — RFC-006 D1) in parallel, per indexer.
         const statusPromises = withUrl.map(async (alloc) => {
-          const raw = await queryIndexerStatus(alloc.indexer.url!, ipfsHash);
-          return buildIndexerStatus(
+          const [raw, probe] = await Promise.all([
+            queryIndexerStatus(alloc.indexer.url!, ipfsHash),
+            probeServing(alloc.indexer.url!, ipfsHash),
+          ]);
+          const built = buildIndexerStatus(
             alloc.indexer.id,
             resolveIndexerName(alloc.indexer),
             alloc.indexer.url!,
             alloc.allocatedTokens,
             raw,
           );
+          return withServeProbe(built, probe);
         });
 
         const noUrlStatuses: IndexerStatusResult[] = withoutUrl.map((alloc) => ({
@@ -161,6 +173,8 @@ export async function GET(
           url: '',
           allocatedTokens: alloc.allocatedTokens,
           status: 'unreachable' as const,
+          serveProbe: 'unreachable',
+          servable: false,
         }));
 
         const indexers = [
@@ -174,6 +188,18 @@ export async function GET(
         const unreachableCount = indexers.filter((s) => s.status === 'unreachable').length;
         const healthyCount = indexers.filter((s) => s.health === 'healthy').length;
         const unhealthyCount = indexers.filter((s) => s.health === 'unhealthy').length;
+
+        // RFC-006 D2 — live serving verdict over the allocated set. Each indexer
+        // is its own operator for now; clustering (D4) can collapse identities
+        // later. This is the instantaneous read; persistence is a D5 concern.
+        const servability = assessServability(
+          indexers.map((i) => ({
+            indexerId: i.indexerId,
+            servable: !!i.servable,
+            status: i.status,
+            allocatedTokens: i.allocatedTokens,
+          })),
+        );
 
         return {
           deploymentId,
@@ -189,6 +215,7 @@ export async function GET(
           unhealthyCount,
           failedCount,
           unreachableCount,
+          servability,
         };
       },
     );

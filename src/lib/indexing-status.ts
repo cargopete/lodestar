@@ -9,6 +9,7 @@
  */
 
 import { isSafeUrlResolved } from './ssrf';
+import type { ServabilityVerdict } from './servability';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,6 +65,8 @@ export interface DeploymentIndexingStatus {
   unhealthyCount: number;
   failedCount: number;
   unreachableCount: number;
+  /** RFC-006 D2 — live serving verdict over the allocated set (null if not probed) */
+  servability?: ServabilityVerdict | null;
 }
 
 // ---------------------------------------------------------------------------

@@ -415,8 +415,34 @@ function IndexingHealthSection({ hash }: { hash: string }) {
 
   const syncingCount = data.totalIndexers - data.syncedCount - data.failedCount - data.unreachableCount;
 
+  const servability = data.servability;
+
   return (
     <>
+      {servability?.effectivelyDead ? (
+        <Card className="border-[var(--red-dim)]">
+          <div className="flex items-start gap-2">
+            <span aria-hidden>⛔</span>
+            <div>
+              <p className="text-sm font-semibold text-[var(--red)]">
+                {servability.recovering ? 'Effectively dead — rescue in flight' : 'Effectively dead'}
+              </p>
+              <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
+                All allocated stake belongs to operators with no working serving path; queries will fail despite any
+                reported sync.{servability.recovering ? ' A syncing indexer is catching up.' : ''}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : servability && servability.dominantOperatorShare >= 0.66 ? (
+        <Card className="border-[var(--amber)]">
+          <p className="text-[13px] text-[var(--amber)]">
+            ⚠ Fragile redundancy — {Math.round(servability.dominantOperatorShare * 100)}% of allocated stake sits with a
+            single operator. The gateway sees several indexers of headroom, but they share one fate.
+          </p>
+        </Card>
+      ) : null}
+
       <StatGrid className="lg:grid-cols-5 xl:grid-cols-5">
         <StatCard label="Active Indexers" value={String(data.totalAllocations)} subtitle={`${data.totalIndexers} unique`} />
         <StatCard
