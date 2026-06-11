@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 
-// sessionStorage (not localStorage): dismissal lasts only for the current
-// browser session, so the CTA returns next time the site is opened.
+// localStorage: once dismissed, the CTA stays gone across reloads and
+// future visits (same behaviour as the camp banner).
 const STORAGE_KEY = 'lodestar:nights-watch-cta-dismissed';
 const INVITE_URL = 'https://discord.gg/484vgDETEZ';
 
@@ -11,14 +11,14 @@ export function NightsWatchCTA() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem(STORAGE_KEY)) return;
+    if (localStorage.getItem(STORAGE_KEY)) return;
     setVisible(true);
   }, []);
 
   if (!visible) return null;
 
   const dismiss = () => {
-    sessionStorage.setItem(STORAGE_KEY, '1');
+    localStorage.setItem(STORAGE_KEY, '1');
     setVisible(false);
   };
 
