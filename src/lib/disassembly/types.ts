@@ -137,6 +137,12 @@ export interface SignalContext {
   exposure: SignalExposure;
 }
 
+/** Source-repo pointer from a subgraph's on-chain metadata, for auto-filling Verify. */
+export interface SourceHint {
+  codeRepository: string | null;
+  website: string | null;
+}
+
 export interface DisassemblyReport {
   deploymentId: string;
   manifest: DeployManifestInfo;
@@ -155,5 +161,7 @@ export interface DisassemblyReport {
    * which stays pure/immutable-cacheable). null when the gateway is unavailable.
    */
   signal?: SignalContext | null;
+  /** source-repo hint from metadata, attached at the route layer (auto-fills Verify) */
+  sourceHint?: SourceHint | null;
   caveats: string[];
 }

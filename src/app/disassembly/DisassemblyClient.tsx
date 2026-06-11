@@ -71,6 +71,21 @@ function short(hash: string, head = 8, tail = 6): string {
   return hash.length > head + tail + 1 ? `${hash.slice(0, head)}…${hash.slice(-tail)}` : hash;
 }
 
+const VERIFY_HOSTS = ['github.com', 'gitlab.com', 'bitbucket.org'];
+
+/** Normalise a metadata codeRepository into a verifiable https git URL, or undefined. */
+function normalizeRepo(url?: string | null): string | undefined {
+  if (!url || !url.trim()) return undefined;
+  let u = url.trim();
+  if (!/^https?:\/\//i.test(u)) u = `https://${u.replace(/^\/+/, '')}`;
+  try {
+    const host = new URL(u).hostname.replace(/^www\./, '');
+    return VERIFY_HOSTS.includes(host) ? u.replace(/^http:\/\//i, 'https://') : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 interface ApiResponse {
   data?: DisassemblyReport;
   error?: string;
@@ -307,7 +322,7 @@ function InspectPanel({ initialId }: { initialId?: string }) {
 
       {data && <ShareLink id={target} />}
       {data && <Report report={data} />}
-      {data && <SourceVerification deploymentId={target} />}
+      {data && <SourceVerification key={target} deploymentId={target} defaultRepoUrl={normalizeRepo(data.sourceHint?.codeRepository)} />}
     </>
   );
 }
@@ -490,8 +505,8 @@ const MODULE_STATUS_META: Record<ModuleStatus, { label: string; color: string }>
 // Optional source verification, folded into the Inspect view. The deployed WASM
 // is already in hand (fetched from the Qm hash); supplying a repo only adds the
 // "does this match the public source?" check, so it lives behind a disclosure.
-function SourceVerification({ deploymentId }: { deploymentId: string }) {
-  const [repoUrl, setRepoUrl] = useState('');
+function SourceVerification({ deploymentId, defaultRepoUrl }: { deploymentId: string; defaultRepoUrl?: string }) {
+  const [repoUrl, setRepoUrl] = useState(defaultRepoUrl ?? '');
   const [ref, setRef] = useState('');
   const [manifestPath, setManifestPath] = useState('');
   const [prepareCommand, setPrepareCommand] = useState('');
@@ -528,7 +543,11 @@ function SourceVerification({ deploymentId }: { deploymentId: string }) {
       <details>
         <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
           <span className="font-semibold text-[var(--text)] text-sm">Verify against source <span className="text-[var(--text-faint)] font-normal">(optional)</span></span>
-          <span className="text-[11px] text-[var(--text-muted)]">does the deployed WASM match the public repo?</span>
+          {defaultRepoUrl ? (
+            <Badge variant="success">repo auto-resolved</Badge>
+          ) : (
+            <span className="text-[11px] text-[var(--text-muted)]">does the deployed WASM match the public repo?</span>
+          )}
         </summary>
 
         <div className="mt-3 space-y-3">
@@ -539,6 +558,9 @@ function SourceVerification({ deploymentId }: { deploymentId: string }) {
 
           <form onSubmit={submit} className="space-y-2">
             <input value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="Source repo URL (https://github.com/org/repo)" spellCheck={false} className={`w-full ${inputCls}`} />
+            {defaultRepoUrl && repoUrl === defaultRepoUrl && (
+              <p className="text-[11px] text-[var(--green)]">↪ auto-resolved from the subgraph&apos;s on-chain metadata — edit if needed.</p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Ref — branch / tag / commit (optional)" spellCheck={false} className={inputCls} />
               <input value={manifestPath} onChange={(e) => setManifestPath(e.target.value)} placeholder="Manifest path (default subgraph.yaml)" spellCheck={false} className={inputCls} />

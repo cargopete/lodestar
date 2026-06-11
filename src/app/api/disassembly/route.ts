@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { runDisassembly } from '@/lib/disassembly';
 import { fetchDeploymentSignal } from '@/lib/disassembly/signal';
+import { fetchSourceHint } from '@/lib/disassembly/source-hint';
 import { IPFS_HASH_RE } from '@/lib/disassembly/ipfs';
 import { log } from '@/lib/logger';
 
@@ -10,6 +11,8 @@ const TTL = 7 * 24 * 60 * 60; // 7 days
 // Curation signal is dynamic — cache briefly and keep the response s-maxage low
 // so the overlay stays fresh while the heavy parse is served from the 7d cache.
 const SIGNAL_TTL = 300; // 5 min
+// Source repo comes from metadata — changes rarely, cache an hour.
+const SOURCE_TTL = 3600; // 1 hour
 
 export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id');
@@ -22,11 +25,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [report, signal] = await Promise.all([
+    const [report, signal, sourceHint] = await Promise.all([
       cached(`lodestar:disasm:v1:${id}`, TTL, () => runDisassembly(id)),
       cached(`lodestar:disasm-signal:${id}`, SIGNAL_TTL, () => fetchDeploymentSignal(id)),
+      cached(`lodestar:disasm-source:${id}`, SOURCE_TTL, () => fetchSourceHint(id)),
     ]);
-    return NextResponse.json({ data: { ...report, signal } }, {
+    return NextResponse.json({ data: { ...report, signal, sourceHint } }, {
       headers: { 'Cache-Control': `public, s-maxage=${SIGNAL_TTL}, stale-while-revalidate=${TTL}` },
     });
   } catch (error) {
