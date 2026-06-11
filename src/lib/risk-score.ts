@@ -17,6 +17,8 @@
  *   Delegation trend      4%  — crowd signal (noisy, low weight)
  */
 
+import { scoreServedGap } from './served-gap';
+
 export interface ScoreBreakdown {
   reo: number;
   selfStake: number;
@@ -414,6 +416,12 @@ export interface ScoreInput {
   queryFeeCutPPM: number;
   effectiveCutPercent?: number | null;
   queryFeesCollectedGRT: number;
+  /**
+   * RFC-006 D3: split-invariant served-gap (allocShare − servedShare, stake-
+   * weighted). When present it scores the queryVolume dimension instead of raw
+   * fees, so the score stops rewarding a high-volume leech. null → fall back.
+   */
+  servedGap?: number | null;
   netFlowGRT: number;
   delegatedGRT: number;
   rollingAPY30d?: number | null;
@@ -425,7 +433,12 @@ export function calculateIndexerScore(input: ScoreInput): IndexerScore {
   const breakdown: ScoreBreakdown = {
     reo: scoreREO(input.reoStatus, input.reoDaysRemaining, input.reoSource),
     selfStake: scoreSelfStake(input.selfStakeGRT),
-    queryVolume: scoreQueryVolume(input.queryFeesCollectedGRT),
+    // RFC-006 D3: prefer the split-invariant served-gap (penalises leeching);
+    // fall back to the raw fee-volume score only when gap data is unavailable.
+    queryVolume:
+      input.servedGap != null
+        ? scoreServedGap(input.servedGap)
+        : scoreQueryVolume(input.queryFeesCollectedGRT),
     delegatorCut: scoreDelegatorCut(input.rewardCutPPM, input.queryFeeCutPPM, input.effectiveCutPercent),
     cutStability: scoreCutStability(
       input.lastDelegationParameterUpdate,
