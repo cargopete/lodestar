@@ -140,8 +140,10 @@ export function AprProvenancePanel({
     };
   }, [delegatedTokensWei, delegatedThawingTokensWei, allocations, indexingRewardCutPPM, indexingRewardEffectiveCut, ownStakeRatio, totalNetworkSignal, annualIssuance]);
 
-  const { delegated, thawing, annualDelegatorRewards, activeBase, rawCut, effectiveCut, apr } = breakdown;
+  const { delegated, thawing, annualDelegatorRewards, activeBase, rawCut, effectiveCut, apr, aprUncapped } = breakdown;
   const thawingPct = delegated > 0 ? (thawing / delegated) * 100 : 0;
+  // Only surface the uncapped figure when the P95 clamp actually moved the number.
+  const clampMatters = aprUncapped - apr > 0.1;
   const reconcile = data?.reconcile ?? null;
   const events = data?.events ?? [];
 
@@ -204,7 +206,22 @@ export function AprProvenancePanel({
           />
           <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-elevated)]">
             <span className="text-sm font-semibold text-[var(--text)]">= Delegator APR</span>
-            <span className="text-lg font-semibold font-mono text-[var(--accent)]">{apr.toFixed(2)}%</span>
+            <span className="flex items-baseline gap-2">
+              <span
+                className="text-lg font-semibold font-mono text-[var(--accent)]"
+                title="Per-allocation signal-to-stake ratios clamped to the P95 of this indexer's allocations, so one tiny-stake/high-signal subgraph can't run away with the estimate."
+              >
+                {apr.toFixed(2)}%
+              </span>
+              {clampMatters && (
+                <span
+                  className="text-[11px] font-mono text-[var(--text-faint)]"
+                  title="The same projection without the P95 clamp — the raw run-rate. Other dashboards pick different percentiles (95/99/100), which is the main source of cross-dashboard divergence."
+                >
+                  · {aprUncapped.toFixed(2)}% uncapped
+                </span>
+              )}
+            </span>
           </div>
         </div>
 

@@ -166,6 +166,32 @@ describe('calculateDelegatorAPR', () => {
     expect(horizon.apr).toBeCloseTo(legacy.apr, 4);
   });
 
+  it('breakdown: aprUncapped exceeds apr when a P95-outlier allocation exists', () => {
+    const grt = (n: number) => (BigInt(n) * 10n ** 18n).toString();
+    // 20 normal allocations (signal/stake = 0.1) + 1 outlier (ratio 10).
+    // With 21 entries, P95 index = floor(21*0.95)=19 < 20, so the outlier is clamped.
+    const normal = Array.from({ length: 20 }, () => ({
+      allocatedTokens: grt(100_000),
+      subgraphDeployment: { signalledTokens: grt(100_000), stakedTokens: grt(1_000_000) },
+    }));
+    const outlier = {
+      allocatedTokens: grt(100_000),
+      subgraphDeployment: { signalledTokens: grt(10_000_000), stakedTokens: grt(1_000_000) },
+    };
+    const b = calculateDelegatorAPRBreakdown(
+      [...normal, outlier], 100_000, 20_000_000, 10_000_000, 100_000_000,
+    );
+    expect(b.aprUncapped).toBeGreaterThan(b.apr);
+    expect(b.apr).toBeLessThan(100);
+    expect(b.aprUncapped).toBeLessThan(100);
+  });
+
+  it('breakdown: apr === aprUncapped when no allocation exceeds P95', () => {
+    // Single normal allocation → P95 equals its own ratio → nothing to clamp.
+    const b = calculateDelegatorAPRBreakdown(baseAllocations, 100_000, 1_000_000, 10_000_000, 100_000_000);
+    expect(b.aprUncapped).toBeCloseTo(b.apr, 6);
+  });
+
   it('breakdown: over-delegation yields LOWER delegator rewards than naive (1−rawCut)', () => {
     // When over-delegated, effective cut rises above raw cut, so the delegator
     // share shrinks vs the naive (1 − rawCut) approximation.

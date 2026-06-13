@@ -121,6 +121,14 @@ The resulting APR is finally capped at **100%** as a sanity bound. The intent is
 a representative run-rate, not a best-case headline — which is why, for an
 honest historical read, the realized APY above is the one to trust.
 
+> **We show the uncapped figure too.** Because the percentile choice is the main
+> reason dashboards disagree (one picks P95, another P99, another no cap at all)
+> from identical on-chain data, the indexer page displays the **uncapped**
+> projection right next to the P95-clamped one whenever they differ (e.g.
+> `27.5% · 31% uncapped`). The clamp is an opinion; surfacing both makes the
+> opinion visible and the divergence between tools self-explanatory rather than
+> mysterious.
+
 ## Verification: we read the chain, not just the subgraph
 
 The subgraph is event-driven and can lag the chain by a few blocks. So for the

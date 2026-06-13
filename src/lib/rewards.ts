@@ -104,8 +104,10 @@ export interface DelegatorAPRBreakdown {
   rawCut: number;
   /** Effective cut applied to delegated-stake rewards, 0–1 (Horizon; differs from rawCut when over-delegated) */
   effectiveCut: number;
-  /** Final APR percent (capped at 100) */
+  /** Final APR percent, with per-allocation signal-to-stake ratios clamped to P95 (capped at 100) */
   apr: number;
+  /** APR percent WITHOUT the P95 clamp — the raw projection, for transparency vs. other dashboards (capped at 100) */
+  aprUncapped: number;
 }
 
 /**
@@ -159,6 +161,7 @@ export function calculateDelegatorAPRBreakdown(
     rawCut,
     effectiveCut: effCut,
     apr: 0,
+    aprUncapped: 0,
   };
 
   if (delegated <= 0 || totalNetworkSignal === 0 || allocations.length === 0) return empty;
@@ -181,13 +184,14 @@ export function calculateDelegatorAPRBreakdown(
   const p95Idx = Math.min(Math.floor(ratios.length * 0.95), ratios.length - 1);
   const signalToStakeCap = ratios[p95Idx];
 
-  let totalRewards = 0;
+  let totalRewards = 0;        // with P95 clamp
+  let totalRewardsUncapped = 0; // raw, no clamp — for the transparency comparison
   for (const alloc of allocData) {
     // reward = issuance × (signal/totalSignal) × (allocated/stake)
     //        = issuance × signalToStake × allocated / totalSignal
     const cappedRatio = Math.min(alloc.signalToStake, signalToStakeCap);
-    const reward = annualIssuance * cappedRatio * alloc.allocated / totalNetworkSignal;
-    totalRewards += reward;
+    totalRewards += annualIssuance * cappedRatio * alloc.allocated / totalNetworkSignal;
+    totalRewardsUncapped += annualIssuance * alloc.signalToStake * alloc.allocated / totalNetworkSignal;
   }
 
   // Delegator share of indexing rewards. Prefer the Horizon decomposition
@@ -198,6 +202,7 @@ export function calculateDelegatorAPRBreakdown(
     ? delegatedStakeRatio * (1 - effCut)
     : (1 - rawCut);
   const delegatorRewards = totalRewards * delegatorFraction;
+  const delegatorRewardsUncapped = totalRewardsUncapped * delegatorFraction;
 
   return {
     annualIndexingRewards: totalRewards,
@@ -206,6 +211,7 @@ export function calculateDelegatorAPRBreakdown(
     rawCut,
     effectiveCut: effCut,
     apr: Math.min((delegatorRewards / delegated) * 100, 100),
+    aprUncapped: Math.min((delegatorRewardsUncapped / delegated) * 100, 100),
   };
 }
 
