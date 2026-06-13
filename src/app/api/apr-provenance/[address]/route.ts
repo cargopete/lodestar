@@ -111,6 +111,9 @@ export async function GET(
             const kind: ProvenanceEvent['kind'] | null =
               name === 'reward_cut' ? 'reward_cut' : name === 'query_fee_cut' ? 'query_fee_cut' : null;
             if (!kind) continue;
+            // Skip no-op rows (old == new): the ingest re-detects unchanged cuts,
+            // and "cut changed 50% → 50%" is noise, not provenance.
+            if (r.old_value != null && Number(r.old_value) === Number(r.new_value)) continue;
             events.push({
               kind,
               timestamp: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
