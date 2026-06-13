@@ -38,7 +38,10 @@ function cooldownNote(
   lastUpdate: number,
   nowSec: number,
 ): { text: string; tone: 'up' | 'neutral' | 'down' } | null {
-  if (!lastUpdate || lastUpdate <= 0) return null;
+  // Anything before the network existed (~Sept 2020) is a zero/sentinel value —
+  // the indexer has no recorded parameter change, so don't invent a 50-year "stable" claim.
+  const NETWORK_GENESIS = 1_600_000_000;
+  if (!lastUpdate || lastUpdate < NETWORK_GENESIS) return null;
   const daysSince = Math.floor((nowSec - lastUpdate) / 86400);
   const cooldownDays = cooldown / 86400;
   const isLocked = cooldown > 0 && nowSec - lastUpdate < cooldown;
@@ -144,6 +147,13 @@ export function AprProvenancePanel({
   const thawingPct = delegated > 0 ? (thawing / delegated) * 100 : 0;
   // Only surface the uncapped figure when the P95 clamp actually moved the number.
   const clampMatters = aprUncapped - apr > 0.1;
+  // Genuine over-delegation = the delegation-ratio cap bites, i.e. the delegator
+  // share drops below the naive (1 − rawCut). effective < raw on its own is the
+  // NORMAL case (indexer with low self-stake ratio), not over-delegation.
+  const ownRatioNum = ownStakeRatio != null ? parseFloat(ownStakeRatio) : null;
+  const delStakeRatio = ownRatioNum != null && ownRatioNum >= 0 && ownRatioNum <= 1 ? 1 - ownRatioNum : null;
+  const delegatorFraction = delStakeRatio != null ? delStakeRatio * (1 - effectiveCut) : 1 - rawCut;
+  const overDelegated = delegatorFraction < 1 - rawCut - 0.005;
   const reconcile = data?.reconcile ?? null;
   const events = data?.events ?? [];
 
@@ -198,9 +208,9 @@ export function AprProvenancePanel({
           <ProvRow
             label="Cut applied"
             sub={
-              Math.abs(effectiveCut - rawCut) > 0.0001
-                ? `Raw ${(rawCut * 100).toFixed(1)}% · effective ${(effectiveCut * 100).toFixed(1)}% (over-delegated — capped stake earns nothing)`
-                : `${(rawCut * 100).toFixed(1)}% — indexer keeps this share of delegated-stake rewards`
+              overDelegated
+                ? `Raw ${(rawCut * 100).toFixed(1)}% · effective ${(effectiveCut * 100).toFixed(1)}% — over-delegated, so some delegated stake earns nothing`
+                : `Raw ${(rawCut * 100).toFixed(1)}% set by indexer · ${(effectiveCut * 100).toFixed(1)}% effective on delegated-stake rewards`
             }
             value={`${(effectiveCut * 100).toFixed(1)}%`}
           />
