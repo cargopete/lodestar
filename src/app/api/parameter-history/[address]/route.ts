@@ -24,12 +24,12 @@ export async function GET(
   const rows = await db`
     SELECT * FROM (
       SELECT DISTINCT ON (param_name, old_value, new_value, epoch)
-        param_name, old_value, new_value, epoch, detected_at
+        param_name, old_value, new_value, epoch, created_at
       FROM parameter_changes
       WHERE indexer_address = ${addr}
-      ORDER BY param_name, old_value, new_value, epoch, detected_at DESC
+      ORDER BY param_name, old_value, new_value, epoch, created_at DESC
     ) deduped
-    ORDER BY detected_at DESC
+    ORDER BY created_at DESC
     LIMIT 100
   `;
 
@@ -38,9 +38,9 @@ export async function GET(
     old_value: r.old_value != null ? Number(r.old_value) : null,
     new_value: Number(r.new_value),
     epoch: r.epoch != null ? Number(r.epoch) : null,
-    detected_at: r.detected_at instanceof Date
-      ? r.detected_at.toISOString()
-      : String(r.detected_at),
+    detected_at: r.created_at instanceof Date
+      ? r.created_at.toISOString()
+      : String(r.created_at),
   }));
 
   return NextResponse.json(

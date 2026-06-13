@@ -72,48 +72,54 @@ export async function GET(
       // 2. Event trail — full history from our own DB (delegation_events +
       //    parameter_changes), so we can explain jumps older than the 7-day
       //    subgraph window everyone else is limited to.
+      // Wrapped so a DB hiccup degrades to an empty trail rather than
+      // discarding the (already-computed) reconcile result or 500-ing.
       const events: ProvenanceEvent[] = [];
       if (hasDbAccess() && db) {
-        const [delegationRows, paramRows] = await Promise.all([
-          db`
-            SELECT event_type, delegator, tokens_grt, timestamp
-            FROM delegation_events
-            WHERE indexer = ${addr}
-            ORDER BY timestamp DESC
-            LIMIT 30
-          `,
-          db`
-            SELECT DISTINCT ON (param_name, old_value, new_value, epoch)
-              param_name, old_value, new_value, detected_at
-            FROM parameter_changes
-            WHERE indexer_address = ${addr}
-            ORDER BY param_name, old_value, new_value, epoch, detected_at DESC
-          `,
-        ]);
+        try {
+          const [delegationRows, paramRows] = await Promise.all([
+            db`
+              SELECT event_type, delegator, tokens_grt, timestamp
+              FROM delegation_events
+              WHERE indexer = ${addr}
+              ORDER BY timestamp DESC
+              LIMIT 30
+            `,
+            db`
+              SELECT DISTINCT ON (param_name, old_value, new_value, epoch)
+                param_name, old_value, new_value, created_at
+              FROM parameter_changes
+              WHERE indexer_address = ${addr}
+              ORDER BY param_name, old_value, new_value, epoch, created_at DESC
+            `,
+          ]);
 
-        for (const r of delegationRows) {
-          const kind = EVENT_TYPE_MAP[String(r.event_type)];
-          if (!kind) continue;
-          events.push({
-            kind,
-            timestamp: r.timestamp instanceof Date ? r.timestamp.toISOString() : String(r.timestamp),
-            tokensGRT: r.tokens_grt != null ? Number(r.tokens_grt) : undefined,
-            delegator: r.delegator ? String(r.delegator).toLowerCase() : undefined,
-            delegatorName: null,
-          });
-        }
+          for (const r of delegationRows) {
+            const kind = EVENT_TYPE_MAP[String(r.event_type)];
+            if (!kind) continue;
+            events.push({
+              kind,
+              timestamp: r.timestamp instanceof Date ? r.timestamp.toISOString() : String(r.timestamp),
+              tokensGRT: r.tokens_grt != null ? Number(r.tokens_grt) : undefined,
+              delegator: r.delegator ? String(r.delegator).toLowerCase() : undefined,
+              delegatorName: null,
+            });
+          }
 
-        for (const r of paramRows) {
-          const name = String(r.param_name);
-          const kind: ProvenanceEvent['kind'] | null =
-            name === 'reward_cut' ? 'reward_cut' : name === 'query_fee_cut' ? 'query_fee_cut' : null;
-          if (!kind) continue;
-          events.push({
-            kind,
-            timestamp: r.detected_at instanceof Date ? r.detected_at.toISOString() : String(r.detected_at),
-            oldValue: r.old_value != null ? Number(r.old_value) : null,
-            newValue: Number(r.new_value),
-          });
+          for (const r of paramRows) {
+            const name = String(r.param_name);
+            const kind: ProvenanceEvent['kind'] | null =
+              name === 'reward_cut' ? 'reward_cut' : name === 'query_fee_cut' ? 'query_fee_cut' : null;
+            if (!kind) continue;
+            events.push({
+              kind,
+              timestamp: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
+              oldValue: r.old_value != null ? Number(r.old_value) : null,
+              newValue: Number(r.new_value),
+            });
+          }
+        } catch (e) {
+          log.api.warn({ err: e }, 'apr-provenance DB event trail failed (non-critical)');
         }
       }
 
