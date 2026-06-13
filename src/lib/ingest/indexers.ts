@@ -120,6 +120,7 @@ export async function writeIndexers(
     epoch: currentEpoch ?? null,
     self_stake_grt: i.selfStakeGRT,
     delegated_grt: i.delegatedGRT,
+    delegated_thawing_grt: i.delegatedThawingGRT,
     allocated_grt: weiToGRT(i.allocatedTokens),
     reward_cut: i.indexingRewardCut,
     query_fee_cut: i.queryFeeCut,

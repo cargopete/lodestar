@@ -460,12 +460,23 @@ export async function refreshIndexers(opts: {
       subgraphDeployment: a.subgraphDeployment,
     }));
 
+    // Horizon effective-cut inputs: prefer subgraph figures so over-delegated
+    // indexers (where the delegation-ratio cap bites) aren't credited APR on
+    // delegated stake that earns nothing. delegatedStakeRatio = 1 − ownStakeRatio.
+    const effectiveCut = indexer.indexingRewardEffectiveCut != null
+      ? parseFloat(indexer.indexingRewardEffectiveCut)
+      : null;
+    const ownRatio = indexer.ownStakeRatio != null ? parseFloat(indexer.ownStakeRatio) : null;
+    const delegatedStakeRatio = ownRatio != null && ownRatio >= 0 && ownRatio <= 1 ? 1 - ownRatio : null;
+
     const apr = calculateDelegatorAPR(
       allocations,
       indexer.indexingRewardCut,
       delegatedActive,
       totalNetworkSignal,
-      annualIssuance
+      annualIssuance,
+      effectiveCut,
+      delegatedStakeRatio
     );
 
     const capacity = calculateDelegationCapacity(selfStake, delegated, delegationRatio);
@@ -579,6 +590,7 @@ export async function refreshIndexers(opts: {
       createdAt: indexer.createdAt,
       selfStakeGRT: selfStake,
       delegatedGRT: delegatedActive,
+      delegatedThawingGRT: delegatedThawing,
       delegatorAPR: apr,
       delegationCapacity: capacity,
       reoStatus,

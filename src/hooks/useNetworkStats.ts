@@ -29,6 +29,7 @@ import {
   fetchDelegationFlows,
   fetchTokenMetrics,
   fetchParameterHistory,
+  fetchAprProvenance,
   fetchSubgraphCuration,
   fetchSubgraphSchema,
   fetchCuratorLeaderboard,
@@ -592,6 +593,22 @@ export function useParameterHistory(address: string | null) {
     staleTime: TEN_MINUTES,
     refetchInterval: TEN_MINUTES,
     enabled: !!address,
+  });
+}
+
+/**
+ * Hook for APR provenance — on-chain pool reconcile + merged event trail
+ * (delegations/undelegations + reward/query-fee cut changes) explaining why
+ * an indexer's delegator APR is what it is.
+ */
+export function useAprProvenance(address: string | null) {
+  return useQuery({
+    queryKey: ['aprProvenance', address],
+    queryFn: () => fetchAprProvenance(address!),
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
+    enabled: !!address,
+    retry: 1,
   });
 }
 

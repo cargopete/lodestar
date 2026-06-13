@@ -444,6 +444,36 @@ export async function fetchParameterHistory(address: string): Promise<{
   return json.data ?? [];
 }
 
+export interface ProvenanceEvent {
+  kind: 'delegation' | 'undelegation' | 'withdrawal' | 'reward_cut' | 'query_fee_cut';
+  timestamp: string;
+  tokensGRT?: number;
+  delegator?: string;
+  delegatorName?: string | null;
+  oldValue?: number | null;
+  newValue?: number;
+}
+
+export interface PoolReconciliation {
+  verified: boolean;
+  driftGRT: number;
+  driftPct: number;
+  chain: { tokens: number; thawing: number; active: number };
+  subgraph: { tokens: number; thawing: number; active: number };
+}
+
+export interface AprProvenance {
+  reconcile: PoolReconciliation | null;
+  events: ProvenanceEvent[];
+}
+
+export async function fetchAprProvenance(address: string): Promise<AprProvenance> {
+  const response = await fetch(`/api/apr-provenance/${encodeURIComponent(address)}`);
+  if (!response.ok) throw new Error(`APR provenance failed: ${response.status}`);
+  const json = await response.json();
+  return json.data ?? { reconcile: null, events: [] };
+}
+
 export interface CuratorSignalEntry {
   id: string;
   curatorAddress: string;

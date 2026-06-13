@@ -48,6 +48,7 @@ function makeIndexer(overrides: Partial<EnrichedIndexer> = {}): EnrichedIndexer 
     ensName: 'idx.eth',
     selfStakeGRT: 1_500_000,
     delegatedGRT: 0,
+    delegatedThawingGRT: 0,
     delegatorAPR: 8.4,
     delegationCapacity: { maxCapacity: 100, usedCapacity: 50, availableCapacity: 50, utilizationPercent: 50 },
     reoStatus: 'eligible',

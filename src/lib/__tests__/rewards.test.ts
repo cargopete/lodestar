@@ -12,6 +12,7 @@ import {
   calculatePoolExchangeRate,
   calculateExchangeRateAPY,
   calculateRollingAPY,
+  calculateDelegatorAPRBreakdown,
 } from '../rewards';
 
 // ---------- calculateExchangeRate ----------
@@ -136,6 +137,47 @@ describe('calculateDelegatorAPR', () => {
 
   it('returns 0 with no delegated tokens', () => {
     expect(calculateDelegatorAPR(baseAllocations, 100_000, 0, 10_000_000, 300_000_000)).toBe(0);
+  });
+
+  // ---------- calculateDelegatorAPRBreakdown ----------
+
+  it('breakdown: apr equals numerator / active base × 100 (below the 100% cap)', () => {
+    // 100M issuance keeps the raw APR (~45%) under the cap so the identity holds.
+    const b = calculateDelegatorAPRBreakdown(
+      baseAllocations, 100_000, 1_000_000, 10_000_000, 100_000_000,
+    );
+    expect(b.annualDelegatorRewards).toBeGreaterThan(0);
+    expect(b.activeBase).toBe(1_000_000);
+    expect(b.apr).toBeLessThan(100);
+    expect(b.apr).toBeCloseTo((b.annualDelegatorRewards / b.activeBase) * 100, 5);
+  });
+
+  it('breakdown: legacy (1−rawCut) and Horizon ratios agree when NOT over-delegated', () => {
+    // delegatedStakeRatio × (1 − effectiveCut) == (1 − rawCut) when uncapped.
+    // rawCut 10%; ownStakeRatio 0.2 ⇒ delegatedStakeRatio 0.8;
+    // effectiveCut = (0.1 − 0.2)/0.8 is negative, so use a realistic uncapped case:
+    // rawCut 0.3, ownStakeRatio 0.1 ⇒ delegatedStakeRatio 0.9, effectiveCut = (0.3−0.1)/0.9 = 0.2222
+    const legacy = calculateDelegatorAPRBreakdown(baseAllocations, 300_000, 1_000_000, 10_000_000, 300_000_000);
+    const horizon = calculateDelegatorAPRBreakdown(
+      baseAllocations, 300_000, 1_000_000, 10_000_000, 300_000_000,
+      (0.3 - 0.1) / 0.9, // effectiveCut
+      0.9,               // delegatedStakeRatio
+    );
+    expect(horizon.apr).toBeCloseTo(legacy.apr, 4);
+  });
+
+  it('breakdown: over-delegation yields LOWER delegator rewards than naive (1−rawCut)', () => {
+    // When over-delegated, effective cut rises above raw cut, so the delegator
+    // share shrinks vs the naive (1 − rawCut) approximation.
+    const naive = calculateDelegatorAPRBreakdown(baseAllocations, 100_000, 1_000_000, 10_000_000, 300_000_000);
+    const overDelegated = calculateDelegatorAPRBreakdown(
+      baseAllocations, 100_000, 1_000_000, 10_000_000, 300_000_000,
+      0.5,  // effectiveCut well above the 10% raw cut → capped stake earns nothing
+      0.95, // delegatedStakeRatio
+    );
+    expect(overDelegated.annualDelegatorRewards).toBeLessThan(naive.annualDelegatorRewards);
+    expect(overDelegated.effectiveCut).toBe(0.5);
+    expect(overDelegated.rawCut).toBeCloseTo(0.1, 6);
   });
 
   it('returns 0 with no allocations', () => {

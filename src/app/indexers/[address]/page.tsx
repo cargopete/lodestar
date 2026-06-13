@@ -26,6 +26,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { DelegationCalculator } from '@/components/ui/DelegationCalculator';
 import { ProvisionsPanel } from '@/components/ui/ProvisionsPanel';
 import { DelegationFeed } from '@/components/feed/DelegationFeed';
+import { AprProvenancePanel } from '@/components/indexer/AprProvenancePanel';
 import dynamic from 'next/dynamic';
 
 const IndexerTrendsChart = dynamic(() => import('@/components/charts/IndexerTrendsChart').then(m => ({ default: m.IndexerTrendsChart })), { ssr: false });
@@ -416,6 +417,25 @@ export default function IndexerDetailPage({
           </Card>
         </div>
       )}
+
+      {/* APR Provenance — decomposition + on-chain reconcile + event trail */}
+      <AprProvenancePanel
+        address={address}
+        delegatedTokensWei={indexer.delegatedTokens}
+        delegatedThawingTokensWei={indexer.delegatedThawingTokens ?? '0'}
+        allocations={indexer.allocations.map((a) => ({
+          allocatedTokens: a.allocatedTokens,
+          subgraphDeployment: {
+            signalledTokens: a.subgraphDeployment.signalledTokens,
+            stakedTokens: a.subgraphDeployment.stakedTokens,
+          },
+        }))}
+        indexingRewardCutPPM={indexer.indexingRewardCut}
+        indexingRewardEffectiveCut={indexer.indexingRewardEffectiveCut ?? null}
+        ownStakeRatio={indexer.ownStakeRatio ?? null}
+        totalNetworkSignal={totalNetworkSignal}
+        annualIssuance={annualIssuance}
+      />
 
       {/* Greedy Indexer Warning */}
       {isGreedyCut(indexer.indexingRewardCut) && (

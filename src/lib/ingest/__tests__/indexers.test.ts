@@ -24,6 +24,7 @@ function makeIndexer(overrides: Partial<EnrichedIndexer> = {}): EnrichedIndexer 
     ensName: null,
     selfStakeGRT: 100_000,
     delegatedGRT: 500_000,
+    delegatedThawingGRT: 0,
     delegatorAPR: 5.5,
     delegationCapacity: {
       maxCapacity: 1_600_000,

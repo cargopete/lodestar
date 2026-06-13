@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS indexer_snapshots (
   epoch                    INTEGER,
   self_stake_grt           NUMERIC,
   delegated_grt            NUMERIC,
+  delegated_thawing_grt    NUMERIC,
   allocated_grt            NUMERIC,
   reward_cut               NUMERIC,
   query_fee_cut            NUMERIC,
