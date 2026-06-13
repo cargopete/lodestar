@@ -151,8 +151,15 @@ export function calculateDelegatorAPRBreakdown(
   delegatedStakeRatio?: number | null
 ): DelegatorAPRBreakdown {
   const rawCut = protocolCutPPM / 1000000;
-  // Effective cut defaults to the raw cut when the subgraph value is unavailable.
-  const effCut = effectiveCut != null && effectiveCut >= 0 && effectiveCut <= 1 ? effectiveCut : rawCut;
+  // Effective cut from the subgraph. It can legitimately be NEGATIVE — when an
+  // indexer's self-stake ratio exceeds its raw cut, delegators effectively keep
+  // MORE than their delegated-stake share (effCut = (rawCut − ownStakeRatio)/
+  // delegatedStakeRatio). Clamping the lower bound to 0 breaks the identity
+  // delegatedStakeRatio × (1 − effCut) = (1 − rawCut) and collapses APR by a
+  // factor of delegatedStakeRatio (the graphops.eth bug). Only reject NaN or a
+  // value above 1 (anomalous), falling back to the raw cut in that case.
+  const effCutValid = effectiveCut != null && Number.isFinite(effectiveCut) && effectiveCut <= 1;
+  const effCut = effCutValid ? (effectiveCut as number) : rawCut;
 
   const empty: DelegatorAPRBreakdown = {
     annualIndexingRewards: 0,
@@ -196,10 +203,13 @@ export function calculateDelegatorAPRBreakdown(
 
   // Delegator share of indexing rewards. Prefer the Horizon decomposition
   // (delegatedStakeRatio × (1 − effectiveCut)) which correctly attributes
-  // nothing to delegated stake that sits above the delegation-ratio cap;
-  // fall back to the legacy (1 − rawCut) when ratios are unavailable.
-  const delegatorFraction = (delegatedStakeRatio != null && delegatedStakeRatio >= 0 && delegatedStakeRatio <= 1)
-    ? delegatedStakeRatio * (1 - effCut)
+  // nothing to delegated stake that sits above the delegation-ratio cap.
+  // This is only valid with the GENUINE effective cut — the identity
+  // delegatedStakeRatio × (1 − effCut) = (1 − rawCut) does NOT hold if effCut
+  // has fallen back to rawCut, so in that case use (1 − rawCut) directly rather
+  // than del × (1 − rawCut), which would wrongly collapse the share.
+  const delegatorFraction = (effCutValid && delegatedStakeRatio != null && delegatedStakeRatio >= 0 && delegatedStakeRatio <= 1)
+    ? delegatedStakeRatio * (1 - (effectiveCut as number))
     : (1 - rawCut);
   const delegatorRewards = totalRewards * delegatorFraction;
   const delegatorRewardsUncapped = totalRewardsUncapped * delegatorFraction;

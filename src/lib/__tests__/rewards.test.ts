@@ -192,6 +192,32 @@ describe('calculateDelegatorAPR', () => {
     expect(b.aprUncapped).toBeCloseTo(b.apr, 6);
   });
 
+  it('breakdown: a NEGATIVE effective cut is honoured, not floored to rawCut (graphops.eth case)', () => {
+    // rawCut 0.88, ownStakeRatio 0.896 ⇒ effCut = (0.88−0.896)/0.104 ≈ −0.156.
+    // The identity del × (1 − effCut) = (1 − rawCut) must hold: 0.104 × 1.156 ≈ 0.12.
+    // The bug floored effCut at 0, collapsing the share by ~10× (24% → 2.4%).
+    const withNeg = calculateDelegatorAPRBreakdown(
+      baseAllocations, 880_000, 1_000_000, 10_000_000, 100_000_000, -0.156, 0.1038,
+    );
+    const naive = calculateDelegatorAPRBreakdown(
+      baseAllocations, 880_000, 1_000_000, 10_000_000, 100_000_000,
+    );
+    expect(withNeg.effectiveCut).toBeCloseTo(-0.156, 4);
+    expect(withNeg.apr).toBeCloseTo(naive.apr, 3); // identity holds → matches (1−rawCut)
+    expect(withNeg.apr).toBeGreaterThan(0);
+  });
+
+  it('breakdown: an effective cut above 1 falls back to (1−rawCut), not del×(1−rawCut)', () => {
+    // effCut 1.5 is anomalous → ignored. Must NOT collapse by delegatedStakeRatio.
+    const bad = calculateDelegatorAPRBreakdown(
+      baseAllocations, 100_000, 1_000_000, 10_000_000, 100_000_000, 1.5, 0.5,
+    );
+    const naive = calculateDelegatorAPRBreakdown(
+      baseAllocations, 100_000, 1_000_000, 10_000_000, 100_000_000,
+    );
+    expect(bad.apr).toBeCloseTo(naive.apr, 6);
+  });
+
   it('breakdown: over-delegation yields LOWER delegator rewards than naive (1−rawCut)', () => {
     // When over-delegated, effective cut rises above raw cut, so the delegator
     // share shrinks vs the naive (1 − rawCut) approximation.

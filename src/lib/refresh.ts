@@ -45,6 +45,7 @@ interface SubgraphIndexer {
   indexingRewardEffectiveCut?: string;
   overDelegationDilution?: string;
   ownStakeRatio?: string;
+  delegatedStakeRatio?: string;
   indexerRewardsOwnGenerationRatio?: string;
   provisionedTokens?: string;
 }
@@ -138,6 +139,7 @@ export async function refreshIndexers(opts: {
         indexingRewardEffectiveCut
         overDelegationDilution
         ownStakeRatio
+        delegatedStakeRatio
         indexerRewardsOwnGenerationRatio
         provisionedTokens
       }
@@ -466,8 +468,12 @@ export async function refreshIndexers(opts: {
     const effectiveCut = indexer.indexingRewardEffectiveCut != null
       ? parseFloat(indexer.indexingRewardEffectiveCut)
       : null;
+    // Prefer the subgraph's own delegatedStakeRatio (correctly capped for
+    // over-delegated indexers); fall back to 1 − ownStakeRatio.
     const ownRatio = indexer.ownStakeRatio != null ? parseFloat(indexer.ownStakeRatio) : null;
-    const delegatedStakeRatio = ownRatio != null && ownRatio >= 0 && ownRatio <= 1 ? 1 - ownRatio : null;
+    const delegatedStakeRatio = indexer.delegatedStakeRatio != null
+      ? parseFloat(indexer.delegatedStakeRatio)
+      : (ownRatio != null && ownRatio >= 0 && ownRatio <= 1 ? 1 - ownRatio : null);
 
     const apr = calculateDelegatorAPR(
       allocations,

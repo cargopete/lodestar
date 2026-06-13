@@ -36,20 +36,26 @@ export async function writeIndexers(
       epoch: number | null;
     }> = [];
 
-    if (prev.reward_cut !== null && prev.reward_cut !== indexer.indexingRewardCut) {
+    // Postgres returns NUMERIC columns as strings, so compare as numbers — a raw
+    // `!==` is always true ("880000" !== 880000) and records a no-op change on
+    // every refresh. (The graphops.eth "long history of same→same changes" bug.)
+    const prevRewardCut = prev.reward_cut != null ? Number(prev.reward_cut) : null;
+    const prevQueryFeeCut = prev.query_fee_cut != null ? Number(prev.query_fee_cut) : null;
+
+    if (prevRewardCut !== null && prevRewardCut !== indexer.indexingRewardCut) {
       changes.push({
         indexer_address: indexer.id,
         param_name: 'reward_cut',
-        old_value: prev.reward_cut,
+        old_value: prevRewardCut,
         new_value: indexer.indexingRewardCut,
         epoch: currentEpoch ?? null,
       });
     }
-    if (prev.query_fee_cut !== null && prev.query_fee_cut !== indexer.queryFeeCut) {
+    if (prevQueryFeeCut !== null && prevQueryFeeCut !== indexer.queryFeeCut) {
       changes.push({
         indexer_address: indexer.id,
         param_name: 'query_fee_cut',
-        old_value: prev.query_fee_cut,
+        old_value: prevQueryFeeCut,
         new_value: indexer.queryFeeCut,
         epoch: currentEpoch ?? null,
       });

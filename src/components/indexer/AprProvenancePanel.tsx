@@ -154,6 +154,15 @@ export function AprProvenancePanel({
   const delStakeRatio = ownRatioNum != null && ownRatioNum >= 0 && ownRatioNum <= 1 ? 1 - ownRatioNum : null;
   const delegatorFraction = delStakeRatio != null ? delStakeRatio * (1 - effectiveCut) : 1 - rawCut;
   const overDelegated = delegatorFraction < 1 - rawCut - 0.005;
+  // A negative effective cut is legitimate (high self-stake offsets the cut) but
+  // reads oddly, so display it as 0% while the maths keeps the real value.
+  const negativeEffCut = effectiveCut < 0;
+  const displayEffCut = Math.max(0, effectiveCut);
+  const cutSub = negativeEffCut
+    ? `Raw ${(rawCut * 100).toFixed(1)}% nominal · effectively ~0% — high self-stake offsets the cut, so delegators keep their full delegated-stake share`
+    : overDelegated
+      ? `Raw ${(rawCut * 100).toFixed(1)}% · effective ${(effectiveCut * 100).toFixed(1)}% — over-delegated, so some delegated stake earns nothing`
+      : `Raw ${(rawCut * 100).toFixed(1)}% set by indexer · ${(effectiveCut * 100).toFixed(1)}% effective on delegated-stake rewards`;
   const reconcile = data?.reconcile ?? null;
   const events = data?.events ?? [];
 
@@ -207,12 +216,8 @@ export function AprProvenancePanel({
           />
           <ProvRow
             label="Cut applied"
-            sub={
-              overDelegated
-                ? `Raw ${(rawCut * 100).toFixed(1)}% · effective ${(effectiveCut * 100).toFixed(1)}% — over-delegated, so some delegated stake earns nothing`
-                : `Raw ${(rawCut * 100).toFixed(1)}% set by indexer · ${(effectiveCut * 100).toFixed(1)}% effective on delegated-stake rewards`
-            }
-            value={`${(effectiveCut * 100).toFixed(1)}%`}
+            sub={cutSub}
+            value={`${(displayEffCut * 100).toFixed(1)}%`}
           />
           <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-elevated)]">
             <span className="text-sm font-semibold text-[var(--text)]">= Delegator APR</span>

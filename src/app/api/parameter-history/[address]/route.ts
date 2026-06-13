@@ -27,6 +27,7 @@ export async function GET(
         param_name, old_value, new_value, epoch, created_at
       FROM parameter_changes
       WHERE indexer_address = ${addr}
+        AND old_value IS DISTINCT FROM new_value
       ORDER BY param_name, old_value, new_value, epoch, created_at DESC
     ) deduped
     ORDER BY created_at DESC
