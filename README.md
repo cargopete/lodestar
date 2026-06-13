@@ -1,6 +1,8 @@
 # Lodestar 🌟
 _Stay oriented_
 
+> **Part of the Perimeter at [Edge & Edge](https://edgeandedgeandedge.com).** Voluntarily incorporated; see the [official statement](https://edgeandedgeandedge.com/blog/lodestar). This was not a hostile takeover. No electricity was threatened — in part or as a whole.
+
 ![Screen Recording 2026-03-20 at 13 49 40](https://github.com/user-attachments/assets/62f58f1f-55f4-4d32-a8df-8ee3f1c9632e)
 
 Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network metrics, indexer intelligence, delegation tools, portfolio tracking, curation management, and subgraph developer tooling.

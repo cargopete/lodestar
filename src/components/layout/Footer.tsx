@@ -6,6 +6,17 @@ export function Footer() {
           <span className="not-italic font-medium text-[var(--text-muted)]">lodestar</span> /ˈloʊdstɑːr/ <span className="not-italic text-[var(--text-faint)]">n.</span>{' '}
           a star, especially the pole star, used to navigate by; a guiding principle or source of inspiration.
         </p>
+        <p className="text-center text-[11px] text-[var(--text-muted)] mb-6 not-italic">
+          <a
+            href="https://edgeandedgeandedge.com/blog/lodestar"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[var(--accent)] transition-colors"
+            title="Voluntarily incorporated. No electricity was threatened."
+          >
+            part of the Perimeter at Edge &amp; Edge
+          </a>
+        </p>
         <div className="flex flex-col items-center sm:flex-row sm:justify-between gap-4 text-xs text-[var(--text-faint)]">
           <p>
             Made with{' '}
