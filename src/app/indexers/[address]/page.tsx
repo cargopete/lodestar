@@ -435,6 +435,9 @@ export default function IndexerDetailPage({
         ownStakeRatio={indexer.ownStakeRatio ?? null}
         totalNetworkSignal={totalNetworkSignal}
         annualIssuance={annualIssuance}
+        delegatorParameterCooldown={indexer.delegatorParameterCooldown}
+        lastDelegationParameterUpdate={indexer.lastDelegationParameterUpdate}
+        nowSec={nowSec}
       />
 
       {/* Greedy Indexer Warning */}
@@ -454,39 +457,6 @@ export default function IndexerDetailPage({
         </div>
       )}
 
-      {/* Reward Cut Change Alert */}
-      {(() => {
-        const lastUpdate = indexer.lastDelegationParameterUpdate;
-        const daysSinceChange = (nowSec - lastUpdate) / 86400;
-        const cooldown = indexer.delegatorParameterCooldown;
-        const cooldownDays = cooldown / 86400;
-        const isLocked = cooldown > 0 && (nowSec - lastUpdate) < cooldown;
-
-        if (daysSinceChange <= 30) {
-          return (
-            <div className={cn(
-              'flex items-start gap-3 p-4 rounded-lg border',
-              daysSinceChange <= 7
-                ? 'bg-[var(--red-dim)] border-[var(--red)]'
-                : 'bg-[var(--amber-dim)] border-[var(--amber)]'
-            )}>
-              <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke={daysSinceChange <= 7 ? 'var(--red)' : 'var(--amber)'} strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-              </svg>
-              <div>
-                <p className={cn('text-sm font-medium', daysSinceChange <= 7 ? 'text-[var(--red)]' : 'text-[var(--amber)]')}>
-                  Parameters changed {Math.floor(daysSinceChange)} day{Math.floor(daysSinceChange) !== 1 ? 's' : ''} ago
-                </p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                  Reward cut: {formatPPM(indexer.indexingRewardCut)} · Query fee cut: {formatPPM(indexer.queryFeeCut)}
-                  {isLocked && ` · Locked for ${Math.ceil(cooldownDays - daysSinceChange)}d`}
-                </p>
-              </div>
-            </div>
-          );
-        }
-        return null;
-      })()}
 
       {/* Delegate CTA */}
       <Link

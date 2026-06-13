@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { useAprProvenance } from '@/hooks/useNetworkStats';
 import { calculateDelegatorAPRBreakdown } from '@/lib/rewards';
@@ -20,6 +20,39 @@ interface AprProvenancePanelProps {
   ownStakeRatio?: string | null;
   totalNetworkSignal: number;
   annualIssuance: number;
+  /** Protocol-enforced cooldown between delegation-parameter changes (seconds) */
+  delegatorParameterCooldown: number;
+  /** Unix seconds of the indexer's last delegation-parameter change */
+  lastDelegationParameterUpdate: number;
+  /** Mount-stable "now" in seconds, passed from the page to keep render pure */
+  nowSec: number;
+}
+
+/**
+ * Delegation-parameter cooldown status — the lock window during which an
+ * indexer can't change its cut again. A caveat about term stability, not a
+ * return metric. Returns null when there's nothing noteworthy to surface.
+ */
+function cooldownNote(
+  cooldown: number,
+  lastUpdate: number,
+  nowSec: number,
+): { text: string; tone: 'up' | 'neutral' | 'down' } | null {
+  if (!lastUpdate || lastUpdate <= 0) return null;
+  const daysSince = Math.floor((nowSec - lastUpdate) / 86400);
+  const cooldownDays = cooldown / 86400;
+  const isLocked = cooldown > 0 && nowSec - lastUpdate < cooldown;
+  if (isLocked) {
+    const remaining = Math.max(1, Math.ceil(cooldownDays - (nowSec - lastUpdate) / 86400));
+    return {
+      text: `Cut locked for ${remaining}d (cooldown) · last changed ${daysSince}d ago — terms can't change until then`,
+      tone: 'up',
+    };
+  }
+  if (daysSince <= 30) {
+    return { text: `Cut changed ${daysSince}d ago — recheck before delegating`, tone: 'down' };
+  }
+  return { text: `Cut stable — unchanged for ${daysSince}d`, tone: 'neutral' };
 }
 
 function fmtPpmFromValue(v: number | null | undefined): string {
@@ -77,8 +110,13 @@ export function AprProvenancePanel({
   ownStakeRatio,
   totalNetworkSignal,
   annualIssuance,
+  delegatorParameterCooldown,
+  lastDelegationParameterUpdate,
+  nowSec,
 }: AprProvenancePanelProps) {
   const { data, isLoading } = useAprProvenance(address);
+  const [showEvents, setShowEvents] = useState(false);
+  const cooldown = cooldownNote(delegatorParameterCooldown, lastDelegationParameterUpdate, nowSec);
 
   const breakdown = useMemo(() => {
     const delegated = weiToGRT(delegatedTokensWei);
@@ -204,33 +242,70 @@ export function AprProvenancePanel({
           </div>
         )}
 
-        {/* Why did it change — event trail */}
-        <div>
-          <h4 className="text-sm font-medium text-[var(--text)] mb-2">Why did it change?</h4>
-          {isLoading ? (
-            <p className="text-xs text-[var(--text-faint)]">Loading event trail…</p>
-          ) : events.length === 0 ? (
-            <p className="text-xs text-[var(--text-faint)]">
-              No recent delegation or parameter activity on record.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {events.map((e, i) => {
-                const { text, tone } = eventSentence(e);
-                return (
-                  <li key={i} className="flex items-start gap-2.5 text-xs">
-                    <span
-                      className={cn(
-                        'mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0',
-                        tone === 'down' ? 'bg-[var(--red)]' : tone === 'up' ? 'bg-[var(--green)]' : 'bg-[var(--text-faint)]',
-                      )}
-                    />
-                    <span className="text-[var(--text-muted)] leading-relaxed">{text}</span>
-                    <span className="ml-auto text-[var(--text-faint)] whitespace-nowrap">{timeAgo(e.timestamp)}</span>
-                  </li>
-                );
-              })}
-            </ul>
+        {/* Cooldown / parameter-stability note */}
+        {cooldown && (
+          <div className="flex items-start gap-2 text-[11px]">
+            <span
+              className={cn(
+                'mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0',
+                cooldown.tone === 'up' ? 'bg-[var(--green)]' : cooldown.tone === 'down' ? 'bg-[var(--amber)]' : 'bg-[var(--text-faint)]',
+              )}
+            />
+            <span className="text-[var(--text-muted)] leading-relaxed">{cooldown.text}</span>
+          </div>
+        )}
+
+        {/* Why did it change — event trail, collapsed by default */}
+        <div className="border-t border-[var(--border)] pt-3">
+          <button
+            type="button"
+            onClick={() => setShowEvents((v) => !v)}
+            aria-expanded={showEvents}
+            className="flex w-full items-center justify-between gap-2 text-sm font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+          >
+            <span>
+              Why did it change?
+              {!isLoading && events.length > 0 && (
+                <span className="ml-2 text-[11px] font-normal text-[var(--text-faint)]">
+                  {events.length} event{events.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </span>
+            <svg
+              className={cn('w-4 h-4 flex-shrink-0 transition-transform', showEvents && 'rotate-180')}
+              viewBox="0 0 20 20" fill="currentColor"
+            >
+              <path fillRule="evenodd" d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z" clipRule="evenodd" />
+            </svg>
+          </button>
+          {showEvents && (
+            <div className="mt-3">
+              {isLoading ? (
+                <p className="text-xs text-[var(--text-faint)]">Loading event trail…</p>
+              ) : events.length === 0 ? (
+                <p className="text-xs text-[var(--text-faint)]">
+                  No recent delegation or parameter activity on record.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {events.map((e, i) => {
+                    const { text, tone } = eventSentence(e);
+                    return (
+                      <li key={i} className="flex items-start gap-2.5 text-xs">
+                        <span
+                          className={cn(
+                            'mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0',
+                            tone === 'down' ? 'bg-[var(--red)]' : tone === 'up' ? 'bg-[var(--green)]' : 'bg-[var(--text-faint)]',
+                          )}
+                        />
+                        <span className="text-[var(--text-muted)] leading-relaxed">{text}</span>
+                        <span className="ml-auto text-[var(--text-faint)] whitespace-nowrap">{timeAgo(e.timestamp)}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           )}
         </div>
       </CardContent>
