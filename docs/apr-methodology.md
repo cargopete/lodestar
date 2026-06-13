@@ -80,6 +80,47 @@ over-delegated indexers are scored honestly.
 There is no delegation tax adjustment — Horizon removed the 0.5% deposit tax
 entirely.
 
+## Two figures, and how allocations are handled
+
+Lodestar surfaces two delegator-return numbers, computed differently. Knowing
+which is which matters when you compare them.
+
+### Rolling APY (30d / 90d) — *realized*
+
+This is the headline, trust-it number. It's derived from the **delegation
+pool's exchange-rate growth** over the window (tokens-per-share then vs. now),
+falling back to realized rewards from closed allocations. It reflects what
+*actually happened* to a delegator's position — **no allocations are filtered
+or capped**, because there's nothing to model: it's measured, not projected. It
+also uses the active (excl. thawing) base, so recent undelegations don't distort
+it.
+
+### Instantaneous APR — *forward estimate*
+
+This is a projection of the current run-rate: for each active allocation,
+
+```
+reward = annualIssuance × (subgraphSignal / totalNetworkSignal) × (allocatedTokens / subgraphStake)
+```
+
+summed across allocations, then split to delegators per the section above.
+Because it's a projection off live signal, a single anomalous allocation can
+dominate it — so we apply two robustness rules:
+
+1. **Zero-filter.** Allocations whose subgraph has zero signal or zero staked
+   tokens are dropped — they can't contribute a meaningful signal-weighted
+   reward (and would divide by zero).
+2. **P95 outlier cap.** For each allocation we compute its signal-to-stake
+   ratio, then **clamp each ratio to the 95th percentile** of that indexer's own
+   allocation set. A subgraph with tiny stake but outsized signal (say, 100× the
+   norm) would otherwise project an unrealistic reward and skew the whole
+   estimate. We **cap, not exclude** — the allocation still counts, just at the
+   P95 ratio rather than its raw one.
+
+The resulting APR is finally capped at **100%** as a sanity bound. The intent is
+a representative run-rate, not a best-case headline — which is why, for an
+honest historical read, the realized APY above is the one to trust.
+
 ## Verification: we read the chain, not just the subgraph
 
 The subgraph is event-driven and can lag the chain by a few blocks. So for the
