@@ -6,6 +6,7 @@ import {
   ComposedChart,
   Bar,
   Line,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -32,6 +33,7 @@ export function DeveloperActivityChart() {
         week: formatWeek(w.weekStart),
         published: w.count,
         cumulative: w.cumulative,
+        partial: w.partial,
       })),
     [data]
   );
@@ -70,7 +72,7 @@ export function DeveloperActivityChart() {
                 </p>
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
-                <p className="text-[10px] text-[var(--text-faint)] mb-1">Latest week</p>
+                <p className="text-[10px] text-[var(--text-faint)] mb-1">Latest full week</p>
                 <p className="text-lg font-mono font-semibold text-[var(--text)]">
                   {formatNumber(data!.lastWeekCount)}
                 </p>
@@ -128,22 +130,28 @@ export function DeveloperActivityChart() {
                     }}
                     labelStyle={{ color: 'var(--text)' }}
                     itemStyle={{ color: 'var(--text-muted)' }}
-                    formatter={(value, name) => [
+                    formatter={(value, name, item) => [
                       formatNumber(Number(value)),
-                      name === 'published' ? 'Published' : 'Cumulative',
+                      name === 'published'
+                        ? item?.payload?.partial
+                          ? 'Published (week in progress)'
+                          : 'Published'
+                        : 'Cumulative',
                     ]}
                   />
                   <Legend
                     formatter={(v) => (v === 'published' ? 'Published / week' : 'Cumulative')}
                     wrapperStyle={{ fontSize: 11, color: 'var(--text-muted)' }}
                   />
-                  <Bar
-                    yAxisId="left"
-                    dataKey="published"
-                    fill="var(--accent)"
-                    fillOpacity={0.8}
-                    radius={[2, 2, 0, 0]}
-                  />
+                  <Bar yAxisId="left" dataKey="published" radius={[2, 2, 0, 0]}>
+                    {chartData.map((d, i) => (
+                      <Cell
+                        key={i}
+                        fill="var(--accent)"
+                        fillOpacity={d.partial ? 0.3 : 0.8}
+                      />
+                    ))}
+                  </Bar>
                   <Line
                     yAxisId="right"
                     type="monotone"
@@ -158,7 +166,7 @@ export function DeveloperActivityChart() {
           </>
         )}
         <p className="text-[10px] text-[var(--text-faint)] mt-2 text-right">
-          Source: Subgraph publish events from The Graph network
+          Faded bar = current week (in progress) · Source: Subgraph publish events from The Graph network
         </p>
       </CardContent>
     </Card>

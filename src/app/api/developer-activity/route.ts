@@ -15,6 +15,8 @@ interface WeekBucket {
   count: number;
   /** Running total of subgraphs published from the window start through this week */
   cumulative: number;
+  /** True for the current, still-in-progress week (incomplete — don't read its count as a trend) */
+  partial: boolean;
 }
 
 export interface DeveloperActivityResponse {
@@ -24,9 +26,9 @@ export interface DeveloperActivityResponse {
   windowMonths: number;
   /** Total subgraphs published within the window */
   totalInWindow: number;
-  /** Published in the most recent complete-ish week */
+  /** Published in the most recent COMPLETE week (the partial current week is excluded) */
   lastWeekCount: number;
-  /** Week-over-week change (%), null when the prior week is empty */
+  /** Week-over-week change (%) between the last two complete weeks, null when the prior week is empty */
   weekOverWeekPct: number | null;
 }
 
@@ -92,6 +94,7 @@ export async function GET() {
 
       // Emit a contiguous run of weeks (filling empty ones with 0) so the chart
       // doesn't lie about gaps.
+      const currentWeekStart = weekStartUTC(Math.floor(Date.now() / 1000));
       const weeks: WeekBucket[] = [];
       const sortedKeys = [...counts.keys()].sort();
       if (sortedKeys.length > 0) {
@@ -102,13 +105,16 @@ export async function GET() {
           const key = d.toISOString().slice(0, 10);
           const count = counts.get(key) ?? 0;
           cumulative += count;
-          weeks.push({ weekStart: key, count, cumulative });
+          weeks.push({ weekStart: key, count, cumulative, partial: key === currentWeekStart });
         }
       }
 
       const totalInWindow = rows.length;
-      const lastWeekCount = weeks.length > 0 ? weeks[weeks.length - 1].count : 0;
-      const prevWeekCount = weeks.length > 1 ? weeks[weeks.length - 2].count : 0;
+      // Headline + WoW use only COMPLETE weeks — the current week is partial and would
+      // otherwise read as a crash mid-week.
+      const completeWeeks = weeks.filter((w) => !w.partial);
+      const lastWeekCount = completeWeeks.length > 0 ? completeWeeks[completeWeeks.length - 1].count : 0;
+      const prevWeekCount = completeWeeks.length > 1 ? completeWeeks[completeWeeks.length - 2].count : 0;
       const weekOverWeekPct =
         prevWeekCount > 0 ? ((lastWeekCount - prevWeekCount) / prevWeekCount) * 100 : null;
 
