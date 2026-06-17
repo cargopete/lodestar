@@ -27,6 +27,7 @@ import {
   fetchIndexerQoS,
   fetchIndexerStakeHistory,
   fetchDelegationFlows,
+  fetchDeveloperActivity,
   fetchTokenMetrics,
   fetchParameterHistory,
   fetchAprProvenance,
@@ -568,6 +569,19 @@ export function useDelegationFlows(days = 90, compare = false) {
     queryFn: () => fetchDelegationFlows(days, compare),
     staleTime: TEN_MINUTES,
     refetchInterval: TEN_MINUTES,
+  });
+}
+
+/**
+ * Hook for developer-activity timeseries (subgraphs published per week)
+ */
+export function useDeveloperActivity() {
+  return useQuery({
+    queryKey: ['developerActivity'],
+    queryFn: fetchDeveloperActivity,
+    staleTime: ONE_HOUR,
+    refetchInterval: ONE_HOUR,
+    placeholderData: keepPreviousData,
   });
 }
 

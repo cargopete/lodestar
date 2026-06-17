@@ -19,6 +19,7 @@ const RewardSplitDonut = dynamic(() => import('@/components/charts/RewardSplitDo
 const QueryFeesChart = dynamic(() => import('@/components/charts/QueryFeesChart').then(m => ({ default: m.QueryFeesChart })), { ssr: false });
 const TokenIssuanceChart = dynamic(() => import('@/components/charts/TokenIssuanceChart').then(m => ({ default: m.TokenIssuanceChart })), { ssr: false });
 const DelegationFlowChart = dynamic(() => import('@/components/charts/DelegationFlowChart').then(m => ({ default: m.DelegationFlowChart })), { ssr: false });
+const DeveloperActivityChart = dynamic(() => import('@/components/charts/DeveloperActivityChart').then(m => ({ default: m.DeveloperActivityChart })), { ssr: false });
 
 export default function ProtocolOverview() {
   const [epochsOpen, setEpochsOpen] = useState(false);
@@ -187,6 +188,9 @@ export default function ProtocolOverview() {
 
       {/* Delegation flows */}
       <DelegationFlowChart />
+
+      {/* Developer activity — new subgraphs published over time */}
+      <DeveloperActivityChart />
 
       {/* Network participants + protocol parameters */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

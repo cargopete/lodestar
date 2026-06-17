@@ -13,6 +13,7 @@ import type { ManifestAnalysis } from './manifest';
 import type { POIOverview, POIDeploymentDetail } from './poi';
 import type { DeploymentIndexingStatus } from './indexing-status';
 import type { VotesResponse, VoteMessage } from './voting';
+import type { DeveloperActivityResponse } from '@/app/api/developer-activity/route';
 
 /**
  * Fetch network statistics via cached GET endpoint
@@ -414,6 +415,16 @@ export async function fetchTokenMetrics(count = 100): Promise<{
   if (!response.ok) throw new Error(`Token metrics failed: ${response.status}`);
   const json = await response.json();
   return json.data ?? [];
+}
+
+/**
+ * Fetch developer-activity timeseries (subgraphs published per week)
+ */
+export async function fetchDeveloperActivity(): Promise<DeveloperActivityResponse> {
+  const response = await fetch('/api/developer-activity');
+  if (!response.ok) throw new Error(`Developer activity failed: ${response.status}`);
+  const json = await response.json();
+  return json.data as DeveloperActivityResponse;
 }
 
 /**

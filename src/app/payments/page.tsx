@@ -3,7 +3,7 @@
 import { useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { usePayments, useGRTPrice, useEnrichedIndexers } from '@/hooks/useNetworkStats';
+import { usePayments, useGRTPrice, useEnrichedIndexers, useNetworkStats } from '@/hooks/useNetworkStats';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
@@ -269,6 +269,7 @@ function PaymentsInner() {
   const router = useRouter();
   const { data, isLoading, isError } = usePayments();
   const { data: priceData } = useGRTPrice();
+  const { data: networkData } = useNetworkStats();
   const names = useIndexerNames();
   const [activeTab, setActiveTab] = useState<Tab>('escrow');
   const [selectedGateway, setSelectedGateway] = useState<string | null>(
@@ -415,6 +416,36 @@ function PaymentsInner() {
           />
         )}
       </StatGrid>
+
+      {/* Network revenue context — ties the TAP pipeline to lifetime protocol revenue */}
+      {networkData?.graphNetwork && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-[var(--text-faint)]">Network revenue (lifetime)</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  TAP escrow above is the modern collection rail; these are the protocol-wide totals.
+                </p>
+              </div>
+              <div className="flex gap-6">
+                <div>
+                  <p className="text-[10px] text-[var(--text-faint)]">Query Fees</p>
+                  <p className="text-lg font-mono font-semibold text-[var(--accent)]">
+                    {formatGRT(weiToGRT(networkData.graphNetwork.totalQueryFees))} GRT
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-[var(--text-faint)]">Indexing Rewards</p>
+                  <p className="text-lg font-mono font-semibold text-[var(--green)]">
+                    {formatGRT(weiToGRT(networkData.graphNetwork.totalIndexingRewards))} GRT
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Gateway breakdown / filter */}
       {gatewayBreakdown.length > 0 && (
