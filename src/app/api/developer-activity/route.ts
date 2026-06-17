@@ -54,7 +54,8 @@ export async function GET() {
   }
 
   const windowMonths = 12;
-  const cacheKey = `lodestar:developer-activity:${windowMonths}m`;
+  // v2: payload gained the `partial` flag + complete-week-only headline figures.
+  const cacheKey = `lodestar:developer-activity:v2:${windowMonths}m`;
 
   try {
     const data = await cached<DeveloperActivityResponse>(cacheKey, 3600, async () => {
