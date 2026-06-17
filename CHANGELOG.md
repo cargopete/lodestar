@@ -2,6 +2,47 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.20.0] — 2026-06-17
+
+A single, shareable answer to *"where do I see the state of the protocol?"* — plus a
+show-your-working revamp of delegator APR.
+
+### Added
+- **State of the Network** (`/network`) — one page that answers the three questions newcomers
+  actually ask: protocol **utilization** (stake/delegation/signal, active participants, query
+  fees), **developer activity**, and **revenue** (query fees, indexing rewards, TAP collections).
+  Built for a mod to paste into a chat and have it just make sense — no price speculation. Linked
+  from both the desktop sidebar and the mobile bottom-nav.
+- **Developer-activity timeseries** — subgraphs published per week over the last 12 months
+  (weekly bars + cumulative line), derived purely from on-chain publish events. The in-progress
+  week is flagged *partial*: its bar is muted and it's excluded from the headline and
+  week-over-week figures, so a 2-day-old week never reads as a cliff. Also surfaced on the
+  Protocol Overview.
+- **APR provenance** — delegator APR now shows its working: a decomposition reconciled against
+  the on-chain `getDelegationPool`, plus a merged event trail (delegations/undelegations and
+  reward/query-fee cut changes) explaining *why* the figure is what it is. Surfaces the uncapped
+  instant APR alongside the P95-clamped estimate for transparency across dashboards.
+
+### Changed
+- **Network revenue context on Payments** — the TAP escrow pipeline now sits beneath a
+  lifetime-revenue band (protocol-wide query fees + indexing rewards), tying the modern
+  collection rail to the bigger picture.
+- **Relicensed to BUSL-1.1.**
+
+### Fixed
+- **Negative effective cut honoured** in APR — previously collapsed high-self-stake indexers
+  ~10× (e.g. graphops 24% → 2.4%); now uses the subgraph's `delegatedStakeRatio` and only flags
+  over-delegation when the cap actually bites.
+- Ingest no longer writes no-op parameter changes (numeric-string compare), and no-ops are
+  filtered from parameter history; suppressed the sentinel "unchanged for 20000d" cut note.
+
+## [4.19.0] — 2026-06-11
+
+### Fixed
+- **GRT issuance rate corrected** — annual issuance is now divided by global supply
+  (L1 + L2 − bridge escrow) rather than the L2-only `totalSupply`, which had overstated the
+  rate ~3×.
+
 ## [4.18.0] — 2026-06-11
 
 Servability & network integrity (RFC-006, first deltas): the dashboard now measures
