@@ -10,7 +10,7 @@
  * most decision-relevant field is `providerStatus` — surface it prominently.
  */
 
-export const DATA_SERVICES_LAST_REVIEWED = '2026-05-31';
+export const DATA_SERVICES_LAST_REVIEWED = '2026-06-17';
 
 /** Whether a real, paid-query-serving provider set exists. The headline signal. */
 export type ProviderStatus = 'active' | 'single-self-run' | 'none';
@@ -409,6 +409,44 @@ sds consumer sidecar --grpc-listen-addr :9002 --provider-control-plane-endpoint 
 # 3. stream a package through it
 substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +20`,
     },
+  },
+  {
+    slug: 'fhsce',
+    name: 'File Hosting Service — Community Edition (FHSCE)',
+    builtBy: 'lodestar-team',
+    homeTeam: true,
+    tagline: 'A community edition of the File Hosting Service — chunked, IPFS-verified file sharing, brought onto Horizon with TAP v2.',
+    description:
+      'Forked from graphops/file-hosting-service: a trust-minimised, peer-to-peer marketplace for sharing chunked, SHA2-256-verified file data (Firehose flatfiles, subgraph snapshots, arbitrary datasets) addressed by an IPFS manifest. The upstream data plane is excellent but its payment layer was legacy Scalar TAP and never finished. FHSCE keeps the data plane and replaces payments with a Horizon-native, UUPS-upgradeable FileHostingDataService and a TAP v2 (GraphTally) gateway built on the new horizon-core crate. Providers register and startService per IPFS manifest CID; consumers pay per request via signed TAP receipts redeemed as RAVs.',
+    tier: 3,
+    statusLabel: 'In dev · mainnet-ready',
+    statusVariant: 'default',
+    stage: 'Contract fork-verified against real Arbitrum One Horizon; gateway built on horizon-core; deploy pending',
+    providerStatus: 'none',
+    providerNote:
+      'Not yet on mainnet. Contract complete (39 Foundry tests, UUPS upgrade-preserves-state) and deploy fork-verified against the real Arbitrum One Controller + GraphTallyCollector. fhsce-gateway built on horizon-core; off-chain TAP loop e2e-tested (receipt → verify → persist → proxy, replay/expiry rejected). Awaiting mainnet broadcast + a self-run provider serving real Arbitrum firehose flatfiles.',
+    chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One (target)', dataLabel: 'Firehose flatfiles (.dbin)', isMainnet: false },
+    stack: ['Rust', 'Solidity'],
+    links: [
+      { label: 'Repo (FHSCE)', url: 'https://github.com/lodestar-team/FHSCE' },
+      { label: 'horizon-core', url: 'https://github.com/lodestar-team/horizon-core' },
+      { label: 'Upstream (graphops)', url: 'https://github.com/graphops/file-hosting-service' },
+    ],
+    minProvision: '0 GRT (soft launch)',
+    becomeProvider: [
+      'HorizonStaking: stake, then provision(addr, FileHostingDataService, tokens, maxVerifierCut, thawingPeriod≥14d).',
+      'FileHostingDataService.register(addr, abi.encode(endpoint, geoHash, paymentsDestination)).',
+      'Owner allowlists the IPFS manifest CID (addManifest); startService per manifest hosted.',
+      'Run the stack: file-service (chunked-file data plane) + fhsce-gateway (TAP v2, built on horizon-core) + Postgres; collect() hourly.',
+    ],
+    consume: [
+      'Fund PaymentsEscrow for the provider and authorise a signer on GraphTallyCollector.',
+      'Sign an EIP-712 TAP v2 receipt (GraphTallyCollector domain, chainId 42161) per request; pass it in the TAP-Receipt header.',
+      'Download chunks over HTTP (range requests supported); each chunk is SHA2-256-verifiable against the IPFS manifest.',
+    ],
+    fees: 'Fixed 1% data-service cut, burned (0% retained) — Community Edition policy, matching SDSCE.',
+    notable:
+      'First consumer of horizon-core (lodestar-team\'s reusable Horizon payment plumbing: TAP v2 validation, RAV aggregation, on-chain collection, persistence, generic TAP-gated proxy). Experimental, community-led — not affiliated with the Graph Foundation, Edge & Node, or GraphOps. Unaudited. Distinct from the upstream graphops File Hosting Service.',
   },
   {
     slug: 'mainline-firehose',
