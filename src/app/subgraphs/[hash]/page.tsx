@@ -519,8 +519,8 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                         <td className="px-4 py-3 text-right">
                           {(() => {
                             const q = foghornQos?.get(indexer.indexerId.toLowerCase());
-                            if (!q || q.successRate == null || (q.queryCount ?? 0) < 50) {
-                              return <span className="text-xs text-[var(--text-faint)]" title="No recent query traffic measured">—</span>;
+                            if (!q || q.successRate == null) {
+                              return <span className="text-xs text-[var(--text-faint)]" title="No recent query traffic measured (QoS oracle)">—</span>;
                             }
                             const pct = q.successRate * 100;
                             const color = pct >= 90 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
