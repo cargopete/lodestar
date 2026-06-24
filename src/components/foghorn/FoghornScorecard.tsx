@@ -61,6 +61,10 @@ export function FoghornScorecard({ address }: { address: string }) {
       <CardContent className="space-y-4">
         {!primary ? (
           <p className="text-sm text-[var(--text-muted)]">Not yet graded.</p>
+        ) : !primary.rated ? (
+          <p className="text-sm text-[var(--text-muted)]">
+            Unrated — this indexer has no query volume, allocations, or probe coverage to judge.
+          </p>
         ) : (
           <>
             <div className="flex items-center gap-3">

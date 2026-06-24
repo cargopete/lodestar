@@ -509,7 +509,9 @@ export function IndexerTable() {
         cell: (info) => {
           const grade = info.getValue();
           const flags = info.row.original.foghornFlags;
-          if (!grade) return <span className="text-[var(--text-faint)]">—</span>;
+          if (!grade || grade === 'NR') {
+            return <span className="text-[var(--text-faint)]" title={grade === 'NR' ? 'Inactive / unrated' : undefined}>—</span>;
+          }
           return (
             <span className="inline-flex items-center gap-1">
               <Badge variant={gradeVariant(grade)}>{grade}</Badge>

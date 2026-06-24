@@ -80,6 +80,7 @@ export function useIndexerQuality(address: string | null) {
 
 export interface FoghornGrade {
   grade: string;
+  rated: boolean;
   composite: number;
   verdictCount: number;
   needsAttention: boolean;
@@ -99,6 +100,7 @@ export function useFoghornGrades() {
       for (const ix of data.indexers) {
         map.set(ix.indexer_address.toLowerCase(), {
           grade: ix.grade,
+          rated: ix.rated,
           composite: ix.composite,
           verdictCount: ix.verdict_count,
           needsAttention: ix.needs_attention,

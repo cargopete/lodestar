@@ -31,7 +31,8 @@ export interface FoghornIndexer {
   indexer_address: string;
   ens_name: string | null;
   composite: number;
-  grade: Grade;
+  grade: Grade | 'NR';
+  rated: boolean;
   sub_scores: SubScores;
   self_stake_grt: number | null;
   allocation_count: number | null;
@@ -90,7 +91,8 @@ export interface SybilCluster {
 export interface ScoreEntry {
   window_days: number;
   composite: number;
-  grade: Grade;
+  grade: Grade | 'NR';
+  rated: boolean;
   sub_scores: SubScores;
   probe_count: number;
   sybil_flag: boolean;

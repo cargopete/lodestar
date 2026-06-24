@@ -192,10 +192,16 @@ function Leaderboard() {
                       </Link>
                     </td>
                     <td className="px-3 py-2">
-                      <Badge variant={gradeVariant(ix.grade)}>{ix.grade}</Badge>
+                      {ix.rated ? (
+                        <Badge variant={gradeVariant(ix.grade)}>{ix.grade}</Badge>
+                      ) : (
+                        <Badge variant="default" title="Inactive — no queries, allocations, or probe coverage">NR</Badge>
+                      )}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono">{ix.composite.toFixed(0)}</td>
-                    <td className="px-3 py-2"><SubScoreGrid s={ix.sub_scores} /></td>
+                    <td className="px-3 py-2 text-right font-mono">
+                      {ix.rated ? ix.composite.toFixed(0) : <span className="text-[var(--text-faint)]">—</span>}
+                    </td>
+                    <td className="px-3 py-2">{ix.rated ? <SubScoreGrid s={ix.sub_scores} /> : null}</td>
                     <td className="px-3 py-2 text-right font-mono text-[var(--text-muted)]">
                       {ix.self_stake_grt != null ? formatGRT(ix.self_stake_grt) : '—'}
                     </td>
@@ -404,9 +410,14 @@ function StatsStrip() {
   const { data: verdicts } = useVerdicts({ limit: 500 });
   const { data: indexers } = useFoghornIndexers(30);
 
+  const ratedCount = indexers?.indexers.filter((i) => i.rated).length;
   return (
     <StatGrid>
-      <StatCard label="Indexers graded" value={indexers ? String(indexers.count) : '—'} />
+      <StatCard
+        label="Indexers graded"
+        value={ratedCount != null ? String(ratedCount) : '—'}
+        subtitle={indexers ? `${indexers.count - (ratedCount ?? 0)} unrated / inactive` : undefined}
+      />
       <StatCard
         label="Needs attention"
         value={attn ? String(attn.count) : '—'}
