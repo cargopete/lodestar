@@ -404,6 +404,63 @@ function DivergenceFeed() {
 
 // ── Stats strip ────────────────────────────────────────────────────────────────
 
+// ── What Foghorn actually tests (honest methodology) ─────────────────────────
+
+function MethodologyPanel() {
+  const { data: stats } = useFoghornStats();
+  const { data: indexers } = useFoghornIndexers(30);
+  const probed = stats?.deployments_covered;
+  const correctnessIndexers = indexers?.indexers.filter((i) => i.probe_count > 0).length;
+  const total = indexers?.count;
+
+  return (
+    <Card className="border-l-2 border-l-[var(--accent)]">
+      <CardHeader>
+        <CardTitle>What Foghorn actually tests</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm text-[var(--text-muted)]">
+        <p>
+          Most of an indexer&apos;s grade comes from network telemetry that applies to everyone;
+          only <span className="text-[var(--text)]">correctness</span> is Foghorn&apos;s own
+          measurement, and it only covers indexers serving the deployments Foghorn probes.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="rounded-[var(--radius-card)] bg-[var(--bg-elevated)] p-3">
+            <p className="text-[var(--text)] font-medium mb-1">
+              Directly probed by Foghorn — <span className="text-[var(--green)]">correctness</span>
+            </p>
+            <p>
+              Block-pinned GraphQL queries sent through the gateway, responses canonicalised (JCS)
+              and SHA-256 hashed; an indexer that returns minority (divergent) data versus consensus
+              is flagged. Catches confident, well-formed <em>wrong</em> data that QoS can&apos;t see.
+            </p>
+            {probed != null && correctnessIndexers != null && (
+              <p className="mt-2 text-[11px] text-[var(--text-faint)]">
+                Currently probing <span className="text-[var(--text)]">{probed}</span> deployments;{' '}
+                <span className="text-[var(--text)]">{correctnessIndexers}</span>
+                {total != null ? ` of ${total}` : ''} indexers have correctness coverage so far
+                (expands automatically as Foghorn discovers more deployments).
+              </p>
+            )}
+          </div>
+          <div className="rounded-[var(--radius-card)] bg-[var(--bg-elevated)] p-3">
+            <p className="text-[var(--text)] font-medium mb-1">Read from the network — applies to all indexers</p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              <li><span className="text-[var(--text)]">QoS oracle:</span> success rate (errors/400s), latency, chainhead lag, query volume — measured from real query traffic, not Foghorn.</li>
+              <li><span className="text-[var(--text)]">On-chain / network subgraph:</span> self-stake, allocations (coverage), REO eligibility.</li>
+              <li><span className="text-[var(--text)]">Derived by Foghorn:</span> sybil-swarm clustering and leech detection from roster patterns.</li>
+            </ul>
+          </div>
+        </div>
+        <p className="text-[11px] text-[var(--text-faint)]">
+          So today the composite leans on QoS / stake / coverage for most indexers; correctness is
+          the differentiator wherever Foghorn has probed. &quot;NR&quot; = inactive / unrated.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function StatsStrip() {
   const { data: stats } = useFoghornStats();
   const { data: attn } = useNeedsAttention();
@@ -442,11 +499,13 @@ export default function FoghornPage() {
           <Badge variant="accent">Network-quality judge</Badge>
         </div>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Block-pinned correctness probing fused with QoS, stake and REO data — composite grades,
-          actionable verdicts, and the indexers that need attention right now.
+          A composite A–F grade per indexer, fusing Foghorn&apos;s own correctness probing with
+          The Graph&apos;s QoS oracle, on-chain stake and REO data — plus actionable verdicts and a
+          live needs-attention triage.
         </p>
       </div>
 
+      <MethodologyPanel />
       <StatsStrip />
       <NeedsAttentionSection />
       <Leaderboard />
