@@ -14,6 +14,7 @@ import {
   useENSName,
   useSubgraphSchema,
 } from '@/hooks/useNetworkStats';
+import { useDeploymentQos } from '@/hooks/useFoghorn';
 import { SubgraphHistoryChart } from '@/components/charts/SubgraphHistoryChart';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -373,6 +374,7 @@ function SchemaTab({ hash }: { hash: string }) {
 function IndexingHealthSection({ hash }: { hash: string }) {
   const { data, isLoading, error } = useIndexingStatus(hash);
   const { data: curationData } = useSubgraphCuration(hash);
+  const { data: foghornQos } = useDeploymentQos(hash);
   const queryFeesGRT = weiToGRT(curationData?.queryFeesAmount ?? '0');
 
   if (isLoading) {
@@ -486,6 +488,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                     <tr className="border-b border-[var(--border)]">
                       <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Indexer</th>
                       <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Status</th>
+                      <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]" title="Foghorn: share of queries this indexer answered with HTTP 200 on this deployment (from the QoS oracle). Catches indexers that are synced but returning errors.">Query Success</th>
                       <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Sync Progress</th>
                       <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Blocks Behind</th>
                       <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Entities</th>
@@ -512,6 +515,21 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                               </span>
                             )}
                           </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {(() => {
+                            const q = foghornQos?.get(indexer.indexerId.toLowerCase());
+                            if (!q || q.successRate == null || (q.queryCount ?? 0) < 50) {
+                              return <span className="text-xs text-[var(--text-faint)]" title="No recent query traffic measured">—</span>;
+                            }
+                            const pct = q.successRate * 100;
+                            const color = pct >= 90 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
+                            return (
+                              <span className="text-sm font-mono" style={{ color }} title={`${q.queryCount?.toLocaleString()} queries`}>
+                                {pct.toFixed(pct < 100 ? 1 : 0)}%
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="px-4 py-3">
                           {indexer.syncProgress !== undefined ? (

@@ -188,6 +188,18 @@ export interface NonDetDeployment {
 export const fetchNonDeterministic = () =>
   foghornGet<{ deployments: NonDetDeployment[]; count: number }>('nondeterministic');
 
+export interface DeploymentQosRow {
+  indexer_address: string;
+  success_rate: number | null; // 0..1
+  blocks_behind: number | null;
+  query_count: number | null;
+}
+
+export const fetchDeploymentQos = (deploymentHash: string) =>
+  foghornGet<{ deployment_id: string; indexers: DeploymentQosRow[] }>(
+    `deployment/${deploymentHash}/qos`
+  );
+
 export const fetchFoghornFeed = (limit = 50) =>
   foghornGet<{ events: FeedEvent[]; count: number }>(`feed?limit=${limit}`);
 
