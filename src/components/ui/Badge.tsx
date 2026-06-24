@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils';
 import { ReactNode } from 'react';
 
-type BadgeVariant = 'default' | 'accent' | 'success' | 'warning' | 'error';
+export type BadgeVariant = 'default' | 'accent' | 'success' | 'warning' | 'error';
 
 interface BadgeProps {
   children: ReactNode;

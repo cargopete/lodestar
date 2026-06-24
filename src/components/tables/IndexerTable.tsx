@@ -16,6 +16,8 @@ import {
 } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
 import { useEnrichedIndexers, useIndexers, useNetworkStats } from '@/hooks/useNetworkStats';
+import { useFoghornGrades } from '@/hooks/useFoghorn';
+import { gradeVariant } from '@/lib/foghorn';
 import { qosGrade } from '@/lib/qos-score';
 import {
   weiToGRT,
@@ -76,6 +78,8 @@ interface IndexerRow {
   score: number | null;
   scoreGrade: 'A' | 'B' | 'C' | 'D' | 'F' | null;
   qScore: number | null;
+  foghornGrade: string | null;
+  foghornFlags: { verdicts: number; needsAttention: boolean; sybil: boolean } | null;
   raw: Indexer;
 }
 
@@ -90,6 +94,14 @@ const nameAddressFilter: FilterFn<IndexerRow> = (row, _columnId, filterValue) =>
 };
 
 const columnHelper = createColumnHelper<IndexerRow>();
+
+function foghornFlagsFor(
+  map: Map<string, { verdictCount: number; needsAttention: boolean; sybilFlag: boolean }> | undefined,
+  address: string,
+): IndexerRow['foghornFlags'] {
+  const g = map?.get(address.toLowerCase());
+  return g ? { verdicts: g.verdictCount, needsAttention: g.needsAttention, sybil: g.sybilFlag } : null;
+}
 
 // Module-level cache so repeated renders / page navigations don't re-fetch
 const syncHealthCache = new Map<string, { reachable: boolean; totalDeployments: number; syncedCount: number; worstBlocksBehind?: number }>();
@@ -232,6 +244,7 @@ export function IndexerTable() {
   });
 
   const { data: networkData } = useNetworkStats();
+  const { data: foghornMap } = useFoghornGrades();
   const delegationRatio = networkData?.graphNetwork?.delegationRatio ?? 16;
 
   // QoS quality scores (address → Q-score), from the network-health leaderboard.
@@ -290,6 +303,8 @@ export function IndexerTable() {
           score: e.score ?? null,
           scoreGrade: e.scoreGrade ?? null,
           qScore: (qosResp ?? {})[e.id.toLowerCase()] ?? null,
+          foghornGrade: foghornMap?.get(e.id.toLowerCase())?.grade ?? null,
+          foghornFlags: foghornFlagsFor(foghornMap, e.id),
           // Reconstruct raw Indexer shape for comparison panel
           raw: {
             id: e.id,
@@ -353,11 +368,13 @@ export function IndexerTable() {
           score: null,
           scoreGrade: null,
           qScore: (qosResp ?? {})[indexer.id.toLowerCase()] ?? null,
+          foghornGrade: foghornMap?.get(indexer.id.toLowerCase())?.grade ?? null,
+          foghornFlags: foghornFlagsFor(foghornMap, indexer.id),
           raw: indexer,
         };
       })
       .filter((row) => row.selfStake >= minStake);
-  }, [enrichedData, hasEnriched, indexersData, delegationRatio, minStake, qosResp]);
+  }, [enrichedData, hasEnriched, indexersData, delegationRatio, minStake, qosResp, foghornMap]);
 
   const columns = useMemo(
     () => [
@@ -482,6 +499,31 @@ export function IndexerTable() {
             <span className="font-mono font-semibold" style={{ color }}>
               {q.toFixed(0)}
               <span className="ml-1 text-[11px] font-medium opacity-70">{g.grade}</span>
+            </span>
+          );
+        },
+        sortUndefined: 'last',
+      }),
+      columnHelper.accessor('foghornGrade', {
+        header: () => <HeaderTip label="Foghorn" tip="Foghorn network-quality grade (A–F): block-pinned correctness, availability, freshness, coverage and query value. Distinct from the delegator-lensed Score. Dots flag open verdicts (⚑), needs-attention (!) and sybil-swarm membership." />,
+        cell: (info) => {
+          const grade = info.getValue();
+          const flags = info.row.original.foghornFlags;
+          if (!grade) return <span className="text-[var(--text-faint)]">—</span>;
+          return (
+            <span className="inline-flex items-center gap-1">
+              <Badge variant={gradeVariant(grade)}>{grade}</Badge>
+              {flags && flags.verdicts > 0 && (
+                <span className="text-[10px] text-[var(--amber)]" title={`${flags.verdicts} verdict(s)`}>
+                  {flags.verdicts}⚑
+                </span>
+              )}
+              {flags?.needsAttention && (
+                <span className="text-[10px] text-[var(--red)]" title="Needs attention">!</span>
+              )}
+              {flags?.sybil && (
+                <span className="text-[10px] text-[var(--red)]" title="Sybil swarm member">◆</span>
+              )}
             </span>
           );
         },
