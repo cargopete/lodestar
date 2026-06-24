@@ -12,6 +12,7 @@ import {
   useNeedsAttention,
   useVerdicts,
   useSybilClusters,
+  useNonDeterministic,
   useFoghornFeed,
 } from '@/hooks/useFoghorn';
 import {
@@ -347,6 +348,46 @@ function SybilSection() {
   );
 }
 
+// ── Non-deterministic subgraphs ──────────────────────────────────────────────
+
+function NonDeterministicSection() {
+  const { data, isLoading } = useNonDeterministic();
+  const deps = data?.deployments ?? [];
+  if (!isLoading && deps.length === 0) return null;
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold text-[var(--text)]">Non-deterministic Subgraphs</h2>
+      <p className="text-sm text-[var(--text-muted)]">
+        These deployments diverge across indexers every probe round — their mappings are
+        non-deterministic (the subgraph&apos;s issue, not the indexers&apos;). Indexers are
+        <span className="text-[var(--text)]"> not penalised</span> for serving them.
+      </p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {deps.map((d) => (
+          <Card key={d.deployment_id}>
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-sm text-[var(--text)]">{shortenAddress(d.deployment_id, 8)}</span>
+              <Badge variant="warning">
+                {formatPercent(d.divergence_rate * 100, 0)} of {d.total_probes} probes
+              </Badge>
+            </div>
+            {d.sample_fields.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {d.sample_fields.map((f) => (
+                  <span key={f} className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-muted)]">
+                    {f}
+                  </span>
+                ))}
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // ── Divergence feed ──────────────────────────────────────────────────────────
 
 function DivergenceFeed() {
@@ -511,6 +552,7 @@ export default function FoghornPage() {
       <Leaderboard />
       <VerdictsSection />
       <SybilSection />
+      <NonDeterministicSection />
       <DivergenceFeed />
     </div>
   );

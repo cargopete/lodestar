@@ -1,6 +1,6 @@
 {
   "name": "lodestar",
-  "version": "4.21.1",
+  "version": "4.21.2",
   "private": true,
   "license": "BUSL-1.1",
   "scripts": {

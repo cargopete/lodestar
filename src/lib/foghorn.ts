@@ -175,6 +175,19 @@ export const fetchVerdicts = (params: { kind?: string; severity?: string; limit?
 export const fetchSybilClusters = () =>
   foghornGet<{ clusters: SybilCluster[]; count: number }>('sybil');
 
+export interface NonDetDeployment {
+  deployment_id: string;
+  divergent_probes: number;
+  total_probes: number;
+  divergence_rate: number;
+  sample_fields: string[];
+  first_seen: string;
+  last_seen: string;
+}
+
+export const fetchNonDeterministic = () =>
+  foghornGet<{ deployments: NonDetDeployment[]; count: number }>('nondeterministic');
+
 export const fetchFoghornFeed = (limit = 50) =>
   foghornGet<{ events: FeedEvent[]; count: number }>(`feed?limit=${limit}`);
 

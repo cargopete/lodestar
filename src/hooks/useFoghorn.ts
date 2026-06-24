@@ -8,6 +8,7 @@ import {
   fetchNeedsAttention,
   fetchVerdicts,
   fetchSybilClusters,
+  fetchNonDeterministic,
   fetchFoghornFeed,
   fetchIndexerQuality,
 } from '@/lib/foghorn';
@@ -57,6 +58,10 @@ export function useVerdicts(params: { kind?: string; severity?: string; limit?: 
 
 export function useSybilClusters() {
   return useQuery({ queryKey: ['foghorn', 'sybil'], queryFn: fetchSybilClusters, staleTime: MINUTE, retry: 0 });
+}
+
+export function useNonDeterministic() {
+  return useQuery({ queryKey: ['foghorn', 'nondeterministic'], queryFn: fetchNonDeterministic, staleTime: MINUTE, retry: 0 });
 }
 
 export function useFoghornFeed(limit = 50) {
