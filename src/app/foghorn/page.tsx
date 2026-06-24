@@ -33,12 +33,19 @@ function rel(iso: string): string {
   return formatRelativeTime(new Date(iso).getTime() / 1000);
 }
 
-function SubScoreBar({ label, value }: { label: string; value: number | null }) {
+// Fixed order + unambiguous 2-letter abbreviations (avoids the Correctness/Coverage "C" clash).
+const SUB_SCORE_KEYS: Array<{ key: keyof SubScores; abbr: string; label: string }> = [
+  { key: 'correctness', abbr: 'Co', label: 'Correctness' },
+  { key: 'availability', abbr: 'Av', label: 'Availability' },
+  { key: 'freshness', abbr: 'Fr', label: 'Freshness' },
+  { key: 'coverage', abbr: 'Cv', label: 'Coverage' },
+  { key: 'value', abbr: 'Va', label: 'Value' },
+];
+
+function SubScoreBar({ abbr, label, value }: { abbr: string; label: string; value: number | null }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="w-3 text-[9px] uppercase text-[var(--text-faint)]" title={label}>
-        {label[0]}
-      </span>
+    <div className="flex items-center gap-1.5" title={`${label}: ${value == null ? 'no data' : value.toFixed(0)}`}>
+      <span className="w-4 text-[9px] text-[var(--text-faint)]">{abbr}</span>
       <div className="h-1.5 flex-1 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
         <div
           className="h-full rounded-full"
@@ -52,11 +59,9 @@ function SubScoreBar({ label, value }: { label: string; value: number | null }) 
 function SubScoreGrid({ s }: { s: SubScores }) {
   return (
     <div className="grid grid-cols-1 gap-1 min-w-[150px]">
-      <SubScoreBar label="Correctness" value={s.correctness} />
-      <SubScoreBar label="Availability" value={s.availability} />
-      <SubScoreBar label="Freshness" value={s.freshness} />
-      <SubScoreBar label="Coverage" value={s.coverage} />
-      <SubScoreBar label="Value" value={s.value} />
+      {SUB_SCORE_KEYS.map(({ key, abbr, label }) => (
+        <SubScoreBar key={key} abbr={abbr} label={label} value={s[key]} />
+      ))}
     </div>
   );
 }
@@ -158,6 +163,16 @@ function Leaderboard() {
           ))}
         </div>
       </div>
+      <p className="text-[11px] text-[var(--text-faint)]">
+        Sub-scores (top→bottom): <span className="text-[var(--text-muted)]">Co</span> Correctness ·{' '}
+        <span className="text-[var(--text-muted)]">Av</span> Availability ·{' '}
+        <span className="text-[var(--text-muted)]">Fr</span> Freshness ·{' '}
+        <span className="text-[var(--text-muted)]">Cv</span> Coverage ·{' '}
+        <span className="text-[var(--text-muted)]">Va</span> Value. Bar colour:{' '}
+        <span className="text-[var(--green)]">green ≥75</span> ·{' '}
+        <span className="text-[var(--amber)]">amber ≥50</span> ·{' '}
+        <span className="text-[var(--red)]">red &lt;50</span>.
+      </p>
       <Card className="p-0 overflow-hidden">
         {isLoading ? (
           <p className="text-sm text-[var(--text-muted)] p-4">Loading…</p>
