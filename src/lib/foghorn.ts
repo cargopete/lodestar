@@ -266,6 +266,7 @@ export function kindLabel(kind: string): string {
     'serving-no-data': 'Serving no data',
     'behind-chainhead': 'Behind chainhead',
     'behind-deployment': 'Behind on deployment',
+    'serving-errors-deployment': 'Serving errors on deployment',
     'low-coverage': 'Low coverage',
     leech: 'Leech',
     'reo-ineligible-candidate': 'REO-ineligible candidate',
