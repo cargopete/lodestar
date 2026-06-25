@@ -23,6 +23,7 @@ import {
   type SubScores,
   type AttentionItem,
 } from '@/lib/foghorn';
+import { FoghornAlertBanner } from '@/components/foghorn/FoghornAlertBanner';
 
 function indexerLabel(address: string, ens?: string | null) {
   return ens || shortenAddress(address, 4);
@@ -561,6 +562,7 @@ export default function FoghornPage() {
         </p>
       </div>
 
+      <FoghornAlertBanner />
       <MethodologyPanel />
       <StatsStrip />
       <NeedsAttentionSection />

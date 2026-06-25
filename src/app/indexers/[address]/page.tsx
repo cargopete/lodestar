@@ -19,6 +19,7 @@ import {
 import { ClosedAllocationsTable, type ClosedAllocation } from '@/components/indexer/ClosedAllocationsTable';
 import { DisputesSection } from '@/components/indexer/DisputesSection';
 import { FoghornScorecard } from '@/components/foghorn/FoghornScorecard';
+import { FoghornAlertBanner } from '@/components/foghorn/FoghornAlertBanner';
 import { useIndexerAllocationsQos } from '@/hooks/useFoghorn';
 import { calculateDelegationCapacity } from '@/lib/rewards';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
@@ -726,6 +727,7 @@ export default function IndexerDetailPage({
           )}
 
           {/* Foghorn network-quality grade — correctness/availability/freshness/coverage/value */}
+          <FoghornAlertBanner />
           <FoghornScorecard address={address} />
 
           {/* Recent Delegation Activity — reusable feed component pre-filtered to this indexer */}

@@ -15,6 +15,7 @@ import {
   useSubgraphSchema,
 } from '@/hooks/useNetworkStats';
 import { useDeploymentQos } from '@/hooks/useFoghorn';
+import { FoghornAlertBanner } from '@/components/foghorn/FoghornAlertBanner';
 import { SubgraphHistoryChart } from '@/components/charts/SubgraphHistoryChart';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -464,6 +465,8 @@ function IndexingHealthSection({ hash }: { hash: string }) {
         <StatCard label="Stake" value={formatGRT(weiToGRT(data.stakedTokens))} subtitle="GRT staked" />
         <StatCard label="Query Fees" value={queryFeesGRT > 0 ? `${formatGRT(queryFeesGRT)} GRT` : '—'} subtitle="Lifetime fees collected" />
       </StatGrid>
+
+      <FoghornAlertBanner />
 
       <Card>
         <CardHeader>
