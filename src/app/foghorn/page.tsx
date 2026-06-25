@@ -67,20 +67,20 @@ function SubScoreGrid({ s }: { s: SubScores }) {
   );
 }
 
-// Evidence line, minus the `examples` deployment list (rendered as chips instead).
+// Evidence line, minus the deployment list (rendered as chips instead).
 function evidenceLine(obj: Record<string, unknown>): string {
   return Object.entries(obj)
-    .filter(([k, v]) => k !== 'examples' && v !== null && v !== undefined && v !== '')
+    .filter(([k, v]) => k !== 'deployments' && k !== 'examples' && v !== null && v !== undefined && v !== '')
     .map(([k, v]) => `${k}: ${typeof v === 'number' ? Math.round(v * 100) / 100 : String(v)}`)
     .join(' · ');
 }
 
-// Pull the deployment IDs out of an attention item's detail — either the
-// `examples` rollup array (or comma-joined string) or the single deployment_id.
+// Pull the full deployment-ID list out of an attention item's detail — the
+// `deployments` rollup array (or legacy `examples`), or the single deployment_id.
 function attentionDeployments(item: AttentionItem): string[] {
-  const ex = item.detail?.examples;
-  if (Array.isArray(ex)) return ex.map(String).filter(Boolean);
-  if (typeof ex === 'string') return ex.split(',').map((s) => s.trim()).filter(Boolean);
+  const raw = item.detail?.deployments ?? item.detail?.examples;
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+  if (typeof raw === 'string') return raw.split(',').map((s) => s.trim()).filter(Boolean);
   return item.deployment_id ? [item.deployment_id] : [];
 }
 
@@ -98,12 +98,14 @@ function DeploymentChip({ id }: { id: string }) {
   );
 }
 
+const ATTENTION_COLLAPSED = 6; // deployment chips shown before "+N more"
+
 function AttentionCard({ item }: { item: AttentionItem }) {
+  const [expanded, setExpanded] = useState(false);
   const deployments = attentionDeployments(item);
   const evidence = evidenceLine(item.detail);
-  const rollupCount =
-    typeof item.detail?.deployment_count === 'number' ? item.detail.deployment_count : 0;
-  const moreCount = rollupCount > deployments.length ? rollupCount - deployments.length : 0;
+  const visible = expanded ? deployments : deployments.slice(0, ATTENTION_COLLAPSED);
+  const hidden = deployments.length - visible.length;
 
   return (
     <Card className="border-l-2 border-l-[var(--red)] min-w-0">
@@ -125,11 +127,26 @@ function AttentionCard({ item }: { item: AttentionItem }) {
           )}
           {deployments.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              {deployments.map((d) => (
+              {visible.map((d) => (
                 <DeploymentChip key={d} id={d} />
               ))}
-              {moreCount > 0 && (
-                <span className="text-[11px] text-[var(--text-faint)]">+{moreCount} more</span>
+              {hidden > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded(true)}
+                  className="text-[11px] font-medium px-1.5 py-0.5 rounded text-[var(--accent)] hover:bg-[var(--bg-elevated)] transition-colors"
+                >
+                  +{hidden} more
+                </button>
+              )}
+              {expanded && deployments.length > ATTENTION_COLLAPSED && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded(false)}
+                  className="text-[11px] font-medium px-1.5 py-0.5 rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors"
+                >
+                  Show less
+                </button>
               )}
             </div>
           )}
@@ -163,7 +180,7 @@ function NeedsAttentionSection() {
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
           {items.map((it) => (
             <AttentionCard key={`${it.indexer_address}-${it.kind}-${it.deployment_id}`} item={it} />
           ))}
