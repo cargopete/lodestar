@@ -2,6 +2,23 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.22.1] — 2026-06-25
+
+### Changed
+- **Needs-attention cards** — deployment hashes are now clickable chips that link through to
+  each subgraph and stay inside the card (no more overflow). Indexer-wide rollups show the
+  first six, with a **"+N more"** that expands the card downward to reveal *every* erroring
+  deployment (and a "Show less" to collapse it again).
+- **Grades now reflect broad serving failure** — an indexer erroring across many of the
+  deployments it actually receives traffic on is penalised out of A, rather than hiding behind
+  a query-weighted success rate (e.g. datanexus/pinax → F, ellipfra → C). The broadly-dead hit
+  F via the fraction of failing deployments; a big-but-mostly-healthy operator is capped at
+  C/D via an absolute-count floor. Mirrors how sybil membership already bites the grade.
+
+### Fixed
+- Discord alerts now post the **full** current failure roster on any change (and a daily
+  liveness repost), instead of a delta that read as "everyone else recovered".
+
 ## [4.22.0] — 2026-06-25
 
 Foghorn grows a voice. Serving failures, outages and sybil swarms now reach Discord the
