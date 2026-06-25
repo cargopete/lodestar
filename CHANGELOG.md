@@ -2,6 +2,57 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.22.0] — 2026-06-25
+
+Foghorn grows a voice. Serving failures, outages and sybil swarms now reach Discord the
+moment they're detected, and the synced-but-erroring case is surfaced everywhere it matters.
+
+### Added
+- **Discord alerting (`#foghorn-alerts`)** — new serving failures, indexer outages, sybil
+  swarms and genuine chainhead/deployment lag are pushed to Discord, **grouped by indexer**
+  (one line apiece, nothing truncated). Quiet by default; a **daily heartbeat** proves the
+  watch is still live even when the network's clean. A promo banner linking to the channel
+  was added to the Foghorn hub, indexer and subgraph pages.
+- **Query Success surfacing** — a *Query Success* column on both the subgraph page and an
+  indexer's *Active Allocations* table, fed by Foghorn's QoS read. Catches the
+  synced-but-serving-errors (400s) case the community kept hitting: an indexer reports 100%
+  synced yet fails real queries.
+
+### Changed
+- **Clearer attention labels** — indexer-wide serving-error and multi-deployment lag rollups
+  now name the trigger and count ("serving errors across N deployments", "behind on N
+  deployments"); per-deployment verdicts name the offending deployment.
+- **Unambiguous sub-score legend** — explicit Co/Av/Fr/Cv/Va labels on the leaderboard kill
+  the earlier duplicate-"C" confusion.
+
+### Fixed
+- Subgraph *Query Success* now shows for any measured allocation, not only those above the
+  query-volume floor.
+- Missing space in the alerting-banner copy.
+
+## [4.21.2] — 2026-06-24
+
+### Added
+- **Non-deterministic subgraph detection** — Foghorn flags deployments whose indexers
+  legitimately disagree (non-deterministic data) and stops faulting indexers for them; the
+  hub gains a non-deterministic-subgraphs section.
+
+## [4.21.1] — 2026-06-24
+
+### Changed
+- **Judging calibration** — sybil membership now bites the composite grade; REO-ineligible
+  evidence names the failing condition; staggered-creation swarms are caught; and a
+  behind-chainhead grey zone avoids over-penalising indexers only marginally behind.
+
+## [4.21.0] — 2026-06-24
+
+### Added
+- **Foghorn — network-quality judge on Lodestar** — composite A–F grades per indexer, fusing
+  Foghorn's own correctness probing with The Graph's QoS oracle, on-chain stake and REO
+  eligibility; actionable verdicts; a live needs-attention triage; and sybil-swarm
+  clustering. New `/foghorn` hub (leaderboard, verdicts, sybil clusters), a scorecard on
+  indexer profiles, a Foghorn grade column in the indexer table, and nav entries.
+
 ## [4.20.0] — 2026-06-17
 
 A single, shareable answer to *"where do I see the state of the protocol?"* — plus a
