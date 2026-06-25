@@ -200,6 +200,18 @@ export const fetchDeploymentQos = (deploymentHash: string) =>
     `deployment/${deploymentHash}/qos`
   );
 
+export interface IndexerAllocationQosRow {
+  deployment_id: string;
+  success_rate: number | null;
+  blocks_behind: number | null;
+  query_count: number | null;
+}
+
+export const fetchIndexerAllocationsQos = (address: string) =>
+  foghornGet<{ indexer_address: string; deployments: IndexerAllocationQosRow[] }>(
+    `indexer/${address.toLowerCase()}/allocations-qos`
+  );
+
 export const fetchFoghornFeed = (limit = 50) =>
   foghornGet<{ events: FeedEvent[]; count: number }>(`feed?limit=${limit}`);
 

@@ -19,6 +19,7 @@ import {
 import { ClosedAllocationsTable, type ClosedAllocation } from '@/components/indexer/ClosedAllocationsTable';
 import { DisputesSection } from '@/components/indexer/DisputesSection';
 import { FoghornScorecard } from '@/components/foghorn/FoghornScorecard';
+import { useIndexerAllocationsQos } from '@/hooks/useFoghorn';
 import { calculateDelegationCapacity } from '@/lib/rewards';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -122,6 +123,7 @@ export default function IndexerDetailPage({
   const { data: networkData } = useNetworkStats();
   const { data: provisionsData, isLoading: provisionsLoading } = useIndexerProvisions(address);
   const { data: reoData } = useREOStatus(address);
+  const { data: foghornAllocQos } = useIndexerAllocationsQos(address);
   const { data: recentDelegations } = useRecentDelegations(address);
   const { data: ensData } = useENSName(address);
   const { data: enrichedData } = useEnrichedIndexers();
@@ -872,6 +874,7 @@ export default function IndexerDetailPage({
                   <tr className="border-b border-[var(--border)]">
                     <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Deployment</th>
                     <th className="px-4 py-2 text-left text-[11px] font-medium text-[var(--text-muted)]">Status</th>
+                    <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]" title="Foghorn: share of queries answered with HTTP 200 on this deployment (QoS oracle). Reveals synced-but-erroring allocations.">Query Success</th>
                     <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)] hidden sm:table-cell">Blocks Behind</th>
                     <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)]">Allocated</th>
                     <th className="px-4 py-2 text-right text-[11px] font-medium text-[var(--text-muted)] hidden lg:table-cell">Signalled</th>
@@ -945,6 +948,21 @@ export default function IndexerDetailPage({
                               {dep.fatalError}
                             </p>
                           )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {(() => {
+                            const q = dep.ipfsHash ? foghornAllocQos?.get(dep.ipfsHash) : undefined;
+                            if (!q || q.successRate == null) {
+                              return <span className="text-sm text-[var(--text-faint)]" title="No recent query traffic measured (QoS oracle)">—</span>;
+                            }
+                            const pct = q.successRate * 100;
+                            const color = pct >= 90 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
+                            return (
+                              <span className="font-mono text-sm" style={{ color }} title={`${q.queryCount?.toLocaleString()} queries`}>
+                                {pct.toFixed(pct < 100 ? 1 : 0)}%
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="px-4 py-3 text-right hidden sm:table-cell">
                           {dep.blocksBehind != null ? (

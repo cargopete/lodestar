@@ -10,6 +10,7 @@ import {
   fetchSybilClusters,
   fetchNonDeterministic,
   fetchDeploymentQos,
+  fetchIndexerAllocationsQos,
   fetchFoghornFeed,
   fetchIndexerQuality,
 } from '@/lib/foghorn';
@@ -63,6 +64,24 @@ export function useSybilClusters() {
 
 export function useNonDeterministic() {
   return useQuery({ queryKey: ['foghorn', 'nondeterministic'], queryFn: fetchNonDeterministic, staleTime: MINUTE, retry: 0 });
+}
+
+/** One indexer's per-deployment query success/lag → Map<deploymentId(ipfs), row>. */
+export function useIndexerAllocationsQos(address: string | null) {
+  return useQuery({
+    queryKey: ['foghorn', 'indexer-alloc-qos', address],
+    queryFn: async () => {
+      const data = await fetchIndexerAllocationsQos(address!);
+      const map = new Map<string, { successRate: number | null; blocksBehind: number | null; queryCount: number | null }>();
+      for (const r of data.deployments) {
+        map.set(r.deployment_id, { successRate: r.success_rate, blocksBehind: r.blocks_behind, queryCount: r.query_count });
+      }
+      return map;
+    },
+    enabled: !!address,
+    staleTime: MINUTE,
+    retry: 0,
+  });
 }
 
 /** Per-indexer query success/lag for one deployment → Map<address, row>. */
