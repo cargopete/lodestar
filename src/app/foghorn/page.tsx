@@ -67,20 +67,48 @@ function SubScoreGrid({ s }: { s: SubScores }) {
   );
 }
 
+// Evidence line, minus the `examples` deployment list (rendered as chips instead).
 function evidenceLine(obj: Record<string, unknown>): string {
   return Object.entries(obj)
-    .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    .filter(([k, v]) => k !== 'examples' && v !== null && v !== undefined && v !== '')
     .map(([k, v]) => `${k}: ${typeof v === 'number' ? Math.round(v * 100) / 100 : String(v)}`)
     .join(' · ');
 }
 
+// Pull the deployment IDs out of an attention item's detail — either the
+// `examples` rollup array (or comma-joined string) or the single deployment_id.
+function attentionDeployments(item: AttentionItem): string[] {
+  const ex = item.detail?.examples;
+  if (Array.isArray(ex)) return ex.map(String).filter(Boolean);
+  if (typeof ex === 'string') return ex.split(',').map((s) => s.trim()).filter(Boolean);
+  return item.deployment_id ? [item.deployment_id] : [];
+}
+
 // ── Needs Attention ───────────────────────────────────────────────────────────
 
-function AttentionCard({ item }: { item: AttentionItem }) {
+function DeploymentChip({ id }: { id: string }) {
   return (
-    <Card className="border-l-2 border-l-[var(--red)]">
+    <Link
+      href={`/subgraphs/${id}`}
+      className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+      title={id}
+    >
+      {shortenAddress(id, 6)}
+    </Link>
+  );
+}
+
+function AttentionCard({ item }: { item: AttentionItem }) {
+  const deployments = attentionDeployments(item);
+  const evidence = evidenceLine(item.detail);
+  const rollupCount =
+    typeof item.detail?.deployment_count === 'number' ? item.detail.deployment_count : 0;
+  const moreCount = rollupCount > deployments.length ? rollupCount - deployments.length : 0;
+
+  return (
+    <Card className="border-l-2 border-l-[var(--red)] min-w-0">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant={severityVariant(item.severity)}>{item.severity}</Badge>
             <Badge variant="warning">{kindLabel(item.kind)}</Badge>
@@ -92,12 +120,19 @@ function AttentionCard({ item }: { item: AttentionItem }) {
             </Link>
           </div>
           <p className="text-sm text-[var(--text)] mt-1.5">{item.title}</p>
-          {item.deployment_id && (
-            <p className="text-[11px] font-mono text-[var(--text-muted)] mt-0.5 truncate">
-              {shortenAddress(item.deployment_id, 8)}
-            </p>
+          {evidence && (
+            <p className="text-[11px] text-[var(--text-faint)] mt-1 break-words">{evidence}</p>
           )}
-          <p className="text-[11px] text-[var(--text-faint)] mt-1">{evidenceLine(item.detail)}</p>
+          {deployments.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              {deployments.map((d) => (
+                <DeploymentChip key={d} id={d} />
+              ))}
+              {moreCount > 0 && (
+                <span className="text-[11px] text-[var(--text-faint)]">+{moreCount} more</span>
+              )}
+            </div>
+          )}
         </div>
         <span className="text-[11px] text-[var(--text-faint)] whitespace-nowrap">
           {rel(item.first_seen)}
