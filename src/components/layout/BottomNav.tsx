@@ -165,6 +165,16 @@ const moreSections: MoreSection[] = [
           </svg>
         ),
       },
+      {
+        label: 'Foghorn',
+        href: '/foghorn',
+        icon: (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 10v4a1 1 0 001 1h3l6 4V5L7 9H4a1 1 0 00-1 1z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 8.5a4 4 0 010 7M19 6a7 7 0 010 12" />
+          </svg>
+        ),
+      },
     ],
   },
   {
