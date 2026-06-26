@@ -10,6 +10,7 @@ import {
   useFoghornStats,
   useFoghornIndexers,
   useNeedsAttention,
+  useDeploymentNames,
   useVerdicts,
   useSybilClusters,
   useNonDeterministic,
@@ -86,21 +87,24 @@ function attentionDeployments(item: AttentionItem): string[] {
 
 // ── Needs Attention ───────────────────────────────────────────────────────────
 
-function DeploymentChip({ id }: { id: string }) {
+function DeploymentChip({ id, name }: { id: string; name?: string }) {
   return (
     <Link
       href={`/subgraphs/${id}`}
-      className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
-      title={id}
+      className={cn(
+        'text-[11px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors max-w-[200px] truncate',
+        !name && 'font-mono'
+      )}
+      title={name ? `${name} · ${id}` : id}
     >
-      {shortenAddress(id, 6)}
+      {name || shortenAddress(id, 6)}
     </Link>
   );
 }
 
 const ATTENTION_COLLAPSED = 6; // deployment chips shown before "+N more"
 
-function AttentionCard({ item }: { item: AttentionItem }) {
+function AttentionCard({ item, names }: { item: AttentionItem; names: Record<string, string> }) {
   const [expanded, setExpanded] = useState(false);
   const deployments = attentionDeployments(item);
   const evidence = evidenceLine(item.detail);
@@ -128,7 +132,7 @@ function AttentionCard({ item }: { item: AttentionItem }) {
           {deployments.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
               {visible.map((d) => (
-                <DeploymentChip key={d} id={d} />
+                <DeploymentChip key={d} id={d} name={names[d]} />
               ))}
               {hidden > 0 && (
                 <button
@@ -159,9 +163,44 @@ function AttentionCard({ item }: { item: AttentionItem }) {
   );
 }
 
+// Does an attention item match the indexer + subgraph filters (both optional, ANDed)?
+// Subgraph filter matches either the deployment hash or its resolved display name.
+function attentionMatches(
+  item: AttentionItem,
+  indexerQ: string,
+  subgraphQ: string,
+  names: Record<string, string>
+): boolean {
+  if (indexerQ) {
+    const hay = `${item.ens_name ?? ''} ${item.indexer_address}`.toLowerCase();
+    if (!hay.includes(indexerQ)) return false;
+  }
+  if (subgraphQ) {
+    const deps = attentionDeployments(item);
+    const match = deps.some(
+      (d) => d.toLowerCase().includes(subgraphQ) || (names[d] ?? '').toLowerCase().includes(subgraphQ)
+    );
+    if (!match) return false;
+  }
+  return true;
+}
+
 function NeedsAttentionSection() {
   const { data, isLoading, isError } = useNeedsAttention();
   const items = data?.items ?? [];
+  const [indexerFilter, setIndexerFilter] = useState('');
+  const [subgraphFilter, setSubgraphFilter] = useState('');
+
+  const allHashes = items.flatMap(attentionDeployments);
+  const { data: names = {} } = useDeploymentNames(allHashes);
+
+  const iq = indexerFilter.trim().toLowerCase();
+  const sq = subgraphFilter.trim().toLowerCase();
+  const filtering = iq !== '' || sq !== '';
+  const filtered = filtering ? items.filter((it) => attentionMatches(it, iq, sq, names)) : items;
+
+  const inputClass =
+    'flex-1 min-w-0 px-3 py-1.5 text-sm rounded-[var(--radius-card)] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] transition-colors';
 
   return (
     <section className="space-y-3">
@@ -169,6 +208,43 @@ function NeedsAttentionSection() {
         <h2 className="text-lg font-semibold text-[var(--text)]">Needs Attention</h2>
         {items.length > 0 && <Badge variant="error">{items.length}</Badge>}
       </div>
+
+      {!isLoading && !isError && items.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            value={indexerFilter}
+            onChange={(e) => setIndexerFilter(e.target.value)}
+            placeholder="Filter by indexer (name or address)…"
+            className={inputClass}
+          />
+          <input
+            type="text"
+            value={subgraphFilter}
+            onChange={(e) => setSubgraphFilter(e.target.value)}
+            placeholder="Filter by subgraph (name or hash)…"
+            className={inputClass}
+          />
+          {filtering && (
+            <button
+              type="button"
+              onClick={() => {
+                setIndexerFilter('');
+                setSubgraphFilter('');
+              }}
+              className="px-3 py-1.5 text-sm rounded-[var(--radius-card)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors whitespace-nowrap"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+      {filtering && (
+        <p className="text-[11px] text-[var(--text-faint)]">
+          Showing {filtered.length} of {items.length}
+        </p>
+      )}
+
       {isLoading ? (
         <Card><p className="text-sm text-[var(--text-muted)]">Loading…</p></Card>
       ) : isError ? (
@@ -179,10 +255,16 @@ function NeedsAttentionSection() {
             All clear — no indexers are currently serving bad or no data.
           </p>
         </Card>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <p className="text-sm text-[var(--text-muted)]">
+            Nothing found for this filter.
+          </p>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
-          {items.map((it) => (
-            <AttentionCard key={`${it.indexer_address}-${it.kind}-${it.deployment_id}`} item={it} />
+          {filtered.map((it) => (
+            <AttentionCard key={`${it.indexer_address}-${it.kind}-${it.deployment_id}`} item={it} names={names} />
           ))}
         </div>
       )}

@@ -163,6 +163,21 @@ export const fetchNeedsAttention = (kind?: string) =>
     `needs-attention${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`
   );
 
+/** Batch-resolve deployment IPFS hashes → subgraph display names (dashboard API). */
+export const fetchDeploymentNames = async (
+  hashes: string[]
+): Promise<Record<string, string>> => {
+  if (hashes.length === 0) return {};
+  const res = await fetch('/api/subgraph-names', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ hashes }),
+  });
+  if (!res.ok) return {};
+  const json = await res.json();
+  return (json.data ?? {}) as Record<string, string>;
+};
+
 export const fetchVerdicts = (params: { kind?: string; severity?: string; limit?: number } = {}) => {
   const q = new URLSearchParams();
   if (params.kind) q.set('kind', params.kind);

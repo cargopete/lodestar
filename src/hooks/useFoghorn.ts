@@ -6,6 +6,7 @@ import {
   fetchFoghornIndexers,
   fetchFoghornScorecard,
   fetchNeedsAttention,
+  fetchDeploymentNames,
   fetchVerdicts,
   fetchSybilClusters,
   fetchNonDeterministic,
@@ -45,6 +46,18 @@ export function useNeedsAttention(kind?: string) {
     queryKey: ['foghorn', 'needs-attention', kind ?? 'all'],
     queryFn: () => fetchNeedsAttention(kind),
     staleTime: MINUTE,
+    retry: 0,
+  });
+}
+
+/** Batch-resolve deployment IPFS hashes → subgraph display names. */
+export function useDeploymentNames(hashes: string[]) {
+  const unique = Array.from(new Set(hashes)).sort();
+  return useQuery({
+    queryKey: ['foghorn', 'deployment-names', unique],
+    queryFn: () => fetchDeploymentNames(unique),
+    enabled: unique.length > 0,
+    staleTime: 5 * MINUTE,
     retry: 0,
   });
 }
