@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { queryIndexerStatus, buildIndexerStatus } from '@/lib/indexing-status';
+import {
+  queryIndexerStatus,
+  buildIndexerStatus,
+  reconcileToNetworkHead,
+  type IndexerStatusResult,
+} from '@/lib/indexing-status';
 
 // StatusAPIResponse is not exported from the module, so we model the shape the
 // public helpers consume. The `buildIndexerStatus` signature accepts this.
@@ -289,5 +294,64 @@ describe('indexer-status route SSRF guard (isSafeIndexerUrl)', () => {
     const req = {} as unknown as import('next/server').NextRequest;
     const res = await mod.GET(req, { params: Promise.resolve({ address: 'not-an-address' }) });
     expect(res.status).toBe(400);
+  });
+});
+
+describe('reconcileToNetworkHead', () => {
+  const base = (o: Partial<IndexerStatusResult>): IndexerStatusResult => ({
+    indexerId: o.indexerId ?? '0xidx',
+    indexerName: null,
+    url: 'https://x',
+    allocatedTokens: '0',
+    status: 'synced',
+    ...o,
+  });
+
+  it('flags a stalled-firehose indexer that looks self-caught-up as behind', () => {
+    // The real exchangev3-wd shape: P2P fresh, InfraDAO firehose stalled at an
+    // older head so its self-diff is ~0 and it wrongly reads as caught up.
+    const p2p = base({ indexerId: '0xp2p', chainHeadBlock: 108798899, latestBlock: 108798211, blocksBehind: 688, status: 'syncing' });
+    const infra = base({ indexerId: '0xinfra', chainHeadBlock: 108668349, latestBlock: 108668349, blocksBehind: 0, status: 'synced' });
+
+    const [rp, ri] = reconcileToNetworkHead([p2p, infra]);
+
+    // P2P defines the head, so it keeps its own self-diff.
+    expect(rp.blocksBehind).toBe(688);
+    expect(rp.networkChainHead).toBe(108798899);
+    // InfraDAO is now measured against P2P's head — the real ~130k gap surfaces.
+    expect(ri.blocksBehind).toBe(108798899 - 108668349);
+    expect(ri.blocksBehind).toBeGreaterThan(100_000);
+    expect(ri.status).toBe('syncing'); // was 'synced' — corrected
+  });
+
+  it('the head-defining indexer is never made to look worse than its self-diff', () => {
+    const fresh = base({ indexerId: '0xa', chainHeadBlock: 500, latestBlock: 495, blocksBehind: 5, status: 'synced' });
+    const [r] = reconcileToNetworkHead([fresh]);
+    expect(r.blocksBehind).toBe(5);
+    expect(r.status).toBe('synced');
+  });
+
+  it('recomputes sync progress against the network head', () => {
+    const behind = base({ indexerId: '0xb', chainHeadBlock: 900, latestBlock: 900 });
+    const ahead = base({ indexerId: '0xa', chainHeadBlock: 1000, latestBlock: 1000 });
+    const [rb] = reconcileToNetworkHead([behind, ahead]);
+    expect(rb.syncProgress).toBeCloseTo(90, 5);
+  });
+
+  it('preserves failed and unreachable statuses', () => {
+    const failed = base({ indexerId: '0xf', chainHeadBlock: 1000, latestBlock: 100, status: 'failed' });
+    const unreach = base({ indexerId: '0xu', status: 'unreachable' }); // no chain data
+    const [rf, ru] = reconcileToNetworkHead([failed, unreach]);
+    expect(rf.status).toBe('failed');
+    expect(rf.blocksBehind).toBe(900);
+    expect(ru.status).toBe('unreachable');
+    expect(ru.blocksBehind).toBeUndefined(); // untouched
+  });
+
+  it('is a no-op when no indexer reports any chain data', () => {
+    const a = base({ indexerId: '0xa', status: 'unreachable' });
+    const out = reconcileToNetworkHead([a]);
+    expect(out[0].blocksBehind).toBeUndefined();
+    expect(out[0].networkChainHead).toBeUndefined();
   });
 });

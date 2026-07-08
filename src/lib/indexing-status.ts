@@ -53,7 +53,20 @@ export interface IndexerStatusResult {
   nonFatalErrorCount?: number;
   syncProgress?: number; // 0-100
   blocksBehind?: number;
+  /**
+   * The canonical head this indexer's lag was measured against — the max head
+   * observed across all indexers on the deployment (set by reconcileToNetworkHead).
+   * Present when blocksBehind is relative to the network rather than self.
+   */
+  networkChainHead?: number;
 }
+
+/**
+ * Blocks within this distance of the head count as "effectively synced". The
+ * graph-node `synced` flag is unreliable (it means "caught up at some point"),
+ * so we use the gap instead.
+ */
+export const SYNC_TOLERANCE_BLOCKS = 50;
 
 export interface DeploymentIndexingStatus {
   deploymentId: string;
@@ -197,8 +210,10 @@ export function buildIndexerStatus(
   // The graph-node `synced` flag means "has caught up at some point" — not
   // "is currently at the chain head."  An indexer can report synced=true while
   // being thousands of blocks behind if it fell behind after initially syncing.
-  // We use blocksBehind as the ground truth: <= 50 blocks is effectively synced.
-  const effectivelySynced = blocksBehind !== undefined ? blocksBehind <= 50 : !!s.synced;
+  // We use blocksBehind as the ground truth. NB: this is the indexer's SELF-
+  // reported gap; reconcileToNetworkHead corrects it against the freshest peer.
+  const effectivelySynced =
+    blocksBehind !== undefined ? blocksBehind <= SYNC_TOLERANCE_BLOCKS : !!s.synced;
 
   let status: IndexerStatusResult['status'] = 'syncing';
   if (s.health === 'failed' || s.fatalError) {
@@ -236,6 +251,47 @@ export function buildIndexerStatus(
     syncProgress,
     blocksBehind,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Reconcile lag against a canonical network head
+// ---------------------------------------------------------------------------
+
+/**
+ * Recompute each indexer's lag against a canonical network head — the highest
+ * block observed across ALL indexers on the deployment — instead of each
+ * indexer's own self-reported `chainHeadBlock`.
+ *
+ * Why: an indexer whose firehose/RPC has itself stalled reports
+ * `chainHeadBlock ≈ latestBlock` (self-diff ≈ 0), so it looks "caught up" while
+ * actually being tens of thousands of blocks behind the real chain. Measuring
+ * against the freshest peer exposes that. The peer that defines the head keeps
+ * its own self-diff, so a genuinely fresh indexer is never made to look worse.
+ *
+ * Pure and order-independent. Indexers with no chain data (unreachable) pass
+ * through untouched. Terminal states (failed/unreachable) are preserved; only
+ * the synced/syncing distinction is recomputed.
+ */
+export function reconcileToNetworkHead(indexers: IndexerStatusResult[]): IndexerStatusResult[] {
+  let networkHead = 0;
+  for (const i of indexers) {
+    if (i.chainHeadBlock != null) networkHead = Math.max(networkHead, i.chainHeadBlock);
+    if (i.latestBlock != null) networkHead = Math.max(networkHead, i.latestBlock);
+  }
+  if (networkHead <= 0) return indexers;
+
+  return indexers.map((i) => {
+    if (i.latestBlock == null) return i; // no chain data — nothing to reconcile
+    const blocksBehind = Math.max(networkHead - i.latestBlock, 0);
+    const syncProgress = Math.min((i.latestBlock / networkHead) * 100, 100);
+    const effectivelySynced = blocksBehind <= SYNC_TOLERANCE_BLOCKS;
+
+    let status = i.status;
+    if (status !== 'failed' && status !== 'unreachable') {
+      status = effectivelySynced ? 'synced' : 'syncing';
+    }
+    return { ...i, blocksBehind, syncProgress, networkChainHead: networkHead, status };
+  });
 }
 
 // ---------------------------------------------------------------------------

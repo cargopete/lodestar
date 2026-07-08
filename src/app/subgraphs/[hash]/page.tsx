@@ -27,6 +27,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { cn, formatNumber, formatGRT, weiToGRT, shortenAddress } from '@/lib/utils';
 import { VersionsTable } from '@/components/subgraph/VersionsTable';
 import { ActivitySection } from '@/components/subgraph/ActivitySection';
+import { SYNC_TOLERANCE_BLOCKS } from '@/lib/indexing-status';
 import type { IndexerStatusResult } from '@/lib/indexing-status';
 import type { ComplexityCategory, DataSourceSignal, TemplateSignal } from '@/lib/manifest';
 import type { NetworkInfo } from '@/app/api/networks/route';
@@ -579,11 +580,22 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                         </td>
                         <td className="px-4 py-3 text-right">
                           {indexer.blocksBehind !== undefined ? (
-                            <span className={cn(
-                              'text-sm font-mono',
-                              indexer.blocksBehind === 0 ? 'text-[var(--green)]' : indexer.blocksBehind < 100 ? 'text-[var(--amber)]' : 'text-[var(--red)]',
-                            )}>
-                              {indexer.blocksBehind === 0 ? 'Caught up' : formatNumber(indexer.blocksBehind)}
+                            <span
+                              className={cn(
+                                'text-sm font-mono',
+                                indexer.blocksBehind <= SYNC_TOLERANCE_BLOCKS
+                                  ? 'text-[var(--green)]'
+                                  : indexer.blocksBehind < 1000
+                                    ? 'text-[var(--amber)]'
+                                    : 'text-[var(--red)]',
+                              )}
+                              title={
+                                indexer.networkChainHead
+                                  ? `Measured against the freshest indexer's head (block ${formatNumber(indexer.networkChainHead)})`
+                                  : undefined
+                              }
+                            >
+                              {indexer.blocksBehind <= SYNC_TOLERANCE_BLOCKS ? 'Caught up' : formatNumber(indexer.blocksBehind)}
                             </span>
                           ) : (
                             <span className="text-xs text-[var(--text-faint)]">—</span>
@@ -661,8 +673,12 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className="p-1.5 rounded bg-[var(--bg-surface)]">
                         <p className="text-[10px] text-[var(--text-faint)]">Behind</p>
-                        <p className={cn('text-xs font-mono', indexer.blocksBehind === 0 ? 'text-[var(--green)]' : (indexer.blocksBehind ?? 0) < 100 ? 'text-[var(--amber)]' : 'text-[var(--text)]')}>
-                          {indexer.blocksBehind !== undefined ? formatNumber(indexer.blocksBehind) : '—'}
+                        <p className={cn('text-xs font-mono', (indexer.blocksBehind ?? 0) <= SYNC_TOLERANCE_BLOCKS ? 'text-[var(--green)]' : (indexer.blocksBehind ?? 0) < 1000 ? 'text-[var(--amber)]' : 'text-[var(--red)]')}>
+                          {indexer.blocksBehind === undefined
+                            ? '—'
+                            : indexer.blocksBehind <= SYNC_TOLERANCE_BLOCKS
+                              ? 'Caught up'
+                              : formatNumber(indexer.blocksBehind)}
                         </p>
                       </div>
                       <div className="p-1.5 rounded bg-[var(--bg-surface)]">

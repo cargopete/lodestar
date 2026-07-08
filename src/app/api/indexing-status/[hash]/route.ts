@@ -4,6 +4,7 @@ import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import {
   queryIndexerStatus,
   buildIndexerStatus,
+  reconcileToNetworkHead,
   probeServing,
   withServeProbe,
   type DeploymentIndexingStatus,
@@ -179,10 +180,13 @@ export async function GET(
           servable: false,
         }));
 
-        const indexers = [
+        // Reconcile each indexer's lag against the freshest peer's head, so an
+        // indexer with a stalled firehose (self-diff ≈ 0) doesn't read as
+        // "caught up" while being tens of thousands of blocks behind the chain.
+        const indexers = reconcileToNetworkHead([
           ...(await Promise.all(statusPromises)),
           ...noUrlStatuses,
-        ];
+        ]);
 
         // 4. Aggregate
         const syncedCount = indexers.filter((s) => s.status === 'synced').length;
