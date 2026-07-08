@@ -16,6 +16,7 @@ import {
   fetchPOIOverview,
   fetchPOIDeployment,
   fetchIndexingStatus,
+  fetchGatewayProbe,
   fetchIndexerStatus,
   fetchNetworksRegistry,
   fetchDelegatorPortfolio,
@@ -265,6 +266,21 @@ export function useIndexingStatus(hash: string | null) {
   return useQuery({
     queryKey: ['indexingStatus', hash],
     queryFn: () => fetchIndexingStatus(hash!),
+    staleTime: THIRTY_SECONDS,
+    refetchInterval: THIRTY_SECONDS,
+    enabled: !!hash,
+    retry: 1,
+  });
+}
+
+/**
+ * Hook for the gateway's live serving verdict for a deployment (per-indexer
+ * rejection reasons when it can't serve).
+ */
+export function useGatewayProbe(hash: string | null) {
+  return useQuery({
+    queryKey: ['gatewayProbe', hash],
+    queryFn: () => fetchGatewayProbe(hash!),
     staleTime: THIRTY_SECONDS,
     refetchInterval: THIRTY_SECONDS,
     enabled: !!hash,

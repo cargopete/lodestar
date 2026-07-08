@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   useIndexingStatus,
+  useGatewayProbe,
   useManifestAnalysis,
   useNetworksRegistry,
   useSubgraphCuration,
@@ -16,6 +17,8 @@ import {
 } from '@/hooks/useNetworkStats';
 import { useDeploymentQos } from '@/hooks/useFoghorn';
 import { FoghornAlertBanner } from '@/components/foghorn/FoghornAlertBanner';
+import { GatewayServingCard } from '@/components/subgraph/GatewayServingCard';
+import { badIndexerLabel } from '@/lib/gateway-probe';
 import { SubgraphHistoryChart } from '@/components/charts/SubgraphHistoryChart';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -376,7 +379,13 @@ function IndexingHealthSection({ hash }: { hash: string }) {
   const { data, isLoading, error } = useIndexingStatus(hash);
   const { data: curationData } = useSubgraphCuration(hash);
   const { data: foghornQos } = useDeploymentQos(hash);
+  const { data: gateway } = useGatewayProbe(hash);
   const queryFeesGRT = weiToGRT(curationData?.queryFeesAmount ?? '0');
+
+  // Per-indexer gateway rejection reason, keyed by lower-cased address.
+  const gatewayReasons = new Map(
+    (gateway?.badIndexers ?? []).map((b) => [b.indexer.toLowerCase(), b]),
+  );
 
   if (isLoading) {
     return (
@@ -446,6 +455,8 @@ function IndexingHealthSection({ hash }: { hash: string }) {
         </Card>
       ) : null}
 
+      {gateway && <GatewayServingCard result={gateway} indexers={data.indexers} />}
+
       <StatGrid className="lg:grid-cols-5 xl:grid-cols-5">
         <StatCard label="Active Indexers" value={String(data.totalAllocations)} subtitle={`${data.totalIndexers} unique`} />
         <StatCard
@@ -510,13 +521,27 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                           <p className="text-[10px] text-[var(--text-faint)] font-mono">{shortenAddress(indexer.indexerId, 6)}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
-                            <StatusBadge status={indexer.status} />
-                            {(indexer.nonFatalErrorCount ?? 0) > 0 && !indexer.fatalError && (
-                              <span className="text-[10px] font-mono text-[var(--amber)]" title={`${indexer.nonFatalErrorCount} non-fatal errors`}>
-                                {indexer.nonFatalErrorCount} err
-                              </span>
-                            )}
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <StatusBadge status={indexer.status} />
+                              {(indexer.nonFatalErrorCount ?? 0) > 0 && !indexer.fatalError && (
+                                <span className="text-[10px] font-mono text-[var(--amber)]" title={`${indexer.nonFatalErrorCount} non-fatal errors`}>
+                                  {indexer.nonFatalErrorCount} err
+                                </span>
+                              )}
+                            </div>
+                            {(() => {
+                              const g = gatewayReasons.get(indexer.indexerId.toLowerCase());
+                              if (!g) return null;
+                              return (
+                                <span
+                                  className="text-[10px] font-medium text-[var(--red)]"
+                                  title={`Gateway rejected this indexer: ${g.kind}(${g.detail})`}
+                                >
+                                  gateway: {badIndexerLabel(g).toLowerCase()}
+                                </span>
+                              );
+                            })()}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">

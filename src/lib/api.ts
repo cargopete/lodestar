@@ -12,6 +12,7 @@ import type { EnrichedIndexer } from './enriched';
 import type { ManifestAnalysis } from './manifest';
 import type { POIOverview, POIDeploymentDetail } from './poi';
 import type { DeploymentIndexingStatus } from './indexing-status';
+import type { GatewayProbeResult } from './gateway-probe';
 import type { VotesResponse, VoteMessage } from './voting';
 import type { DeveloperActivityResponse } from '@/app/api/developer-activity/route';
 
@@ -218,6 +219,17 @@ export async function fetchPOIDeployment(deployment: string): Promise<POIDeploym
 export async function fetchIndexingStatus(hash: string): Promise<DeploymentIndexingStatus> {
   const response = await fetch(`/api/indexing-status/${encodeURIComponent(hash)}`);
   if (!response.ok) throw new Error(`Indexing status failed: ${response.status}`);
+  const json = await response.json();
+  return json.data;
+}
+
+/**
+ * Probe the gateway's live serving verdict for a deployment (per-indexer reasons
+ * when it can't serve — the consumer's-eye view).
+ */
+export async function fetchGatewayProbe(hash: string): Promise<GatewayProbeResult> {
+  const response = await fetch(`/api/gateway-probe/${encodeURIComponent(hash)}`);
+  if (!response.ok) throw new Error(`Gateway probe failed: ${response.status}`);
   const json = await response.json();
   return json.data;
 }
