@@ -66,4 +66,4 @@ Lodestar exists to make The Graph's network legible — QoS, indexer analytics, 
 
 If you're a gateway operator — or about to become one — try it. The friction list is the contribution I want most: every step where the docs fail you is a bug, and I'll fix it fast. And if you're an indexer wondering whether independent gateways are worth whitelisting: that conversation is exactly the one this release is meant to start.
 
-*— Pete · [Lodestar](https://www.lodestar-dashboard.com) · gib is MIT, built on the excellent open-source work of Edge & Node, Semiotic Labs, and The Graph's core devs.*
+*— Petko ([cargopete](https://github.com/cargopete)) · [Lodestar](https://www.lodestar-dashboard.com) · gib is MIT, built on the excellent open-source work of Edge & Node, Semiotic Labs, and The Graph's core devs.*
