@@ -108,6 +108,16 @@ describe('extractDecodeCandidates', () => {
     expect(got).toContain('(uint32,uint64,bytes128)');
   });
 
+  it('does not manufacture a false divergence from junk-suffixed valid tuples', () => {
+    // ethabi's fallback parses ANY unparseable string as Uint(8), which alloy
+    // rejects — so a raw over-joined "(...,bool)L" would falsely read DIVERGENT.
+    // We classify the cleaned tuple instead, which is valid under both parsers.
+    const got = extractDecodeCandidates(['(address,address,uint256,bool)L']);
+    expect(got).toEqual(['(address,address,uint256,bool)']);
+    const c = classifyType('(address,address,uint256,bool)');
+    expect(Boolean(c && c.ethabi !== null && !c.alloyOk)).toBe(false);
+  });
+
   it('dedupes', () => {
     const got = extractDecodeCandidates(['bytes128', 'bytes128']);
     expect(got).toEqual(['bytes128']);

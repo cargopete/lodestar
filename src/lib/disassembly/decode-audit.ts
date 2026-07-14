@@ -87,18 +87,20 @@ function balancedTupleSlice(s: string): string | null {
 }
 
 /**
- * Forms of a recovered string worth classifying. We deliberately do NOT trim
- * leading whitespace — a leading space is itself a divergence (the #6461
- * `" address"` case) — but we do strip trailing non-type junk and pull out a
- * balanced tuple, to survive over-joins from adjacent constants in memory.
+ * The single cleaned form of a recovered string worth classifying — NOT the raw
+ * string. Memory reconstruction routinely over-joins a printable header byte
+ * onto a constant (`(…,bool)L`, `string,`), and ethabi's fallback silently
+ * parses ANY unparseable string as `Uint(8)`, which alloy rejects — so the raw
+ * junk-suffixed form manufactures a false divergence. We therefore classify the
+ * balanced tuple (the real decode argument) or the trailing-junk-trimmed type.
+ * Leading whitespace is preserved — a leading space is itself a divergence (the
+ * #6461 `" address"` case), and it is never junk.
  */
 function candidateForms(s: string): string[] {
-  const forms = new Set<string>([s]);
-  const trimmedTail = s.replace(/[^A-Za-z0-9\])]+$/, '');
-  if (trimmedTail !== s) forms.add(trimmedTail);
   const tuple = balancedTupleSlice(s);
-  if (tuple) forms.add(tuple);
-  return [...forms];
+  if (tuple) return [tuple];
+  const trimmed = s.replace(/[^A-Za-z0-9\])]+$/, '');
+  return trimmed ? [trimmed] : [];
 }
 
 /** Pick ABI-shaped candidate type strings out of recovered data-segment strings. */
