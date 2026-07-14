@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/Badge';
 import { formatGRT, weiToGRT } from '@/lib/utils';
 import type {
   DataSourceReport,
+  DecodeAudit,
+  DecodeFinding,
   DisassemblyReport,
   FlagLevel,
   HandlerAnalysis,
@@ -63,6 +65,19 @@ const EXPOSURE_LABEL: Record<SignalExposure, string> = {
   medium: 'medium exposure',
   high: 'high exposure',
 };
+
+// graph-node issues documenting the ethereum.decode alloy-migration breakage.
+const DECODE_ISSUE_6683 = 'https://github.com/graphprotocol/graph-node/issues/6683';
+const DECODE_ISSUE_6461 = 'https://github.com/graphprotocol/graph-node/issues/6461';
+
+/** Minimal slice of /api/indexing-status used to label silent vs loud failure. */
+interface DeploymentHealth {
+  totalIndexers: number;
+  syncedCount: number;
+  healthyCount: number;
+  failedCount: number;
+  unreachableCount: number;
+}
 
 // The Graph's own GNS / network subgraph — 6 data sources, reads IPFS metadata.
 const SAMPLE_ID = 'QmQKXcNQQRdUvNRMGJiE2idoTu9fo5F5MRtKztH4WyKxED';
@@ -690,6 +705,22 @@ function Report({ report }: { report: DisassemblyReport }) {
   const { scorecard, manifest, totals, dataSources, caveats, signal } = report;
   const sortedFlags = [...scorecard.flags].sort((a, b) => FLAG_RANK[a.level] - FLAG_RANK[b.level]);
 
+  // Only when a decode divergence is found do we spend a call on live indexing
+  // health — it's what tells silent data loss (indexers healthy) from a loud
+  // deterministic failure. Lazy + gated so page load and clean deployments pay nothing.
+  const hasDivergent = dataSources.some((d) => d.decodeAudit?.status === 'divergent');
+  const { data: decodeHealth } = useQuery<DeploymentHealth | null>({
+    queryKey: ['decode-health', report.deploymentId],
+    enabled: hasDivergent,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await fetch(`/api/indexing-status/${report.deploymentId}`);
+      if (!res.ok) return null;
+      const json = (await res.json()) as { data?: DeploymentHealth };
+      return json.data ?? null;
+    },
+  });
+
   return (
     <div className="space-y-6">
       {/* Scorecard */}
@@ -753,7 +784,7 @@ function Report({ report }: { report: DisassemblyReport }) {
 
       {/* Per data source */}
       <div className="space-y-3">
-        {dataSources.map((ds, i) => <DataSourceBlock key={`${ds.name}-${i}`} ds={ds} />)}
+        {dataSources.map((ds, i) => <DataSourceBlock key={`${ds.name}-${i}`} ds={ds} health={decodeHealth} />)}
       </div>
 
       {/* Caveats */}
@@ -834,7 +865,7 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
   );
 }
 
-function DataSourceBlock({ ds }: { ds: DataSourceReport }) {
+function DataSourceBlock({ ds, health }: { ds: DataSourceReport; health?: DeploymentHealth | null }) {
   return (
     <Card>
       <details>
@@ -882,10 +913,142 @@ function DataSourceBlock({ ds }: { ds: DataSourceReport }) {
               </div>
             </Collapsible>
           )}
+
+          {ds.decodeAudit && <DecodeAuditPanel audit={ds.decodeAudit} health={health} />}
         </div>
       </details>
     </Card>
   );
+}
+
+// ── ethereum.decode compatibility audit (graph-node 0.42 alloy migration) ─────
+
+function DecodeAuditPanel({ audit, health }: { audit: DecodeAudit; health?: DeploymentHealth | null }) {
+  const divergent = audit.status === 'divergent';
+
+  // Collapsed by default when there's nothing wrong; forced open when divergent.
+  return (
+    <details
+      open={divergent}
+      className="rounded-[var(--radius-button)] px-3 py-2"
+      style={{
+        background: divergent ? 'color-mix(in srgb, var(--red) 8%, var(--bg-elevated))' : 'var(--bg-elevated)',
+        border: divergent ? '1px solid color-mix(in srgb, var(--red) 40%, transparent)' : '1px solid transparent',
+      }}
+    >
+      <summary className="cursor-pointer list-none flex items-center justify-between gap-2 text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="truncate">Decode Compatibility Audit <span className="text-[var(--text-faint)]">(graph-node 0.42 alloy migration)</span></span>
+        </span>
+        {divergent ? (
+          <Badge variant="error">{audit.findings.length} divergent</Badge>
+        ) : audit.status === 'clean' ? (
+          <Badge variant="success">clean</Badge>
+        ) : audit.status === 'no-import' ? (
+          <span className="text-[var(--text-faint)] shrink-0">no decode</span>
+        ) : null}
+      </summary>
+
+      <div className="mt-2">
+        {audit.unavailable ? (
+          <p className="text-[12px] text-[var(--text-faint)]">
+            Exact-parity ethabi/alloy classifier unavailable in this runtime — decode compatibility could not be evaluated.
+          </p>
+        ) : audit.status === 'no-import' ? (
+          <p className="text-[12px] text-[var(--green)]">
+            No <code className="font-mono">ethereum.decode</code> import — unaffected by the graph-node 0.42 alloy migration.
+          </p>
+        ) : audit.status === 'clean' ? (
+          <p className="text-[12px] text-[var(--green)]">
+            Uses <code className="font-mono">ethereum.decode</code>; all {audit.candidatesScanned} candidate type
+            string{audit.candidatesScanned === 1 ? '' : 's'} still parse under alloy (graph-node ≥0.42).
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-[12px] text-[var(--red)]">
+              {audit.findings.length} type string{audit.findings.length === 1 ? '' : 's'} that <strong>ethabi accepted (graph-node ≤0.41)</strong> but{' '}
+              <strong>alloy rejects (≥0.42)</strong> — <code className="font-mono">ethereum.decode</code> returns <code className="font-mono">null</code> for these on modern graph-node.
+            </p>
+
+            <DecodeHealthNote health={health} />
+
+            <div className="space-y-2">
+              {audit.findings.map((f, i) => <DecodeFindingCard key={i} f={f} />)}
+            </div>
+
+            <p className="text-[11px] text-[var(--text-faint)] leading-relaxed">
+              Static data-segment scan with no dataflow — a flagged string may not be the exact argument passed to{' '}
+              <code className="font-mono">ethereum.decode</code>, and dynamically built type strings aren&apos;t detected.
+              Background:{' '}
+              <a href={DECODE_ISSUE_6683} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--text)]">#6683</a>
+              {' · '}
+              <a href={DECODE_ISSUE_6461} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--text)]">#6461</a>.
+            </p>
+          </div>
+        )}
+      </div>
+    </details>
+  );
+}
+
+function DecodeFindingCard({ f }: { f: DecodeFinding }) {
+  return (
+    <div className="rounded-[var(--radius-button)] bg-[var(--bg-surface)] border border-[var(--border)] px-3 py-2 space-y-1">
+      <div className="font-mono text-[12px] text-[var(--text)] break-all">
+        <span
+          className="px-1 py-0.5 rounded"
+          style={{ background: 'color-mix(in srgb, var(--red) 14%, transparent)' }}
+          title={`raw: ${JSON.stringify(f.raw)}`}
+        >
+          {f.display}
+        </span>
+      </div>
+      <div className="text-[11px] text-[var(--text-muted)]">
+        <span className="text-[var(--text-faint)]">ethabi (≤0.41): </span>
+        <span className="font-mono">{f.ethabi}</span>
+      </div>
+      <div className="text-[11px] text-[var(--text-muted)]">
+        <span className="text-[var(--text-faint)]">alloy (≥0.42): </span>
+        <span className="font-mono text-[var(--red)]">rejected</span>
+        <span className="text-[var(--text-faint)]"> — {f.alloyReason}</span>
+      </div>
+    </div>
+  );
+}
+
+/** Silent-vs-loud annotation from live indexing health, when available. */
+function DecodeHealthNote({ health }: { health?: DeploymentHealth | null }) {
+  if (!health || health.totalIndexers === 0) return null;
+
+  const alive = health.totalIndexers - health.unreachableCount;
+  if (alive <= 0) return null;
+
+  if (health.failedCount > 0) {
+    return (
+      <div
+        className="text-[12px] rounded-[var(--radius-button)] px-2.5 py-1.5"
+        style={{ background: 'color-mix(in srgb, var(--red) 10%, transparent)', color: 'var(--red)' }}
+      >
+        <strong>Loud failure:</strong> {health.failedCount} of {alive} reporting indexer(s) are in a
+        deterministic-failure state — consistent with a mapping that asserts on the decode result.
+      </div>
+    );
+  }
+
+  if (health.healthyCount > 0) {
+    return (
+      <div
+        className="text-[12px] rounded-[var(--radius-button)] px-2.5 py-1.5"
+        style={{ background: 'color-mix(in srgb, var(--amber) 12%, transparent)', color: 'var(--amber)' }}
+      >
+        <strong>Likely silent data loss:</strong> {health.healthyCount} of {alive} reporting indexer(s) are
+        healthy/synced despite the divergent type string — if the mapping null-checks and early-returns, entities
+        are being dropped and POIs diverging while the subgraph looks fine.
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function HandlerTable({ handlers }: { handlers: HandlerAnalysis[] }) {

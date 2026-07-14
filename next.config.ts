@@ -38,6 +38,14 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   compress: true,
   productionBrowserSourceMaps: false,
+  // The decode-audit loads a committed wasm-pack artifact by absolute runtime path
+  // (see src/lib/disassembly/decode-audit.ts), so it's invisible to the bundler's
+  // module tracer. Explicitly copy the pkg into every function that runs the
+  // disassembly (the API routes + the shareable [deploymentId] page/OG image).
+  outputFileTracingIncludes: {
+    '/api/disassembly/**': ['./src/lib/disassembly/decode-classify/pkg/**'],
+    '/disassembly/**': ['./src/lib/disassembly/decode-classify/pkg/**'],
+  },
   async headers() {
     return [
       {

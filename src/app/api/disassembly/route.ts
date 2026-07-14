@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const [report, signal, sourceHint] = await Promise.all([
-      cached(`lodestar:disasm:v1:${id}`, TTL, () => runDisassembly(id)),
+      cached(`lodestar:disasm:v2:${id}`, TTL, () => runDisassembly(id)),
       cached(`lodestar:disasm-signal:${id}`, SIGNAL_TTL, () => fetchDeploymentSignal(id)),
       cached(`lodestar:disasm-source:${id}`, SOURCE_TTL, () => fetchSourceHint(id)),
     ]);

@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // Deployed side (cached, shared with the rest of the disassembly surface).
-    const report = await cached(`lodestar:disasm:v1:${deploymentId}`, TTL, () => runDisassembly(deploymentId));
+    const report = await cached(`lodestar:disasm:v2:${deploymentId}`, TTL, () => runDisassembly(deploymentId));
 
     // Build the source in a disposable sandbox.
     const build = await buildSubgraphInSandbox({ repoUrl, ref, manifestPath, prepareCommand });

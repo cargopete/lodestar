@@ -9,8 +9,10 @@ import { ipfsCatBytes, ipfsCatText, IPFS_HASH_RE } from './ipfs';
 import { parseDisassemblyManifest } from './manifest';
 import { analyzeHandler, parseWasm, type ParsedWasm } from './wasm';
 import { buildScorecard } from './scorecard';
+import { auditModule } from './decode-audit';
 import type {
   DataSourceReport,
+  DecodeAudit,
   DisassemblyReport,
   HostCategory,
 } from './types';
@@ -72,7 +74,11 @@ export async function runDisassembly(deploymentId: string): Promise<DisassemblyR
     }
 
     const handlers = ds.handlers.map((h) => analyzeHandler(parsed, h));
-    return baseReport(ds, parsed.info, handlers, null);
+    const report = baseReport(ds, parsed.info, handlers, null);
+    // Static ethereum.decode / graph-node 0.42 alloy-migration audit — a pure
+    // function of the WASM bytes, so it rides the same content-addressed cache.
+    report.decodeAudit = auditModule(parsed.info);
+    return report;
   });
 
   // Caveats derived from analysis quality.
@@ -85,6 +91,15 @@ export async function runDisassembly(deploymentId: string): Promise<DisassemblyR
   const unresolved = dataSources.reduce((s, d) => s + d.handlers.filter((h) => !h.resolved && d.wasm).length, 0);
   if (unresolved > 0) {
     caveats.push(`${unresolved} manifest handler(s) were not found as exports in their WASM (possible apiVersion/naming skew).`);
+  }
+  const decodeAudits = dataSources
+    .map((d) => d.decodeAudit)
+    .filter((a): a is DecodeAudit => !!a);
+  if (decodeAudits.some((a) => a.usesDecode)) {
+    caveats.push('Decode Compatibility Audit is a static data-segment scan with no dataflow — flagged type strings may not be the exact argument passed to ethereum.decode, and dynamically built type strings are not detected.');
+  }
+  if (decodeAudits.some((a) => a.unavailable)) {
+    caveats.push('The exact-parity ethabi/alloy classifier could not be loaded in this runtime; decode compatibility could not be evaluated for some modules.');
   }
 
   const scorecard = buildScorecard(manifest, dataSources);

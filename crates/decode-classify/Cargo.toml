@@ -1,0 +1,23 @@
+[package]
+name = "decode-classify"
+version = "0.1.0"
+edition = "2021"
+description = "Exact-parity ethabi (<=graph-node 0.41) vs alloy (>=0.42) ABI type-string classifier, compiled to WASM for the Lodestar disassembly decode-audit."
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# graph-node <= 0.41 behaviour: ethabi::param_type::Reader::read(s)
+ethabi = { version = "18", default-features = false, features = ["std", "serde"] }
+# graph-node >= 0.42 behaviour: alloy_dyn_abi::DynSolType::parse(s)
+alloy-dyn-abi = { version = "0.8", default-features = false, features = ["std"] }
+wasm-bindgen = "0.2"
+# ethabi -> ethereum-types -> rand -> getrandom: needs the js backend on wasm32.
+getrandom = { version = "0.2", features = ["js"] }
+
+[profile.release]
+opt-level = "s"
+lto = true

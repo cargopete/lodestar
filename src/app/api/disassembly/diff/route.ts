@@ -13,7 +13,7 @@ const TTL = 7 * 24 * 60 * 60; // 7 days
 const SIGNAL_TTL = 300; // 5 min — curation signal is dynamic
 
 function report(id: string) {
-  return cached(`lodestar:disasm:v1:${id}`, TTL, () => runDisassembly(id));
+  return cached(`lodestar:disasm:v2:${id}`, TTL, () => runDisassembly(id));
 }
 
 function signal(id: string) {

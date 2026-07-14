@@ -22,7 +22,7 @@ export async function loadShareReport(id: string): Promise<ShareData | null> {
   if (!IPFS_HASH_RE.test(id)) return null;
   try {
     const [report, signal] = await Promise.all([
-      cached(`lodestar:disasm:v1:${id}`, TTL, () => runDisassembly(id)),
+      cached(`lodestar:disasm:v2:${id}`, TTL, () => runDisassembly(id)),
       cached(`lodestar:disasm-signal:${id}`, SIGNAL_TTL, () => fetchDeploymentSignal(id)),
     ]);
     return { report, signal };

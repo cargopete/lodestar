@@ -98,6 +98,20 @@ class Reader {
     }
   }
 
+  /** signed LEB128 value (used for data-segment memory offsets — always positive in practice) */
+  s(): number {
+    let result = 0;
+    let shift = 0;
+    let b: number;
+    do {
+      b = this.buf[this.pos++];
+      result += (b & 0x7f) * 2 ** shift;
+      shift += 7;
+    } while (b & 0x80);
+    if (shift < 32 && b & 0x40) result -= 2 ** shift;
+    return result;
+  }
+
   raw(n: number): Uint8Array {
     const end = Math.min(this.pos + n, this.buf.length);
     const slice = this.buf.subarray(this.pos, end);
@@ -257,9 +271,13 @@ function scanBody(r: Reader, bodyEnd: number): FuncBody {
 /**
  * AssemblyScript stores String literals as UTF-16LE. Pull printable ASCII runs
  * out of the UTF-16 stream (event signatures, entity names, log format strings,
- * abort messages all live here).
+ * abort messages, and `ethereum.decode` type strings all live here). We also
+ * scan for plain-ASCII runs so non-AssemblyScript toolchains (and any embedded
+ * ABI text) are covered — UTF-16 content is broken up by its 0x00 padding under
+ * an ASCII scan, so the two passes don't duplicate one another.
  */
 function collectStrings(bytes: Uint8Array, out: Set<string>, cap: number): void {
+  // UTF-16LE printable runs.
   let cur = '';
   for (let i = 0; i + 1 < bytes.length; i += 2) {
     const lo = bytes[i];
@@ -273,20 +291,86 @@ function collectStrings(bytes: Uint8Array, out: Set<string>, cap: number): void 
     if (out.size >= cap) return;
   }
   if (cur.length >= 4 && out.size < cap) out.add(cur);
+
+  // Plain-ASCII printable runs (non-AS toolchains / embedded ABI text).
+  cur = '';
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes[i];
+    if (b >= 0x20 && b <= 0x7e) {
+      cur += String.fromCharCode(b);
+    } else {
+      if (cur.length >= 4) out.add(cur);
+      cur = '';
+    }
+    if (out.size >= cap) return;
+  }
+  if (cur.length >= 4 && out.size < cap) out.add(cur);
 }
 
-/** Skip a constant init expression (data/element offset) up to its `end` (0x0b). */
-function skipConstExpr(r: Reader, end: number): void {
+/**
+ * Read a data-segment offset init expression up to its `end` (0x0b), returning
+ * the i32.const memory address (or null when the offset isn't a simple constant,
+ * e.g. global.get — then the segment can't be placed in the reconstructed image).
+ */
+function readConstOffset(r: Reader, end: number): number | null {
+  let offset: number | null = null;
   while (r.pos < end) {
     const op = r.byte();
-    if (op === 0x0b) return; // end
-    if (op === 0x41 || op === 0x42) r.skipS(); // i32/i64.const
+    if (op === 0x0b) return offset; // end
+    if (op === 0x41) offset = r.s(); // i32.const — the memory offset
+    else if (op === 0x42) r.skipS(); // i64.const
     else if (op === 0x43) r.raw(4); // f32.const
     else if (op === 0x44) r.raw(8); // f64.const
-    else if (op === 0x23 || op === 0xd2) r.skipU(); // global.get / ref.func
+    else if (op === 0x23 || op === 0xd2) { r.skipU(); offset = null; } // global.get / ref.func
     else if (op === 0xd0) r.skipS(); // ref.null
     // anything else: keep scanning for the terminating `end`
   }
+  return offset;
+}
+
+interface DataSegment {
+  /** i32.const memory offset for an active segment, or null (passive / non-const) */
+  offset: number | null;
+  bytes: Uint8Array;
+}
+
+/** Guard against a hostile manifest reconstructing a multi-GB memory image. */
+const MAX_IMAGE_BYTES = 64 * 1024 * 1024;
+
+/**
+ * AssemblyScript emits one tiny data segment per string constant, and many have
+ * odd byte lengths, so a UTF-16 character's two bytes can straddle a segment
+ * boundary. Scanning segments in isolation drops those straddling chars (e.g. the
+ * closing `)` of an ABI tuple type). Reconstruct linear memory by placing each
+ * active segment at its real address — where the toolchain 2-byte-aligns UTF-16 —
+ * then scan the whole image once so straddling chars are recovered intact.
+ */
+function collectStringsFromSegments(segs: DataSegment[], out: Set<string>, cap: number): void {
+  const active = segs.filter((s): s is { offset: number; bytes: Uint8Array } => s.offset !== null && s.bytes.length > 0);
+
+  if (active.length > 0) {
+    let min = Infinity;
+    let max = -Infinity;
+    for (const s of active) {
+      if (s.offset < min) min = s.offset;
+      if (s.offset + s.bytes.length > max) max = s.offset + s.bytes.length;
+    }
+    // Keep the image base even so real (even) addresses map to even image indices.
+    const base = min % 2 === 0 ? min : min - 1;
+    const span = max - base;
+    if (span > 0 && span <= MAX_IMAGE_BYTES) {
+      const image = new Uint8Array(span);
+      for (const s of active) image.set(s.bytes, s.offset - base);
+      collectStrings(image, out, cap);
+      // Passive / non-const segments have no fixed address — scan them alone.
+      for (const s of segs) if (s.offset === null) collectStrings(s.bytes, out, cap);
+      return;
+    }
+  }
+
+  // No placeable segments (or the image would be too large): fall back to
+  // per-segment scanning — safe, just blind to straddling boundaries.
+  for (const s of segs) collectStrings(s.bytes, out, cap);
 }
 
 // ---------- top-level parse ----------
@@ -306,6 +390,7 @@ export function parseWasm(bytes: Uint8Array, wasmHash: string): ParsedWasm {
   const funcNames = new Map<number, string>();
   const bodies = new Map<number, FuncBody>();
   const strings = new Set<string>();
+  const dataSegments: DataSegment[] = [];
   let definedFuncCount = 0;
   let incomplete = false;
 
@@ -409,16 +494,19 @@ export function parseWasm(bytes: Uint8Array, wasmHash: string): ParsedWasm {
           const n = r.u();
           for (let i = 0; i < n; i++) {
             const flags = r.u();
+            let offset: number | null = null;
             if (flags === 0x00) {
-              skipConstExpr(r, sectionEnd);
+              offset = readConstOffset(r, sectionEnd);
             } else if (flags === 0x02) {
               r.u(); // memidx
-              skipConstExpr(r, sectionEnd);
+              offset = readConstOffset(r, sectionEnd);
             }
             // flags === 0x01 (passive): no memidx, no offset expr
             const len = r.u();
             const seg = r.raw(len);
-            collectStrings(seg, strings, MAX_STRINGS);
+            // Reconstructed together after the section loop so UTF-16 chars that
+            // straddle AS's per-string segment boundaries are recovered whole.
+            dataSegments.push({ offset, bytes: seg });
           }
           break;
         }
@@ -433,6 +521,10 @@ export function parseWasm(bytes: Uint8Array, wasmHash: string): ParsedWasm {
     // Always resync to the declared section boundary.
     r.pos = sectionEnd;
   }
+
+  // Recover data-segment strings from the reconstructed memory image (handles
+  // UTF-16 chars straddling AssemblyScript's per-string segment boundaries).
+  collectStringsFromSegments(dataSegments, strings, MAX_STRINGS);
 
   if (incomplete && notes.length === 0) {
     notes.push('Some function bodies used opcodes outside the modelled set (SIMD/atomics/post-MVP); reachability may be partial');

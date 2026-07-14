@@ -72,6 +72,35 @@ export interface WasmModuleInfo {
   notes: string[];
 }
 
+/**
+ * One data-segment type string that ethabi (graph-node ≤0.41) accepts but alloy
+ * (≥0.42) rejects — an `ethereum.decode` call that silently returns null on
+ * modern graph-node. See graphprotocol/graph-node#6683 and #6461.
+ */
+export interface DecodeFinding {
+  /** the raw candidate string as recovered from the data segment */
+  raw: string;
+  /** display form with whitespace made visible (spaces → ·) */
+  display: string;
+  /** how ethabi parsed it (Debug of the ParamType) — the pre-0.42 interpretation */
+  ethabi: string;
+  /** alloy's rejection message — why it breaks on graph-node ≥0.42 */
+  alloyReason: string;
+}
+
+/** Result of the ethereum.decode alloy-migration compatibility scan for one module. */
+export interface DecodeAudit {
+  /** the module imports the `ethereum.decode` host function */
+  usesDecode: boolean;
+  /** number of ABI-shaped candidate strings classified */
+  candidatesScanned: number;
+  /** DIVERGENT candidates only (ethabi-accepts / alloy-rejects) */
+  findings: DecodeFinding[];
+  status: 'no-import' | 'clean' | 'divergent';
+  /** the exact-parity classifier could not be loaded — audit was skipped */
+  unavailable?: boolean;
+}
+
 export interface DataSourceReport {
   name: string;
   kind: string;
@@ -86,6 +115,8 @@ export interface DataSourceReport {
   abis: { name: string; hash: string | null }[];
   /** populated when the WASM could not be fetched/parsed */
   error: string | null;
+  /** ethereum.decode alloy-migration audit (graph-node 0.42); null when no WASM */
+  decodeAudit?: DecodeAudit | null;
 }
 
 export interface DeployManifestInfo {

@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "build:classifier": "wasm-pack build --release --target nodejs crates/decode-classify --out-dir src/lib/disassembly/decode-classify/pkg --out-name decode_classify && cd src/lib/disassembly/decode-classify/pkg && rm -f .gitignore package.json decode_classify.js decode_classify.d.ts decode_classify_bg.wasm.d.ts",
     "db:backfill": "tsx scripts/backfill.ts"
   },
   "dependencies": {
