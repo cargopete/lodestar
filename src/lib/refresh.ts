@@ -16,9 +16,6 @@ import type { DbClient } from './db';
 import { updateIngestionState } from './db';
 import { writeIndexers } from './ingest/indexers';
 
-// Minimum self-stake for REO eligibility (100K GRT)
-const MIN_STAKE_REO = 100000;
-
 interface SubgraphIndexer {
   id: string;
   account: {
@@ -282,15 +279,16 @@ export async function refreshIndexers(opts: {
     log.refresh.warn({ err: e }, 'ENS lookup failed, continuing without');
   }
 
-  // Step 5: Batch-read REO oracle
+  // Step 5: Batch-read REO oracle. The oracle is the sole source of truth —
+  // if the batch read fails, every indexer is left 'unknown' rather than
+  // guessed at from on-chain heuristics.
   let reoMap = new Map<string, OracleEligibility>();
-  let reoSource: 'oracle' | 'heuristic' = 'heuristic';
+  const reoSource: 'oracle' | 'heuristic' = 'oracle';
   try {
     reoMap = await batchCheckEligibility(indexerIds);
-    reoSource = 'oracle';
     log.refresh.info({ count: reoMap.size }, 'REO oracle checked');
   } catch (e) {
-    log.refresh.warn({ err: e }, 'REO oracle batch call failed, falling back to heuristics');
+    log.refresh.warn({ err: e }, 'REO oracle batch call failed — indexers left unknown (no heuristic fallback)');
   }
 
   // Step 5b: Fetch closed allocations (last 90d) for rolling APY
@@ -492,7 +490,7 @@ export async function refreshIndexers(opts: {
     let reoRenewalTimestamp: number | null = null;
     let reoExpiresAt: number | null = null;
     let reoDaysRemaining: number | null = null;
-    let thisReoSource = reoSource;
+    const thisReoSource = reoSource;
 
     if (oracle) {
       reoStatus = oracle.isEligible ? 'eligible' : 'ineligible';
@@ -500,10 +498,9 @@ export async function refreshIndexers(opts: {
       reoExpiresAt = oracle.expiresAt;
       reoDaysRemaining = oracle.daysRemaining;
     } else {
-      const hasAllocations = indexer.allocationCount > 0;
-      const hasSufficientStake = selfStake >= MIN_STAKE_REO;
-      reoStatus = (hasAllocations && hasSufficientStake) ? 'eligible' : 'ineligible';
-      thisReoSource = 'heuristic';
+      // No oracle reading for this indexer (batch failed or entry missing) —
+      // report unknown rather than guessing from stake/allocations.
+      reoStatus = 'unknown';
     }
 
     const activity = delegationActivity[indexer.id] ?? { delegations: 0, undelegations: 0, netFlowGRT: 0 };

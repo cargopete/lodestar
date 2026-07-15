@@ -310,38 +310,38 @@ export default function IndexerDetailPage({
               Website
             </a>
           )}
-          {/* REO Status Badge with tooltip */}
-          {reoData?.status?.status && reoData.status.status !== 'unknown' && (
+          {/* REO Status Badge with tooltip — the oracle's isEligible is authoritative */}
+          {reoData?.status?.status && (
             <div className="relative group">
               <Badge
-                variant={reoData.status.status === 'eligible' ? 'success' : 'error'}
+                variant={
+                  reoData.status.status === 'eligible' ? 'success'
+                    : reoData.status.status === 'ineligible' ? 'error'
+                    : 'default'
+                }
                 className="cursor-help"
               >
-                {reoData.status.status === 'eligible' ? 'Eligible' : 'Ineligible'}
+                {reoData.status.status === 'eligible' ? 'Eligible'
+                  : reoData.status.status === 'ineligible' ? 'Ineligible'
+                  : 'Eligibility unavailable'}
               </Badge>
               <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 p-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50">
                 <p className="text-xs font-semibold text-[var(--text)] mb-2">Rewards Eligibility (GIP-0079)</p>
-                {reoData.status.source === 'oracle' ? (
+                {reoData.status.status === 'unknown' ? (
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    The on-chain REO oracle couldn&apos;t be reached — eligibility can&apos;t be determined right now.
+                  </p>
+                ) : (
                   <>
                     <p className="text-[11px] text-[var(--text-muted)] mb-2">
                       Direct read from the on-chain REO oracle contract.
                     </p>
-                    {reoData.status.daysRemaining !== undefined && (
-                      <p className={cn(
-                        'text-[11px] font-medium',
-                        reoData.status.daysRemaining > 3 ? 'text-[var(--green)]' :
-                        reoData.status.daysRemaining > 0 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
-                      )}>
-                        {reoData.status.daysRemaining > 0
-                          ? `Renewal in ${reoData.status.daysRemaining.toFixed(1)} days`
-                          : 'Renewal overdue'}
+                    {reoData.status.daysRemaining !== undefined && reoData.status.daysRemaining > 0 && (
+                      <p className="text-[11px] text-[var(--text-faint)]">
+                        Next renewal in ~{reoData.status.daysRemaining.toFixed(1)} days
                       </p>
                     )}
                   </>
-                ) : (
-                  <p className="text-[11px] text-[var(--text-muted)]">
-                    Estimate based on on-chain signals (oracle data pending).
-                  </p>
                 )}
               </div>
             </div>
@@ -556,46 +556,57 @@ export default function IndexerDetailPage({
             </CardContent>
           </Card>
 
-          {/* REO Eligibility — direct oracle read */}
-          {reoData?.status?.status && reoData.status.status !== 'unknown' && (
+          {/* REO Eligibility — direct oracle read. The oracle's own verdict
+              (the badge) is authoritative; renewal timing is shown as context
+              only and never contradicts it. */}
+          {reoData?.status?.status && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Rewards Eligibility</CardTitle>
-                  <Badge variant={reoData.status.status === 'eligible' ? 'success' : 'error'}>
-                    {reoData.status.status === 'eligible' ? 'Eligible' : 'Ineligible'}
+                  <Badge variant={
+                    reoData.status.status === 'eligible' ? 'success'
+                      : reoData.status.status === 'ineligible' ? 'error'
+                      : 'default'
+                  }>
+                    {reoData.status.status === 'eligible' ? 'Eligible'
+                      : reoData.status.status === 'ineligible' ? 'Ineligible'
+                      : 'Unavailable'}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
-                {reoData.status.source === 'oracle' ? (
+                {reoData.status.status === 'unknown' ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-[var(--text-muted)]">
+                      The on-chain REO oracle couldn&apos;t be reached, so this indexer&apos;s rewards eligibility can&apos;t be determined right now.
+                    </p>
+                    <p className="text-[10px] text-[var(--text-faint)] leading-relaxed">
+                      Eligibility is read straight from the REO oracle contract (GIP-0079) — we never estimate it. Please try again shortly.
+                    </p>
+                  </div>
+                ) : (
                   <div className="space-y-3">
-                    {/* Renewal countdown */}
-                    {reoData.status.daysRemaining !== undefined && reoData.status.renewalTimestamp > 0 && (
+                    {/* Renewal timing — informational only; the badge above is the verdict */}
+                    {reoData.status.daysRemaining !== undefined && reoData.status.renewalTimestamp > 0 && reoData.status.daysRemaining > 0 && (
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-sm text-[var(--text-muted)]">Eligibility renewal</span>
-                          <span className={cn(
-                            'text-sm font-medium',
-                            reoData.status.daysRemaining > 3 ? 'text-[var(--green)]' :
-                            reoData.status.daysRemaining > 0 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
-                          )}>
-                            {reoData.status.daysRemaining > 0
-                              ? `${reoData.status.daysRemaining.toFixed(1)} days remaining`
-                              : 'Renewal overdue'}
+                          <span className="text-sm text-[var(--text-muted)]">Next renewal</span>
+                          <span className="text-sm font-medium text-[var(--text)]">
+                            ~{reoData.status.daysRemaining.toFixed(1)} days
                           </span>
                         </div>
-                        {reoData.status.eligibilityPeriod && reoData.status.daysRemaining > 0 && (
+                        {reoData.status.eligibilityPeriod && (
                           <ProgressBar
-                            value={Math.max(0, (reoData.status.daysRemaining / (reoData.status.eligibilityPeriod / 86400)) * 100)}
-                            variant={reoData.status.daysRemaining > 3 ? 'teal' : 'orange'}
+                            value={Math.max(0, Math.min(100, (reoData.status.daysRemaining / (reoData.status.eligibilityPeriod / 86400)) * 100))}
+                            variant="teal"
                           />
                         )}
                       </div>
                     )}
                     {reoData.status.renewalTimestamp === 0 && (
                       <p className="text-sm text-[var(--text-muted)]">
-                        No renewal on record — this indexer has not yet met the oracle&apos;s quality thresholds (HTTP 200, &lt;5s response, &lt;50K blocks behind chain head).
+                        No renewal on record — the oracle has not yet posted an eligibility attestation for this indexer.
                       </p>
                     )}
                     {/* Timestamps */}
@@ -610,7 +621,7 @@ export default function IndexerDetailPage({
                       )}
                       {reoData.status.renewalTimestamp > 0 && reoData.status.expiresAt > 0 && (
                         <div>
-                          <p className="text-[var(--text-faint)]">Expires</p>
+                          <p className="text-[var(--text-faint)]">Renewal due</p>
                           <p className="text-[var(--text)] font-mono">
                             {new Date(reoData.status.expiresAt * 1000).toLocaleDateString()}
                           </p>
@@ -618,40 +629,7 @@ export default function IndexerDetailPage({
                       )}
                     </div>
                     <p className="text-[10px] text-[var(--text-faint)] leading-relaxed">
-                      Source: REO oracle contract (GIP-0079). The oracle evaluates indexer service quality — HTTP status, response speed, and data freshness — over 28-day windows with 14-day renewal cycles.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2.5">
-                    {/* Heuristic fallback — show basic checks */}
-                    {reoData.status.checks && [
-                      { label: 'Active allocations', pass: reoData.status.checks.hasAllocations },
-                      { label: 'Recent POI activity', pass: reoData.status.checks.hasRecentPOIs },
-                      { label: 'Sufficient self-stake (100K+)', pass: reoData.status.checks.hasSufficientStake },
-                      { label: 'Horizon provisions', pass: reoData.status.checks.hasProvisions },
-                    ].map((check) => (
-                      <div key={check.label} className="flex items-center gap-2.5">
-                        <div className={cn(
-                          'w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0',
-                          check.pass ? 'bg-[var(--green-dim)]' : 'bg-[var(--red-dim)]'
-                        )}>
-                          {check.pass ? (
-                            <svg className="w-2.5 h-2.5 text-[var(--green)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg className="w-2.5 h-2.5 text-[var(--red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          )}
-                        </div>
-                        <span className={cn('text-sm', check.pass ? 'text-[var(--text)]' : 'text-[var(--text-muted)]')}>
-                          {check.label}
-                        </span>
-                      </div>
-                    ))}
-                    <p className="text-[10px] text-[var(--text-faint)] mt-3 leading-relaxed">
-                      Estimate based on on-chain signals — oracle read unavailable.
+                      Source: REO oracle contract (GIP-0079). The oracle evaluates indexer service quality — HTTP status, response speed, and data freshness — over 28-day windows with 14-day renewal cycles. The badge above reflects the oracle&apos;s own eligibility verdict; a due renewal does not mean an eligible indexer has stopped earning.
                     </p>
                   </div>
                 )}

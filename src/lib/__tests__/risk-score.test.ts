@@ -49,32 +49,17 @@ describe('SCORE_WEIGHTS', () => {
 // ---------- REO dimension ----------
 
 describe('REO scoring', () => {
-  it('scores 100 for oracle-eligible with plenty of runway', () => {
-    const { breakdown } = calculateIndexerScore(makeInput({
-      reoStatus: 'eligible', reoDaysRemaining: 30, reoSource: 'oracle',
-    }));
-    expect(breakdown.reo).toBe(100);
-  });
-
-  it('scores 80 for 3-6 days remaining', () => {
-    const { breakdown } = calculateIndexerScore(makeInput({
-      reoStatus: 'eligible', reoDaysRemaining: 5, reoSource: 'oracle',
-    }));
-    expect(breakdown.reo).toBe(80);
-  });
-
-  it('scores 60 for 1-2 days remaining', () => {
-    const { breakdown } = calculateIndexerScore(makeInput({
-      reoStatus: 'eligible', reoDaysRemaining: 1, reoSource: 'oracle',
-    }));
-    expect(breakdown.reo).toBe(60);
-  });
-
-  it('scores 20 for eligible but 0 days (overdue)', () => {
-    const { breakdown } = calculateIndexerScore(makeInput({
-      reoStatus: 'eligible', reoDaysRemaining: 0, reoSource: 'oracle',
-    }));
-    expect(breakdown.reo).toBe(20);
+  // The oracle's isEligible bool is authoritative. Renewal runway must NOT
+  // affect the score — an eligible indexer is compliant regardless of how close
+  // its next renewal is. (Previously renewalTime+period arithmetic dropped an
+  // eligible indexer to 20/100 the instant our countdown hit zero.)
+  it('scores 100 for eligible regardless of renewal runway', () => {
+    for (const reoDaysRemaining of [30, 5, 1, 0, -3]) {
+      const { breakdown } = calculateIndexerScore(makeInput({
+        reoStatus: 'eligible', reoDaysRemaining, reoSource: 'oracle',
+      }));
+      expect(breakdown.reo).toBe(100);
+    }
   });
 
   it('scores 0 for ineligible', () => {
@@ -82,16 +67,9 @@ describe('REO scoring', () => {
     expect(breakdown.reo).toBe(0);
   });
 
-  it('scores 50 for heuristic-eligible', () => {
-    const { breakdown } = calculateIndexerScore(makeInput({
-      reoStatus: 'eligible', reoSource: 'heuristic',
-    }));
-    expect(breakdown.reo).toBe(50);
-  });
-
-  it('scores 25 for unknown status', () => {
+  it('scores a neutral 50 for unknown (oracle read unavailable)', () => {
     const { breakdown } = calculateIndexerScore(makeInput({ reoStatus: 'unknown' }));
-    expect(breakdown.reo).toBe(25);
+    expect(breakdown.reo).toBe(50);
   });
 });
 

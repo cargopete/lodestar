@@ -37,20 +37,6 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Badge } from '@/components/ui/Badge';
 import { IndexerComparison } from '@/components/ui/IndexerComparison';
 
-// Minimum self-stake for REO eligibility heuristic fallback (100K GRT)
-const MIN_STAKE_REO = 100000;
-
-/**
- * Quick client-side REO eligibility heuristic — used only when enriched
- * (oracle-sourced) data isn't available yet. Not authoritative.
- */
-function quickREOStatus(indexer: Indexer): 'eligible' | 'ineligible' | 'unknown' {
-  const selfStake = weiToGRT(indexer.stakedTokens) - weiToGRT(indexer.lockedTokens ?? '0');
-  const hasAllocations = indexer.allocationCount > 0;
-  const hasSufficientStake = selfStake >= MIN_STAKE_REO;
-  return (hasAllocations && hasSufficientStake) ? 'eligible' : 'ineligible';
-}
-
 interface IndexerRow {
   id: string;
   name: string;
@@ -356,7 +342,9 @@ export function IndexerTable() {
           allocated,
           rewards,
           feesCollected: 0,
-          reoStatus: quickREOStatus(indexer),
+          // Enriched (oracle-sourced) data isn't loaded in this fallback path —
+          // don't guess eligibility from stake/allocations; leave it unknown.
+          reoStatus: 'unknown' as const,
           reoSource: null,
           reoDaysRemaining: null,
           recentDelegations: null,
@@ -408,30 +396,34 @@ export function IndexerTable() {
                 <Link href={`/indexers/${row.address}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
                   {info.getValue()}
                 </Link>
-                {/* REO eligibility indicator */}
+                {/* REO eligibility indicator — oracle isEligible is authoritative;
+                    'unknown' renders neutral (oracle read unavailable), never red. */}
                 <span className="relative group/reo inline-flex">
                   <span className={cn(
                     'w-2 h-2 rounded-full inline-block',
-                    row.reoStatus === 'eligible' ? 'bg-[var(--green)]' : 'bg-[var(--red)]'
+                    row.reoStatus === 'eligible' ? 'bg-[var(--green)]'
+                      : row.reoStatus === 'ineligible' ? 'bg-[var(--red)]'
+                      : 'bg-[var(--text-faint)]'
                   )} />
                   <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-52 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/reo:opacity-100 transition-opacity z-50 text-[11px] font-normal">
                     <span className="block font-semibold text-[var(--text)] mb-1">Rewards Eligibility (GIP-0079)</span>
                     <span className={cn(
                       'block font-medium',
-                      row.reoStatus === 'eligible' ? 'text-[var(--green)]' : 'text-[var(--red)]'
+                      row.reoStatus === 'eligible' ? 'text-[var(--green)]'
+                        : row.reoStatus === 'ineligible' ? 'text-[var(--red)]'
+                        : 'text-[var(--text-faint)]'
                     )}>
-                      {row.reoStatus === 'eligible' ? 'Eligible' : 'Ineligible'}
+                      {row.reoStatus === 'eligible' ? 'Eligible'
+                        : row.reoStatus === 'ineligible' ? 'Ineligible'
+                        : 'Unavailable'}
                     </span>
-                    {row.reoSource === 'oracle' && row.reoDaysRemaining !== null && (
+                    {row.reoStatus === 'unknown' ? (
+                      <span className="block text-[var(--text-faint)] mt-1">Oracle read unavailable</span>
+                    ) : row.reoSource === 'oracle' && row.reoDaysRemaining !== null && row.reoDaysRemaining > 0 ? (
                       <span className="block text-[var(--text-faint)] mt-1">
-                        {row.reoDaysRemaining > 0
-                          ? `Renews in ${row.reoDaysRemaining.toFixed(1)}d`
-                          : 'Renewal overdue'}
+                        Renews in ~{row.reoDaysRemaining.toFixed(1)}d
                       </span>
-                    )}
-                    {row.reoSource !== 'oracle' && (
-                      <span className="block text-[var(--text-faint)] mt-1">Estimate — oracle data pending</span>
-                    )}
+                    ) : null}
                   </span>
                 </span>
                 {/* Node sync health indicator */}
@@ -867,7 +859,9 @@ export function IndexerTable() {
                         <div className="flex items-center gap-1 mt-1 flex-shrink-0">
                           <div className={cn(
                             'w-2 h-2 rounded-full',
-                            d.reoStatus === 'eligible' ? 'bg-[var(--green)]' : 'bg-[var(--red)]'
+                            d.reoStatus === 'eligible' ? 'bg-[var(--green)]'
+                              : d.reoStatus === 'ineligible' ? 'bg-[var(--red)]'
+                              : 'bg-[var(--text-faint)]'
                           )} />
                           {d.recentDelegations && (
                             <svg className="w-3 h-3 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

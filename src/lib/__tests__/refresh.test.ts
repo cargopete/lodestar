@@ -200,51 +200,44 @@ describe('refreshIndexers', () => {
     expect(result.count).toBe(1);
   });
 
-  it('falls back to heuristic when REO oracle throws', async () => {
+  it('leaves indexers unknown when the REO oracle batch throws (no heuristic guess)', async () => {
     setupHappyPath();
+    mockBatchCheckEligibility.mockReset(); // drop the empty-map queued by setupHappyPath
     mockBatchCheckEligibility.mockRejectedValueOnce(new Error('contract error'));
     const result = await refreshIndexers({ writeToRedis: false });
     expect(result.count).toBe(1);
+    expect(mockCalculateIndexerScore.mock.calls[0][0].reoStatus).toBe('unknown');
   });
 
   it('uses oracle data when oracle returns result for indexer (eligible)', async () => {
     const oracleMap = new Map([['0xabc', { isEligible: true, renewalTimestamp: 1700000000, expiresAt: 1800000000, daysRemaining: 30 }]]);
     setupHappyPath();
+    mockBatchCheckEligibility.mockReset();
     mockBatchCheckEligibility.mockResolvedValueOnce(oracleMap);
     const result = await refreshIndexers({ writeToRedis: false });
     expect(result.count).toBe(1);
+    expect(mockCalculateIndexerScore.mock.calls[0][0].reoStatus).toBe('eligible');
   });
 
   it('uses oracle data when oracle returns result for indexer (ineligible)', async () => {
     const oracleMap = new Map([['0xabc', { isEligible: false, renewalTimestamp: null, expiresAt: null, daysRemaining: null }]]);
     setupHappyPath();
+    mockBatchCheckEligibility.mockReset();
     mockBatchCheckEligibility.mockResolvedValueOnce(oracleMap);
     const result = await refreshIndexers({ writeToRedis: false });
     expect(result.count).toBe(1);
+    expect(mockCalculateIndexerScore.mock.calls[0][0].reoStatus).toBe('ineligible');
   });
 
-  it('heuristic: eligible when has allocations and sufficient stake', async () => {
+  it('reports unknown — never a stake/allocation guess — when the oracle has no entry for an indexer', async () => {
+    // Plenty of stake and allocations, but no oracle data → unknown, not a guessed 'eligible'.
     const indexer = makeIndexer('0xabc', { allocationCount: 3, stakedTokens: GRT(200_000) });
     setupHappyPath(indexer);
-    mockBatchCheckEligibility.mockResolvedValueOnce(new Map()); // no oracle data
+    mockBatchCheckEligibility.mockReset();
+    mockBatchCheckEligibility.mockResolvedValueOnce(new Map()); // oracle returned no data for this indexer
     const result = await refreshIndexers({ writeToRedis: false });
     expect(result.count).toBe(1);
-  });
-
-  it('heuristic: ineligible when no allocations', async () => {
-    const indexer = makeIndexer('0xabc', { allocationCount: 0 });
-    setupHappyPath(indexer);
-    mockBatchCheckEligibility.mockResolvedValueOnce(new Map());
-    const result = await refreshIndexers({ writeToRedis: false });
-    expect(result.count).toBe(1);
-  });
-
-  it('heuristic: ineligible when stake below minimum', async () => {
-    const indexer = makeIndexer('0xabc', { stakedTokens: GRT(50_000), allocationCount: 3 });
-    setupHappyPath(indexer);
-    mockBatchCheckEligibility.mockResolvedValueOnce(new Map());
-    const result = await refreshIndexers({ writeToRedis: false });
-    expect(result.count).toBe(1);
+    expect(mockCalculateIndexerScore.mock.calls[0][0].reoStatus).toBe('unknown');
   });
 
   it('maps optional indexer fields when present', async () => {

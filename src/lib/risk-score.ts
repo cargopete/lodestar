@@ -70,25 +70,20 @@ export const SCORE_LABELS: Record<keyof ScoreBreakdown, string> = {
 // --- Individual dimension scorers ---
 
 /**
- * REO compliance: eligible with plenty of renewal runway = 100, ineligible = 0
+ * REO compliance: the oracle's `isEligible` bool is the sole authority.
+ *
+ * Eligible = fully compliant (100), ineligible = 0. When the oracle read is
+ * unavailable ('unknown') we neither reward nor punish — a neutral 50.
+ *
+ * We deliberately do NOT derive a score from renewal arithmetic
+ * (renewalTime + period). That guess contradicted the oracle's own answer —
+ * an indexer the oracle reports as eligible was being scored 20/100 the moment
+ * our computed countdown hit zero, even though it was plainly still earning.
  */
-function scoreREO(
-  status: 'eligible' | 'ineligible' | 'unknown',
-  daysRemaining: number | null,
-  source: 'oracle' | 'heuristic',
-): number {
+function scoreREO(status: 'eligible' | 'ineligible' | 'unknown'): number {
+  if (status === 'eligible') return 100;
   if (status === 'ineligible') return 0;
-
-  if (source === 'oracle' && status === 'eligible' && daysRemaining !== null) {
-    if (daysRemaining >= 7) return 100;
-    if (daysRemaining >= 3) return 80;
-    if (daysRemaining > 0) return 60;
-    return 20; // eligible but overdue renewal — oracle lag?
-  }
-
-  // Heuristic or unknown — partial credit
-  if (status === 'eligible') return 50;
-  return 25;
+  return 50; // unknown — oracle read unavailable; neither reward nor punish
 }
 
 /**
@@ -431,7 +426,7 @@ export interface ScoreInput {
 
 export function calculateIndexerScore(input: ScoreInput): IndexerScore {
   const breakdown: ScoreBreakdown = {
-    reo: scoreREO(input.reoStatus, input.reoDaysRemaining, input.reoSource),
+    reo: scoreREO(input.reoStatus),
     selfStake: scoreSelfStake(input.selfStakeGRT),
     // RFC-006 D3: prefer the split-invariant served-gap (penalises leeching);
     // fall back to the raw fee-volume score only when gap data is unavailable.
