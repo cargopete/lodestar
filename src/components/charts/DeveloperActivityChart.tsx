@@ -17,6 +17,7 @@ import {
 import { useDeveloperActivity } from '@/hooks/useNetworkStats';
 import { formatNumber } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { NuthatchBadge } from '@/components/ui/NuthatchBadge';
 
 function formatWeek(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
@@ -47,7 +48,10 @@ export function DeveloperActivityChart() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Developer Activity</CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle>Developer Activity</CardTitle>
+              {data?.source === 'nuthatch' && <NuthatchBadge />}
+            </div>
             <p className="text-sm text-[var(--text-muted)] mt-1">
               Subgraphs published per week{data ? ` — last ${data.windowMonths} months` : ''}
             </p>

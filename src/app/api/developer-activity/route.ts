@@ -40,7 +40,8 @@ async function fetchSubgraphRows(cutoff: number): Promise<SubgraphRow[]> {
 async function fetchNuthatchRows(cutoff: number): Promise<SubgraphRow[]> {
   const rows = await nuthatchSql<{ createdAt: number }>(
     `SELECT block_timestamp AS "createdAt" FROM "gns__subgraph_published" ` +
-      `WHERE block_timestamp >= ${cutoff} ORDER BY block_timestamp`
+      `WHERE block_timestamp >= ${cutoff} ORDER BY block_timestamp`,
+    '/gns' // the graph-gns-nest, reverse-proxied under /gns on the shared nuthatch host
   );
   return rows.map((r) => ({ id: '', createdAt: Number(r.createdAt) }));
 }

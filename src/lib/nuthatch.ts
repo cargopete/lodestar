@@ -24,8 +24,15 @@ export function nuthatchEnabled(flag: string): boolean {
   return hasNuthatch() && process.env[flag] === 'true';
 }
 
-/** Run one SQL query against the nest's `/sql` surface and return its rows. */
-export async function nuthatchSql<T = Record<string, unknown>>(sql: string): Promise<T[]> {
+/**
+ * Run one SQL query against a nest's `/sql` surface and return its rows. `basePath` selects which nest
+ * behind the shared host (empty = the default `graph-staking-nest` on `/sql`; `"/gns"` = the
+ * `graph-gns-nest` reverse-proxied under `/gns/sql`). One URL + credential fronts both.
+ */
+export async function nuthatchSql<T = Record<string, unknown>>(
+  sql: string,
+  basePath = ''
+): Promise<T[]> {
   if (!NUTHATCH_URL) throw new Error('NUTHATCH_URL not configured');
   const headers: Record<string, string> = {};
   if (NUTHATCH_USER && NUTHATCH_PASSWORD) {
@@ -33,7 +40,7 @@ export async function nuthatchSql<T = Record<string, unknown>>(sql: string): Pro
     headers.Authorization = `Basic ${basic}`;
   }
 
-  const res = await fetch(`${NUTHATCH_URL}/sql?q=${encodeURIComponent(sql)}`, {
+  const res = await fetch(`${NUTHATCH_URL}${basePath}/sql?q=${encodeURIComponent(sql)}`, {
     headers,
     // Server-side only; the nest is finality-gated, so a short cache is safe and cheap.
     next: { revalidate: 0 },
