@@ -100,7 +100,9 @@ export async function GET() {
 
   const windowMonths = 12;
   // v2: payload gained the `partial` flag + complete-week-only headline figures.
-  const cacheKey = `lodestar:developer-activity:v2:${windowMonths}m`;
+  // v3: payload gained a `source` field (nuthatch vs subgraph) — new key so we don't serve a v2
+  // entry cached before the nuthatch migration (which has no source and the old subgraph totals).
+  const cacheKey = `lodestar:developer-activity:v3:${windowMonths}m`;
 
   try {
     const data = await cached<DeveloperActivityResponse>(cacheKey, 3600, async () => {
