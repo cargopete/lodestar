@@ -436,7 +436,7 @@ export function useNetworkDelegations(indexerAddress?: string) {
       const response = await fetch(`/api/delegation-events?${params}`);
       if (!response.ok) throw new Error('Failed to fetch delegation events');
       const json = await response.json();
-      return { events: json.data?.delegationEvents ?? [], source: json.source };
+      return { events: json.data?.delegationEvents ?? [], source: json.data?.source };
     },
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,

@@ -67,14 +67,15 @@ export async function GET(request: NextRequest) {
     // community subgraph. Falls back to the gateway on any error, so the panel never goes dark.
     if (nuthatchEnabled('NUTHATCH_DELEGATION_EVENTS')) {
       try {
-        const data = await cached(`${cacheKey}:nuthatch`, 300, async () => {
+        const data = await cached(`${cacheKey}:nuthatch:v2`, 300, async () => {
           const rows = await nuthatchSql<DelegationEvent>(
             delegationEventsSql(indexer, first, sevenDaysAgo)
           );
-          return { delegationEvents: rows };
+          // `source` lives inside `data` (not as a sibling) to match /api/developer-activity's shape.
+          return { delegationEvents: rows, source: 'nuthatch' as const };
         });
         return NextResponse.json(
-          { data, source: 'nuthatch' },
+          { data },
           { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }
         );
       } catch (err) {
