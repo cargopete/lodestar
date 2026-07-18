@@ -158,9 +158,29 @@ Code: [`src/app/delegate/`](src/app/delegate/) · API: [`src/app/api/delegate/re
 - Self-hosted Postgres 16 (postgres.js, forced TLS) + self-hosted Redis (TLS / `rediss://`), with an in-memory cache fallback
 - CoinGecko + DefiLlama (price/TVL data)
 - The Graph Network subgraph (Arbitrum, inline fetch)
+- [**nuthatch**](https://www.nuthatch-indexer.com) — our own self-hosted indexer, serving a growing subset of the event-derived panels instead of The Graph gateway (see [Data from nuthatch](#data-from-nuthatch))
 - Alchemy — Arbitrum One RPC for on-chain contract reads
 - Amp (`ampd`) — optional self-hosted on-chain event indexer for Horizon event history
 - Push Protocol — opt-in delegator notifications via on-chain channel
+
+## Data from nuthatch
+
+Some panels are served by [**nuthatch**](https://www.nuthatch-indexer.com), a self-hosted, single-binary
+indexer we run ourselves, instead of The Graph gateway. It indexes the relevant Graph Protocol
+contracts on Arbitrum One directly and exposes the data over SQL — no third-party data API in the path.
+This is an incremental migration (the [RFC-0011 pilot](https://github.com/nuthatch-indexer/nuthatch)):
+each panel is behind its own flag and falls back to The Graph on any error, so nothing depends on
+nuthatch being up.
+
+Currently nuthatch-backed (both show an **"⚡ Indexed by nuthatch"** badge in the UI when live):
+
+| Panel | Route | Source contract(s) |
+|---|---|---|
+| **Delegation Activity** feed | `/api/delegation-events` | HorizonStaking delegation events |
+| **Developer Activity** chart (subgraphs published/week) | `/api/developer-activity` | L2GNS `SubgraphPublished` |
+
+Everything else still reads The Graph Network subgraph. Configuration lives in `.env` under the
+`NUTHATCH_*` keys (see [`.env.example`](.env.example)).
 
 ## Getting Started
 

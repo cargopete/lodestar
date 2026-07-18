@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useNetworkDelegations, useEnrichedIndexers } from '@/hooks/useNetworkStats';
+import { NuthatchBadge } from '@/components/ui/NuthatchBadge';
 import { weiToGRT, formatGRT, formatRelativeTime, cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 
@@ -52,7 +53,9 @@ export function DelegationFeed({ indexerAddress: initialFilter }: DelegationFeed
   }, [activeFilter, nameToAddress]);
 
   const isValidAddress = /^0x[a-fA-F0-9]{40}$/.test(resolvedFilter);
-  const { data: events, isLoading } = useNetworkDelegations(isValidAddress ? resolvedFilter : undefined);
+  const { data: delegations, isLoading } = useNetworkDelegations(isValidAddress ? resolvedFilter : undefined);
+  const events = delegations?.events;
+  const nuthatchBacked = delegations?.source === 'nuthatch';
 
   // Build indexer address → name map for display
   const indexerNames = useMemo(() => {
@@ -80,9 +83,12 @@ export function DelegationFeed({ indexerAddress: initialFilter }: DelegationFeed
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Delegation Activity</CardTitle>
-          <span className="text-[10px] text-[var(--text-faint)]">
-            {activeFilter ? 'Filtered' : 'Live'} — last 50
-          </span>
+          <div className="flex items-center gap-3">
+            {nuthatchBacked && <NuthatchBadge />}
+            <span className="text-[10px] text-[var(--text-faint)]">
+              {activeFilter ? 'Filtered' : 'Live'} — last 50
+            </span>
+          </div>
         </div>
         {/* Indexer filter — hidden when pre-filtered from indexer detail page */}
         {!initialFilter && (

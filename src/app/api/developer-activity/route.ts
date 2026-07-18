@@ -1,11 +1,49 @@
 import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { nuthatchEnabled, nuthatchSql } from '@/lib/nuthatch';
 import { log } from '@/lib/logger';
 
 interface SubgraphRow {
   id: string;
   createdAt: number;
+}
+
+/** All subgraphs published since `cutoff`, from the network subgraph (paginated by id cursor). */
+async function fetchSubgraphRows(cutoff: number): Promise<SubgraphRow[]> {
+  const rows: SubgraphRow[] = [];
+  let lastId = '';
+  while (true) {
+    const result = await subgraphQuery<{ subgraphs: SubgraphRow[] }>(`{
+      subgraphs(
+        first: 1000
+        orderBy: id
+        orderDirection: asc
+        where: { createdAt_gte: ${cutoff} ${lastId ? `id_gt: "${lastId}"` : ''} }
+      ) { id createdAt }
+    }`);
+    if (result.subgraphs.length === 0) break;
+    rows.push(...result.subgraphs);
+    lastId = result.subgraphs[result.subgraphs.length - 1].id;
+    if (result.subgraphs.length < 1000) break;
+  }
+  return rows;
+}
+
+/**
+ * The same set, from our own nuthatch nest (RFC-0011 pilot): each GNS `SubgraphPublished` event is a
+ * new subgraph, so `block_timestamp` is its `createdAt`. This counts natively-published L2 subgraphs;
+ * it can run ~1% below the network subgraph's entity count (which folds in a few L1-origin/legacy
+ * subgraphs), but the weekly trend is identical — a documented divergence within tolerance (RFC-0011
+ * §2). See graph-gns-nest on the Helsinki box.
+ */
+async function fetchNuthatchRows(cutoff: number): Promise<SubgraphRow[]> {
+  const rows = await nuthatchSql<{ createdAt: number }>(
+    `SELECT block_timestamp AS "createdAt" FROM "gns__subgraph_published" ` +
+      `WHERE block_timestamp >= ${cutoff} ORDER BY block_timestamp`,
+    '/gns' // the graph-gns-nest, reverse-proxied under /gns on the shared nuthatch host
+  );
+  return rows.map((r) => ({ id: '', createdAt: Number(r.createdAt) }));
 }
 
 interface WeekBucket {
@@ -30,6 +68,8 @@ export interface DeveloperActivityResponse {
   lastWeekCount: number;
   /** Week-over-week change (%) between the last two complete weeks, null when the prior week is empty */
   weekOverWeekPct: number | null;
+  /** Which backend served this payload (RFC-0011 pilot). Absent on cached pre-migration payloads. */
+  source?: 'nuthatch' | 'subgraph';
 }
 
 /** Monday (UTC) of the ISO week containing the given unix-seconds timestamp. */
@@ -61,29 +101,21 @@ export async function GET() {
     const data = await cached<DeveloperActivityResponse>(cacheKey, 3600, async () => {
       const cutoff = Math.floor(Date.now() / 1000) - windowMonths * 30 * 86400;
 
-      // Paginate by id (stable cursor) over all subgraphs published since the cutoff.
-      const rows: SubgraphRow[] = [];
-      let lastId = '';
-      while (true) {
-        const result = await subgraphQuery<{ subgraphs: SubgraphRow[] }>(`{
-          subgraphs(
-            first: 1000
-            orderBy: id
-            orderDirection: asc
-            where: {
-              createdAt_gte: ${cutoff}
-              ${lastId ? `id_gt: "${lastId}"` : ''}
-            }
-          ) {
-            id
-            createdAt
-          }
-        }`);
-
-        if (result.subgraphs.length === 0) break;
-        rows.push(...result.subgraphs);
-        lastId = result.subgraphs[result.subgraphs.length - 1].id;
-        if (result.subgraphs.length < 1000) break;
+      // RFC-0011 pilot: when the flag is on, source the published-subgraph rows from our own nuthatch
+      // nest instead of the network subgraph. Identical bucketing runs below either way, so only the
+      // data origin changes. Falls back to the subgraph on any error.
+      let source: 'nuthatch' | 'subgraph' = 'subgraph';
+      let rows: SubgraphRow[];
+      if (nuthatchEnabled('NUTHATCH_DEVELOPER_ACTIVITY')) {
+        try {
+          rows = await fetchNuthatchRows(cutoff);
+          source = 'nuthatch';
+        } catch (err) {
+          log.api.error({ err }, 'nuthatch developer-activity failed — falling back to subgraph');
+          rows = await fetchSubgraphRows(cutoff);
+        }
+      } else {
+        rows = await fetchSubgraphRows(cutoff);
       }
 
       // Tally into weekly buckets.
@@ -119,7 +151,7 @@ export async function GET() {
       const weekOverWeekPct =
         prevWeekCount > 0 ? ((lastWeekCount - prevWeekCount) / prevWeekCount) * 100 : null;
 
-      return { weeks, windowMonths, totalInWindow, lastWeekCount, weekOverWeekPct };
+      return { weeks, windowMonths, totalInWindow, lastWeekCount, weekOverWeekPct, source };
     });
 
     return NextResponse.json(

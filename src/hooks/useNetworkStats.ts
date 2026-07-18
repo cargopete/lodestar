@@ -426,7 +426,9 @@ export function useRecentDelegations(indexerAddress: string) {
  * Optionally filtered by indexer address
  */
 export function useNetworkDelegations(indexerAddress?: string) {
-  return useQuery<DelegationEvent[]>({
+  // Returns the events plus which backend served them (`source`), so the panel can annotate itself
+  // when it's nuthatch-backed (RFC-0011 pilot). `source` is undefined on the subgraph path.
+  return useQuery<{ events: DelegationEvent[]; source?: 'nuthatch' | 'subgraph' }>({
     queryKey: ['networkDelegations', indexerAddress ?? ''],
     queryFn: async () => {
       const params = new URLSearchParams({ first: '50' });
@@ -434,7 +436,7 @@ export function useNetworkDelegations(indexerAddress?: string) {
       const response = await fetch(`/api/delegation-events?${params}`);
       if (!response.ok) throw new Error('Failed to fetch delegation events');
       const json = await response.json();
-      return json.data?.delegationEvents ?? [];
+      return { events: json.data?.delegationEvents ?? [], source: json.source };
     },
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
