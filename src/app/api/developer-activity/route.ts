@@ -4,6 +4,11 @@ import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { nuthatchEnabled, nuthatchSql } from '@/lib/nuthatch';
 import { log } from '@/lib/logger';
 
+// This handler takes no request argument, so Next would otherwise statically cache it at build time
+// and never re-run it — freezing the data source (and defeating the `NUTHATCH_*` flags). The app-level
+// `cached()` below is the real cache; the route itself must run each request.
+export const dynamic = 'force-dynamic';
+
 interface SubgraphRow {
   id: string;
   createdAt: number;
