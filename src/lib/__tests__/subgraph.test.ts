@@ -97,7 +97,7 @@ describe('subgraph: with GRAPH_API_KEY configured', () => {
     await mod.horizonPerfQuery('{ a }');
     await mod.qosOracleQuery('{ b }');
     expect(mockFetch.mock.calls[0][0]).toContain('eD1TVayj2NtmCjWFr4hZhc1APHQs9iR2Xah6KNE8Y4h');
-    expect(mockFetch.mock.calls[1][0]).toContain('Dtr9rETvwokot4BSXaD5tECanXfqfJKcvHuaaEgPDD2D');
+    expect(mockFetch.mock.calls[1][0]).toContain('CnfJ5tC5cfAmt2tUyUaM6vPrtmNYasavkDDn793FkbN3');
   });
 });
 

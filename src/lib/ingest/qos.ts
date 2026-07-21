@@ -6,7 +6,9 @@ import { log } from '../logger';
 /**
  * Ingest QoS Oracle daily datapoints into qos_daily + deployment_daily.
  *
- * Source: E&N/GraphOps QoS Oracle subgraph (V1).
+ * Source: Ellipfra's forked Gateway QoS Oracle subgraph (V1 daily grain; superset schema).
+ * NB the fork's history starts 2026-07-01 — older days come from the prior oracle's backfill
+ * already in Postgres, so DO NOT wipe; delta/backfill upserts merge the two ranges.
  *   - allocationDailyDataPoints → per (indexer, deployment, day, gateway): the scoring
  *     primitive. V1 has avg+blocks_behind+proportion_200 (no p90/p99, no stdev at daily grain).
  *   - queryDailyDataPoints → per (deployment, day, gateway): the served-share denominator.

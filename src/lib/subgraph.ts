@@ -125,10 +125,13 @@ export async function dispatchRegistryQuery<T = Record<string, unknown>>(query: 
   return json.data as T;
 }
 
-// Gateway QoS Oracle subgraph (Edge & Node — indexer quality of service timeseries)
-// https://thegraph.com/explorer/subgraphs/Dtr9rETvwokot4BSXaD5tECanXfqfJKcvHuaaEgPDD2D
+// Gateway QoS Oracle subgraph (indexer quality of service timeseries).
+// Ellipfra's fork of the E&N/GraphOps oracle: adds the missing oracle sender + optimisations,
+// and (unlike the original, which stalled ~2026-07-02) stays current. Data starts 2026-07-01.
+// Schema is a strict superset of the original, so queries are unchanged.
+// https://thegraph.com/explorer/subgraphs/CnfJ5tC5cfAmt2tUyUaM6vPrtmNYasavkDDn793FkbN3
 const QOS_ORACLE_URL = process.env.GRAPH_API_KEY
-  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/Dtr9rETvwokot4BSXaD5tECanXfqfJKcvHuaaEgPDD2D`
+  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/CnfJ5tC5cfAmt2tUyUaM6vPrtmNYasavkDDn793FkbN3`
   : null;
 
 export async function qosOracleQuery<T = Record<string, unknown>>(query: string): Promise<T> {

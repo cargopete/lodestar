@@ -39,7 +39,9 @@ export async function GET(
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
 
-  const cacheKey = `lodestar:indexer-qos-v4:${address}`;
+  // v5: repointed to Ellipfra's forked QoS oracle (CnfJ5t…), which is current where the
+  // original stalled ~2026-07-02. Bump invalidates stale-subgraph payloads.
+  const cacheKey = `lodestar:indexer-qos-v5:${address}`;
 
   try {
     const data = await cached(cacheKey, 3600, async () => {
