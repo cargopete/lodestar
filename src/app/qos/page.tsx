@@ -941,8 +941,11 @@ export default function QosPage() {
                 failure is already counted once.
               </li>
               <li>
-                Freshness is chainhead lag resolved against a public Arbitrum RPC, not
-                self-reported.
+                Freshness is chainhead lag: the indexer&apos;s own reported head compared against
+                chainhead at probe time, which we resolve ourselves rather than taking on trust.
+                Clamped at zero, and conservative by a few seconds of block production — it will not
+                resolve a lag of tens of blocks on a sub-second chain, but an indexer hundreds or
+                thousands of blocks behind measures cleanly.
               </li>
               <li>
                 Measurements land in 5-minute buckets and are recomputed over a trailing window
