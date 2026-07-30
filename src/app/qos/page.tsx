@@ -76,19 +76,23 @@ function formatAge(seconds: number | null | undefined): string {
 }
 
 /**
- * Staleness thresholds differ per source *by design*, because their cadences do.
+ * Staleness judged against each source's OWN cadence, never a fixed number.
  *
- * The oracle batches with a ~30-minute watermark, so anything under an hour is normal for it and
- * would be alarming for us. Foghorn recomputes every minute and has nothing to wait for, so a
- * quarter of an hour already means something is wrong. Judging both against one threshold would
- * either cry wolf about theirs or excuse ours.
+ * The two feeds publish on completely different clocks — the oracle every 5 minutes with a
+ * ~30-minute watermark, our probes on whatever `probe_interval_secs` the box is set to (3600 in
+ * production). A single hardcoded threshold cannot serve both, and the first attempt proved it:
+ * a 15-minute limit marked our own feed "lagging" for roughly 45 minutes out of every hour purely
+ * because someone had configured hourly probing and the page didn't know.
  */
 function staleness(source: FoghornQosSource): { variant: BadgeVariant; label: string } {
   const age = source.age_seconds;
   if (age === null) return { variant: 'default', label: 'no data' };
-  const measured = source.source === 'foghorn';
-  const warn = measured ? 15 * 60 : 60 * 60;
-  const bad = measured ? 60 * 60 : 3 * 60 * 60;
+  // Relative to the source's own cadence, never a hardcoded number. A fixed 15-minute threshold
+  // labelled our own feed "lagging" for ~45 minutes out of every hour, because the box probes
+  // hourly — the page was crying wolf about itself. Two missed intervals is late; four is broken.
+  const interval = source.expected_interval_seconds ?? (source.source === 'foghorn' ? 3600 : 300);
+  const warn = interval * 2;
+  const bad = interval * 4;
   if (age >= bad) return { variant: 'error', label: 'stalled' };
   if (age >= warn) return { variant: 'warning', label: 'lagging' };
   return { variant: 'success', label: 'live' };
@@ -428,7 +432,11 @@ export default function QosPage() {
         <StatCard
           label="Foghorn QoS"
           value={formatAge(measured?.age_seconds)}
-          subtitle="since last measurement"
+          subtitle={
+            measured?.expected_interval_seconds
+              ? `since last probe · runs every ${Math.round(measured.expected_interval_seconds / 60)}m`
+              : 'since last measurement'
+          }
           tag={measured ? staleness(measured).label : undefined}
           tooltip={measured?.note}
           loading={statusLoading}

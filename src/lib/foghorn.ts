@@ -279,6 +279,11 @@ export interface FoghornQosSource {
   last_computed?: string | null;
   /** Null when a source has never published anything we have seen. */
   age_seconds: number | null;
+  /**
+   * The cadence this source is actually configured to run at. Staleness must be judged against
+   * this, not a fixed number: probing hourly makes a 50-minute age completely normal.
+   */
+  expected_interval_seconds?: number;
   note: string;
 }
 
