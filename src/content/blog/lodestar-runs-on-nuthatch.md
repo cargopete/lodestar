@@ -112,4 +112,4 @@ What it doesn't prove: everything. The QoS-oracle data still lives on The Graph'
 
 But the read path for two of them now belongs to us. That's the point of "be your own indexer": not a flag day, but a migration you can do on your own terms, with your own eyes on the parity, one honest step at a time.
 
-nuthatch is [github.com/nuthatch-indexer/nuthatch](https://github.com/nuthatch-indexer/nuthatch) (AGPL-3.0) — [www.nuthatch-indexer.com](https://www.nuthatch-indexer.com).
+nuthatch is [github.com/nightswatchhq/nuthatch](https://github.com/nightswatchhq/nuthatch) (AGPL-3.0) — [www.nuthatch-indexer.com](https://www.nuthatch-indexer.com).

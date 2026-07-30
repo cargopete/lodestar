@@ -208,10 +208,10 @@ I started in 2021 by building the tool that made AssemblyScript bearable. I spen
 
 ```bash
 # Homebrew (macOS + Linux) — pre-compiled, no Rust required
-brew install lodestar-team/tap/redstart
+brew install nightswatchhq/tap/redstart
 
 # or with a Rust toolchain
-cargo install --git https://github.com/lodestar-team/redstart redstart-cli
+cargo install --git https://github.com/nightswatchhq/redstart redstart-cli
 
 redstart new my-subgraph
 redstart check my-subgraph
@@ -220,7 +220,7 @@ redstart test  my-subgraph
 redstart dev   my-subgraph     # watch: check → build → test on save
 ```
 
-- **GitHub:** [github.com/lodestar-team/redstart](https://github.com/lodestar-team/redstart)
+- **GitHub:** [github.com/nightswatchhq/redstart](https://github.com/nightswatchhq/redstart)
 - **Worked examples:** `examples/erc20` (split across two modules), `examples/factory`, `examples/horizon-indexer`
 - **The Night's Watch:** if you want to help harden the open data layer, the door's open.
 

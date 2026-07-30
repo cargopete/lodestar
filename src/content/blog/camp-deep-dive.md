@@ -329,7 +329,7 @@ The pieces:
 Install and run `ampd` pointing at an Arbitrum One RPC (or any chain Amp supports). The node will ingest blocks, transactions, and logs into local parquet files. The [run-local-amp-node posts on this blog](/blog/run-local-amp-node) walk through the setup. You need a machine with enough disk — Arbitrum One logs accumulate fast; plan for several hundred GB per month of indexed history.
 
 **2. The camp gateway.**
-Clone [github.com/lodestar-team/camp](https://github.com/lodestar-team/camp), set `AMP_ORIGIN` to wherever your `ampd` is listening, set `AMP_TOKEN` to a shared secret, and deploy to Vercel (or run locally with `npm run dev`). That's the entire public API surface.
+Clone [github.com/nightswatchhq/camp](https://github.com/nightswatchhq/camp), set `AMP_ORIGIN` to wherever your `ampd` is listening, set `AMP_TOKEN` to a shared secret, and deploy to Vercel (or run locally with `npm run dev`). That's the entire public API surface.
 
 **3. (Optional) nginx + Redis.**
 The ops pattern camp uses puts nginx in front of `ampd` to enforce the shared-secret check and Redis-backed IP rate limiting. Without this, `AMP_ORIGIN` points directly at `ampd`'s HTTP port and there's no rate limiting — fine for a private node, not for a public one.
@@ -350,7 +350,7 @@ The full environment variables:
 
 Rate limiting requires a Redis instance reachable from Vercel. The camp ops setup runs a self-hosted Redis HTTP shim alongside nginx, but Upstash's managed Redis works identically — it's the same `@upstash/ratelimit` client either way.
 
-**Becoming a Horizon provider.** If you want to earn GRT for your node's query serving rather than offering a free endpoint, camp-data-service adds the payment layer on top. It's a Rust/Axum gateway that validates GraphTally (TAP) signed receipts, proxies requests to the camp REST API, aggregates receipts into RAVs, and collects on-chain via a Solidity `DataService` contract. The code is at [github.com/lodestar-team/camp-data-service](https://github.com/lodestar-team/camp-data-service) — currently on Arbitrum Sepolia (testnet), not mainnet.
+**Becoming a Horizon provider.** If you want to earn GRT for your node's query serving rather than offering a free endpoint, camp-data-service adds the payment layer on top. It's a Rust/Axum gateway that validates GraphTally (TAP) signed receipts, proxies requests to the camp REST API, aggregates receipts into RAVs, and collects on-chain via a Solidity `DataService` contract. The code is at [github.com/nightswatchhq/camp-data-service](https://github.com/nightswatchhq/camp-data-service) — currently on Arbitrum Sepolia (testnet), not mainnet.
 
 ---
 
@@ -373,5 +373,5 @@ The main items in flight:
 - **camp API:** [engine.camp](https://engine.camp)
 - **OpenAPI spec + browsable docs:** [engine.camp/docs](https://engine.camp/docs)
 - **Explore dashboards:** [engine.camp/explore](https://engine.camp/explore)
-- **Source:** [github.com/lodestar-team/camp](https://github.com/lodestar-team/camp)
+- **Source:** [github.com/nightswatchhq/camp](https://github.com/nightswatchhq/camp)
 - **Intro post (if you missed it):** [camp: A Free Decoded Arbitrum API](/blog/camp-free-amp-api-arbitrum)

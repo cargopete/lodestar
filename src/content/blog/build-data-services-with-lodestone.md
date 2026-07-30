@@ -11,7 +11,7 @@ A while ago we wrote [a long guide on building a Horizon data service by hand](/
 
 We know, because we did it ten times. Dispatch (JSON-RPC). A files service. A WebSocket relay. A Solana indexer. An MCP gateway. A camp monetiser. Each one was 90% the same payment plumbing wrapped around 10% of an actual idea. At some point copying your own homework stops being a workflow and starts being a smell.
 
-So we did the obvious thing: extracted the 90% into a reusable library ([`horizon-core`](https://github.com/lodestar-team/horizon-core)), and then built a generator for the rest. It's called **[lodestone](https://github.com/lodestar-team/lodestone)** — a Claude Code plugin that turns a short spec into a complete, *building*, payment-gated Horizon data service. This post is how to use it, and the story of the gleefully silly service we built to prove it works.
+So we did the obvious thing: extracted the 90% into a reusable library ([`horizon-core`](https://github.com/nightswatchhq/horizon-core)), and then built a generator for the rest. It's called **[lodestone](https://github.com/nightswatchhq/lodestone)** — a Claude Code plugin that turns a short spec into a complete, *building*, payment-gated Horizon data service. This post is how to use it, and the story of the gleefully silly service we built to prove it works.
 
 ## What a Horizon data service actually is
 
@@ -65,7 +65,7 @@ We didn't take its word for it. We stood the gateway up locally against Postgres
 - A request with no `TAP-Receipt` header → `402 Payment Required`. The payment gate is live.
 - A request with a malformed receipt → `402 invalid receipt`. Validation is live.
 
-That's the entire generated stack — contract, indexer, and a serving, payment-gating gateway — from a paragraph, building and running locally. The dormancy logic itself? That's the data plane: you replace the generated mock `Substrate`/`Handler`/`Sink` with your real detection, and fill in the three tiers. Lodestone did the boring, error-prone 90%. [The repo is here](https://github.com/lodestar-team/hermit-ds), and its README says, plainly, that lodestone built all of it.
+That's the entire generated stack — contract, indexer, and a serving, payment-gating gateway — from a paragraph, building and running locally. The dormancy logic itself? That's the data plane: you replace the generated mock `Substrate`/`Handler`/`Sink` with your real detection, and fill in the three tiers. Lodestone did the boring, error-prone 90%. [The repo is here](https://github.com/nightswatchhq/hermit-ds), and its README says, plainly, that lodestone built all of it.
 
 ## The loop that makes it better
 
@@ -82,7 +82,7 @@ A service you can't run is a demo. Lodestone ships a companion MCP server, `hori
 ## Try it
 
 ```
-/plugin marketplace add lodestar-team/lodestone
+/plugin marketplace add nightswatchhq/lodestone
 /plugin install lodestone
 ```
 

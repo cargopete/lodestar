@@ -55,7 +55,7 @@ export function Footer() {
               {'⚔️'} The Night&apos;s Watch
             </a>
             <a
-              href="https://github.com/lodestar-team/lodestar"
+              href="https://github.com/nightswatchhq/lodestar"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"

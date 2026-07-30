@@ -15,10 +15,10 @@ The Graph decentralized its indexers years ago. Its gateways — the layer that 
 
 I know, because I did all of that. **gib** (gateway-in-a-box) is the result: the whole Horizon gateway stack — gateway, TAP aggregator, escrow manager, Redpanda — in a Docker Compose distribution configured from a single documented `.env`.
 
-**Repo:** [github.com/lodestar-team/gib](https://github.com/lodestar-team/gib) · **Release:** v0.2.0
+**Repo:** [github.com/nightswatchhq/gib](https://github.com/nightswatchhq/gib) · **Release:** v0.2.0
 
 ```sh
-git clone https://github.com/lodestar-team/gib && cd gib
+git clone https://github.com/nightswatchhq/gib && cd gib
 cp .env.example .env               # fill three TODOs
 ./scripts/fetch-addresses.sh       # verified Horizon contract addresses, never hand-copied
 ./scripts/gen-keys.sh              # sender + signer keys

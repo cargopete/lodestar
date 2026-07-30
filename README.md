@@ -108,7 +108,7 @@ Each indexer receives a composite score (0–100) across eleven dimensions, comb
 - **Zero extra API calls** — scores are computed from data the enrichment pipeline already fetches
 - **Delegation-neutral self-stake** — attracting delegation is a sign of trust, not something to penalise
 - **Delegator-first** — the score explicitly penalises high cuts; an operationally excellent indexer that takes 100% of rewards still scores poorly because delegators earn nothing
-- **Feedback welcome** — if the weights or thresholds feel off, [open an issue](https://github.com/lodestar-team/lodestar/issues)
+- **Feedback welcome** — if the weights or thresholds feel off, [open an issue](https://github.com/nightswatchhq/lodestar/issues)
 
 ## One-Click Delegation
 
@@ -168,7 +168,7 @@ Code: [`src/app/delegate/`](src/app/delegate/) · API: [`src/app/api/delegate/re
 Some panels are served by [**nuthatch**](https://www.nuthatch-indexer.com), a self-hosted, single-binary
 indexer we run ourselves, instead of The Graph gateway. It indexes the relevant Graph Protocol
 contracts on Arbitrum One directly and exposes the data over SQL — no third-party data API in the path.
-This is an incremental migration (the [RFC-0011 pilot](https://github.com/nuthatch-indexer/nuthatch)):
+This is an incremental migration (the [RFC-0011 pilot](https://github.com/nightswatchhq/nuthatch)):
 each panel is behind its own flag and falls back to The Graph on any error, so nothing depends on
 nuthatch being up.
 
@@ -279,7 +279,7 @@ src/
 
 ## Contributing
 
-Issues and feedback welcome at [github.com/lodestar-team/lodestar/issues](https://github.com/lodestar-team/lodestar/issues).
+Issues and feedback welcome at [github.com/nightswatchhq/lodestar/issues](https://github.com/nightswatchhq/lodestar/issues).
 
 ## License
 
