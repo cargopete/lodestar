@@ -164,7 +164,8 @@ const FIELD_MAPPING: { field: string; meaning: string }[] = [
   },
   {
     field: 'avg_indexer_blocks_behind',
-    meaning: 'Chainhead lag resolved against a public Arbitrum RPC, not self-reported.',
+    meaning:
+      "The indexer's reported head against chainhead at probe time. We resolve the reference; the position is their claim — an indexer misreporting its head would read as fresh.",
   },
   {
     field: 'avg_query_fee / total_query_fees',
@@ -980,10 +981,12 @@ export default function QosPage() {
                 and a funded escrow first.
               </li>
               <li>
-                <strong>Which fields are unaffected.</strong> Blocks-behind is unbiased because we
-                resolve chainhead ourselves, and correctness is unbiased because responses are
-                compared against each other rather than self-reported. Those two stand on their own;
-                success rate does not, yet.
+                <strong>Which fields are unaffected.</strong> Correctness is the genuinely
+                independent one: responses are compared against each other, so nothing an indexer
+                asserts about itself can move it. Blocks-behind is <em>partly</em> independent — we
+                resolve chainhead ourselves, but the indexer&apos;s position is taken from its own{' '}
+                <code>_meta</code>, so an operator misreporting its head would appear current.
+                Success rate is the weakest of the three, for the selection-bias reason above.
               </li>
               <li>
                 <span className="text-[var(--amber)]">Correctness is currently thin.</span> Judging a
