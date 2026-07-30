@@ -379,6 +379,16 @@ export default function QosPage() {
   };
 
   const divergentRows = rows.filter((r) => (r.correctness ?? 1) < 1);
+  /**
+   * Total corroborated responses. Correctness requires two or more indexers answering the identical
+   * probe; with gateway dispatch that is uncommon, so this is frequently zero — and a zero
+   * "serving wrong data" count then means "nothing was checked", not "everything is fine". The UI
+   * has to say which, or it flatters the network by accident.
+   */
+  const comparableTotal = useMemo(
+    () => (buckets?.buckets ?? []).reduce((n, b) => n + b.comparable_count, 0),
+    [buckets]
+  );
 
   return (
     <div className="space-y-6">
@@ -389,10 +399,18 @@ export default function QosPage() {
           <Badge variant="default">no API key</Badge>
         </div>
         <p className="text-sm text-[var(--text-muted)] max-w-3xl">
-          Quality-of-service that Foghorn measures itself, published in the canonical oracle&apos;s
-          own schema. The oracle&apos;s format carries a <code>gateway_id</code> on every data
-          point, so this is a second gateway in a format built for several — not a fork of it.
-          Independent of Edge &amp; Node&apos;s pipeline, so it stays up when that stalls.
+          Two feeds, kept deliberately distinct. <strong>The canonical QoS oracle&apos;s own data</strong>,
+          mirrored here so it stays queryable without an API key or Edge &amp; Node&apos;s gateway in
+          the read path — real traffic, real fees, real success rates. And{' '}
+          <strong>Lodestar&apos;s own measurements</strong>, produced by active probing, which keep
+          running when their publisher stalls. Both are served in the oracle&apos;s own schema:{' '}
+          <code>gateway_id</code> is on every data point because the format was built for several
+          gateways, so this is a second one rather than a fork.
+        </p>
+        <p className="text-xs text-[var(--text-muted)] max-w-3xl">
+          A mirror cannot invent data for a window the publisher never produced — during a stall it
+          is as frozen as the source. What it changes is that the freeze is visible and the history
+          stays served.
         </p>
       </header>
 
@@ -423,8 +441,16 @@ export default function QosPage() {
         <StatCard
           label="Serving wrong data"
           value={String(divergentRows.length)}
-          subtitle="minority-cluster responses"
-          tooltip="The oracle cannot see this: it knows an indexer answered fast with a 200, not whether the answer was correct."
+          subtitle={
+            comparableTotal === 0
+              ? 'no corroborated probes yet'
+              : `${comparableTotal} corroborated responses`
+          }
+          tooltip={
+            comparableTotal === 0
+              ? 'Scoring correctness needs two or more indexers answering the identical probe. Gateway dispatch rarely provides that, so this is currently measuring nothing — 0 here means "not established", not "all clean".'
+              : 'The oracle cannot see this: it knows an indexer answered fast with a 200, not whether the answer was correct.'
+          }
           loading={bucketsLoading}
         />
       </StatGrid>
@@ -955,6 +981,15 @@ export default function QosPage() {
                 resolve chainhead ourselves, and correctness is unbiased because responses are
                 compared against each other rather than self-reported. Those two stand on their own;
                 success rate does not, yet.
+              </li>
+              <li>
+                <span className="text-[var(--amber)]">Correctness is currently thin.</span> Judging a
+                response requires at least two indexers answering the <em>identical</em> probe, and
+                gateway dispatch seldom provides that corroboration — so most rows read{' '}
+                <code>—</code>, meaning not established rather than clean. An earlier version scored
+                a &quot;minority of one&quot; as wrong and briefly accused a named indexer on a
+                sample where nothing had been compared; requiring a real majority fixed that and
+                revealed how sparse the coverage actually is. Direct dispatch fixes the coverage.
               </li>
               <li>
                 <strong>Percentiles only at bucket resolution.</strong> Percentiles don&apos;t
