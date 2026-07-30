@@ -171,7 +171,7 @@ The contract is written in Solidity, inherits from The Graph's `DataService` bas
 
 > camp-data-service is experimental and community-built. It is not affiliated with The Graph Foundation or Edge & Node.
 
-The full code is on GitHub: [lodestar-team/camp-data-service](https://github.com/lodestar-team/camp-data-service).
+The full code is on GitHub: [nightswatchhq/camp-data-service](https://github.com/nightswatchhq/camp-data-service).
 
 ---
 
@@ -188,7 +188,7 @@ Both projects are open source. The pattern is replicable: run `ampd` against any
 ## Try it
 
 - **camp API:** [engine.camp](https://engine.camp)
-- **camp source:** [github.com/lodestar-team/camp](https://github.com/lodestar-team/camp)
-- **camp-data-service:** [github.com/lodestar-team/camp-data-service](https://github.com/lodestar-team/camp-data-service)
+- **camp source:** [github.com/nightswatchhq/camp](https://github.com/nightswatchhq/camp)
+- **camp-data-service:** [github.com/nightswatchhq/camp-data-service](https://github.com/nightswatchhq/camp-data-service)
 - **Amp:** [amp.thegraph.com](https://amp.thegraph.com)
 - **Intro to Amp:** [Full writeup on this blog](/blog/intro-to-amp)

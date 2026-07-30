@@ -179,8 +179,8 @@ We said it in the [announcement](/blog/substreams-data-service-community-edition
 
 Everything here is in the repo. The fork rehearsals, the lifecycle script, and the RAV-signing harness are all checked in, and the deploy/onboarding runbook has every `cast` invocation.
 
-- **Repo:** [github.com/lodestar-team/SDSCE](https://github.com/lodestar-team/SDSCE)
-- **Deployment & onboarding runbook:** [docs/arb-one-deployment-runbook.md](https://github.com/lodestar-team/SDSCE/blob/main/docs/arb-one-deployment-runbook.md)
+- **Repo:** [github.com/nightswatchhq/SDSCE](https://github.com/nightswatchhq/SDSCE)
+- **Deployment & onboarding runbook:** [docs/arb-one-deployment-runbook.md](https://github.com/nightswatchhq/SDSCE/blob/main/docs/arb-one-deployment-runbook.md)
 - **Live SubstreamsDataService:** [`0x1c3e9cca124ad19b9ed3c202d2e6cd106944640c`](https://arbiscan.io/address/0x1c3e9cca124ad19b9ed3c202d2e6cd106944640c)
 - **The proof, on-chain:** the [provider](https://arbiscan.io/address/0x82A4a06dF453Ac30e5ceb9F1308F845BB128045e) and [payer](https://arbiscan.io/address/0x8eEc11Cf2CE7E2872c37f8DcCfC071923183326E) test wallets — every transaction in this post is in their history.
 

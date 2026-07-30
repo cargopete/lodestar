@@ -79,7 +79,7 @@ export interface DataService {
   grc?: string;
   /** Org / author that built it. */
   builtBy: string;
-  /** Built by Lodestar (lodestar-team / cargopete). */
+  /** Built by Lodestar (nightswatchhq / cargopete). */
   homeTeam: boolean;
   /** One-line summary for the card. */
   tagline: string;
@@ -247,7 +247,7 @@ npm i @lodestar-dispatch/consumer-sdk`,
     slug: 'seahorn',
     name: 'Seahorn',
     grc: 'GRC-008',
-    builtBy: 'lodestar-team',
+    builtBy: 'nightswatchhq',
     homeTeam: true,
     tagline: 'A Solana structured-data service — the "missing third lane" alongside Subgraphs and Substreams.',
     description:
@@ -262,7 +262,7 @@ npm i @lodestar-dispatch/consumer-sdk`,
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Solana mainnet data', isMainnet: true },
     stack: ['Rust', 'Solidity'],
     links: [
-      { label: 'Repo', url: 'https://github.com/lodestar-team/seahorn' },
+      { label: 'Repo', url: 'https://github.com/nightswatchhq/seahorn' },
       { label: 'GRC-008', url: 'https://forum.thegraph.com/t/grc-008-seahorn-a-solana-structured-data-service-on-horizon/6950' },
     ],
     contracts: [
@@ -342,7 +342,7 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
   {
     slug: 'sdsce',
     name: 'Substreams Data Service — Community Edition (SDSCE)',
-    builtBy: 'lodestar-team',
+    builtBy: 'nightswatchhq',
     homeTeam: true,
     tagline: 'A community edition of the Substreams Data Service — live on Arbitrum One, with a fixed 1% burn.',
     description:
@@ -357,9 +357,9 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Substreams (firecore)', isMainnet: true },
     stack: ['Go', 'Solidity'],
     links: [
-      { label: 'Repo', url: 'https://github.com/lodestar-team/SDSCE' },
+      { label: 'Repo', url: 'https://github.com/nightswatchhq/SDSCE' },
       { label: 'Announcement', url: 'https://www.lodestar-dashboard.com/blog/substreams-data-service-community-edition' },
-      { label: 'Deployment runbook', url: 'https://github.com/lodestar-team/SDSCE/blob/main/docs/arb-one-deployment-runbook.md' },
+      { label: 'Deployment runbook', url: 'https://github.com/nightswatchhq/SDSCE/blob/main/docs/arb-one-deployment-runbook.md' },
     ],
     contracts: [
       {
@@ -470,7 +470,7 @@ cargo run --example stream_blocks -- \\
   {
     slug: 'wsaas',
     name: 'WSaaS (WebSocket)',
-    builtBy: 'lodestar-team',
+    builtBy: 'nightswatchhq',
     homeTeam: true,
     tagline: 'A WebSocket data service — pre-parsed transfers, swaps and exchange events over one connection, billed per message.',
     description:
@@ -485,7 +485,7 @@ cargo run --example stream_blocks -- \\
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Multi-chain pre-parsed events', isMainnet: true },
     stack: ['Rust', 'Solidity'],
     links: [
-      { label: 'Repo', url: 'https://github.com/lodestar-team/wsaas' },
+      { label: 'Repo', url: 'https://github.com/nightswatchhq/wsaas' },
       { label: 'Pinax WebSockets', url: 'https://pinax.network/products/websockets' },
     ],
     contracts: [
@@ -523,7 +523,7 @@ wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
     slug: 'compass',
     name: 'Compass',
     grc: 'GRC-007',
-    builtBy: 'lodestar-team',
+    builtBy: 'nightswatchhq',
     homeTeam: true,
     tagline: 'A decentralized Subgraph-MCP gateway — every subgraph becomes a pay-per-call MCP tool for AI agents.',
     description:
@@ -537,7 +537,7 @@ wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
     chain: { payment: 'arbitrum-sepolia', paymentLabel: 'Arbitrum Sepolia', dataLabel: 'USDC rail on Base', isMainnet: false },
     stack: ['Solidity', 'JavaScript', 'TypeScript', 'Rust'],
     links: [
-      { label: 'Repo', url: 'https://github.com/lodestar-team/compass' },
+      { label: 'Repo', url: 'https://github.com/nightswatchhq/compass' },
       { label: 'GRC-007', url: 'https://forum.thegraph.com/t/grc-007-compass-a-decentralised-subgraph-mcp-gateway-on-horizon/6949' },
     ],
     becomeProvider: [
@@ -557,7 +557,7 @@ wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
   {
     slug: 'camp-data-service',
     name: 'camp-data-service',
-    builtBy: 'lodestar-team',
+    builtBy: 'nightswatchhq',
     homeTeam: true,
     tagline: 'Monetizes a self-hosted camp instance — pay per request in GRT for decoded Arbitrum One data.',
     description:
@@ -576,8 +576,8 @@ wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
     },
     stack: ['Rust', 'Solidity', 'TypeScript'],
     links: [
-      { label: 'Repo', url: 'https://github.com/lodestar-team/camp-data-service' },
-      { label: 'camp REST API', url: 'https://github.com/lodestar-team/camp' },
+      { label: 'Repo', url: 'https://github.com/nightswatchhq/camp-data-service' },
+      { label: 'camp REST API', url: 'https://github.com/nightswatchhq/camp' },
     ],
     contracts: [
       { label: 'CampDataService (proxy)', address: '0x8ED612666ad1853AdB050f4c4c54082decA605b8', network: 'arbitrum-one' },
@@ -621,7 +621,7 @@ curl -s 'https://camp.89.167.109.4.sslip.io/v1/transfers?token=0xaf88…&limit=1
   {
     slug: 'vince-data-service',
     name: 'Vince Data Service',
-    builtBy: 'lodestar-team · cargopete',
+    builtBy: 'nightswatchhq · cargopete',
     homeTeam: true,
     tagline: 'A whimsical-but-functional service "for locating individuals named Vince, worldwide".',
     description:
@@ -635,7 +635,7 @@ curl -s 'https://camp.89.167.109.4.sslip.io/v1/transfers?token=0xaf88…&limit=1
     chain: { payment: 'local-anvil', paymentLabel: 'Local Anvil', isMainnet: false },
     stack: ['Solidity'],
     links: [
-      { label: 'Repo', url: 'https://github.com/lodestar-team/vince-data-service' },
+      { label: 'Repo', url: 'https://github.com/nightswatchhq/vince-data-service' },
       { label: 'Lodestar guide', url: 'https://www.lodestar-dashboard.com/blog/how-to-build-a-horizon-data-service' },
     ],
     becomeProvider: [
@@ -652,7 +652,7 @@ curl -s 'https://camp.89.167.109.4.sslip.io/v1/transfers?token=0xaf88…&limit=1
   {
     slug: 'hello-data-service',
     name: 'Hello Data Service',
-    builtBy: 'lodestar-team · cargopete',
+    builtBy: 'nightswatchhq · cargopete',
     homeTeam: true,
     tagline: 'A minimal (~120-line) working Horizon data service reference — the simplest of the set.',
     description:
@@ -666,7 +666,7 @@ curl -s 'https://camp.89.167.109.4.sslip.io/v1/transfers?token=0xaf88…&limit=1
     chain: { payment: 'local-anvil', paymentLabel: 'Local Anvil', isMainnet: false },
     stack: ['Solidity'],
     links: [
-      { label: 'Repo', url: 'https://github.com/lodestar-team/hello-data-service' },
+      { label: 'Repo', url: 'https://github.com/nightswatchhq/hello-data-service' },
       { label: 'Lodestar guide', url: 'https://www.lodestar-dashboard.com/blog/how-to-build-a-horizon-data-service' },
     ],
     becomeProvider: [

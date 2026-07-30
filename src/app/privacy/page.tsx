@@ -81,8 +81,8 @@ export default function PrivacyPage() {
       <h2>Contact</h2>
       <p>
         Questions about privacy? Open an issue at{' '}
-        <a href="https://github.com/lodestar-team/lodestar/issues">
-          github.com/lodestar-team/lodestar/issues
+        <a href="https://github.com/nightswatchhq/lodestar/issues">
+          github.com/nightswatchhq/lodestar/issues
         </a>{' '}
         or reach us on{' '}
         <a href="https://discord.gg/484vgDETEZ">Discord</a>.

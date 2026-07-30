@@ -22,8 +22,8 @@ export default function SupportPage() {
         </li>
         <li>
           <strong>Bugs &amp; feature requests:</strong>{' '}
-          <a href="https://github.com/lodestar-team/lodestar/issues">
-            github.com/lodestar-team/lodestar/issues
+          <a href="https://github.com/nightswatchhq/lodestar/issues">
+            github.com/nightswatchhq/lodestar/issues
           </a>
         </li>
       </ul>
@@ -53,7 +53,7 @@ export default function SupportPage() {
       <h2>Contact</h2>
       <p>
         For anything not covered above, open an issue on{' '}
-        <a href="https://github.com/lodestar-team/lodestar/issues">GitHub</a> or message us on{' '}
+        <a href="https://github.com/nightswatchhq/lodestar/issues">GitHub</a> or message us on{' '}
         <a href="https://discord.gg/484vgDETEZ">Discord</a>.
       </p>
     </article>
