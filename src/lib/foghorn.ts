@@ -375,6 +375,58 @@ export const fetchQosBuckets = (hours = 24, limit = 500) =>
 export const fetchQosCompare = (days = 3) =>
   foghornGet<FoghornQosCompare>(`qos/compare?days=${days}`);
 
+
+// ── Canonical oracle data, mirrored ──────────────────────────────────────────
+//
+// Edge & Node's OWN published numbers, served from Lodestar's mirror. Unlike the measured feed
+// these are real gateway traffic: genuine query counts, genuine fees, success rates over queries
+// users actually sent. This is the feed to show first — the probe feed answers a different question.
+
+export interface CanonicalPoint {
+  id: string;
+  dayNumber: number;
+  dayStart: number | null;
+  dayEnd: number | null;
+  dataPointCount: number | null;
+  indexer_wallet: string;
+  indexer_url: string | null;
+  subgraph_deployment_ipfs_hash: string;
+  chain_id: string | null;
+  gateway_id: string | null;
+  query_count: number | null;
+  num_indexer_200_responses: number | null;
+  proportion_indexer_200_responses: number | null;
+  avg_indexer_latency_ms: number | null;
+  max_indexer_latency_ms: number | null;
+  avg_indexer_blocks_behind: number | null;
+  max_indexer_blocks_behind: number | null;
+  avg_query_fee: number | null;
+  total_query_fees: number | null;
+  /** Share of the deployment's indexer attempts. Bounded by 1. No probe feed can compute this. */
+  served_share: number | null;
+  /** User queries on the deployment. attempts ÷ this = the gateway's retry rate, not a share. */
+  deployment_user_queries: number | null;
+}
+
+export interface CanonicalQos {
+  source: string;
+  served_by: string;
+  what: string;
+  publisher: {
+    last_post: string | null;
+    age_seconds: number | null;
+    publish_lag_seconds: number | null;
+    measured_from: string;
+    note: string;
+  };
+  window_days: number;
+  count: number;
+  allocationDailyDataPoints: CanonicalPoint[];
+}
+
+export const fetchQosCanonical = (days = 1, limit = 1000) =>
+  foghornGet<CanonicalQos>(`qos/canonical?days=${days}&limit=${limit}`);
+
 // ── Presentation helpers ──────────────────────────────────────────────────────
 
 export function gradeVariant(grade: Grade | string | null | undefined): BadgeVariant {

@@ -17,6 +17,7 @@ import {
   fetchQosStatus,
   fetchQosBuckets,
   fetchQosCompare,
+  fetchQosCanonical,
 } from '@/lib/foghorn';
 
 const MINUTE = 60 * 1000;
@@ -212,6 +213,20 @@ export function useQosCompare(days = 3) {
   return useQuery({
     queryKey: ['foghorn', 'qos-compare', days],
     queryFn: () => fetchQosCompare(days),
+    staleTime: 5 * MINUTE,
+    retry: 0,
+  });
+}
+
+/**
+ * The canonical oracle's data from Lodestar's mirror. Longer staleTime than the measured feed
+ * because it changes on the publisher's cadence, not ours — and during a stall it does not change
+ * at all, which the `publisher` block in the response reports honestly.
+ */
+export function useQosCanonical(days = 1, limit = 1000) {
+  return useQuery({
+    queryKey: ['foghorn', 'qos-canonical', days, limit],
+    queryFn: () => fetchQosCanonical(days, limit),
     staleTime: 5 * MINUTE,
     retry: 0,
   });

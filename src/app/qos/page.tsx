@@ -31,6 +31,7 @@ import {
   useQosCompare,
   useDeploymentNames,
   useFoghornIndexers,
+  useQosCanonical,
 } from '@/hooks/useFoghorn';
 import type { BadgeVariant } from '@/components/ui/Badge';
 import type { FoghornQosSource } from '@/lib/foghorn';
@@ -183,9 +184,12 @@ const FIELD_MAPPING: { field: string; meaning: string }[] = [
 export default function QosPage() {
   const [hours, setHours] = useState<6 | 24 | 168>(24);
   const [page, setPage] = useState(0);
+  const [canonDays, setCanonDays] = useState<1 | 3 | 7>(1);
+  const [canonPage, setCanonPage] = useState(0);
   const { data: status, isLoading: statusLoading, isError: statusError } = useQosStatus();
   const { data: buckets, isLoading: bucketsLoading } = useQosBuckets(hours);
   const { data: compare, isLoading: compareLoading } = useQosCompare();
+  const { data: canonical, isLoading: canonicalLoading } = useQosCanonical(canonDays);
 
   // Name enrichment. Raw hex addresses and Qm… hashes are unreadable, and both lookups already
   // exist: `/v1/indexers` returns ens_name in batch (same queryKey as the rest of the site, so this
@@ -342,6 +346,38 @@ export default function QosPage() {
     return [head, ...body].join('\n');
   };
 
+  const canonRows = useMemo(() => {
+    const pts = canonical?.allocationDailyDataPoints ?? [];
+    // Sorted by real query volume: with a traffic census the interesting rows are the ones actually
+    // serving load, unlike the probe feed where worst-first is the useful ordering.
+    return [...pts].sort((a, b) => (b.query_count ?? 0) - (a.query_count ?? 0));
+  }, [canonical]);
+  const canonPageRows = canonRows.slice(canonPage * PAGE_SIZE, (canonPage + 1) * PAGE_SIZE);
+
+  const canonCsv = () => {
+    const head = [
+      'indexer', 'ens_name', 'deployment', 'day_number', 'query_count',
+      'success_rate', 'avg_latency_ms', 'blocks_behind', 'served_share',
+      'avg_query_fee', 'total_query_fees',
+    ].join(',');
+    const body = canonRows.map((r) =>
+      [
+        r.indexer_wallet,
+        indexerNames.get(r.indexer_wallet.toLowerCase()) ?? '',
+        r.subgraph_deployment_ipfs_hash,
+        r.dayNumber,
+        r.query_count ?? '',
+        r.proportion_indexer_200_responses ?? '',
+        r.avg_indexer_latency_ms === null ? '' : Math.round(r.avg_indexer_latency_ms),
+        r.avg_indexer_blocks_behind === null ? '' : Math.round(r.avg_indexer_blocks_behind),
+        r.served_share ?? '',
+        r.avg_query_fee ?? '',
+        r.total_query_fees ?? '',
+      ].join(',')
+    );
+    return [head, ...body].join('\n');
+  };
+
   const divergentRows = rows.filter((r) => (r.correctness ?? 1) < 1);
 
   return (
@@ -431,10 +467,156 @@ export default function QosPage() {
         ))}
       </div>
 
+      {/* ── The canonical oracle's own data, from our mirror. Lead with this. ── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <CardTitle>Canonical QoS oracle data — mirrored</CardTitle>
+            <div className="flex items-center gap-2">
+              {([1, 3, 7] as const).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => { setCanonDays(d); setCanonPage(0); }}
+                  className={cn(
+                    'px-3 py-1 text-xs rounded border transition-colors',
+                    canonDays === d
+                      ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-dim)]'
+                      : 'border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]'
+                  )}
+                >
+                  {d}d
+                </button>
+              ))}
+              <ExportButton
+                onExport={canonCsv}
+                filename={`canonical-qos-${canonDays}d.csv`}
+                label="Export CSV"
+                disabled={canonRows.length === 0}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-[var(--text-muted)]">
+            Edge &amp; Node&apos;s own published numbers, held by Lodestar and served without an API
+            key or their gateway in the read path. Real traffic: genuine query counts, fees, and
+            success rates over queries users actually sent.
+          </p>
+
+          {canonical && (
+            <div
+              className={cn(
+                'text-xs rounded p-3',
+                (canonical.publisher.age_seconds ?? 0) > 5400
+                  ? 'bg-[var(--red-dim)] text-[var(--red)]'
+                  : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
+              )}
+            >
+              Publisher last posted{' '}
+              <strong>{formatAge(canonical.publisher.age_seconds)} ago</strong>
+              {canonical.publisher.publish_lag_seconds !== null && (
+                <> (publish lag {Math.round(canonical.publisher.publish_lag_seconds / 60)}m)</>
+              )}
+              . {canonical.publisher.note}
+            </div>
+          )}
+
+          {canonicalLoading ? (
+            <div className="text-sm text-[var(--text-muted)]">Loading…</div>
+          ) : canonRows.length === 0 ? (
+            <div className="text-sm text-[var(--text-muted)]">
+              Mirror has no rows for this window yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-[var(--text-muted)] border-b border-[var(--border)]">
+                    <th className="py-2 pr-4">Indexer</th>
+                    <th className="py-2 pr-4">Deployment</th>
+                    <th className="py-2 pr-4 text-right">Queries</th>
+                    <th className="py-2 pr-4 text-right">Share</th>
+                    <th className="py-2 pr-4 text-right">Success</th>
+                    <th className="py-2 pr-4 text-right">Latency</th>
+                    <th className="py-2 pr-4 text-right">Behind</th>
+                    <th className="py-2 pr-4 text-right">Fees</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {canonPageRows.map((r) => (
+                    <tr
+                      key={r.id}
+                      className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-elevated)]"
+                    >
+                      <td className="py-2 pr-4">
+                        <Link
+                          href={`/indexers/${r.indexer_wallet}`}
+                          className="text-[var(--accent)] hover:underline text-xs"
+                          title={r.indexer_wallet}
+                        >
+                          {nameOf(r.indexer_wallet)}
+                        </Link>
+                      </td>
+                      <td
+                        className="py-2 pr-4 text-xs text-[var(--text-muted)] max-w-[16rem] truncate"
+                        title={r.subgraph_deployment_ipfs_hash}
+                      >
+                        <Link
+                          href={`/subgraphs/${r.subgraph_deployment_ipfs_hash}`}
+                          className="hover:underline"
+                        >
+                          {deploymentLabel(r.subgraph_deployment_ipfs_hash)}
+                        </Link>
+                      </td>
+                      <td className="py-2 pr-4 text-right">
+                        {r.query_count === null ? '—' : Math.round(r.query_count).toLocaleString()}
+                      </td>
+                      <td className="py-2 pr-4 text-right text-[var(--text-muted)]">
+                        {pct(r.served_share)}
+                      </td>
+                      <td className="py-2 pr-4 text-right">
+                        <span
+                          className={cn(
+                            (r.proportion_indexer_200_responses ?? 1) < 0.9 && 'text-[var(--red)]',
+                            (r.proportion_indexer_200_responses ?? 0) >= 0.99 && 'text-[var(--green)]'
+                          )}
+                        >
+                          {pct(r.proportion_indexer_200_responses)}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 text-right">{ms(r.avg_indexer_latency_ms)}</td>
+                      <td className="py-2 pr-4 text-right">
+                        {r.avg_indexer_blocks_behind === null
+                          ? '—'
+                          : Math.round(r.avg_indexer_blocks_behind)}
+                      </td>
+                      <td className="py-2 pr-4 text-right text-[var(--text-muted)]">
+                        {r.total_query_fees === null ? '—' : r.total_query_fees.toFixed(4)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <Pagination
+                page={canonPage}
+                pageSize={PAGE_SIZE}
+                totalItems={canonRows.length}
+                onPageChange={setCanonPage}
+              />
+            </div>
+          )}
+          <p className="text-xs text-[var(--text-muted)]">
+            <strong>Share</strong> is this indexer&apos;s portion of all indexer attempts on that
+            deployment — it needs every indexer&apos;s real traffic, so no probe-based feed can
+            compute it. <strong>Fees</strong> are GRT actually collected.
+          </p>
+        </CardContent>
+      </Card>
+
       {series.length > 1 && (
         <Card>
           <CardHeader>
-            <CardTitle>Measured over the window</CardTitle>
+            <CardTitle>Lodestar&apos;s own measurements over the window</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
@@ -489,7 +671,7 @@ export default function QosPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <CardTitle>Measured allocations — worst first</CardTitle>
+            <CardTitle>Lodestar&apos;s own measurements — worst first</CardTitle>
             <ExportButton
               onExport={exportCsv}
               filename={`foghorn-qos-${hours}h.csv`}
