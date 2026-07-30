@@ -258,6 +258,123 @@ export interface IndexerQuality {
 export const fetchIndexerQuality = (address: string) =>
   foghornGet<IndexerQuality>(`indexer/${address.toLowerCase()}/quality`);
 
+// ── Foghorn QoS — measured here, not ingested ────────────────────────────────
+//
+// Foghorn's own QoS, published in the Edge & Node oracle's schema as a second `gateway_id`.
+// The oracle's format carries `gateway_id` on every data point, so this is the format's own
+// design for multiple gateways rather than a fork of it.
+//
+// IMPORTANT for anything rendering `query_count`: it counts PROBES FOGHORN DISPATCHED, not
+// organic gateway traffic. It is a statement about Foghorn's cadence, never about an indexer's
+// popularity. The API repeats this in `query_count_means` on every response; surface it rather
+// than quietly plotting it next to real traffic volumes.
+
+export interface FoghornQosSource {
+  source: string;
+  gateway_id?: string;
+  /** Oracle-fed source only. */
+  last_update?: string | null;
+  /** Measured source only. */
+  last_bucket?: string | null;
+  last_computed?: string | null;
+  /** Null when a source has never published anything we have seen. */
+  age_seconds: number | null;
+  note: string;
+}
+
+export interface FoghornQosStatus {
+  checked_at: string;
+  sources: FoghornQosSource[];
+}
+
+/** One 5-minute measurement window for one (indexer, deployment). */
+export interface FoghornQosBucket {
+  indexer_wallet: string;
+  subgraph_deployment_ipfs_hash: string;
+  bucket_start: string;
+  bucket_secs: number;
+  gateway_id: string | null;
+  chain_id: string | null;
+  query_count: number;
+  num_indexer_200_responses: number;
+  proportion_indexer_200_responses: number;
+  avg_indexer_latency_ms: number | null;
+  max_indexer_latency_ms: number | null;
+  stdev_indexer_latency_ms: number | null;
+  /** Percentiles exist only at bucket resolution — they do not recombine into daily figures. */
+  latency_p50_ms: number | null;
+  latency_p95_ms: number | null;
+  latency_p99_ms: number | null;
+  avg_indexer_blocks_behind: number | null;
+  max_indexer_blocks_behind: number | null;
+  /** Responses comparable against a stake-weighted majority cluster. */
+  comparable_count: number;
+  divergent_count: number;
+  /** Null when nothing was comparable. Do NOT render null as 100%. */
+  correctness_rate: number | null;
+}
+
+export interface FoghornQosBuckets {
+  source: string;
+  gateway_id: string;
+  method: string;
+  query_count_means: string;
+  independent_of: string;
+  window_hours: number;
+  buckets: FoghornQosBucket[];
+}
+
+/** One (indexer, deployment) pair present in BOTH feeds. */
+export interface FoghornQosComparePair {
+  indexer_address: string;
+  deployment_id: string;
+  probes: number;
+  /** False when the pair had too few probes to contribute to the aggregate error. */
+  counted_in_aggregate: boolean;
+  foghorn: {
+    success_rate: number | null;
+    blocks_behind: number | null;
+    correctness_rate: number | null;
+  };
+  oracle: {
+    success_rate: number | null;
+    blocks_behind: number | null;
+    /** Context only — organic queries, not comparable with our probe count. */
+    query_count: number | null;
+  };
+  success_rate_delta: number | null;
+  /** Oracle sees ≥99% success while Foghorn measured incorrect data. */
+  oracle_blind_spot: boolean;
+}
+
+export interface FoghornQosCompare {
+  window_days: number;
+  min_probes_for_aggregate: number;
+  coverage: {
+    overlapping_pairs: number;
+    foghorn_pairs: number;
+    oracle_pairs: number;
+    note: string;
+  };
+  agreement: {
+    pairs_in_aggregate: number;
+    mean_absolute_success_rate_error: number | null;
+    pairs_disagreeing_over_10pct: number;
+    oracle_blind_spots: number;
+    oracle_blind_spot_means: string;
+  };
+  not_compared: { query_count: string };
+  pairs: FoghornQosComparePair[];
+}
+
+export const fetchQosStatus = () => foghornGet<FoghornQosStatus>('qos/status');
+
+export const fetchQosBuckets = (hours = 24, limit = 500) =>
+  foghornGet<FoghornQosBuckets>(`qos/buckets?hours=${hours}&limit=${limit}`);
+
+export const fetchQosCompare = (days = 3) =>
+  foghornGet<FoghornQosCompare>(`qos/compare?days=${days}`);
+
 // ── Presentation helpers ──────────────────────────────────────────────────────
 
 export function gradeVariant(grade: Grade | string | null | undefined): BadgeVariant {

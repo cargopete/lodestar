@@ -14,6 +14,9 @@ import {
   fetchIndexerAllocationsQos,
   fetchFoghornFeed,
   fetchIndexerQuality,
+  fetchQosStatus,
+  fetchQosBuckets,
+  fetchQosCompare,
 } from '@/lib/foghorn';
 
 const MINUTE = 60 * 1000;
@@ -169,6 +172,46 @@ export function useFoghornGrades() {
       }
       return map;
     },
+    staleTime: 5 * MINUTE,
+    retry: 0,
+  });
+}
+
+// ── Foghorn QoS (measured, not ingested) ─────────────────────────────────────
+
+/**
+ * Freshness of both QoS sources. Polled on a short interval because its whole purpose is
+ * answering "is this current?" — a status panel that is itself stale would be worse than none.
+ */
+export function useQosStatus() {
+  return useQuery({
+    queryKey: ['foghorn', 'qos-status'],
+    queryFn: fetchQosStatus,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+    retry: 0,
+  });
+}
+
+export function useQosBuckets(hours = 24, limit = 500) {
+  return useQuery({
+    queryKey: ['foghorn', 'qos-buckets', hours, limit],
+    queryFn: () => fetchQosBuckets(hours, limit),
+    staleTime: MINUTE,
+    retry: 0,
+  });
+}
+
+/**
+ * Agreement between Foghorn's measurements and the canonical oracle.
+ *
+ * Longer staleTime than the live feeds: this is an evidence panel, not a monitor, and it changes
+ * on the oracle's daily cadence rather than ours.
+ */
+export function useQosCompare(days = 3) {
+  return useQuery({
+    queryKey: ['foghorn', 'qos-compare', days],
+    queryFn: () => fetchQosCompare(days),
     staleTime: 5 * MINUTE,
     retry: 0,
   });
