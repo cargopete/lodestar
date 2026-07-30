@@ -11,10 +11,27 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import {
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
-import { useQosStatus, useQosBuckets, useQosCompare } from '@/hooks/useFoghorn';
+import { Pagination } from '@/components/ui/Pagination';
+import { ExportButton } from '@/components/ui/ExportButton';
+import {
+  useQosStatus,
+  useQosBuckets,
+  useQosCompare,
+  useDeploymentNames,
+  useFoghornIndexers,
+} from '@/hooks/useFoghorn';
 import type { BadgeVariant } from '@/components/ui/Badge';
 import type { FoghornQosSource } from '@/lib/foghorn';
 import { shortenAddress, cn } from '@/lib/utils';
@@ -84,6 +101,20 @@ function ms(v: number | null | undefined): string {
   return v === null || v === undefined ? '—' : `${Math.round(v)}ms`;
 }
 
+const TOOLTIP_STYLE = {
+  contentStyle: {
+    backgroundColor: 'var(--bg-elevated)',
+    border: '1px solid var(--border-mid)',
+    borderRadius: 'var(--radius-button)',
+    color: 'var(--text)',
+    fontSize: 12,
+  },
+  labelStyle: { color: 'var(--text)' },
+  itemStyle: { color: 'var(--text-muted)' },
+};
+
+const PAGE_SIZE = 25;
+
 const GRAPHQL_EXAMPLE = `# Your existing QoS oracle query, unchanged.
 # Only the endpoint differs.
 {
@@ -151,9 +182,32 @@ const FIELD_MAPPING: { field: string; meaning: string }[] = [
 
 export default function QosPage() {
   const [hours, setHours] = useState<6 | 24 | 168>(24);
+  const [page, setPage] = useState(0);
   const { data: status, isLoading: statusLoading, isError: statusError } = useQosStatus();
   const { data: buckets, isLoading: bucketsLoading } = useQosBuckets(hours);
   const { data: compare, isLoading: compareLoading } = useQosCompare();
+
+  // Name enrichment. Raw hex addresses and Qm… hashes are unreadable, and both lookups already
+  // exist: `/v1/indexers` returns ens_name in batch (same queryKey as the rest of the site, so this
+  // is usually a cache hit), and useDeploymentNames batch-resolves subgraph names.
+  const { data: roster } = useFoghornIndexers();
+  const indexerNames = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const ix of roster?.indexers ?? []) {
+      if (ix.ens_name) m.set(ix.indexer_address.toLowerCase(), ix.ens_name);
+    }
+    return m;
+  }, [roster]);
+
+  const deploymentHashes = useMemo(
+    () => (buckets?.buckets ?? []).map((b) => b.subgraph_deployment_ipfs_hash),
+    [buckets]
+  );
+  const { data: deploymentNames } = useDeploymentNames(deploymentHashes);
+
+  /** ENS name if we have one, otherwise a shortened address — never a bare 42-char hex string. */
+  const nameOf = (addr: string) => indexerNames.get(addr.toLowerCase()) ?? shortenAddress(addr);
+  const deploymentLabel = (hash: string) => deploymentNames?.[hash] ?? `${hash.slice(0, 10)}…`;
 
   const oracle = status?.sources.find((s) => s.source !== 'foghorn');
   const measured = status?.sources.find((s) => s.source === 'foghorn');
@@ -235,6 +289,59 @@ export default function QosPage() {
       });
   }, [buckets]);
 
+  /**
+   * Network-wide series over the window, one point per 5-minute bucket.
+   *
+   * Success is probe-weighted across indexers and latency is weighted by successful probes, so a
+   * bucket where one indexer was probed twice does not count the same as one where ten were. This
+   * is an average over *probed allocations*, not over traffic — nobody should read it as a
+   * network-wide user experience figure.
+   */
+  const series = useMemo(() => {
+    const byBucket = new Map<string, { ok: number; probes: number; lat: number; latW: number }>();
+    for (const b of buckets?.buckets ?? []) {
+      const cur = byBucket.get(b.bucket_start) ?? { ok: 0, probes: 0, lat: 0, latW: 0 };
+      cur.ok += b.num_indexer_200_responses;
+      cur.probes += b.query_count;
+      if (b.avg_indexer_latency_ms !== null && b.num_indexer_200_responses > 0) {
+        cur.lat += b.avg_indexer_latency_ms * b.num_indexer_200_responses;
+        cur.latW += b.num_indexer_200_responses;
+      }
+      byBucket.set(b.bucket_start, cur);
+    }
+    return [...byBucket.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([bucket, v]) => ({
+        t: new Date(bucket).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        success: v.probes > 0 ? Number(((v.ok / v.probes) * 100).toFixed(1)) : null,
+        latency: v.latW > 0 ? Math.round(v.lat / v.latW) : null,
+      }));
+  }, [buckets]);
+
+  const pageRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  /** CSV of the aggregated view, not the raw buckets — what is on screen is what gets exported. */
+  const exportCsv = () => {
+    const head = [
+      'indexer', 'ens_name', 'deployment', 'success_rate', 'correctness_rate',
+      'avg_latency_ms', 'p95_latest_ms', 'blocks_behind', 'probes',
+    ].join(',');
+    const body = rows.map((r) =>
+      [
+        r.indexer,
+        indexerNames.get(r.indexer.toLowerCase()) ?? '',
+        r.deployment,
+        r.successRate ?? '',
+        r.correctness ?? '',
+        r.avgLatency === null ? '' : Math.round(r.avgLatency),
+        r.p95 ?? '',
+        r.blocksBehind === null ? '' : Math.round(r.blocksBehind),
+        r.probes,
+      ].join(',')
+    );
+    return [head, ...body].join('\n');
+  };
+
   const divergentRows = rows.filter((r) => (r.correctness ?? 1) < 1);
 
   return (
@@ -311,7 +418,7 @@ export default function QosPage() {
         {([6, 24, 168] as const).map((h) => (
           <button
             key={h}
-            onClick={() => setHours(h)}
+            onClick={() => { setHours(h); setPage(0); }}
             className={cn(
               'px-3 py-1 text-xs rounded border transition-colors',
               hours === h
@@ -324,9 +431,71 @@ export default function QosPage() {
         ))}
       </div>
 
+      {series.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Measured over the window</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <div className="text-xs text-[var(--text-muted)] mb-2">Success rate (%)</div>
+                <ResponsiveContainer width="100%" height={160}>
+                  <LineChart data={series}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="t" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                    <Tooltip {...TOOLTIP_STYLE} />
+                    <Line
+                      type="monotone"
+                      dataKey="success"
+                      stroke="var(--green)"
+                      dot={false}
+                      strokeWidth={2}
+                      connectNulls={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div>
+                <div className="text-xs text-[var(--text-muted)] mb-2">Avg latency (ms)</div>
+                <ResponsiveContainer width="100%" height={160}>
+                  <LineChart data={series}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="t" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                    <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                    <Tooltip {...TOOLTIP_STYLE} />
+                    <Line
+                      type="monotone"
+                      dataKey="latency"
+                      stroke="var(--accent)"
+                      dot={false}
+                      strokeWidth={2}
+                      connectNulls={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <p className="text-xs text-[var(--text-muted)] mt-3">
+              Averaged across probed allocations, weighted by probe count — not weighted by real
+              traffic, so this is not a network-wide user-experience figure. Gaps are buckets with no
+              probes, left broken rather than interpolated.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Measured allocations — worst first</CardTitle>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <CardTitle>Measured allocations — worst first</CardTitle>
+            <ExportButton
+              onExport={exportCsv}
+              filename={`foghorn-qos-${hours}h.csv`}
+              disabled={rows.length === 0}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {bucketsLoading ? (
@@ -351,7 +520,7 @@ export default function QosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {pageRows.map((r) => (
                     <tr
                       key={r.key}
                       className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-elevated)]"
@@ -359,14 +528,18 @@ export default function QosPage() {
                       <td className="py-2 pr-4">
                         <Link
                           href={`/indexers/${r.indexer}`}
-                          className="text-[var(--accent)] hover:underline font-mono text-xs"
+                          className="text-[var(--accent)] hover:underline text-xs"
+                          title={r.indexer}
                         >
-                          {shortenAddress(r.indexer)}
+                          {nameOf(r.indexer)}
                         </Link>
                       </td>
-                      <td className="py-2 pr-4 font-mono text-xs text-[var(--text-muted)]">
+                      <td
+                        className="py-2 pr-4 text-xs text-[var(--text-muted)] max-w-[18rem] truncate"
+                        title={r.deployment}
+                      >
                         <Link href={`/subgraphs/${r.deployment}`} className="hover:underline">
-                          {r.deployment.slice(0, 10)}…
+                          {deploymentLabel(r.deployment)}
                         </Link>
                       </td>
                       <td className="py-2 pr-4 text-right">
@@ -405,6 +578,12 @@ export default function QosPage() {
                   ))}
                 </tbody>
               </table>
+              <Pagination
+                page={page}
+                pageSize={PAGE_SIZE}
+                totalItems={rows.length}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </CardContent>
@@ -494,16 +673,20 @@ export default function QosPage() {
                               key={`${p.indexer_address}|${p.deployment_id}`}
                               className="border-b border-[var(--border)] last:border-0"
                             >
-                              <td className="py-2 pr-4 font-mono">
+                              <td className="py-2 pr-4">
                                 <Link
                                   href={`/indexers/${p.indexer_address}`}
                                   className="text-[var(--accent)] hover:underline"
+                                  title={p.indexer_address}
                                 >
-                                  {shortenAddress(p.indexer_address)}
+                                  {nameOf(p.indexer_address)}
                                 </Link>
                               </td>
-                              <td className="py-2 pr-4 font-mono text-[var(--text-muted)]">
-                                {p.deployment_id.slice(0, 10)}…
+                              <td
+                                className="py-2 pr-4 text-[var(--text-muted)] max-w-[16rem] truncate"
+                                title={p.deployment_id}
+                              >
+                                {deploymentLabel(p.deployment_id)}
                               </td>
                               <td className="py-2 pr-4 text-right text-[var(--green)]">
                                 {pct(p.oracle.success_rate)}
@@ -572,6 +755,24 @@ export default function QosPage() {
                 load. The oracle&apos;s census of live traffic is better at &quot;what did users
                 actually experience&quot;; ours is better at &quot;is this indexer serving correct,
                 fresh data right now&quot;.
+              </li>
+              <li>
+                <span className="text-[var(--amber)]">Our success rate is an upper bound, not a
+                measurement.</span>{' '}
+                Probes are dispatched through Edge &amp; Node&apos;s gateway, which routes to
+                indexers it believes are healthy — so failures it already avoids are invisible to
+                us. The comparison above shows it plainly: across every overlapping allocation our
+                success rate came out higher than theirs, never lower. That is selection bias in our
+                method, not an error in theirs. Removing it needs direct-to-indexer dispatch, and
+                every indexer tested answers an unpaid query with{' '}
+                <code>402 No Tap receipt was found in the request</code>, so it needs TAP payment
+                and a funded escrow first.
+              </li>
+              <li>
+                <strong>Which fields are unaffected.</strong> Blocks-behind is unbiased because we
+                resolve chainhead ourselves, and correctness is unbiased because responses are
+                compared against each other rather than self-reported. Those two stand on their own;
+                success rate does not, yet.
               </li>
               <li>
                 <strong>Percentiles only at bucket resolution.</strong> Percentiles don&apos;t
