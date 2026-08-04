@@ -539,20 +539,50 @@ export default function QosPage() {
           </p>
 
           {canonical && (
-            <div
-              className={cn(
-                'text-xs rounded p-3',
-                (canonical.publisher.age_seconds ?? 0) > 5400
-                  ? 'bg-[var(--red-dim)] text-[var(--red)]'
-                  : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
+            <div className="space-y-2">
+              {/* The number that actually matters: how old is the DATA. A live publisher and a
+                  synced subgraph can both be true while this is a month stale. */}
+              <div
+                className={cn(
+                  'text-xs rounded p-3',
+                  (canonical.data?.age_seconds ?? 0) > 2 * 86400
+                    ? 'bg-[var(--red-dim)] text-[var(--red)]'
+                    : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
+                )}
+              >
+                Newest canonical data is{' '}
+                <strong>{formatAge(canonical.data?.age_seconds)} old</strong>
+                {(canonical.data?.age_seconds ?? 0) > 2 * 86400 && (
+                  <>
+                    {' '}— the oracle has published nothing newer, so every consumer of it (this
+                    table included) is showing data from then.
+                  </>
+                )}
+              </div>
+
+              {/* Root cause, when there is one. A rejection reason names the offending address, which
+                  is the difference between "something is wrong" and "here is what to fix". */}
+              {canonical.subgraph?.newest_message_accepted === false && (
+                <div className="text-xs rounded p-3 bg-[var(--red-dim)] text-[var(--red)]">
+                  <strong>The oracle&apos;s subgraph is rejecting the publisher&apos;s messages.</strong>{' '}
+                  It is synced to block{' '}
+                  {canonical.subgraph.indexed_block?.toLocaleString() ?? '—'} with{' '}
+                  {canonical.subgraph.has_indexing_errors ? 'indexing errors' : 'no indexing errors'},
+                  and is discarding every post:{' '}
+                  <code className="break-all">{canonical.subgraph.rejection_reason}</code>. Messages
+                  keep arriving on-chain; none become data. That is why the figures above are stale
+                  while the publisher looks alive.
+                </div>
               )}
-            >
-              Publisher last posted{' '}
-              <strong>{formatAge(canonical.publisher.age_seconds)} ago</strong>
-              {canonical.publisher.publish_lag_seconds !== null && (
-                <> (publish lag {Math.round(canonical.publisher.publish_lag_seconds / 60)}m)</>
-              )}
-              . {canonical.publisher.note}
+
+              <div className="text-xs rounded p-3 bg-[var(--bg-elevated)] text-[var(--text-muted)]">
+                Publisher last posted{' '}
+                <strong>{formatAge(canonical.publisher.age_seconds)} ago</strong>
+                {canonical.publisher.publish_lag_seconds !== null && (
+                  <> (publish lag {Math.round(canonical.publisher.publish_lag_seconds / 60)}m)</>
+                )}
+                . {canonical.publisher.note}
+              </div>
             </div>
           )}
 
