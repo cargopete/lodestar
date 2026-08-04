@@ -153,10 +153,14 @@ const REST_ENDPOINTS: { path: string; what: string }[] = [
   },
 ];
 
+// These describe the MEASURED feed (gateway_id: lodestar) only. The same field names on the
+// canonical feed carry the oracle's original meanings — `query_count` there is real routed traffic,
+// not probes — so the table says which feed it is talking about.
 const FIELD_MAPPING: { field: string; meaning: string }[] = [
   {
     field: 'query_count',
-    meaning: 'Probes Foghorn dispatched. NOT organic traffic, and never a measure of demand.',
+    meaning:
+      'Measured feed: probes Foghorn dispatched, never a measure of demand. Canonical feed: real queries the gateway routed.',
   },
   {
     field: 'proportion_indexer_200_responses',
@@ -394,6 +398,10 @@ export default function QosPage() {
     () => (buckets?.buckets ?? []).reduce((n, b) => n + b.comparable_count, 0),
     [buckets]
   );
+  const divergentTotal = useMemo(
+    () => (buckets?.buckets ?? []).reduce((n, b) => n + b.divergent_count, 0),
+    [buckets]
+  );
 
   return (
     <div className="space-y-6">
@@ -413,9 +421,11 @@ export default function QosPage() {
           gateways, so this is a second one rather than a fork.
         </p>
         <p className="text-xs text-[var(--text-muted)] max-w-3xl">
-          A mirror cannot invent data for a window the publisher never produced — during a stall it
-          is as frozen as the source. What it changes is that the freeze is visible and the history
-          stays served.
+          When the publisher stops, this mirror stops with it, because it is fed by the same
+          subgraph. That is a limit of how it is built today rather than a law: the CIDs are on
+          Gnosis and the payloads are fetchable from IPFS, so a gap can be reconstructed from source.
+          Nothing here has been backfilled that way yet, and where data is missing the page says so
+          instead of quietly ending the series.
         </p>
       </header>
 
@@ -448,17 +458,17 @@ export default function QosPage() {
           loading={bucketsLoading}
         />
         <StatCard
-          label="Serving wrong data"
-          value={String(divergentRows.length)}
+          label="Divergent responses"
+          value={comparableTotal === 0 ? '—' : `${divergentTotal}/${comparableTotal}`}
           subtitle={
             comparableTotal === 0
-              ? 'no corroborated probes yet'
-              : `${comparableTotal} corroborated responses`
+              ? 'nothing corroborated yet'
+              : `over ${comparableTotal} corroborated response${comparableTotal === 1 ? '' : 's'}`
           }
           tooltip={
             comparableTotal === 0
-              ? 'Scoring correctness needs two or more indexers answering the identical probe. Gateway dispatch rarely provides that, so this is currently measuring nothing — 0 here means "not established", not "all clean".'
-              : 'The oracle cannot see this: it knows an indexer answered fast with a 200, not whether the answer was correct.'
+              ? 'Correctness needs two or more indexers answering the identical probe. Gateway dispatch rarely provides that, so nothing has been checked — this is "not established", not "all clean".'
+              : 'A response that disagreed with a majority of at least two other indexers on the same probe. With this few corroborated responses it is an observation, not a verdict on any operator — the oracle cannot see it at all, which is why it is worth showing.'
           }
           loading={bucketsLoading}
         />
@@ -1068,13 +1078,23 @@ export default function QosPage() {
           <section className="space-y-1">
             <h3 className="font-medium">Why this exists</h3>
             <p className="text-[var(--text-muted)]">
-              On 2026-07-29 the canonical oracle stopped publishing for over 35 hours. Its
-              publisher had been running with a steady 30-minute lag for hours, slipped to 48
-              minutes, then died between the two halves of a single 5-minute bucket. The relayer
+              On 2026-07-29 the canonical oracle stopped publishing for over 35 hours. The relayer
               was fine — funded, no failed transactions, no stuck nonce — so nothing on-chain
-              revealed it. Every consumer kept serving stale numbers that looked current, this
-              dashboard included. A feed with fewer moving parts and its own age on the front
-              cannot fail that quietly.
+              revealed it, and every consumer kept serving stale numbers that looked current, this
+              dashboard included.
+            </p>
+            <p className="text-[var(--text-muted)]">
+              Watching for that turned up something larger. Since 2026-07-01 the oracle&apos;s own
+              subgraph has rejected every message the publisher sends, with{' '}
+              <code>&quot;… is not a valid submitter&quot;</code>, while sitting at chain tip
+              reporting no indexing errors. The posts keep arriving and none become data. That is
+              over a month in which anyone querying it received July figures with no way to tell —
+              a failure that is invisible unless something separately asks how old the data is and
+              whether the consumer is accepting it.
+            </p>
+            <p className="text-[var(--text-muted)]">
+              Hence the ages on the front of this page, and hence the parts below that say
+              &quot;not measured&quot; rather than showing a comfortable zero.
             </p>
           </section>
         </CardContent>
@@ -1122,6 +1142,11 @@ export default function QosPage() {
 
           <section className="space-y-2">
             <h3 className="font-medium">Field mapping</h3>
+            <p className="text-xs text-[var(--text-muted)]">
+              What each field means on <strong>Lodestar&apos;s measured feed</strong>. On the
+              canonical mirror the same names keep the oracle&apos;s original meanings, which are not
+              the same thing — most importantly <code>query_count</code>.
+            </p>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
