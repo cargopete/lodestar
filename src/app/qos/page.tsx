@@ -36,6 +36,7 @@ import {
 import type { BadgeVariant } from '@/components/ui/Badge';
 import type { FoghornQosSource } from '@/lib/foghorn';
 import { shortenAddress, cn } from '@/lib/utils';
+import { gradeVariant } from '@/lib/foghorn';
 
 /** A code line with a copy button. Local because it is used only here. */
 function CopyRow({ text }: { text: string }) {
@@ -102,6 +103,11 @@ function pct(v: number | null | undefined): string {
   return v === null || v === undefined ? '—' : `${(v * 100).toFixed(1)}%`;
 }
 
+/** Sub-scores are 0..100, or null when the component had nothing to score. */
+function sub(v: number | null | undefined): string {
+  return v === null || v === undefined ? '—' : v.toFixed(0);
+}
+
 function ms(v: number | null | undefined): string {
   return v === null || v === undefined ? '—' : `${Math.round(v)}ms`;
 }
@@ -119,6 +125,16 @@ const TOOLTIP_STYLE = {
 };
 
 const PAGE_SIZE = 25;
+
+/**
+ * Probes on an indexer before its grade is worth reading.
+ *
+ * Not a scoring threshold — the score itself makes no claim about sample size, and inventing one
+ * in Rust would just move the arbitrariness somewhere less visible. It is a reader's warning: four
+ * successful probes and an A look identical to six hundred and an A in a sorted table, and they
+ * are not the same statement.
+ */
+const THIN_EVIDENCE_PROBES = 50;
 
 const GRAPHQL_EXAMPLE = `# Your existing QoS oracle query, unchanged.
 # Only the endpoint differs.
@@ -195,6 +211,7 @@ export default function QosPage() {
   const [page, setPage] = useState(0);
   const [canonDays, setCanonDays] = useState<1 | 3 | 7>(1);
   const [canonPage, setCanonPage] = useState(0);
+  const [scorePage, setScorePage] = useState(0);
   const { data: status, isLoading: statusLoading, isError: statusError } = useQosStatus();
   const { data: buckets, isLoading: bucketsLoading } = useQosBuckets(hours);
   const { data: compare, isLoading: compareLoading } = useQosCompare();
@@ -386,6 +403,21 @@ export default function QosPage() {
     );
     return [head, ...body].join('\n');
   };
+
+  /**
+   * Indexer quality, scored on Lodestar's own measurements.
+   *
+   * This is what /indexer-qos used to show, except its score came from the canonical QoS oracle
+   * subgraph, whose data has been frozen at 2026-07-01 since its allowlist stopped recognising the
+   * publisher's signer. Ranking operators on month-old numbers while stamping today's date on them
+   * is the failure this page exists to expose, so the score now runs on correctness, availability,
+   * freshness and coverage — all measured here, by us.
+   */
+  const scoredIndexers = useMemo(() => {
+    const list = (roster?.indexers ?? []).filter((ix) => ix.rated);
+    return [...list].sort((a, b) => b.composite - a.composite);
+  }, [roster]);
+  const scorePageRows = scoredIndexers.slice(scorePage * PAGE_SIZE, (scorePage + 1) * PAGE_SIZE);
 
   const divergentRows = rows.filter((r) => (r.correctness ?? 1) < 1);
   /**
@@ -685,6 +717,119 @@ export default function QosPage() {
             deployment — it needs every indexer&apos;s real traffic, so no probe-based feed can
             compute it. <strong>Fees</strong> are GRT actually collected.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* ── Indexer quality, on our own numbers ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Indexer quality — scored on Lodestar&apos;s measurements</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-[var(--text-muted)]">
+            Composite of four things we measure ourselves: correctness (0.40), availability (0.30),
+            freshness (0.20) and coverage (0.10). No sub-score, verdict or alert reads the canonical
+            oracle any more, so a stall upstream leaves every number here untouched.
+          </p>
+          <p className="text-xs text-[var(--text-muted)]">
+            Only indexers Lodestar has actually probed appear. That is the whole list — roughly a
+            third of the active set, not all of it. An indexer missing from this table has not been
+            judged and found wanting; it has not been judged.
+          </p>
+          <p className="text-xs text-[var(--text-muted)]">
+            A fifth component, query volume, was removed rather than left at zero. Volume is{' '}
+            <em>demand</em> — a fact about which indexers a gateway chose to route to — and no amount
+            of probing reproduces it. Scoring operators on a number we cannot measure, from a feed
+            that had been stale for a month, was rewarding and punishing them for our blind spot.
+          </p>
+
+          {scoredIndexers.length === 0 ? (
+            <div className="text-sm text-[var(--text-muted)]">
+              No rated indexers yet — scoring needs enough probes to be meaningful.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-[var(--text-muted)] border-b border-[var(--border)]">
+                    <th className="py-2 pr-4">Indexer</th>
+                    <th className="py-2 pr-4">Grade</th>
+                    <th className="py-2 pr-4 text-right">Score</th>
+                    <th className="py-2 pr-4 text-right">Correct</th>
+                    <th className="py-2 pr-4 text-right">Available</th>
+                    <th className="py-2 pr-4 text-right">Fresh</th>
+                    <th className="py-2 pr-4 text-right">Coverage</th>
+                    <th className="py-2 pr-4 text-right">Probes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scorePageRows.map((ix) => (
+                    <tr
+                      key={ix.indexer_address}
+                      className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-elevated)]"
+                    >
+                      <td className="py-2 pr-4">
+                        <Link
+                          href={`/indexers/${ix.indexer_address}`}
+                          className="text-[var(--accent)] hover:underline text-xs"
+                          title={ix.indexer_address}
+                        >
+                          {ix.ens_name ?? shortenAddress(ix.indexer_address)}
+                        </Link>
+                        {ix.sybil_flag && (
+                          <Badge variant="warning" className="ml-2">
+                            sybil
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="py-2 pr-4">
+                        <Badge variant={gradeVariant(ix.grade)}>{ix.grade}</Badge>
+                      </td>
+                      <td className="py-2 pr-4 text-right">{ix.composite.toFixed(1)}</td>
+                      <td className="py-2 pr-4 text-right">{sub(ix.sub_scores.correctness)}</td>
+                      <td className="py-2 pr-4 text-right">{sub(ix.sub_scores.availability)}</td>
+                      <td className="py-2 pr-4 text-right">{sub(ix.sub_scores.freshness)}</td>
+                      <td className="py-2 pr-4 text-right">{sub(ix.sub_scores.coverage)}</td>
+                      <td
+                        className={cn(
+                          'py-2 pr-4 text-right',
+                          ix.probe_count < THIN_EVIDENCE_PROBES
+                            ? 'text-[var(--amber)]'
+                            : 'text-[var(--text-muted)]'
+                        )}
+                        title={
+                          ix.probe_count < THIN_EVIDENCE_PROBES
+                            ? `Only ${ix.probe_count} probes — this grade is a weak signal, not a verdict`
+                            : undefined
+                        }
+                      >
+                        {ix.probe_count}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <Pagination
+                page={scorePage}
+                pageSize={PAGE_SIZE}
+                totalItems={scoredIndexers.length}
+                onPageChange={setScorePage}
+              />
+            </div>
+          )}
+          <div className="text-xs text-[var(--text-muted)] space-y-1">
+            <p>
+              A dash means that component had nothing to score, never that it scored zero. Freshness
+              is dashed most often: it now comes only from chainhead lag we measured ourselves, where
+              it used to fall back to the oracle&apos;s figure — which reads as pristine and was last
+              written on 1 July.
+            </p>
+            <p>
+              A probe count in amber is under {THIN_EVIDENCE_PROBES}. The grade is computed the same
+              way, but a sorted table makes an A off four probes look like an A off six hundred, and
+              it is not the same claim.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -1084,13 +1229,27 @@ export default function QosPage() {
               dashboard included.
             </p>
             <p className="text-[var(--text-muted)]">
-              Watching for that turned up something larger. Since 2026-07-01 the oracle&apos;s own
-              subgraph has rejected every message the publisher sends, with{' '}
-              <code>&quot;… is not a valid submitter&quot;</code>, while sitting at chain tip
-              reporting no indexing errors. The posts keep arriving and none become data. That is
-              over a month in which anyone querying it received July figures with no way to tell —
-              a failure that is invisible unless something separately asks how old the data is and
-              whether the consumer is accepting it.
+              Watching for that turned up something larger. Since 2026-07-01 the oracle&apos;s
+              canonical subgraph (<code>Dtr9r…</code>) has rejected every message the publisher
+              sends, with <code>&quot;… is not a valid submitter&quot;</code> — the publisher moved
+              to a signer its allowlist does not carry — while sitting at chain tip reporting no
+              indexing errors. The posts keep arriving and none become data. Anyone querying that
+              deployment has received 1 July figures ever since, with nothing in the response to
+              say so.
+            </p>
+            <p className="text-[var(--text-muted)]">
+              The data itself was never lost, and it is worth being precise about that. The
+              publisher is live — you can watch it post to Gnosis at the top of this page — and a
+              community fork of the subgraph (<code>CnfJ5…</code>, maintained by ellipfra) carries
+              an updated allowlist and has indexed every message throughout. It is current to today.
+              So the oracle is not down; one deployment of its subgraph is, and the consumers
+              pointed at that deployment cannot tell.
+            </p>
+            <p className="text-[var(--text-muted)]">
+              Which is the sharper version of the same problem. A stalled feed that announces itself
+              is an outage. A stalled feed that answers every query with month-old numbers, at chain
+              tip, with no indexing errors, while a working copy of the same data sits one subgraph
+              id away, is a correctness failure that no amount of uptime monitoring finds.
             </p>
             <p className="text-[var(--text-muted)]">
               Hence the ages on the front of this page, and hence the parts below that say
