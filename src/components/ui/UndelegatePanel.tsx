@@ -104,6 +104,7 @@ export function UndelegatePanel({ position, className, onClose }: UndelegatePane
         </div>
         <button
           onClick={onClose}
+          aria-label="Close"
           className="p-1 rounded hover:bg-[var(--bg-elevated)] transition-colors"
         >
           <svg className="w-4 h-4 text-[var(--text-faint)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

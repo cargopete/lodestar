@@ -270,7 +270,7 @@ function RegisterModal({ onClose, onCreated }: { onClose: () => void; onCreated:
       <div className="w-full max-w-md bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
           <h3 className="font-semibold text-[var(--text)]">Create Subgraph</h3>
-          <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
+          <button onClick={onClose} aria-label="Close" className="text-[var(--text-faint)] hover:text-[var(--text)]">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -444,7 +444,7 @@ function PublishWizard({
         <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
           <h3 className="font-semibold text-[var(--text)]">Publish on The Graph</h3>
           {canClose && (
-            <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
+            <button onClick={onClose} aria-label="Close" className="text-[var(--text-faint)] hover:text-[var(--text)]">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -820,7 +820,7 @@ function PostBountyWizard({
             <p className="text-xs text-amber-500 mt-0.5">Experimental: on-chain GRT escrow</p>
           </div>
           {canClose && (
-            <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
+            <button onClick={onClose} aria-label="Close" className="text-[var(--text-faint)] hover:text-[var(--text)]">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -1150,7 +1150,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
             <p className="text-xs text-[var(--text-faint)] font-mono mt-0.5">{bounty.amount_grt} GRT</p>
           </div>
           {canClose && (
-            <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
+            <button onClick={onClose} aria-label="Close" className="text-[var(--text-faint)] hover:text-[var(--text)]">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -1548,7 +1548,7 @@ function SubgraphDetailModal({
                   {publishLabel}
                 </button>
               )}
-              <button onClick={onClose} className="p-1 text-[var(--text-faint)] hover:text-[var(--text)]">
+              <button onClick={onClose} aria-label="Close" className="p-1 text-[var(--text-faint)] hover:text-[var(--text)]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>

@@ -436,10 +436,11 @@ export function RedelegationPage({
               </select>
             </div>
             <div>
-              <label className="block text-sm text-[var(--text-muted)] mb-2">
+              <label htmlFor="redelegation-amount" className="block text-sm text-[var(--text-muted)] mb-2">
                 Delegation Amount (GRT)
               </label>
               <input
+                id="redelegation-amount"
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}

@@ -110,6 +110,7 @@ function PrefSlider({
         <span className="text-[10px] text-[var(--text-faint)]">Less</span>
         <input
           type="range"
+          aria-label={`${pref.label}: less to more`}
           min={0}
           max={10}
           step={1}

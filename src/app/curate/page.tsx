@@ -105,7 +105,7 @@ function SignalModal({
             <h3 className="font-semibold text-[var(--text)]">Signal GRT</h3>
             <p className="text-xs text-[var(--text-faint)] font-mono mt-0.5">{displayName}</p>
           </div>
-          <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
+          <button onClick={onClose} aria-label="Close" className="text-[var(--text-faint)] hover:text-[var(--text)]">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -221,7 +221,7 @@ function UnsignalModal({
             <h3 className="font-semibold text-[var(--text)]">Remove Signal</h3>
             <p className="text-xs text-[var(--text-faint)] font-mono mt-0.5">{displayName}</p>
           </div>
-          <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
+          <button onClick={onClose} aria-label="Close" className="text-[var(--text-faint)] hover:text-[var(--text)]">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -247,7 +247,7 @@ function UnsignalModal({
                   <span className="text-sm font-medium text-[var(--text)]">{pct}%</span>
                 </div>
                 <input
-                  type="range" min={1} max={100} value={pct}
+                  type="range" aria-label="Amount to remove, percent" min={1} max={100} value={pct}
                   onChange={(e) => setPct(Number(e.target.value))}
                   className="w-full accent-[var(--accent)]"
                 />

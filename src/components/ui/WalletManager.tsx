@@ -116,6 +116,7 @@ export function WalletManager({ onSelectWallet, selectedWallet }: WalletManagerP
                     {isEditing ? (
                       <input
                         type="text"
+                        aria-label="Wallet label"
                         value={editLabel}
                         onChange={(e) => setEditLabel(e.target.value)}
                         onKeyDown={(e) => {
