@@ -4,12 +4,12 @@ date: "2026-04-16"
 author: "cargopete"
 tags: ["dispatch", "rpc", "data-services", "horizon", "infrastructure", "indexers"]
 category: "News"
-excerpt: "Every dApp on Earth relies on Alchemy or Infura for JSON-RPC. Dispatch is a community-built experiment exploring what a decentralised JSON-RPC data service on The Graph's Horizon protocol might look like — the first provider is live and serving real traffic on Arbitrum One."
+excerpt: "Every dApp on Earth relies on Alchemy or Infura for JSON-RPC. Dispatch is a community-built experiment exploring what a decentralised JSON-RPC data service on The Graph's Horizon protocol might look like. The first provider is live and serving real traffic on Arbitrum One."
 ---
 
 > **This is an experimental, unofficial, community-led project.**
 >
-> Dispatch is not affiliated with, endorsed by, backed by, or supported in any way by The Graph Foundation or Edge & Node. It is an independent hobby project that exists to explore what a decentralised JSON-RPC data service on Horizon *might* look like — nothing more. It is not production-ready and should not be used for anything critical.
+> Dispatch is not affiliated with, endorsed by, backed by, or supported in any way by The Graph Foundation or Edge & Node. It is an independent hobby project that exists to explore what a decentralised JSON-RPC data service on Horizon *might* look like, nothing more. It is not production-ready and should not be used for anything critical.
 >
 > Feedback, contributions, and wild ideas are very warmly welcome. If you want to help shape what this becomes, open an issue or PR on [GitHub](https://github.com/cargopete/dispatch).
 
@@ -17,11 +17,11 @@ Every dApp on Earth quietly depends on Alchemy or Infura. When you call `eth_get
 
 The Graph Protocol's entire thesis is that blockchain data infrastructure should be decentralised. It's done that for Subgraph data remarkably well. But the most fundamental piece of infrastructure (plain JSON-RPC) has stayed centralised.
 
-**Dispatch** is a community attempt to explore what that might look like. It's a proof of concept for a decentralised JSON-RPC data service built on The Graph's Horizon framework. The first provider is live and serving real traffic — but "live" means "the experiment is running", not "production-ready". This is unofficial, unsupported, and very much a work in progress.
+**Dispatch** is a community attempt to explore what that might look like. It's a proof of concept for a decentralised JSON-RPC data service built on The Graph's Horizon framework. The first provider is live and serving real traffic, but "live" means "the experiment is running", not "production-ready". This is unofficial, unsupported, and very much a work in progress.
 
 ## What is Dispatch?
 
-Dispatch is an experimental, community-built JSON-RPC data service on [The Graph's Horizon framework](https://thegraph.com/docs/en/horizon/). The idea: indexers stake GRT, register to serve specific chains, and get paid per request via [GraphTally](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-timeline-aggregation-protocol.md) (TAP v2) micropayments — the same payment primitive that powers Subgraph queries on the network today.
+Dispatch is an experimental, community-built JSON-RPC data service on [The Graph's Horizon framework](https://thegraph.com/docs/en/horizon/). The idea: indexers stake GRT, register to serve specific chains, and get paid per request via [GraphTally](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-timeline-aggregation-protocol.md) (TAP v2) micropayments, the same payment primitive that powers Subgraph queries on the network today.
 
 From a consumer's perspective it's just an HTTP endpoint. Under the hood, every request carries a signed EIP-712 receipt. Providers validate receipts, forward requests to their Ethereum client, sign the response, and accumulate receipts for on-chain settlement.
 
@@ -67,9 +67,9 @@ Dispatch handles this with capability tiers:
 
 | Tier | Capability | Example methods |
 |---|---|---|
-| 0 — Standard | Full node | `eth_blockNumber`, `eth_getBalance` (latest), `eth_sendRawTransaction` |
-| 1 — Archive | Archive node | `eth_getBalance` (historical), `eth_getStorageAt` (historical) |
-| 2 — Debug | Debug/trace APIs | `debug_traceTransaction`, `trace_block` |
+| 0: Standard | Full node | `eth_blockNumber`, `eth_getBalance` (latest), `eth_sendRawTransaction` |
+| 1: Archive | Archive node | `eth_getBalance` (historical), `eth_getStorageAt` (historical) |
+| 2: Debug | Debug/trace APIs | `debug_traceTransaction`, `trace_block` |
 
 Providers register per `(chainId, tier)` pair. The gateway routes requests to capable providers only.
 
@@ -77,11 +77,11 @@ Providers register per `(chainId, tier)` pair. The gateway routes requests to ca
 
 Three tiers of response verification match the three capability tiers:
 
-**Tier 1 — Merkle-provable.** Methods like `eth_getBalance` and `eth_getStorageAt` can be verified with an EIP-1186 Merkle-Patricia proof against a trusted block header. The `dispatch-oracle` daemon feeds L1 state roots to the RPCDataService contract on Arbitrum every ~12 seconds, enabling on-chain `slash()` for provably wrong responses.
+**Tier 1, Merkle-provable.** Methods like `eth_getBalance` and `eth_getStorageAt` can be verified with an EIP-1186 Merkle-Patricia proof against a trusted block header. The `dispatch-oracle` daemon feeds L1 state roots to the RPCDataService contract on Arbitrum every ~12 seconds, enabling on-chain `slash()` for provably wrong responses.
 
-**Tier 2 — Quorum.** For `eth_call`, `eth_getLogs`, and similar non-provable methods, the gateway dispatches to multiple providers and takes a majority vote. Minority providers get penalised in QoS scoring.
+**Tier 2, Quorum.** For `eth_call`, `eth_getLogs`, and similar non-provable methods, the gateway dispatches to multiple providers and takes a majority vote. Minority providers get penalised in QoS scoring.
 
-**Tier 3 — Reputation.** Non-deterministic methods like `eth_estimateGas` are scored by reputation only.
+**Tier 3, Reputation.** Non-deterministic methods like `eth_estimateGas` are scored by reputation only.
 
 ## What's deployed
 
@@ -95,13 +95,13 @@ The on-chain infrastructure lives on Arbitrum One:
 
 Subgraph: `https://api.studio.thegraph.com/query/1747796/rpc-network/v0.1.1`
 
-npm packages: `@graph-dispatch/consumer-sdk` and `@graph-dispatch/indexer-agent` — both published.
+npm packages: `@graph-dispatch/consumer-sdk` and `@graph-dispatch/indexer-agent`, both published.
 
 ## The first provider
 
 The first provider is serving Arbitrum One (chain ID 42161) with Standard and Archive tiers.
 
-To validate the full consumer → provider → backend flow, the repo includes `dispatch-smoke` — a Rust binary that signs real EIP-712 TAP receipts and fires JSON-RPC requests at a live endpoint:
+To validate the full consumer → provider → backend flow, the repo includes `dispatch-smoke`, a Rust binary that signs real EIP-712 TAP receipts and fires JSON-RPC requests at a live endpoint:
 
 ```
 dispatch-smoke
@@ -193,7 +193,7 @@ The network is live but early. What's needed to make it real:
 - **Oracle**: the `dispatch-oracle` daemon feeds L1 state roots for Tier 1 slash verification; it needs the contract owner key to start submitting
 - **More chains**: the contract supports permissionless chain registration with a 100k GRT bond. Ethereum mainnet and other L2s are the obvious next additions
 
-The code is all there. The contracts are deployed. The payment primitives are the same ones the Subgraph network has been using in production. The main thing needed is more providers — and more people poking at the edges to see where it breaks.
+The code is all there. The contracts are deployed. The payment primitives are the same ones the Subgraph network has been using in production. The main thing needed is more providers, and more people poking at the edges to see where it breaks.
 
 This is a community experiment. If you're curious about what decentralised RPC on Horizon could look like, come have a look.
 

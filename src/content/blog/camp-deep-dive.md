@@ -47,15 +47,15 @@ WHERE block_num BETWEEN 266900000 AND 267000000
   AND topic0 = evm_topic('Swap(address,address,int256,int256,uint160,uint128,int24)')
 ```
 
-The `d` struct is then projected field by field — addresses get `encode(arrow_cast(d['sender'], 'Binary'), 'hex')` to produce a hex string; numeric fields get `arrow_cast(d['amount0'], 'Utf8')` to produce a decimal string.
+The `d` struct is then projected field by field: addresses get `encode(arrow_cast(d['sender'], 'Binary'), 'hex')` to produce a hex string; numeric fields get `arrow_cast(d['amount0'], 'Utf8')` to produce a decimal string.
 
 That last point is worth pausing on.
 
 ### The uint256 precision problem
 
-JavaScript's `Number` type has 53 bits of integer precision. A `uint256` token amount with 18 decimal places is a 256-bit integer — feeding it through `JSON.parse` as a native number will silently lose precision for any value above ~9 quadrillion. For a USDC transfer (6 decimals) this is usually fine; for a WBTC or GRT transfer with 18 decimals at large volumes, it is not.
+JavaScript's `Number` type has 53 bits of integer precision. A `uint256` token amount with 18 decimal places is a 256-bit integer, so feeding it through `JSON.parse` as a native number will silently lose precision for any value above ~9 quadrillion. For a USDC transfer (6 decimals) this is usually fine; for a WBTC or GRT transfer with 18 decimals at large volumes, it is not.
 
-camp serialises every `uint` and `int` field as a decimal string in JSON. If you're consuming the API you should treat these as `BigInt` in JavaScript or `int` in Python — they won't overflow, but they also won't fit in a float.
+camp serialises every `uint` and `int` field as a decimal string in JSON. If you're consuming the API you should treat these as `BigInt` in JavaScript or `int` in Python. They won't overflow, but they also won't fit in a float.
 
 ```json
 {
@@ -103,7 +103,7 @@ Response shape:
 }
 ```
 
-`amount0` and `amount1` are signed — a negative value means that token left the pool. For a USDC/ETH pool, a trade sending ETH in and receiving USDC would show a negative `amount0` (USDC out) and a positive `amount1` (ETH in).
+`amount0` and `amount1` are signed: a negative value means that token left the pool. For a USDC/ETH pool, a trade sending ETH in and receiving USDC would show a negative `amount0` (USDC out) and a positive `amount1` (ETH in).
 
 `sqrtPriceX96` is the post-swap price in Q64.96 fixed-point. To get the human-readable price of token1 in terms of token0: `(sqrtPriceX96 / 2^96)^2 * 10^(decimals0 - decimals1)`. camp returns this raw; converting it is a one-liner in your client.
 
@@ -164,19 +164,19 @@ GET /v1/horizon/provision-slashed?from_block=260000000&to_block=262000000
 }
 ```
 
-The `/explore/horizon` dashboard renders these as a timeline with severity accents — slashing events in red, stake changes in amber, delegations in blue. The same data, straight from the API.
+The `/explore/horizon` dashboard renders these as a timeline with severity accents: slashing events in red, stake changes in amber, delegations in blue. The same data, straight from the API.
 
 ---
 
 ## Raw SQL: `/v1/sql`
 
-`POST /v1/sql` exposes DataFusion SELECT queries directly against the `blocks`, `transactions`, and `logs` tables. The full UDF suite is available — `evm_decode_log`, `evm_topic`, `evm_decode_params`, `evm_encode_type`, and the rest. Max 1,000 rows, 8-second timeout, 4,096-byte query limit.
+`POST /v1/sql` exposes DataFusion SELECT queries directly against the `blocks`, `transactions`, and `logs` tables. The full UDF suite is available: `evm_decode_log`, `evm_topic`, `evm_decode_params`, `evm_encode_type`, and the rest. Max 1,000 rows, 8-second timeout, 4,096-byte query limit.
 
 The security posture deserves a look because it's not the obvious approach.
 
 ### Not a parser
 
-A proper SQL query allowlist would require a full DataFusion-compatible parser. DataFusion's SQL dialect is PostgreSQL-ish with quirks — `X'hex'` binary literals, bracket struct access (`d['field']`), `arrow_cast` — that no off-the-shelf SQL parser handles cleanly. Building a correct parser for this dialect would take longer than the rest of camp combined, and it would still be wrong in edge cases.
+A proper SQL query allowlist would require a full DataFusion-compatible parser. DataFusion's SQL dialect is PostgreSQL-ish with quirks (`X'hex'` binary literals, bracket struct access (`d['field']`), `arrow_cast`) that no off-the-shelf SQL parser handles cleanly. Building a correct parser for this dialect would take longer than the rest of camp combined, and it would still be wrong in edge cases.
 
 Instead, camp uses a defence-in-depth approach:
 
@@ -186,7 +186,7 @@ Instead, camp uses a defence-in-depth approach:
 
 3. **`block_num` is required.** Every query must reference `block_num` in the SQL text. Without a block range, a query can table-scan the entire dataset. With one, the worst case is a bounded parquet range scan. This is enforced with a simple regex (not a parse tree) but the regex is applied after the denylist, so a comment trick to hide a `block_num` reference is caught first.
 
-4. **`LIMIT` is injected** if absent. If you write a SELECT without a LIMIT, the gateway appends `LIMIT 1000` before forwarding. If your LIMIT is above 1,000, the query is rejected — not rewritten.
+4. **`LIMIT` is injected** if absent. If you write a SELECT without a LIMIT, the gateway appends `LIMIT 1000` before forwarding. If your LIMIT is above 1,000, the query is rejected, not rewritten.
 
 5. **8-second timeout + IP rate limit** are the final backstop.
 
@@ -243,7 +243,7 @@ Ten server-rendered pages, one per endpoint family:
 | `/explore/lookup` | Ad-hoc block / tx / events forms |
 | `/explore/signatures` | Well-known topic0 reference table |
 
-These are server components — the page renders with data, no client-side fetch waterfall. The data is the same JSON every API caller gets; the dashboards are just a UI skin over it.
+These are server components: the page renders with data, no client-side fetch waterfall. The data is the same JSON every API caller gets; the dashboards are just a UI skin over it.
 
 ---
 
@@ -253,9 +253,9 @@ This one is operational context, but it explains a decision that would otherwise
 
 ampd v0.0.35 exposed a JSONL-over-HTTP endpoint: POST a SQL query, receive newline-delimited JSON. That's what `ampQuery()` in camp's gateway was written against.
 
-ampd v0.0.36 removed it. The new interface is Apache Arrow Flight — a gRPC-based binary protocol for exchanging columnar data. The performance improvement is real: Flight sends Arrow IPC buffers directly, no JSON serialisation, no text parsing. But a Next.js Vercel function can't speak gRPC over a Cloudflare tunnel without a bridge.
+ampd v0.0.36 removed it. The new interface is Apache Arrow Flight, a gRPC-based binary protocol for exchanging columnar data. The performance improvement is real: Flight sends Arrow IPC buffers directly, no JSON serialisation, no text parsing. But a Next.js Vercel function can't speak gRPC over a Cloudflare tunnel without a bridge.
 
-The Flight shim is that bridge: a small service that accepts the old JSONL-over-HTTP shape on one side, translates it to a Flight SQL query, and streams the Arrow IPC response back as newline-delimited JSON. From camp's gateway perspective nothing changed — it still POSTs SQL and gets JSONL back. The shim absorbs the protocol difference.
+The Flight shim is that bridge: a small service that accepts the old JSONL-over-HTTP shape on one side, translates it to a Flight SQL query, and streams the Arrow IPC response back as newline-delimited JSON. From camp's gateway perspective nothing changed: it still POSTs SQL and gets JSONL back. The shim absorbs the protocol difference.
 
 The camp gateway itself (this repo) therefore requires no changes when ampd upgrades. The shim is in the ops repo alongside nginx, Redis, and the cloudflared tunnel config.
 
@@ -271,7 +271,7 @@ Every API response sets `Cache-Control` based on where the queried block range s
 
 **Raw SQL**: `POST /v1/sql` responses are `private, no-store`. The query is arbitrary; there's no reliable cache key short of hashing the full SQL body, and the Cloudflare edge won't cache POSTs anyway.
 
-The "is this finalized?" check uses the `to_block` parameter against `to_block + 200` as a proxy for tip — the actual tip isn't fetched on every request, which would add a round-trip. The heuristic is conservative: a range that was finalized an hour ago is definitely finalized now.
+The "is this finalized?" check uses the `to_block` parameter against `to_block + 200` as a proxy for tip. The actual tip isn't fetched on every request, which would add a round-trip. The heuristic is conservative: a range that was finalized an hour ago is definitely finalized now.
 
 ---
 
@@ -287,7 +287,7 @@ event: block
 data: {"block_num":267000101,"timestamp":"2026-05-28T12:00:07Z"}
 ```
 
-This is a polling bridge, not a native push. Amp's Arrow Flight implementation does support CDC events (insert/delete/reorg streams) natively — streaming the real event feed rather than polling `MAX(block_num)` is on the roadmap once the Flight shim is wired up for CDC.
+This is a polling bridge, not a native push. Amp's Arrow Flight implementation does support CDC events (insert/delete/reorg streams) natively, so streaming the real event feed rather than polling `MAX(block_num)` is on the roadmap once the Flight shim is wired up for CDC.
 
 ---
 
@@ -295,7 +295,7 @@ This is a polling bridge, not a native push. Amp's Arrow Flight implementation d
 
 The node runs a rolling window, not full Arbitrum history. History started building forward from **2026-05-27** (a clean cutover from ampd v0.0.35 to v0.0.36, since the parquet schema changed and old files aren't compatible). The window grows by roughly 24 hours per calendar day. Every `/v1/status` response includes `history_seconds` and `earliest_indexed_at` so you can check programmatically.
 
-The eventual target is a rolling 30-day view. Backfilling beyond "since last reindex" is blocked until the compactor situation is stable — ampd v0.0.35 had a compactor bug that required hourly forced reindexing; v0.0.36 fixes it.
+The eventual target is a rolling 30-day view. Backfilling beyond "since last reindex" is blocked until the compactor situation is stable. ampd v0.0.35 had a compactor bug that required hourly forced reindexing; v0.0.36 fixes it.
 
 ---
 
@@ -311,9 +311,9 @@ A few concrete use cases that are straightforward with the current API.
 
 **Protocol health monitor.** Use `/v1/contract/{a}/activity?bucket=hour` to track event volume over time for any contract. If a protocol's hourly log count drops to zero, something has stopped. Wire this into a Grafana panel or a Prometheus scrape target with a two-liner.
 
-**GRT staking dashboard.** The Horizon endpoints decode the full staking lifecycle for any service provider or delegator: deposits, provisions, delegations, and slashing events. Building a read-only view of who is staking what, under which verifier, with what slashing history — the data is all there, no GraphQL schema required.
+**GRT staking dashboard.** The Horizon endpoints decode the full staking lifecycle for any service provider or delegator: deposits, provisions, delegations, and slashing events. Building a read-only view of who is staking what, under which verifier, with what slashing history: the data is all there, no GraphQL schema required.
 
-**Arbitrage surface scanner.** Compare Uniswap V3 swap events across multiple pools using raw SQL. A single POST to `/v1/sql` can join swap data across pools in a block range, compute implied prices, and surface spreads — the kind of query you'd write in Dune but that you want at chain tip rather than on a delayed cache.
+**Arbitrage surface scanner.** Compare Uniswap V3 swap events across multiple pools using raw SQL. A single POST to `/v1/sql` can join swap data across pools in a block range, compute implied prices, and surface spreads: the kind of query you'd write in Dune but that you want at chain tip rather than on a delayed cache.
 
 **Gas fee planner.** `/v1/gas/blocks?bucket=minute` gives you per-minute base-fee stats for any block range. Pull the last 24 hours of minute-bucket data and you have enough to build a "cheapest time to transact" heuristic tuned to Arbitrum's actual fee dynamics.
 
@@ -326,13 +326,13 @@ camp is one deployment of a replicable pattern. If you want uncapped limits, a p
 The pieces:
 
 **1. Amp node (`ampd`).**
-Install and run `ampd` pointing at an Arbitrum One RPC (or any chain Amp supports). The node will ingest blocks, transactions, and logs into local parquet files. The [run-local-amp-node posts on this blog](/blog/run-local-amp-node) walk through the setup. You need a machine with enough disk — Arbitrum One logs accumulate fast; plan for several hundred GB per month of indexed history.
+Install and run `ampd` pointing at an Arbitrum One RPC (or any chain Amp supports). The node will ingest blocks, transactions, and logs into local parquet files. The [run-local-amp-node posts on this blog](/blog/run-local-amp-node) walk through the setup. You need a machine with enough disk. Arbitrum One logs accumulate fast; plan for several hundred GB per month of indexed history.
 
 **2. The camp gateway.**
 Clone [github.com/nightswatchhq/camp](https://github.com/nightswatchhq/camp), set `AMP_ORIGIN` to wherever your `ampd` is listening, set `AMP_TOKEN` to a shared secret, and deploy to Vercel (or run locally with `npm run dev`). That's the entire public API surface.
 
 **3. (Optional) nginx + Redis.**
-The ops pattern camp uses puts nginx in front of `ampd` to enforce the shared-secret check and Redis-backed IP rate limiting. Without this, `AMP_ORIGIN` points directly at `ampd`'s HTTP port and there's no rate limiting — fine for a private node, not for a public one.
+The ops pattern camp uses puts nginx in front of `ampd` to enforce the shared-secret check and Redis-backed IP rate limiting. Without this, `AMP_ORIGIN` points directly at `ampd`'s HTTP port and there's no rate limiting: fine for a private node, not for a public one.
 
 **4. (Optional) Cloudflare tunnel.**
 If your node is on a home machine or behind NAT, `cloudflared tunnel` gives you a public HTTPS endpoint without port-forwarding. The tunnel URL will rotate occasionally; automate the Vercel env var update or use a named tunnel with a stable hostname.
@@ -345,12 +345,12 @@ The full environment variables:
 | `AMP_TOKEN` | Shared secret the origin expects in `X-Amp-Token` |
 | `AMP_DATASET` | Fully-qualified dataset@version, e.g. `_/arbitrum_one@2.0.0` |
 | `AMP_QUERY_TIMEOUT_MS` | Per-query hard cap in ms (default 8000) |
-| `UPSTASH_REDIS_REST_URL` | Redis REST URL for rate limiting (optional — no-ops if absent) |
+| `UPSTASH_REDIS_REST_URL` | Redis REST URL for rate limiting (optional; no-ops if absent) |
 | `UPSTASH_REDIS_REST_TOKEN` | Bearer token for the Redis endpoint |
 
-Rate limiting requires a Redis instance reachable from Vercel. The camp ops setup runs a self-hosted Redis HTTP shim alongside nginx, but Upstash's managed Redis works identically — it's the same `@upstash/ratelimit` client either way.
+Rate limiting requires a Redis instance reachable from Vercel. The camp ops setup runs a self-hosted Redis HTTP shim alongside nginx, but Upstash's managed Redis works identically; it's the same `@upstash/ratelimit` client either way.
 
-**Becoming a Horizon provider.** If you want to earn GRT for your node's query serving rather than offering a free endpoint, camp-data-service adds the payment layer on top. It's a Rust/Axum gateway that validates GraphTally (TAP) signed receipts, proxies requests to the camp REST API, aggregates receipts into RAVs, and collects on-chain via a Solidity `DataService` contract. The code is at [github.com/nightswatchhq/camp-data-service](https://github.com/nightswatchhq/camp-data-service) — currently on Arbitrum Sepolia (testnet), not mainnet.
+**Becoming a Horizon provider.** If you want to earn GRT for your node's query serving rather than offering a free endpoint, camp-data-service adds the payment layer on top. It's a Rust/Axum gateway that validates GraphTally (TAP) signed receipts, proxies requests to the camp REST API, aggregates receipts into RAVs, and collects on-chain via a Solidity `DataService` contract. The code is at [github.com/nightswatchhq/camp-data-service](https://github.com/nightswatchhq/camp-data-service), currently on Arbitrum Sepolia (testnet), not mainnet.
 
 ---
 

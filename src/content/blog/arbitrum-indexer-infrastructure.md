@@ -9,11 +9,11 @@ excerpt: "Two problems, one post: the new PathDB/PebbleDB archive node that cuts
 
 Two problems that came up in the indexer Discord this week, both worth a proper write-up.
 
-First: the old Arbitrum archive node approach had become genuinely unmanageable — nodes ballooning to 38TB, official snapshots abandoned since May 2024. There's a new approach (PathDB + PebbleDB) that cuts the footprint to ~4TB with continuous online pruning.
+First: the old Arbitrum archive node approach had become genuinely unmanageable: nodes ballooning to 38TB, official snapshots abandoned since May 2024. There's a new approach (PathDB + PebbleDB) that cuts the footprint to ~4TB with continuous online pruning.
 
 Second: even with a healthy archive node, subgraphs on BSC and other fast chains tend to sit 10–30 blocks behind chain head indefinitely. The fix is two graph-node config values that almost nobody touches.
 
-They're connected — a leaner node with less maintenance overhead makes the sync tuning matter more. So here's both.
+They're connected, because a leaner node with less maintenance overhead makes the sync tuning matter more. So here's both.
 
 ---
 
@@ -28,7 +28,7 @@ The new approach uses two things together:
 - **PebbleDB**: a newer key-value store (developed by CockroachDB) replacing LevelDB. Faster write performance, better compaction. Default for all new Nitro databases since v3.1.0.
 - **PathDB**: a path-based state trie scheme replacing HashDB. The key property: continuous online pruning with no offline maintenance windows.
 
-Combined (archive-path mode), the disk footprint for Arbitrum One archive sits at approximately **4TB** — and stays there, rather than growing indefinitely.
+Combined (archive-path mode), the disk footprint for Arbitrum One archive sits at approximately **4TB**, and stays there rather than growing indefinitely.
 
 ### Disk comparison
 
@@ -38,7 +38,7 @@ Combined (archive-path mode), the disk footprint for Arbitrum One archive sits a
 | New archive-path (PathDB/PebbleDB) | ~4TB, stable |
 | Full node / pruned (PathDB/PebbleDB) | ~1.4TB |
 
-For graph-node indexing you need the archive node — full/pruned nodes will fail on historical `eth_call` requests.
+For graph-node indexing you need the archive node; full/pruned nodes will fail on historical `eth_call` requests.
 
 ### Before you start
 
@@ -70,16 +70,16 @@ The three flags that matter:
 | Flag | What it does |
 |---|---|
 | `--execution.caching.archive` | Retains all historical state (archive mode) |
-| `--execution.caching.state-scheme=path` | Switches from HashDB to PathDB — enables continuous online pruning |
+| `--execution.caching.state-scheme=path` | Switches from HashDB to PathDB, enabling continuous online pruning |
 | `--init.latest=archive` | Downloads the current official archive snapshot on first boot |
 
-PebbleDB is now the default for new databases — you don't need `--persistent.db-engine=pebble` unless you want to be explicit.
+PebbleDB is now the default for new databases, so you don't need `--persistent.db-engine=pebble` unless you want to be explicit.
 
 Official snapshots: [snapshot-explorer.arbitrum.io](https://snapshot-explorer.arbitrum.io/). Or use `--init.latest=archive` to pull the current one automatically.
 
 ### The pruning question
 
-inflex asked in the same thread: fully pruned (128 blocks) vs full archive — is there anything in between?
+inflex asked in the same thread: fully pruned (128 blocks) vs full archive: is there anything in between?
 
 Yes. The short version:
 
@@ -91,7 +91,7 @@ The rule of thumb (courtesy of mindstyle): keep enough history to survive outage
 
 ### On the horizon: Erigon Nitro (likely abandoned)
 
-Erigon Nitro was a port of the Erigon client to the Arbitrum Nitro stack that showed impressive numbers on Sepolia testnet — ~713GB archive, a 94% reduction. However, as of April 2026 the Arbitrum team appears to have stopped work on it (per Johnathan at Pinax). It never reached Arbitrum One mainnet and at this point probably won't. Archive-path with PathDB/PebbleDB is the practical choice for the foreseeable future.
+Erigon Nitro was a port of the Erigon client to the Arbitrum Nitro stack that showed impressive numbers on Sepolia testnet: ~713GB archive, a 94% reduction. However, as of April 2026 the Arbitrum team appears to have stopped work on it (per Johnathan at Pinax). It never reached Arbitrum One mainnet and at this point probably won't. Archive-path with PathDB/PebbleDB is the practical choice for the foreseeable future.
 
 ---
 
@@ -99,7 +99,7 @@ Erigon Nitro was a port of the Erigon client to the Arbitrum Nitro stack that sh
 
 ### The symptom
 
-Your archive node is at chain head. Your RPC latency is fine. Your Postgres isn't sweating. And yet every subgraph you run sits 10–30 blocks behind — stubborn, not catching up, not alerting. Just quietly lagging.
+Your archive node is at chain head. Your RPC latency is fine. Your Postgres isn't sweating. And yet every subgraph you run sits 10–30 blocks behind: stubborn, not catching up, not alerting. Just quietly lagging.
 
 Tehn observed this exactly on BSC: archive node tracking chain head fine, subgraphs perpetually behind. Hau at Pinax confirmed they see the same. It's not a node problem. It's the sync engine's conservatism meeting a fast chain.
 
@@ -113,19 +113,19 @@ Three modes:
 
 **Range scan** (far behind): graph-node batches block lookups, fetches chunks at once. Fast. This is how initial syncs go quickly.
 
-**Block-walk** (close but not at head): once within `reorg_threshold` blocks of chain head, graph-node switches to walking blocks one at a time. Slower by design — it's watching carefully for reorgs.
+**Block-walk** (close but not at head): once within `reorg_threshold` blocks of chain head, graph-node switches to walking blocks one at a time. Slower by design, because it's watching carefully for reorgs.
 
 **Idle** (at head): waits for the ingestor to store the next block, then processes it immediately.
 
 The problem: if `reorg_threshold` is set too high (say 250 blocks), you're stuck in block-walk mode on fast chains almost permanently. Never far enough behind to use range-scan, never close enough to reach idle. You just lag.
 
-**Important caveat**: lowering the threshold only helps if your lag is *greater than* the threshold. If you're already sitting 10–30 blocks behind with `reorg_threshold=50`, you're already in block-walk mode — lowering to 50 won't change anything because 10–30 < 50. In that case the bottleneck is block-walk throughput itself, not the threshold (more on this below).
+**Important caveat**: lowering the threshold only helps if your lag is *greater than* the threshold. If you're already sitting 10–30 blocks behind with `reorg_threshold=50`, you're already in block-walk mode, so lowering to 50 won't change anything because 10–30 < 50. In that case the bottleneck is block-walk throughput itself, not the threshold (more on this below).
 
 ### Why BSC in particular
 
 BSC produces a block every ~3 seconds. Even in block-walk mode, your subgraph needs to process each block in under ~3 seconds to keep up. If your mappings are doing `eth_call`s, writing lots of entities, or your Postgres is under load, you'll accumulate lag faster than you can drain it. High throughput (many transactions per block, large event logs) compounds this.
 
-Tehn tested `polling_interval=300ms` and `ETHEREUM_REORG_THRESHOLD=50` on BSC — neither closed the lag because his subgraphs were already within the threshold. The sync engine was already in block-walk mode. The bottleneck was elsewhere.
+Tehn tested `polling_interval=300ms` and `ETHEREUM_REORG_THRESHOLD=50` on BSC. Neither closed the lag because his subgraphs were already within the threshold. The sync engine was already in block-walk mode. The bottleneck was elsewhere.
 
 ### The threshold fix (when it applies)
 
@@ -185,7 +185,7 @@ The relevant env var is `GRAPH_ETHEREUM_CALL_CACHE_FULL_TRIES`. Check the graph-
 
 ### Why the defaults don't fit
 
-The defaults were designed for Ethereum mainnet (12-second blocks, occasional deep reorgs). They haven't always been updated for the high-throughput EVM chains added since. Tuning these is expected — but config tuning has limits. On a chain with 3s blocks, the real ceiling is mapping execution time, not polling frequency.
+The defaults were designed for Ethereum mainnet (12-second blocks, occasional deep reorgs). They haven't always been updated for the high-throughput EVM chains added since. Tuning these is expected, but config tuning has limits. On a chain with 3s blocks, the real ceiling is mapping execution time, not polling frequency.
 
 ---
 
@@ -203,6 +203,6 @@ Neither fix is glamorous. Both are genuinely useful.
 *Thanks to Marc-André (Ellipfra) for flagging the new archive snapshot format, and to Maks, Hau (Pinax), and mindstyle for the graph-node insight. Most of this came out of a single Discord thread.*
 
 **Further reading:**
-- [How to run an archive node — Arbitrum Docs](https://docs.arbitrum.io/run-arbitrum-node/more-types/run-archive-node)
-- [Nitro database snapshots — Arbitrum Docs](https://docs.arbitrum.io/run-arbitrum-node/nitro/nitro-database-snapshots)
-- [LevelDB to PebbleDB migration — Arbitrum Docs](https://docs.arbitrum.io/run-arbitrum-node/nitro/how-to-convert-databases-from-leveldb-to-pebble)
+- [How to run an archive node, Arbitrum Docs](https://docs.arbitrum.io/run-arbitrum-node/more-types/run-archive-node)
+- [Nitro database snapshots, Arbitrum Docs](https://docs.arbitrum.io/run-arbitrum-node/nitro/nitro-database-snapshots)
+- [LevelDB to PebbleDB migration, Arbitrum Docs](https://docs.arbitrum.io/run-arbitrum-node/nitro/how-to-convert-databases-from-leveldb-to-pebble)

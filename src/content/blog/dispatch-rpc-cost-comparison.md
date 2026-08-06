@@ -4,7 +4,7 @@ date: "2026-04-22"
 author: "cargopete"
 tags: ["dispatch", "rpc", "alchemy", "infura", "pricing", "infrastructure"]
 category: "Analysis"
-excerpt: "Concrete, code-derived cost comparisons between Dispatch and the major centralised RPC providers — plus a step-by-step guide to getting an RPC URL from the Dispatch network today."
+excerpt: "Concrete, code-derived cost comparisons between Dispatch and the major centralised RPC providers, plus a step-by-step guide to getting an RPC URL from the Dispatch network today."
 ---
 
 > **This is an experimental, unofficial, community-led project.**
@@ -19,7 +19,7 @@ Then it shows you exactly how to get a working RPC URL from the Dispatch network
 
 ## The pricing model
 
-Dispatch prices by **compute unit (CU) weight**. Every request has a CU weight depending on how expensive it is to serve. The gateway multiplies that weight by a configurable `base_price_per_cu` to produce a GRT receipt value. That receipt gets signed and sent to the provider alongside the request — payment happens off-chain and settles on Arbitrum One periodically via GraphTally (TAP v2).
+Dispatch prices by **compute unit (CU) weight**. Every request has a CU weight depending on how expensive it is to serve. The gateway multiplies that weight by a configurable `base_price_per_cu` to produce a GRT receipt value. That receipt gets signed and sent to the provider alongside the request. Payment happens off-chain and settles on Arbitrum One periodically via GraphTally (TAP v2).
 
 The current default, hardcoded in the gateway source:
 
@@ -103,7 +103,7 @@ The gateway manages escrow on your behalf. Just point your app at it:
 http://167.235.29.213:8080/rpc/42161
 ```
 
-That's it. Chain ID 42161 (Arbitrum One) in the path. Works with curl, ethers.js, viem, wagmi, cast — anything that speaks JSON-RPC.
+That's it. Chain ID 42161 (Arbitrum One) in the path. Works with curl, ethers.js, viem, wagmi, cast: anything that speaks JSON-RPC.
 
 ```bash
 curl -s -X POST http://167.235.29.213:8080/rpc/42161 \
@@ -145,13 +145,13 @@ curl -si -X POST http://167.235.29.213:8080/rpc/42161 \
   | grep x-drpc-attestation
 ```
 
-The attestation is a provider-signed `{signer, signature}` JSON blob over `keccak256(chain_id || method || keccak256(params) || keccak256(result))`. The gateway verifies every attestation before forwarding — a provider that returns wrong or inconsistent responses gets penalised in QoS scoring.
+The attestation is a provider-signed `{signer, signature}` JSON blob over `keccak256(chain_id || method || keccak256(params) || keccak256(result))`. The gateway verifies every attestation before forwarding, and a provider that returns wrong or inconsistent responses gets penalised in QoS scoring.
 
 ---
 
 ### Option 2: dispatch-proxy (drop-in, your own key)
 
-The proxy runs a standard JSON-RPC server on `localhost:8545`. It handles provider discovery, TAP receipt signing, and QoS routing. Your existing app needs zero code changes — just swap the RPC URL.
+The proxy runs a standard JSON-RPC server on `localhost:8545`. It handles provider discovery, TAP receipt signing, and QoS routing. Your existing app needs zero code changes; just swap the RPC URL.
 
 ```bash
 git clone https://github.com/cargopete/dispatch
@@ -221,7 +221,7 @@ const blockNumber = await client.request("eth_blockNumber", []);
 const balance = await client.request("eth_getBalance", ["0x...", "latest"]);
 ```
 
-The client handles provider discovery (polling the subgraph), QoS-scored selection, TAP receipt signing, and latency EMA tracking — all in your process.
+The client handles provider discovery (polling the subgraph), QoS-scored selection, TAP receipt signing, and latency EMA tracking, all in your process.
 
 You need to fund escrow before requests will be accepted. Providers check on-chain escrow balance every 30 seconds and return a 402 for consumers with zero balance. Easiest path is the Lodestar dashboard; manual path via cast:
 
@@ -262,7 +262,7 @@ Subgraph: `https://api.studio.thegraph.com/query/1747796/rpc-network/v0.2.0`
 
 ## The honest summary
 
-The cost numbers are real — derived from the deployed `base_price_per_cu` constant and cross-checked with a passing unit test in the gateway source. At current GRT prices, Dispatch is cheaper per call than any of the major centralised providers.
+The cost numbers are real, derived from the deployed `base_price_per_cu` constant and cross-checked with a passing unit test in the gateway source. At current GRT prices, Dispatch is cheaper per call than any of the major centralised providers.
 
 The network is also one VPS and one provider. The economic model works on paper; the network effects that make decentralisation actually useful take more providers. If you're a Graph indexer and already have the stake, [the provider setup is documented here](https://github.com/cargopete/dispatch).
 
@@ -271,6 +271,6 @@ The network is also one VPS and one provider. The economic model works on paper;
 ## Further reading
 
 - [Dispatch GitHub](https://github.com/cargopete/dispatch)
-- [Original Dispatch post — architecture deep dive](/blog/dispatch-json-rpc-horizon)
+- [Original Dispatch post: architecture deep dive](/blog/dispatch-json-rpc-horizon)
 - [GraphTally / TAP v2 GIP](https://github.com/graphprotocol/graph-improvement-proposals/blob/main/gips/0054-timeline-aggregation-protocol.md)
 - [The Graph Horizon documentation](https://thegraph.com/docs/en/horizon/)
