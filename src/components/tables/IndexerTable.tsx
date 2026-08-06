@@ -31,6 +31,13 @@ import {
 } from '@/lib/utils';
 import type { Indexer } from '@/lib/queries';
 import type { EnrichedIndexer } from '@/lib/enriched';
+
+// Rows per page, and the measured height of a loaded row (name + address is two
+// lines). The loading skeleton mirrors both so the table doesn't grow when data
+// lands: it used to render 10 rows at 48px against 25 real rows at 73px, which
+// pushed 1344px of page down and was most of this page's layout shift.
+const PAGE_SIZE = 25;
+const ROW_HEIGHT_PX = 73;
 import { cooldownRemainingDays } from '@/lib/network-math';
 import { Card } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
@@ -135,7 +142,7 @@ function SyncDot({ address, url }: { address: string; url: string | null }) {
   if (syncedPct >= 85) return null;
 
   const isCritical = syncedPct < 50;
-  const color = isCritical ? 'var(--red)' : 'var(--amber)';
+  const color = isCritical ? 'var(--red-text)' : 'var(--amber)';
   const behind = health.worstBlocksBehind;
   const lagText = behind ? `, up to ${behind.toLocaleString()} blocks behind` : '';
   const tipBody = `${syncedPct}% of deployments at chain head${lagText}. View the indexer profile for per-subgraph detail.`;
@@ -470,7 +477,7 @@ export function IndexerTable() {
           const row = info.row.original;
           const score = info.getValue();
           if (score === null) return <span className="text-[var(--text-faint)]">—</span>;
-          const color = score >= 80 ? 'var(--green)' : score >= 65 ? 'var(--teal, var(--green))' : score >= 50 ? 'var(--amber)' : 'var(--red)';
+          const color = score >= 80 ? 'var(--green)' : score >= 65 ? 'var(--teal, var(--green))' : score >= 50 ? 'var(--amber)' : 'var(--red-text)';
           return (
             <span className="font-mono font-semibold" style={{ color }}>
               {score}
@@ -488,7 +495,7 @@ export function IndexerTable() {
           const q = info.getValue();
           if (q === null) return <span className="text-[var(--text-faint)]">—</span>;
           const g = qosGrade(q);
-          const color = q >= 75 ? 'var(--green)' : q >= 45 ? 'var(--amber)' : 'var(--red)';
+          const color = q >= 75 ? 'var(--green)' : q >= 45 ? 'var(--amber)' : 'var(--red-text)';
           return (
             <span className="font-mono font-semibold" style={{ color }}>
               {q.toFixed(0)}
@@ -700,7 +707,7 @@ export function IndexerTable() {
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: {
-        pageSize: 25,
+        pageSize: PAGE_SIZE,
       },
     },
   });
@@ -937,6 +944,10 @@ export function IndexerTable() {
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
+                      // Explicit scope: the selection column's header is a
+                      // checkbox with no text, so axe could not associate the
+                      // cells beneath it with any header without this.
+                      scope="col"
                       className={cn(
                         'px-4 py-3 text-left text-[11px] font-medium text-[var(--text-muted)]',
                         'border-r border-[var(--border)]/20 last:border-r-0',
@@ -959,8 +970,8 @@ export function IndexerTable() {
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? (
-                Array.from({ length: 10 }).map((_, i) => (
-                  <tr key={i}>
+                Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                  <tr key={i} style={{ height: ROW_HEIGHT_PX }}>
                     {columns.map((_, j) => (
                       <td key={j} className="px-4 py-4">
                         <div className="h-4 w-24 animate-pulse rounded bg-[var(--bg-elevated)]" />

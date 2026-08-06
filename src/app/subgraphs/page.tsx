@@ -366,7 +366,10 @@ function SubgraphDirectory() {
     ) : null;
 
   if (isLoading && page === 0) {
-    return <ChartSkeleton height="300px" />;
+    // Reserves roughly what a full page of results occupies (PAGE_SIZE rows at
+    // ~67px, plus header and pagination). At the old 300px the table grew by
+    // ~1400px on load and shoved the whole footer down the page.
+    return <ChartSkeleton height="1725px" />;
   }
 
   if (isError || (is30d ? !raw30d : !raw)) {
