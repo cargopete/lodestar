@@ -3,6 +3,7 @@ import type { FeedItem } from '@/lib/feed';
 import newsData from '@/data/news.json';
 
 import { cached } from '@/lib/cache';
+import { log } from '@/lib/logger';
 
 // ── Forum config ─────────────────────────────────────────────────
 const FORUM_BASE = 'https://forum.thegraph.com';
@@ -153,10 +154,37 @@ async function fetchForumTopics(): Promise<FeedItem[]> {
   return items;
 }
 
+/**
+ * GitHub fetch that says something when the rejection is our fault.
+ *
+ * Every caller below folds a failure into an empty array, so an expired
+ * GITHUB_TOKEN silently strips the gip/issue/pr/release categories out of the
+ * feed while the endpoint keeps returning 200. That went unnoticed for six
+ * weeks. 401 and 403 are worth a warning; anything else stays quiet, since
+ * transient upstream errors are already handled by returning nothing.
+ */
+async function ghFetch(url: string, source: string): Promise<Response | null> {
+  const res = await fetch(url, { headers: GH_HEADERS });
+  if (res.ok) return res;
+  if (res.status === 401 || res.status === 403) {
+    log.api.warn(
+      {
+        status: res.status,
+        source,
+        hasToken: Boolean(GITHUB_TOKEN),
+        // 403 with no remaining quota is rate limiting, not a bad credential.
+        rateLimitRemaining: res.headers.get('x-ratelimit-remaining'),
+      },
+      'GitHub rejected a feed request; check GITHUB_TOKEN validity and rate limit',
+    );
+  }
+  return null;
+}
+
 async function fetchGIPCommits(): Promise<FeedItem[]> {
   try {
-    const res = await fetch(GIP_COMMITS_URL, { headers: GH_HEADERS });
-    if (!res.ok) return [];
+    const res = await ghFetch(GIP_COMMITS_URL, 'gip-commits');
+    if (!res) return [];
 
     const commits: GitHubCommit[] = await res.json();
 
@@ -192,11 +220,11 @@ async function fetchGIPCommits(): Promise<FeedItem[]> {
 async function fetchRepoIssues(): Promise<FeedItem[]> {
   const results = await Promise.allSettled(
     TRACKED_REPOS.map(async (repo) => {
-      const res = await fetch(
+      const res = await ghFetch(
         `https://api.github.com/repos/${repo}/issues?state=open&sort=created&direction=desc&per_page=5`,
-        { headers: GH_HEADERS }
+        `issues:${repo}`,
       );
-      if (!res.ok) return [];
+      if (!res) return [];
 
       const issues: GitHubIssue[] = await res.json();
       // The issues endpoint also returns PRs — filter them out
@@ -225,11 +253,11 @@ async function fetchRepoIssues(): Promise<FeedItem[]> {
 async function fetchRepoPRs(): Promise<FeedItem[]> {
   const results = await Promise.allSettled(
     TRACKED_REPOS.map(async (repo) => {
-      const res = await fetch(
+      const res = await ghFetch(
         `https://api.github.com/repos/${repo}/pulls?state=open&sort=created&direction=desc&per_page=5`,
-        { headers: GH_HEADERS }
+        `pulls:${repo}`,
       );
-      if (!res.ok) return [];
+      if (!res) return [];
 
       const prs: GitHubPR[] = await res.json();
       return prs.map((pr): FeedItem => ({
@@ -255,11 +283,11 @@ async function fetchRepoPRs(): Promise<FeedItem[]> {
 async function fetchRepoReleases(): Promise<FeedItem[]> {
   const results = await Promise.allSettled(
     TRACKED_REPOS.map(async (repo) => {
-      const res = await fetch(
+      const res = await ghFetch(
         `https://api.github.com/repos/${repo}/releases?per_page=3`,
-        { headers: GH_HEADERS }
+        `releases:${repo}`,
       );
-      if (!res.ok) return [];
+      if (!res) return [];
 
       const releases: GitHubRelease[] = await res.json();
       return releases.map((rel): FeedItem => ({
