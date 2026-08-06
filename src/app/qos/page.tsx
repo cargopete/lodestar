@@ -178,6 +178,16 @@ const PAGE_SIZE = 25;
  */
 const THIN_EVIDENCE_PROBES = 50;
 
+/**
+ * Corroborated responses before the correctness figure is worth reading as more than an anecdote.
+ *
+ * Corroboration only happens when several indexers answer the *identical* block-pinned probe, which
+ * gateway routing rarely arranged. Direct paid dispatch is the first time we choose who answers, so
+ * this number is expected to climb; the copy below reads differently either side of the threshold
+ * rather than describing every sample size as small.
+ */
+const CORROBORATION_CONFIDENT = 500;
+
 const GRAPHQL_EXAMPLE = `# Your existing QoS oracle query, unchanged.
 # Only the endpoint differs.
 {
@@ -526,9 +536,15 @@ export default function QosPage() {
               : `over ${comparableTotal} corroborated response${comparableTotal === 1 ? '' : 's'}`
           }
           tooltip={
+            /* Scaled to the actual sample rather than fixed prose. The "with this few" wording was
+               hardcoded, so it would have gone on calling ten thousand corroborated responses a
+               small sample forever — the same way the bias caveat quietly went false once paid
+               dispatch shipped. A caveat nobody complains about is one nobody notices is wrong. */
             comparableTotal === 0
-              ? 'Correctness needs two or more indexers answering the identical probe. Gateway dispatch rarely provides that, so nothing has been checked. This is "not established", not "all clean".'
-              : 'A response that disagreed with a majority of at least two other indexers on the same probe. With this few corroborated responses it is an observation, not a verdict on any operator. The oracle cannot see it at all, which is why it is worth showing.'
+              ? 'Correctness needs two or more indexers answering the identical probe, and until direct paid dispatch we could not choose who answered. Nothing has been checked yet: this is "not established", not "all clean".'
+              : comparableTotal < CORROBORATION_CONFIDENT
+                ? `A response that disagreed with a majority of at least two other indexers on the same probe. Over only ${comparableTotal} corroborated response${comparableTotal === 1 ? '' : 's'} this is an observation, not a verdict on any operator. Edge & Node's oracle cannot see it at all, which is why it is worth showing even while thin.`
+                : `A response that disagreed with a majority of at least two other indexers on the same probe, over ${comparableTotal.toLocaleString()} corroborated responses. No traffic census can produce this signal: counting HTTP 200s cannot tell a correct answer from a confident wrong one.`
           }
           loading={bucketsLoading}
         />
