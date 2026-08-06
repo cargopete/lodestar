@@ -610,12 +610,12 @@ export default function QosPage() {
                 tag={status.paid_dispatch.served > 0 ? 'live' : undefined}
               />
               <StatCard
-                label="Refused — no escrow seen"
+                label="Refused: no escrow seen"
                 value={status.paid_dispatch.refused_denylisted.toLocaleString()}
                 subtitle="their agent has not observed our deposit"
               />
               <StatCard
-                label="Refused — unfunded"
+                label="Refused: unfunded"
                 value={status.paid_dispatch.refused_unfunded.toLocaleString()}
                 subtitle="we hold no escrow with them"
               />
@@ -627,7 +627,7 @@ export default function QosPage() {
               nothing about how well they serve queries, so refusals are excluded from every number
               and every grade on this page rather than counted as failures. They are shown here
               because a reader deserves to know how much of this oracle&apos;s coverage is currently
-              direct — today, most of it is not.
+              direct. Today, most of it is not.
             </p>
           </CardContent>
         </Card>
@@ -1170,7 +1170,7 @@ export default function QosPage() {
                     and nothing would have flagged it, because a caveat that is too harsh generates
                     no complaints. */}
                 {buckets?.success_rate_bias ??
-                  'Unknown until the feed reports its dispatch mix — treat the success rate as an upper bound.'}
+                  'Unknown until the feed reports its dispatch mix; treat the success rate as an upper bound.'}
                 {buckets?.dispatch && (
                   <>
                     {' '}

@@ -4,14 +4,14 @@ date: "2026-04-16"
 author: "cargopete"
 tags: ["graphite", "rust", "subgraphs", "developer-tools", "wasm", "assemblyscript"]
 category: "Ecosystem"
-excerpt: "AssemblyScript is the only language graph-node accepts — or so everyone assumed. Graphite compiles Rust to WASM that graph-node cannot tell apart from AssemblyScript. No patches. No forks. Already live on Arbitrum One."
+excerpt: "AssemblyScript is the only language graph-node accepts, or so everyone assumed. Graphite compiles Rust to WASM that graph-node cannot tell apart from AssemblyScript. No patches. No forks. Already live on Arbitrum One."
 ---
 
 AssemblyScript is a strange language to build on. It's TypeScript with the standard library ripped out, a custom garbage collector bolted on, and a set of constraints that make many normal programming patterns impossible. No closures that capture state. No real iterators. No crates.io. No `cargo test`. You get type annotations and not much else.
 
 Nobody chose AssemblyScript because they love it. They chose it because graph-node accepts AssemblyScript WASM, and nothing else.
 
-Today that assumption breaks. **Graphite** lets you write subgraph mappings in Rust. The compiled WASM is structurally indistinguishable from AssemblyScript output — graph-node accepts it without modification, without a fork, without a PR to the protocol.
+Today that assumption breaks. **Graphite** lets you write subgraph mappings in Rust. The compiled WASM is structurally indistinguishable from AssemblyScript output, so graph-node accepts it without modification, without a fork, without a PR to the protocol.
 
 ERC20 and ERC721 subgraphs are live on The Graph Studio, indexing Arbitrum One right now.
 
@@ -31,14 +31,14 @@ The catch, historically, was that graph-node only speaks AssemblyScript. Nobody 
 
 ## The key insight
 
-We spent time trying to change graph-node. We wrote a proposal (GRC-003) for a native Rust ABI — a new calling convention, new type layout, first-class Rust support. The maintainers were polite but firm: a second ABI is a permanent maintenance burden, and they weren't going to take it on.
+We spent time trying to change graph-node. We wrote a proposal (GRC-003) for a native Rust ABI: a new calling convention, new type layout, first-class Rust support. The maintainers were polite but firm: a second ABI is a permanent maintenance burden, and they weren't going to take it on.
 
 Fair enough. So we asked a different question: *why does graph-node only accept AssemblyScript WASM?*
 
 The answer is simpler than you'd expect. Graph-node does two things when it loads a subgraph WASM:
 
 1. It checks that the manifest declares `language: wasm/assemblyscript`.
-2. It reads two fields from each allocated object's 20-byte header — `rtId` (the class ID) and `rtSize` (the payload size in bytes).
+2. It reads two fields from each allocated object's 20-byte header: `rtId` (the class ID) and `rtSize` (the payload size in bytes).
 
 That's it. Graph-node doesn't verify the compiler, inspect the toolchain, or validate anything beyond what it needs to actually run the subgraph. Host functions (`store.set`, `log.log`, `ethereum.call`, and so on) are matched by *name only*.
 
@@ -57,11 +57,11 @@ If you give graph-node WASM that:
 
 Graphite is four crates:
 
-**`graph-as-runtime`** is the core — a `no_std` Rust crate that implements the AssemblyScript memory model. It provides a bump allocator that writes proper AS object headers, UTF-16LE string constructors, `TypedMap` builders (what graph-node reads when you call `store.get`), and all the host function FFI declarations. This crate is what makes the trick work. It compiles to a handful of kilobytes of WASM.
+**`graph-as-runtime`** is the core: a `no_std` Rust crate that implements the AssemblyScript memory model. It provides a bump allocator that writes proper AS object headers, UTF-16LE string constructors, `TypedMap` builders (what graph-node reads when you call `store.get`), and all the host function FFI declarations. This crate is what makes the trick work. It compiles to a handful of kilobytes of WASM.
 
-**`graphite-macros`** provides two procedural macros. `#[handler]` takes a normal Rust function and generates both the testable `_impl` version and the `extern "C"` WASM entry point graph-node calls. `#[derive(Entity)]` takes a generated struct and adds `new`, `load`, `save`, `remove`, and typed setters — so writing to the store looks like `Transfer::new(&id).set_from(event.from).set_value(event.value).save()`.
+**`graphite-macros`** provides two procedural macros. `#[handler]` takes a normal Rust function and generates both the testable `_impl` version and the `extern "C"` WASM entry point graph-node calls. `#[derive(Entity)]` takes a generated struct and adds `new`, `load`, `save`, `remove`, and typed setters, so writing to the store looks like `Transfer::new(&id).set_from(event.from).set_value(event.value).save()`.
 
-**`graphite-sdk`** is the user-facing library. BigInt, BigDecimal, Bytes, Address, the mock store for testing, crypto utilities, JSON parsing, ENS resolution — everything a subgraph handler needs.
+**`graphite-sdk`** is the user-facing library. BigInt, BigDecimal, Bytes, Address, the mock store for testing, crypto utilities, JSON parsing, ENS resolution: everything a subgraph handler needs.
 
 **`graphite-cli`** is the developer toolchain. `graphite init` scaffolds a new project, optionally fetching the ABI from Etherscan. `graphite codegen` reads your ABIs and `schema.graphql` and generates typed Rust structs. `graphite manifest` converts `graphite.toml` to `subgraph.yaml`. `graphite build` compiles to WASM and runs `wasm-opt`. `graphite deploy` uploads to IPFS and registers with graph-node or The Graph Studio.
 
@@ -94,7 +94,7 @@ pub fn handle_transfer(event: &ERC20TransferEvent, ctx: &graphite::EventContext)
 }
 ```
 
-And the test for it — no Docker, no PostgreSQL, runs in milliseconds:
+And the test for it, with no Docker, no PostgreSQL, running in milliseconds:
 
 ```rust
 #[test]
@@ -149,8 +149,8 @@ Graphite covers the full AssemblyScript graph-ts surface:
 | `ipfs.cat`, `json.fromBytes`, `ens.nameByAddress` | ✅ |
 | `dataSource.create` / factory pattern | ✅ |
 | `crypto.keccak256` / `sha256` / `sha3` / `secp256k1.recover` | ✅ |
-| `BigInt` — full arithmetic, bitwise, shifts | ✅ |
-| `BigDecimal` — full arithmetic | ✅ |
+| `BigInt`: full arithmetic, bitwise, shifts | ✅ |
+| `BigDecimal`: full arithmetic | ✅ |
 | All GraphQL scalar types | ✅ |
 | Block handler filters (`every: N`) | ✅ |
 | Native `cargo test` | ✅ |

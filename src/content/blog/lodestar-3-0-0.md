@@ -45,13 +45,13 @@ The Dispatch service (JSON-RPC over the Graph's Horizon payment layer) is live. 
 
 The problem is adoption, and adoption has a chicken-and-egg structure that we can't resolve unilaterally: without providers there are no consumers, and without consumers there are no providers. We were one of the providers, and we've stepped back from that role. [Graphtronauts joined as a second provider](/blog/dispatch-second-provider-graphtronauts), which is a good sign, but the network is still very thin.
 
-Dispatch is a bet on Horizon's future as a payment layer. Whether that bet pays off is up to the community — specifically, whether indexers choose to provision stake to the Dispatch service and whether developers choose to route RPC traffic through it. We've built the tooling. The rest isn't ours to decide.
+Dispatch is a bet on Horizon's future as a payment layer. Whether that bet pays off is up to the community, specifically whether indexers choose to provision stake to the Dispatch service and whether developers choose to route RPC traffic through it. We've built the tooling. The rest isn't ours to decide.
 
 ---
 
 ## Seahorn: Available, Unused
 
-[Seahorn](https://github.com/nightswatchhq/seahorn) is a Solana data service built for the Horizon architecture — a working proof of concept that a non-EVM chain can participate in the Graph's data services model. It was built carefully, it was written about, and there doesn't appear to be meaningful interest in it.
+[Seahorn](https://github.com/nightswatchhq/seahorn) is a Solana data service built for the Horizon architecture: a working proof of concept that a non-EVM chain can participate in the Graph's data services model. It was built carefully, it was written about, and there doesn't appear to be meaningful interest in it.
 
 That might change if Solana gains traction within the Graph ecosystem. Until then, the repository is public, the code is documented, and it's there for anyone who wants to build on it.
 
@@ -59,7 +59,7 @@ That might change if Solana gains traction within the Graph ecosystem. Until the
 
 ## What the Lodestar Team Does Next
 
-We're not going anywhere. The Graph is a protocol we believe in and have spent real time understanding from the inside — as indexers, as dashboard builders, as Dispatch operators. That perspective doesn't disappear because a particular sprint has ended.
+We're not going anywhere. The Graph is a protocol we believe in and have spent real time understanding from the inside: as indexers, as dashboard builders, as Dispatch operators. That perspective doesn't disappear because a particular sprint has ended.
 
 If community-driven initiatives emerge (governance processes, working groups, network health discussions, tooling projects) we'll be there. The things we care about on the Graph are the things that require community coordination to work, and those are exactly the kinds of efforts where showing up matters more than having a product roadmap.
 
@@ -67,4 +67,4 @@ Lodestar will keep running. We'll keep watching. And if the network moves in dir
 
 ---
 
-*Lodestar is an independent Graph Protocol analytics dashboard. Dashboard: [lodestar-dashboard.com](https://www.lodestar-dashboard.com) — Source: [github.com/nightswatchhq/lodestar](https://github.com/nightswatchhq/lodestar).*
+*Lodestar is an independent Graph Protocol analytics dashboard. Dashboard: [lodestar-dashboard.com](https://www.lodestar-dashboard.com) · Source: [github.com/nightswatchhq/lodestar](https://github.com/nightswatchhq/lodestar).*

@@ -4,16 +4,16 @@ date: "2026-04-07"
 author: "cargopete"
 tags: ["amp", "self-hosted", "infrastructure", "arbitrum"]
 category: "Guides"
-excerpt: "Edge & Node's Amp is available as a hosted service — but you can run it yourself. Here's how to self-host a local ampd node, with no waitlists and no dependency on E&N infrastructure."
+excerpt: "Edge & Node's Amp is available as a hosted service, but you can run it yourself. Here's how to self-host a local ampd node, with no waitlists and no dependency on E&N infrastructure."
 ---
 
-*This post is unaffiliated with Edge & Node or The Graph Foundation — just a hobby project documenting what worked.*
+*This post is unaffiliated with Edge & Node or The Graph Foundation, just a hobby project documenting what worked.*
 
 Edge & Node's [Amp](https://thegraph.com/amp/) is positioned as a hosted enterprise service, but the daemon (`ampd`) is available as a standalone binary. You can run it yourself, point it at any RPC endpoint, and index whatever on-chain data you need. No waitlist, no E&N account, no hosted service dependency.
 
 ## Why self-host?
 
-Ampd indexes raw on-chain events and exposes them via SQL. Subgraphs give you current protocol state — but they don't give you event history. Ampd is a different layer: every raw log, queryable by contract address, topic, and block range.
+Ampd indexes raw on-chain events and exposes them via SQL. Subgraphs give you current protocol state, but they don't give you event history. Ampd is a different layer: every raw log, queryable by contract address, topic, and block range.
 
 None of this requires E&N's hosted service. You just need a machine, a Postgres instance, and an RPC endpoint.
 
@@ -21,10 +21,10 @@ None of this requires E&N's hosted service. You just need a machine, a Postgres 
 
 - Linux machine with 16GB+ RAM and fast NVMe storage (a ThinkPad works fine)
 - Postgres
-- An Arbitrum One RPC endpoint (Chainstack, Alchemy, Infura — anything works)
+- An Arbitrum One RPC endpoint (Chainstack, Alchemy, Infura: anything works)
 - ~50GB free disk for a few months of history, ~400GB+ for full chain history
 
-> **On disk space:** Full history from genesis requires hundreds of GB. Picking a sensible start block (e.g. a contract deployment block, or 3–6 months ago) is the practical move — 50–100GB covers most use cases.
+> **On disk space:** Full history from genesis requires hundreds of GB. Picking a sensible start block (e.g. a contract deployment block, or 3–6 months ago) is the practical move; 50–100GB covers most use cases.
 
 ## Install ampd
 
@@ -93,7 +93,7 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 ```
 
-Note the `solo` subcommand — this runs the server, worker, and controller in one process. The `AMP_CONFIG` environment variable is how ampd reads its config (not `--config`).
+Note the `solo` subcommand: this runs the server, worker, and controller in one process. The `AMP_CONFIG` environment variable is how ampd reads its config (not `--config`).
 
 ## Expose via nginx
 
@@ -157,7 +157,7 @@ curl -s http://YOUR_HOST:1604/query \
   }'
 ```
 
-The response is newline-delimited JSON — one row per line.
+The response is newline-delimited JSON, one row per line.
 
 The `logs` table schema:
 
@@ -178,17 +178,17 @@ The `logs` table schema:
 
 **Jobs persist in Postgres.** If you wipe the data directory and restart, old jobs will still be in the `jobs` table and will restart from their last checkpoint. Run `DELETE FROM jobs;` in the `ampd` database before a fresh reindex.
 
-**Multiple RPC providers don't parallelize.** Adding two `arbitrum-one` provider files doesn't double throughput — ampd appears to use a single provider at a time. The bottleneck is sequential HTTP requests to the RPC endpoint, not local compute.
+**Multiple RPC providers don't parallelize.** Adding two `arbitrum-one` provider files doesn't double throughput; ampd appears to use a single provider at a time. The bottleneck is sequential HTTP requests to the RPC endpoint, not local compute.
 
 **The sync speed ceiling is your RPC.** On a Chainstack Growth plan (250 req/s), expect roughly ~100–120 blocks per 15 seconds. There's no way to go faster without a local node.
 
-## So you have an amp node — what do you do with it?
+## So you have an amp node: what do you do with it?
 
 Raw on-chain logs are only useful if you have a question the subgraph can't answer. Here are some things we use ours for.
 
 ### Graph Horizon event history
 
-The Graph Network Subgraph gives you current protocol state — indexer stakes, delegation positions, provisions. It doesn't give you event history. With Amp:
+The Graph Network Subgraph gives you current protocol state: indexer stakes, delegation positions, provisions. It doesn't give you event history. With Amp:
 
 - **Delegation timelines**: every `TokensDelegated` and `TokensUndelegated` event for an address, with exact blocks and amounts
 - **Provision history**: full chronological log of `ProvisionCreated`, `ProvisionSlashed`, parameter changes

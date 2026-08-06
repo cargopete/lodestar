@@ -7,7 +7,7 @@ category: "Ecosystem"
 excerpt: "Tycho indexes DEX liquidity in real time so solvers, market makers, and searchers don't have to. Here's what it is, how it works, and why it's coming to The Graph Network."
 ---
 
-Every block, thousands of trades happen across dozens of DEX protocols — Uniswap, Curve, Balancer, PancakeSwap, and many more. Each stores liquidity differently, uses different smart contract structures, and updates state in different ways.
+Every block, thousands of trades happen across dozens of DEX protocols: Uniswap, Curve, Balancer, PancakeSwap, and many more. Each stores liquidity differently, uses different smart contract structures, and updates state in different ways.
 
 If you're a solver figuring out the best route for a trade, a market maker, or an MEV searcher looking for arbitrage, you need to know the state of all this liquidity in real time. Ideally within milliseconds of each new block.
 
@@ -33,7 +33,7 @@ Tycho has four layers:
 
 **Tycho Indexer**: the core engine. It consumes blockchain data and tracks the state of every supported DEX pool in real time. It materialises a unified view of all liquidity into a PostgreSQL database.
 
-**Tycho SDK**: the developer toolkit. Applications subscribe to liquidity updates via WebSocket. You get real-time deltas — just the changes, block by block. No polling, no redundant data.
+**Tycho SDK**: the developer toolkit. Applications subscribe to liquidity updates via WebSocket. You get real-time deltas: just the changes, block by block. No polling, no redundant data.
 
 **Simulation layer**: lets you simulate swaps against current pool state without executing on-chain. Critical for solvers who need to evaluate thousands of routes per block.
 
@@ -50,7 +50,7 @@ Tycho also comes with executor contracts and encoders to execute the resulting s
 
 ### Chain support
 
-Tycho currently supports **Ethereum**, **Base**, and **Unichain**. Arbitrum support is a known gap — there's a Substreams limitation where it only supports Nitro onwards, not Arbitrum Classic.
+Tycho currently supports **Ethereum**, **Base**, and **Unichain**. Arbitrum support is a known gap: there's a Substreams limitation where it only supports Nitro onwards, not Arbitrum Classic.
 
 Both Tycho and Substreams are chain-agnostic by design and will be available for both EVM and non-EVM chains.
 
@@ -58,38 +58,38 @@ Both Tycho and Substreams are chain-agnostic by design and will be available for
 
 This is where it gets interesting for The Graph ecosystem.
 
-Under the hood, Tycho is built on top of **Substreams** — StreamingFast's real-time blockchain data transformation engine. Raw blocks flow through Firehose into Substreams modules. Each DEX protocol gets its own module — one for Uniswap, one for Curve, one for Balancer, and so on. The Tycho Indexer consumes all of these feeds and builds the unified view.
+Under the hood, Tycho is built on top of **Substreams**, StreamingFast's real-time blockchain data transformation engine. Raw blocks flow through Firehose into Substreams modules. Each DEX protocol gets its own module: one for Uniswap, one for Curve, one for Balancer, and so on. The Tycho Indexer consumes all of these feeds and builds the unified view.
 
 Substreams syncs protocols in hours instead of months, handles re-orgs seamlessly, and provides extremely reliable data processing. It runs geographically distributed nodes that race to provide state updates. Tycho saves these updates in Postgres and streams them directly to clients.
 
-**The catch?** Today, Tycho operators pay StreamingFast directly for Substreams data — completely off-protocol. Tycho is already a real, working Substreams consumer, but it's not going through The Graph Network.
+**The catch?** Today, Tycho operators pay StreamingFast directly for Substreams data, completely off-protocol. Tycho is already a real, working Substreams consumer, but it's not going through The Graph Network.
 
 That's exactly what the **Substreams Data Service** aims to change.
 
 ## Coming to The Graph Network
 
-The Graph currently serves blockchain data through Subgraphs — structured, queryable data via GraphQL. But there's an entire class of workloads that subgraphs can't serve well: real-time, high-throughput streaming data. The difference between querying a database and drinking from a firehose.
+The Graph currently serves blockchain data through Subgraphs: structured, queryable data via GraphQL. But there's an entire class of workloads that subgraphs can't serve well: real-time, high-throughput streaming data. The difference between querying a database and drinking from a firehose.
 
-The **Substreams Data Service** — the second data service on The Graph after Subgraphs, built on the Horizon protocol upgrade — brings Substreams onto the network as a first-class, decentralised service. On-chain settlement, decentralised provider discovery, trust-minimised payments.
+The **Substreams Data Service**, the second data service on The Graph after Subgraphs and built on the Horizon protocol upgrade, brings Substreams onto the network as a first-class, decentralised service. On-chain settlement, decentralised provider discovery, trust-minimised payments.
 
 ### Where things stand
 
-- **GraphOps** has developed an open-source version of the Tycho Indexer and has been running the full stack independently for several months — this is real infrastructure, not a demo
+- **GraphOps** has developed an open-source version of the Tycho Indexer and has been running the full stack independently for several months: this is real infrastructure, not a demo
 - **Private beta** is imminent, with first external users being onboarded with white-glove support
 - **Broader go-to-market** is planned for end of Q2 2026 with self-service sign-up
 - **Longer term**, the ambition is to bring Tycho onto The Graph Network proper, where Indexers can serve Tycho data and earn from it
 
-GraphOps has a fascinating dual role in this picture: they'd be both a **consumer** — paying for Substreams data from StreamingFast — and a **provider** — serving processed Tycho data to solvers. Two revenue streams on one data pipeline.
+GraphOps has a fascinating dual role in this picture: they'd be both a **consumer**, paying for Substreams data from StreamingFast, and a **provider**, serving processed Tycho data to solvers. Two revenue streams on one data pipeline.
 
 ## Why this matters
 
 **For The Graph:** Tycho is the flagship proof point for the Substreams Data Service. If Tycho can consume Substreams via the network and pay for it on-chain, the entire multi-service vision of Horizon is validated.
 
-**For indexers:** This opens a new revenue stream. Serving Tycho data to professional trading operations — organisations that pay real money for data infrastructure.
+**For indexers:** This opens a new revenue stream. Serving Tycho data to professional trading operations: organisations that pay real money for data infrastructure.
 
 **For DeFi:** A single, open-source liquidity index means better price execution for end users. Less fragmentation, more competition among solvers, and cheaper trades.
 
-**Historical data opportunity:** Tycho currently only keeps one to two weeks of state. There's an identified workstream to stream Tycho data into an OLAP database for historical analytics — think "Dune for DEX liquidity." Historical pool states, liquidity trends, trading volume analysis. An entirely separate product.
+**Historical data opportunity:** Tycho currently only keeps one to two weeks of state. There's an identified workstream to stream Tycho data into an OLAP database for historical analytics: think "Dune for DEX liquidity." Historical pool states, liquidity trends, trading volume analysis. An entirely separate product.
 
 ## Getting started with Tycho
 

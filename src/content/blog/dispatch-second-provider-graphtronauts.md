@@ -4,14 +4,14 @@ date: "2026-04-26"
 author: "cargopete"
 tags: ["dispatch", "rpc", "data-services", "horizon", "indexers", "community"]
 category: "News"
-excerpt: "A single-provider network is infrastructure theatre. Two providers is where actual decentralisation starts. PaulieB from the Graphtronauts community just provisioned on Dispatch — here's what that means and why it matters."
+excerpt: "A single-provider network is infrastructure theatre. Two providers is where actual decentralisation starts. PaulieB from the Graphtronauts community just provisioned on Dispatch. Here's what that means and why it matters."
 ---
 
 > **Dispatch is an experimental, unofficial, community-led project.**
 >
 > It is not affiliated with, endorsed by, or supported in any way by The Graph Foundation or Edge & Node. It is an independent experiment exploring decentralised JSON-RPC on Horizon. Not production-ready. Use accordingly.
 
-There's a specific kind of uncomfortable honesty baked into the [original Dispatch announcement](/blog/dispatch-json-rpc-horizon): "a single-provider network isn't decentralised." We wrote it because it's true, and it was the most glaring limitation of the project at launch. One provider serving all traffic isn't a decentralised network — it's a relay with extra steps.
+There's a specific kind of uncomfortable honesty baked into the [original Dispatch announcement](/blog/dispatch-json-rpc-horizon): "a single-provider network isn't decentralised." We wrote it because it's true, and it was the most glaring limitation of the project at launch. One provider serving all traffic isn't a decentralised network; it's a relay with extra steps.
 
 Today that changes. **PaulieB**, a well-known member of the [Graphtronauts](https://graphtronauts.com) community, has provisioned on the Dispatch `RPCDataService` contract and is serving live traffic on Arbitrum One.
 
@@ -21,7 +21,7 @@ This is the first milestone that matters.
 
 ## Who is PaulieB, and who are the Graphtronauts?
 
-If you've spent any time in The Graph's Discord or forum, you've almost certainly encountered the Graphtronauts. They're one of the oldest and most active grassroots communities in The Graph ecosystem — a group of long-term GRT holders, builders, and researchers who've followed the protocol through every cycle since the early days.
+If you've spent any time in The Graph's Discord or forum, you've almost certainly encountered the Graphtronauts. They're one of the oldest and most active grassroots communities in The Graph ecosystem: a group of long-term GRT holders, builders, and researchers who've followed the protocol through every cycle since the early days.
 
 PaulieB is a prominent voice in that community. He's not running a commercial indexing operation backed by a protocol grant. He's a community member who looked at Dispatch, understood what it was trying to do, and decided to run a provider because he thought it was worth doing. That's the origin story you want for this kind of project.
 
@@ -77,11 +77,11 @@ The original Dispatch post identified the core problem clearly: "a single-provid
 
 The case for doing that is straightforward if you're already an indexer:
 
-- You have GRT staked. The provisioning requirement is 25,000 GRT — a fraction of what most active indexers hold.
+- You have GRT staked. The provisioning requirement is 25,000 GRT, a fraction of what most active indexers hold.
 - You have Ethereum node infrastructure already running. `dispatch-service` is a sidecar, not a replacement.
-- The payment mechanism is GraphTally (TAP v2) — the exact same payment primitive the Subgraph network uses for query fees. It's not new territory.
+- The payment mechanism is GraphTally (TAP v2), the exact same payment primitive the Subgraph network uses for query fees. It's not new territory.
 
-What PaulieB has done, concretely, is walk the path from "I run Graph infrastructure" to "I'm a Dispatch provider" and demonstrate that it works. The documentation, the indexer agent, the Docker compose setup — they were there in theory; they're now validated in practice by a second independent operator.
+What PaulieB has done, concretely, is walk the path from "I run Graph infrastructure" to "I'm a Dispatch provider" and demonstrate that it works. The documentation, the indexer agent, the Docker compose setup: they were there in theory; they're now validated in practice by a second independent operator.
 
 If you're an indexer who has been watching Dispatch from a distance: the second provider is a reasonable signal that the onboarding experience is real.
 
@@ -91,11 +91,11 @@ If you're an indexer who has been watching Dispatch from a distance: the second 
 
 Two providers is not where this stops. Here's what we're watching:
 
-**More chains.** The RPCDataService supports permissionless chain registration — any provider can add a new chain with a 100,000 GRT bond. Ethereum mainnet is the obvious next addition. As providers join, chain coverage will expand.
+**More chains.** The RPCDataService supports permissionless chain registration: any provider can add a new chain with a 100,000 GRT bond. Ethereum mainnet is the obvious next addition. As providers join, chain coverage will expand.
 
 **TAP aggregation.** Receipts are being signed per request. The aggregator that batches them into RAVs for on-chain settlement is the next piece. When that's wired up, GRT will actually flow from consumer escrow to providers on-chain in real time.
 
-**Oracle.** The `dispatch-oracle` daemon feeds L1 state roots for Tier 1 slash verification — enabling provable slashing for wrong `eth_getBalance` responses. This is the cryptographic accountability layer that makes a decentralised RPC network meaningfully different from a trusted one.
+**Oracle.** The `dispatch-oracle` daemon feeds L1 state roots for Tier 1 slash verification, enabling provable slashing for wrong `eth_getBalance` responses. This is the cryptographic accountability layer that makes a decentralised RPC network meaningfully different from a trusted one.
 
 None of this requires waiting. The contracts are deployed. The code is open source. The payment primitives are proven. What it requires is more people doing what PaulieB did: deciding the experiment is worth participating in.
 
@@ -113,4 +113,4 @@ The progress from "one provider, experimental" to "two providers, experimental" 
 
 ---
 
-*Want to become a provider? Everything you need is at [github.com/cargopete/dispatch](https://github.com/cargopete/dispatch). Want to use Dispatch as a consumer? Head to [the Dispatch page](/dispatch) and grab a gateway URL — it takes under two minutes.*
+*Want to become a provider? Everything you need is at [github.com/cargopete/dispatch](https://github.com/cargopete/dispatch). Want to use Dispatch as a consumer? Head to [the Dispatch page](/dispatch) and grab a gateway URL; it takes under two minutes.*
