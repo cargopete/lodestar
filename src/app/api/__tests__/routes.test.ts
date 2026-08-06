@@ -46,6 +46,8 @@ vi.mock('@/lib/reo-contract', () => ({
 }));
 
 // Mock @/lib/indexing-status
+// A factory mock replaces the whole module, so every export the routes import
+// has to appear here or it arrives as undefined and the route throws.
 vi.mock('@/lib/indexing-status', () => ({
   queryIndexerStatus: vi.fn(() => Promise.resolve(null)),
   buildIndexerStatus: vi.fn(
@@ -57,6 +59,16 @@ vi.mock('@/lib/indexing-status', () => ({
       status: 'unreachable',
     }),
   ),
+  // Reconciliation is peer-relative and has its own unit tests; here it just
+  // has to preserve the list so the route's shape assertions stay meaningful.
+  reconcileToNetworkHead: vi.fn((indexers: unknown[]) => indexers),
+  // RFC-006 D1 serving probe. No network in tests, so report unreachable.
+  probeServing: vi.fn(() => Promise.resolve('unreachable')),
+  withServeProbe: vi.fn((result: Record<string, unknown>, probe: string) => ({
+    ...result,
+    serveProbe: probe,
+    servable: probe === 'serving' || probe === 'alive_paid',
+  })),
 }));
 
 // Mock global fetch for routes that call external APIs directly
