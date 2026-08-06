@@ -537,7 +537,7 @@ export default function QosPage() {
       {statusError && (
         <Card>
           <CardContent className="text-sm text-[var(--text-muted)]">
-            The oracle's API is unreachable. The feed may be fine — this page is not.
+            The oracle&apos;s API is unreachable. The feed may be fine; this page is not.
           </CardContent>
         </Card>
       )}
@@ -580,8 +580,8 @@ export default function QosPage() {
         <CardContent className="space-y-3">
           <p className="text-sm text-[var(--text-muted)]">
             Composite of four things we measure ourselves: correctness (0.40), availability (0.30),
-            freshness (0.20) and coverage (0.10). No sub-score, verdict or alert reads anyone else's
-            feed, so a stall upstream leaves every number here untouched.
+            freshness (0.20) and coverage (0.10). No sub-score, verdict or alert reads anyone
+            else&apos;s feed, so a stall upstream leaves every number here untouched.
           </p>
           <p className="text-xs text-[var(--text-muted)]">
             Only indexers Lodestar has actually probed appear. That is the whole list — roughly a
