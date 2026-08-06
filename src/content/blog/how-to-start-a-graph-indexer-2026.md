@@ -4,12 +4,12 @@ date: "2026-05-04"
 author: "cargopete"
 tags: ["indexing", "horizon", "infrastructure", "guide", "subgraphs", "chainstack", "hetzner"]
 category: "Guides"
-excerpt: "We just did this. Everything that the docs don't tell you — hardware, RPC, Horizon's on-chain quirks, graft chains, and the honest economics."
+excerpt: "We just did this. Everything that the docs don't tell you: hardware, RPC, Horizon's on-chain quirks, graft chains, and the honest economics."
 ---
 
-We just went through this ourselves. What follows is the guide we wish had existed before we started — drawn from the research we did, the official docs, and the parts that broke.
+We just went through this ourselves. What follows is the guide we wish had existed before we started, drawn from the research we did, the official docs, and the parts that broke.
 
-The short version before the long one: **at GRT's current price (~$0.024), running an indexer on 100–200k GRT is a break-even-at-best operation in USD terms.** That's not a reason not to do it, but it should be the first thing you understand. The rest of this post assumes you've decided to proceed anyway — for strategic, technical, or speculative reasons.
+The short version before the long one: **at GRT's current price (~$0.024), running an indexer on 100–200k GRT is a break-even-at-best operation in USD terms.** That's not a reason not to do it, but it should be the first thing you understand. The rest of this post assumes you've decided to proceed anyway, for strategic, technical, or speculative reasons.
 
 ---
 
@@ -24,7 +24,7 @@ The math at 150k GRT self-stake, no delegation:
 - USD value at $0.024: ~**$40–$48/month gross**
 - Fixed costs: Hetzner AX102 + RPC = ~**$180–$220/month**
 
-You're running at a deficit of around $140–$170/month at spot price. Break-even requires one of: GRT recovering to ~$0.10, attracting ≥1M GRT in delegation, or both. Delegation is the actual lever — it multiplies your stake by up to 16× without proportional cost increase.
+You're running at a deficit of around $140–$170/month at spot price. Break-even requires one of: GRT recovering to ~$0.10, attracting ≥1M GRT in delegation, or both. Delegation is the actual lever: it multiplies your stake by up to 16× without proportional cost increase.
 
 **Why do it anyway?** A few real reasons: you believe GRT recovers significantly, you want technical skin in the game, you're building on The Graph and want operational insight, or (like us) you're running a dashboard about indexers and want to actually be one. These are all legitimate. Just don't go in expecting a USD profit at current spot.
 
@@ -34,9 +34,9 @@ One more thing: **REO (GIP-0079) is deployed on Arbitrum One and activation is p
 
 ## Hardware
 
-The sensible single-server choice is a **Hetzner AX102** — Ryzen 9 7950X3D, 128 GB DDR5 ECC, 2×1.92 TB Gen4 NVMe. After Hetzner's April 1, 2026 price adjustment: **€117.30/month in Helsinki**, €122.30 in Falkenstein. Pick Helsinki unless you have a reason not to — it's €5/month cheaper and the latency difference from Falkenstein is irrelevant for indexing.
+The sensible single-server choice is a **Hetzner AX102**: Ryzen 9 7950X3D, 128 GB DDR5 ECC, 2×1.92 TB Gen4 NVMe. After Hetzner's April 1, 2026 price adjustment: **€117.30/month in Helsinki**, €122.30 in Falkenstein. Pick Helsinki unless you have a reason not to; it's €5/month cheaper and the latency difference from Falkenstein is irrelevant for indexing.
 
-Check the **Server Auction** first (`hetzner.com/sb`). You'll often find AX102-class hardware at €85–€115 — same specs, slightly older drives. We used an auction server. The rescue-mode OS installation (installimage over the existing OS, RAID 1 mdadm across the two NVMes) took about 20 minutes.
+Check the **Server Auction** first (`hetzner.com/sb`). You'll often find AX102-class hardware at €85–€115: same specs, slightly older drives. We used an auction server. The rescue-mode OS installation (installimage over the existing OS, RAID 1 mdadm across the two NVMes) took about 20 minutes.
 
 **Postgres tuning for 128 GB RAM.** The defaults are conservative. In `compose-graphnode.yml`, add these postgres command args:
 
@@ -75,7 +75,7 @@ fs.file-max=1000000
 
 **Chainstack Growth at $49/month** is the right choice for a new indexer. Twenty million request units, 250 RPS, archive included (2 RU per archive call, no per-method multipliers). Covers Arbitrum, mainnet, Base, BSC, Gnosis, Polygon, and 70+ more chains from one plan.
 
-Add **dRPC at ~$6/M requests** as a secondary endpoint in `config.toml`. graph-node round-robins and fails over — you want this.
+Add **dRPC at ~$6/M requests** as a secondary endpoint in `config.toml`. graph-node round-robins and fails over, and you want this.
 
 One **critical warning about Chainstack plan quota**: the initial historical sync of multiple chains simultaneously is extremely RPC-intensive. We watched 97% of our monthly quota disappear while graph-node was backfilling xdai, BSC, and Base in parallel. The fix: only run the chains you actually need right now. Chains with no active subgraph deployments are pure quota burn. We cut from 5 chains to 3 (arbitrum-one, xdai, base) once we identified the waste.
 
@@ -110,9 +110,9 @@ INDEXER_TAP_VERSION=ghcr.io/graphprotocol/indexer-tap-agent:1.12.3
 [ -f graph-node-configs/config.toml ] || envsubst < graph-node-configs/config.tmpl > graph-node-configs/config.toml
 ```
 
-**Chain naming matters.** The network name in your `config.toml` must match what subgraph manifests declare. Gnosis chain is `xdai` in manifests — not `gnosis`. If you name it `gnosis` you'll get `network not supported: no network xdai found` errors on every Gnosis subgraph deploy attempt. Set `[chains.xdai]`, not `[chains.gnosis]`.
+**Chain naming matters.** The network name in your `config.toml` must match what subgraph manifests declare. Gnosis chain is `xdai` in manifests, not `gnosis`. If you name it `gnosis` you'll get `network not supported: no network xdai found` errors on every Gnosis subgraph deploy attempt. Set `[chains.xdai]`, not `[chains.gnosis]`.
 
-**TAP migrations.** `indexer-service-rs` and `indexer-tap-agent` require TAP database tables to exist before they'll start. The agent (Node.js `indexer-agent`) runs the Sequelize migrations that create these tables — but only if it can successfully reach its RPC endpoint. If your RPC is down (or your Chainstack invoice is unpaid), the agent crashes before migrating, and the service and tap containers crash-loop in a confused heap. Fix the RPC issue first; let the agent run and migrate; everything else starts clean. Do not manually apply TAP SQL migrations — it creates function conflicts that are painful to unwind.
+**TAP migrations.** `indexer-service-rs` and `indexer-tap-agent` require TAP database tables to exist before they'll start. The agent (Node.js `indexer-agent`) runs the Sequelize migrations that create these tables, but only if it can successfully reach its RPC endpoint. If your RPC is down (or your Chainstack invoice is unpaid), the agent crashes before migrating, and the service and tap containers crash-loop in a confused heap. Fix the RPC issue first; let the agent run and migrate; everything else starts clean. Do not manually apply TAP SQL migrations; it creates function conflicts that are painful to unwind.
 
 ---
 
@@ -151,17 +151,17 @@ cast send $STAKING_CONTRACT \
 Key addresses (Arbitrum One, verify against current address book):
 - Staking contract: `0x00669A4CF01450B64E8A2A20E9b1FCB71E61eF03`
 - SubgraphService: `0xb2Bb92d0DE618878E438b55D5846cfecD9301105`
-- GRT token: `0x9623063377AD1B27544C965cCd7342f7EA7e88C7` — note the last two characters are `C7`, not `C0`. The wrong address exists onchain and has no code.
+- GRT token: `0x9623063377AD1B27544C965cCd7342f7EA7e88C7`. Note the last two characters are `C7`, not `C0`. The wrong address exists onchain and has no code.
 
 **`setOperator` changed in Horizon.** It's now a 3-parameter function: `setOperator(address verifier, address operator, bool allowed)`. The first argument is the *verifier* (SubgraphService address), not the indexer address. If you're using an old script or ABI that calls the 2-param version, it will revert. Find the correct ABI in the agent container's bundled `@graphprotocol/interfaces` NPM package if you're unsure.
 
-**Verifying the operator was set.** `isOperator` also has the arguments in a non-obvious order: `isOperator(operator, indexer)` — operator first, indexer second. Call it that way or you'll get `false` even when the operator is set correctly.
+**Verifying the operator was set.** `isOperator` also has the arguments in a non-obvious order: `isOperator(operator, indexer)`: operator first, indexer second. Call it that way or you'll get `false` even when the operator is set correctly.
 
 ---
 
 ## Allocation Strategy
 
-You have 100–200k GRT. The network has ~2.26B GRT total stake. If you allocate to the same mega-subgraphs as everyone else (Uniswap V3, Graph Network Arbitrum, Snapshot) you capture approximately your proportional share — which is ~0.007% of rewards. That's not interesting.
+You have 100–200k GRT. The network has ~2.26B GRT total stake. If you allocate to the same mega-subgraphs as everyone else (Uniswap V3, Graph Network Arbitrum, Snapshot) you capture approximately your proportional share, which is ~0.007% of rewards. That's not interesting.
 
 The move is to find subgraphs with high **curator signal relative to total staked** on that specific deployment. The signal/stake ratio tells you how much above or below average that deployment pays per staked GRT. Ratio > 1 means you earn above average; ratio < 1 means you're subsidising the curation signal.
 
@@ -187,7 +187,7 @@ To find these, query the network subgraph directly:
 
 Then compute `signalledTokens / stakedTokens` for each. Anything above 1.2 is worth investigating further.
 
-**Graft chains are a silent trap.** Many high-signal subgraphs are grafted — they start from the final state of a previous deployment rather than from genesis. If you try to deploy a grafted subgraph without first having the graft base synced, you get `graft base is invalid: deployment not found`. The base itself may also be a graft, and so on recursively. We hit a four-level graft chain on Pancakeswap V3 BNB that would have taken months to resolve.
+**Graft chains are a silent trap.** Many high-signal subgraphs are grafted: they start from the final state of a previous deployment rather than from genesis. If you try to deploy a grafted subgraph without first having the graft base synced, you get `graft base is invalid: deployment not found`. The base itself may also be a graft, and so on recursively. We hit a four-level graft chain on Pancakeswap V3 BNB that would have taken months to resolve.
 
 Before allocating to a subgraph, check its manifest:
 
@@ -211,7 +211,7 @@ docker exec cli graph indexer rules set <IPFS_HASH> \
 docker exec cli graph indexer rules prepare <GRAFT_BASE_HASH> --network arbitrum-one
 ```
 
-**Auto-graft handles this automatically.** As of indexer-agent v0.24.3, there's an `--enable-auto-graft` flag (or `INDEXER_AGENT_ENABLE_AUTO_GRAFT=true`) that makes the agent detect graft dependencies, deploy them in the correct order, sync each to the required block, and pause them — recursively, all the way down the chain. It's off by default. If you're indexing anything with deep graft chains, turn it on and save yourself the archaeology:
+**Auto-graft handles this automatically.** As of indexer-agent v0.24.3, there's an `--enable-auto-graft` flag (or `INDEXER_AGENT_ENABLE_AUTO_GRAFT=true`) that makes the agent detect graft dependencies, deploy them in the correct order, sync each to the required block, and pause them, recursively, all the way down the chain. It's off by default. If you're indexing anything with deep graft chains, turn it on and save yourself the archaeology:
 
 ```bash
 # In your indexer-agent environment
@@ -226,7 +226,7 @@ docker cp /tmp/cost.agora cli:/tmp/cost.agora
 docker exec cli graph indexer cost set model global /tmp/cost.agora --network arbitrum-one
 ```
 
-**The operator wallet needs ETH before any of this works.** The agent logs `"Current operator ETH balance": 0` and silently skips all allocation transactions. 0.05 ETH on Arbitrum covers hundreds of allocation operations at current gas prices — top it up once and forget about it.
+**The operator wallet needs ETH before any of this works.** The agent logs `"Current operator ETH balance": 0` and silently skips all allocation transactions. 0.05 ETH on Arbitrum covers hundreds of allocation operations at current gas prices; top it up once and forget about it.
 
 ---
 
@@ -245,7 +245,7 @@ Rough real-world sync rates (with Chainstack Growth at 250 RPS):
 
 A subgraph that starts at block 10M on Gnosis (current head ~46M) needs to replay 36M blocks. At 1M blocks/day that's five to six weeks of sync before the allocation opens. Plan around this.
 
-The agent won't open an on-chain allocation until the subgraph passes its health check (`synced: false` but `health: "healthy"` is normal during catchup — the allocation opens once `synced: true`). This is the right behaviour: you don't want to open an allocation and commit to a POI on a deployment that isn't at chain head.
+The agent won't open an on-chain allocation until the subgraph passes its health check (`synced: false` but `health: "healthy"` is normal during catchup, and the allocation opens once `synced: true`). This is the right behaviour: you don't want to open an allocation and commit to a POI on a deployment that isn't at chain head.
 
 ---
 
@@ -256,7 +256,7 @@ The StakeSquid stack includes Prometheus, Grafana, AlertManager, cAdvisor, and N
 - Alert on POI staleness > 20 days (you have 28 before forced closure)
 - Alert on subgraph health regressions (healthy → unhealthy)
 - Alert on RPC error rate > 1%
-- Watch `docker logs indexer-agent` — it logs at INFO level by default and is readable
+- Watch `docker logs indexer-agent`: it logs at INFO level by default and is readable
 
 **indexerscore.com** (Graphtronauts) tracks your indexer's public score: 70% Allocation Efficiency Ratio + 30% Query Fee Ratio. Check it weekly once allocations are open. It'll tell you faster than anything else if the gateway has stopped routing to you.
 
@@ -273,7 +273,7 @@ Things we hit or saw others hit:
 - **Gnosis subgraphs fail with "network xdai not found".** Your `config.toml` chain name must be `xdai`, not `gnosis`.
 - **Grafted subgraph deploy fails with "graft base not found".** Find the full graft chain and queue each ancestor as `offchain` before trying to deploy the target.
 - **Agent submits no allocation transactions despite rules being set.** Check operator ETH balance first. Then check `docker logs indexer-agent` for health check failures.
-- **Subgraph stuck N blocks behind chain head indefinitely.** See our [graph-node sync lag post](/blog/arbitrum-indexer-infrastructure) — it's usually `reorg_threshold` too high or `eth_call` latency in mappings.
+- **Subgraph stuck N blocks behind chain head indefinitely.** See our [graph-node sync lag post](/blog/arbitrum-indexer-infrastructure); it's usually `reorg_threshold` too high or `eth_call` latency in mappings.
 - **`config.toml` gets overwritten on every restart.** Patch `start-essential` to only generate it if missing (see stack section above).
 
 ---
@@ -287,8 +287,8 @@ Things we hit or saw others hit:
 | REO activates | Verify real query traffic is flowing before the vote passes. |
 | DIPs (GIP-0087/0088) launch | Bid on direct indexing agreements early. Consumer-funded indexing will matter. |
 
-The minimum viable setup that's not losing money significantly requires either token price recovery or 500k+ GRT in delegation. Delegation takes time to attract — clean POIs, visible query serving, and a few months of track record. Engage the community; delegators at Graphtronauts (`t.me/graphtronauts`) do pay attention to new indexers.
+The minimum viable setup that's not losing money significantly requires either token price recovery or 500k+ GRT in delegation. Delegation takes time to attract: clean POIs, visible query serving, and a few months of track record. Engage the community; delegators at Graphtronauts (`t.me/graphtronauts`) do pay attention to new indexers.
 
 ---
 
-We'll update this as our own stack matures. The allocations aren't open yet — we're still syncing. But the on-chain setup is complete, the stack is running, and the first subgraphs are in the queue. More when there's something to show.
+We'll update this as our own stack matures. The allocations aren't open yet; we're still syncing. But the on-chain setup is complete, the stack is running, and the first subgraphs are in the queue. More when there's something to show.

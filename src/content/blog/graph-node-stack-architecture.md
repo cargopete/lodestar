@@ -7,7 +7,7 @@ category: "Guides"
 excerpt: "There are many ways to set up your graph-node stack, but the constraints boil down to 3 rules. A practical guide to node roles, sharding, tiered indexing, and the pitfalls that catch everyone."
 ---
 
-There are many ways to set up your graph-node stack. You can run a single box or a fleet of specialised nodes. You can shard your Postgres across machines or keep it all on one beefy instance. But no matter how creative you get, three architectural rules must hold — break any of them and things fall apart in ways that are annoying to debug.
+There are many ways to set up your graph-node stack. You can run a single box or a fleet of specialised nodes. You can shard your Postgres across machines or keep it all on one beefy instance. But no matter how creative you get, three architectural rules must hold. Break any of them and things fall apart in ways that are annoying to debug.
 
 These rules are well-known among experienced indexers (credit to Marc-André Dumas / Ellipfra for articulating them clearly), but they're scattered across Discord threads, office hours recordings, and tribal knowledge. This post collects them in one place, along with the advanced patterns that become possible once the fundamentals are solid.
 
@@ -39,7 +39,7 @@ The node whose `--node-id` matches the `ingestor` value is the one that polls ch
 
 **Why this matters**: Block ingestion is a single-writer process. If two nodes ingest the same chain, you get duplicate blocks in the cache, wasted RPC calls, and burnt provider rate limits. It won't corrupt data, but it's wasteful and can cause confusing log noise.
 
-**Practical tip**: Always set `DISABLE_BLOCK_INGESTOR=true` on every node that isn't the designated ingestor. Don't rely solely on the name mismatch — the env var is a belt-and-braces safety net.
+**Practical tip**: Always set `DISABLE_BLOCK_INGESTOR=true` on every node that isn't the designated ingestor. Don't rely solely on the name mismatch; the env var is a belt-and-braces safety net.
 
 ## Rule 2: Every instance supports every chain
 
@@ -47,7 +47,7 @@ The node whose `--node-id` matches the `ingestor` value is the one that polls ch
 
 Even if a node is only indexing Arbitrum subgraphs today, it needs providers for Ethereum mainnet, Gnosis, and every other chain you've configured. This applies to query nodes too.
 
-**Why this matters**: Subgraphs can be reassigned to any node at any time via `graphman reassign`. If the target node doesn't have providers for that subgraph's chain, it will fail. Query nodes also need chain metadata to properly resolve queries and check block freshness. The `[chains]` config is shared across all nodes reading that config file — there's no per-node chain filtering.
+**Why this matters**: Subgraphs can be reassigned to any node at any time via `graphman reassign`. If the target node doesn't have providers for that subgraph's chain, it will fail. Query nodes also need chain metadata to properly resolve queries and check block freshness. The `[chains]` config is shared across all nodes reading that config file, and there's no per-node chain filtering.
 
 ## Rule 3: Full networking and low latency between all nodes and PG shards
 
@@ -76,11 +76,11 @@ Configured via regex in the TOML:
 query = "query_node_.*"
 ```
 
-Any node whose ID matches this pattern becomes query-only — it won't index anything, just serves GraphQL. Query nodes get their own pool sizes (typically much larger than index nodes) since they're handling concurrent read traffic.
+Any node whose ID matches this pattern becomes query-only: it won't index anything, just serves GraphQL. Query nodes get their own pool sizes (typically much larger than index nodes) since they're handling concurrent read traffic.
 
 ### The ingestor
 
-The single node named in `[chains] ingestor = "..."`. It polls chain heads and ingests blocks. It can simultaneously index subgraphs too — there's no rule that says the ingestor must be dedicated.
+The single node named in `[chains] ingestor = "..."`. It polls chain heads and ingests blocks. It can simultaneously index subgraphs too; there's no rule that says the ingestor must be dedicated.
 
 ### Node IDs are persistent
 
@@ -104,7 +104,7 @@ graphman reassign QmXYZ... index_node_0
 graphman unassign QmXYZ...
 ```
 
-The reassign trick of using a non-existent node ID is a clean way to pause indexing without losing state — the subgraph keeps its progress but no running node picks it up.
+The reassign trick of using a non-existent node ID is a clean way to pause indexing without losing state: the subgraph keeps its progress but no running node picks it up.
 
 ## Advanced patterns
 
@@ -143,7 +143,7 @@ pool_size = [
 ]
 ```
 
-Rules match in order — first match wins. **It's an error if no rule matches a running node**, so always include a catch-all.
+Rules match in order, first match wins. **It's an error if no rule matches a running node**, so always include a catch-all.
 
 ### Tiered shards
 
@@ -158,7 +158,7 @@ graphman copy list
 graphman copy stats sgdDEST
 ```
 
-The copy runs in the background — it copies existing data, then indexes independently until it catches up to chain head. Once caught up, `--activate` makes it the live copy and `--replace` marks the source for cleanup (deleted ~8 hours later by the reaper).
+The copy runs in the background: it copies existing data, then indexes independently until it catches up to chain head. Once caught up, `--activate` makes it the live copy and `--replace` marks the source for cleanup (deleted ~8 hours later by the reaper).
 
 **When to shard**: Start with a single shard. Only add shards when one Postgres instance is maxed out. A good pattern is:
 
@@ -188,7 +188,7 @@ weight = 1
 
 Setting `weight = 0` on the primary means all query traffic goes to replicas, keeping the writer free for indexing.
 
-**The catch**: Replicas have replication lag. A query hitting a replica may see data a few seconds (or under heavy load, minutes) behind what's been written. This means a subgraph's "latest block" on a replica might be stale, and entity data could be a few blocks behind. For most use cases this is fine — but if you need strict consistency, be aware of the tradeoff.
+**The catch**: Replicas have replication lag. A query hitting a replica may see data a few seconds (or under heavy load, minutes) behind what's been written. This means a subgraph's "latest block" on a replica might be stale, and entity data could be a few blocks behind. For most use cases this is fine, but if you need strict consistency, be aware of the tradeoff.
 
 ### Custom query proxy
 
@@ -263,12 +263,12 @@ Graph Horizon (December 2025) didn't change graph-node, but it significantly cha
 
 | Component | What changed |
 |-----------|-------------|
-| **graph-node** | Unchanged — same architecture, same config |
-| **indexer-agent** | Upgraded — now manages provisions and Horizon-style allocations |
-| **indexer-service** | Replaced — old TypeScript version replaced by `indexer-service-rs` (Rust) |
-| **indexer-tap-agent** | New — handles GraphTally (TAP v2) receipt aggregation and RAV redemption |
+| **graph-node** | Unchanged: same architecture, same config |
+| **indexer-agent** | Upgraded: now manages provisions and Horizon-style allocations |
+| **indexer-service** | Replaced: old TypeScript version replaced by `indexer-service-rs` (Rust) |
+| **indexer-tap-agent** | New: handles GraphTally (TAP v2) receipt aggregation and RAV redemption |
 
-**Allocations** are the biggest operational change. Pre-Horizon, allocations were short-lived (closed every ~28 epochs). Post-Horizon, allocations are long-lived — they don't need to be closed to collect rewards. Instead, freshness is enforced by `maxPOIStaleness`: indexers must submit POIs regularly, or stale allocations can be force-closed by anyone.
+**Allocations** are the biggest operational change. Pre-Horizon, allocations were short-lived (closed every ~28 epochs). Post-Horizon, allocations are long-lived; they don't need to be closed to collect rewards. Instead, freshness is enforced by `maxPOIStaleness`: indexers must submit POIs regularly, or stale allocations can be force-closed by anyone.
 
 **Provisions** are also new: indexers must explicitly assign stake to a data service (e.g., SubgraphService) before operating. This replaces the old model where staked GRT was automatically available for everything.
 
@@ -278,7 +278,7 @@ None of this affects how you architect your graph-node stack. The three rules st
 
 ### Small operator (1-3 subgraphs)
 
-Single graph-node instance doing everything — ingestion, indexing, and queries. One Postgres instance. Simple and effective.
+Single graph-node instance doing everything: ingestion, indexing, and queries. One Postgres instance. Simple and effective.
 
 ```
 [graph-node] ←→ [PostgreSQL]
@@ -313,9 +313,9 @@ Tiered index nodes, multiple shards, read replicas, proxy layer.
 
 ## Further reading
 
-- [graph-node/docs/config.md](https://github.com/graphprotocol/graph-node/blob/master/docs/config.md) — the TOML config reference (start here)
-- [graph-node/docs/sharding.md](https://github.com/graphprotocol/graph-node/blob/master/docs/sharding.md) — PostgreSQL sharding architecture
-- [graph-node/docs/graphman.md](https://github.com/graphprotocol/graph-node/blob/master/docs/graphman.md) — graphman command reference
-- [graph-node/docs/environment-variables.md](https://github.com/graphprotocol/graph-node/blob/master/docs/environment-variables.md) — all environment variables
-- [The Graph indexing docs](https://thegraph.com/docs/en/indexing/overview/) — official documentation
-- [What changes with Graph Horizon](https://thegraph.com/docs/en/graph-horizon/what-changes/) — Horizon upgrade details
+- [graph-node/docs/config.md](https://github.com/graphprotocol/graph-node/blob/master/docs/config.md): the TOML config reference (start here)
+- [graph-node/docs/sharding.md](https://github.com/graphprotocol/graph-node/blob/master/docs/sharding.md): PostgreSQL sharding architecture
+- [graph-node/docs/graphman.md](https://github.com/graphprotocol/graph-node/blob/master/docs/graphman.md): graphman command reference
+- [graph-node/docs/environment-variables.md](https://github.com/graphprotocol/graph-node/blob/master/docs/environment-variables.md): all environment variables
+- [The Graph indexing docs](https://thegraph.com/docs/en/indexing/overview/): official documentation
+- [What changes with Graph Horizon](https://thegraph.com/docs/en/graph-horizon/what-changes/): Horizon upgrade details
