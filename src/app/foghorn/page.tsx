@@ -306,7 +306,7 @@ function Leaderboard() {
         <span className="text-[var(--text-muted)]">Va</span> Value. Bar colour:{' '}
         <span className="text-[var(--green)]">green ≥75</span> ·{' '}
         <span className="text-[var(--amber)]">amber ≥50</span> ·{' '}
-        <span className="text-[var(--red)]">red &lt;50</span>.
+        <span className="text-[var(--red-text)]">red &lt;50</span>.
       </p>
       <Card className="p-0 overflow-hidden">
         {isLoading ? (

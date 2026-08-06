@@ -168,7 +168,7 @@ export function WalletManager({ onSelectWallet, selectedWallet }: WalletManagerP
                             e.stopPropagation();
                             removeWallet(wallet.address);
                           }}
-                          className="p-1 text-[var(--text-faint)] hover:text-[var(--red)] transition-colors"
+                          className="p-1 text-[var(--text-faint)] hover:text-[var(--red-text)] transition-colors"
                           title="Remove wallet"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -229,7 +229,7 @@ export function WalletManager({ onSelectWallet, selectedWallet }: WalletManagerP
               </button>
             </div>
           </div>
-          {error && <p className="text-xs text-[var(--red)] mt-1">{error}</p>}
+          {error && <p className="text-xs text-[var(--red-text)] mt-1">{error}</p>}
         </div>
       </CardContent>
     </Card>

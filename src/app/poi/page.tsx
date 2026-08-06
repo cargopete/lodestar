@@ -219,13 +219,13 @@ export default function POIDashboard() {
                       ? 'text-[var(--green)]'
                       : dep.consensusPct >= 90
                         ? 'text-[var(--amber)]'
-                        : 'text-[var(--red)]'
+                        : 'text-[var(--red-text)]'
                   )}>
                     {formatPercent(dep.consensusPct)}
                   </td>
                   <td className={cn(
                     'px-4 py-3 text-right font-mono text-sm',
-                    dep.divergentCount > 0 ? 'text-[var(--red)] font-semibold' : 'text-[var(--text-faint)]'
+                    dep.divergentCount > 0 ? 'text-[var(--red-text)] font-semibold' : 'text-[var(--text-faint)]'
                   )}>
                     {dep.divergentCount > 0 ? dep.divergentCount : '--'}
                   </td>

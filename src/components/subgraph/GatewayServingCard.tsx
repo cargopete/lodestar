@@ -59,7 +59,7 @@ export function GatewayServingCard({ result, indexers }: Props) {
         <div className="flex items-start gap-2">
           <span aria-hidden>⛔</span>
           <div className="w-full">
-            <p className="text-sm font-semibold text-[var(--red)]">
+            <p className="text-sm font-semibold text-[var(--red-text)]">
               Gateway can&apos;t serve this subgraph: 0 of {n} indexer{n === 1 ? '' : 's'} usable
             </p>
             <p className="text-[13px] text-[var(--text-muted)] mt-0.5 mb-3">

@@ -108,7 +108,7 @@ export function FoghornScorecard({ address }: { address: string }) {
 
         {data.sybil_cluster && (
           <div className="rounded-[var(--radius-card)] border border-[var(--red)]/40 bg-[var(--red-dim)] p-2">
-            <p className="text-[12px] text-[var(--red)]">
+            <p className="text-[12px] text-[var(--red-text)]">
               Probable operator-swarm member · {(data.sybil_cluster.confidence * 100).toFixed(0)}% confidence,
               {' '}{data.sybil_cluster.member_count} identities (<span className="font-mono">{data.sybil_cluster.cluster_id}</span>)
             </p>

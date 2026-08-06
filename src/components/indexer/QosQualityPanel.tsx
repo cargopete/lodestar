@@ -85,7 +85,7 @@ export function QosQualityPanel({ indexer }: { indexer: string }) {
               <span
                 className={cn(
                   'text-2xl font-mono font-bold',
-                  q! >= 75 ? 'text-[var(--green)]' : q! >= 45 ? 'text-[var(--amber)]' : 'text-[var(--red)]',
+                  q! >= 75 ? 'text-[var(--green)]' : q! >= 45 ? 'text-[var(--amber)]' : 'text-[var(--red-text)]',
                 )}
               >
                 {q!.toFixed(0)}
@@ -123,7 +123,7 @@ export function QosQualityPanel({ indexer }: { indexer: string }) {
                   'flex items-start gap-2.5 p-2.5 mb-4 rounded-lg border',
                   flagged ? 'bg-[var(--red-dim)] border-[var(--red)]' : 'bg-[var(--bg-elevated)] border-[var(--border)]',
                 )}>
-                  <span className={cn('text-sm font-mono font-semibold mt-0.5', flagged ? 'text-[var(--red)]' : gap < 0 ? 'text-[var(--green)]' : 'text-[var(--text-muted)]')}>
+                  <span className={cn('text-sm font-mono font-semibold mt-0.5', flagged ? 'text-[var(--red-text)]' : gap < 0 ? 'text-[var(--green)]' : 'text-[var(--text-muted)]')}>
                     {gap >= 0 ? '+' : ''}{(gap * 100).toFixed(0)}%
                   </span>
                   <div>

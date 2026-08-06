@@ -82,7 +82,7 @@ export function DisputesSection({ address }: { address: string }) {
                         <Badge variant={statusVariant(d.status)}>{d.status ?? 'Undecided'}</Badge>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className={slashed > 0 ? 'font-mono text-sm text-[var(--red)]' : 'text-sm text-[var(--text-faint)]'}>
+                        <span className={slashed > 0 ? 'font-mono text-sm text-[var(--red-text)]' : 'text-sm text-[var(--text-faint)]'}>
                           {slashed > 0 ? `${formatGRT(slashed)} GRT` : '—'}
                         </span>
                       </td>

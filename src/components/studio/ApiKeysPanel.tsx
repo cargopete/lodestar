@@ -167,7 +167,7 @@ export default function ApiKeysPanel() {
               {k.status === 'active' && (
                 <button
                   onClick={() => revoke(k.id)}
-                  className="px-2 py-1 text-xs rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--red)] hover:border-[var(--red)]/40 transition-colors flex-shrink-0"
+                  className="px-2 py-1 text-xs rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--red-text)] hover:border-[var(--red)]/40 transition-colors flex-shrink-0"
                 >
                   Revoke
                 </button>

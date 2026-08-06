@@ -122,7 +122,7 @@ export default function GrtFlowPage() {
       {isError && (
         <Card>
           <CardContent className="py-5">
-            <p className="text-sm text-[var(--red)]">Couldn&apos;t reach the network subgraph. Live figures unavailable; reference material below is unaffected.</p>
+            <p className="text-sm text-[var(--red-text)]">Couldn&apos;t reach the network subgraph. Live figures unavailable; reference material below is unaffected.</p>
           </CardContent>
         </Card>
       )}

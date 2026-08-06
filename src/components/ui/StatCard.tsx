@@ -65,7 +65,7 @@ export function StatCard({
             <p
               className={cn(
                 'text-[11px] font-mono mt-3 px-1.5 py-0.5 rounded-[var(--radius-badge)] inline-block',
-                delta.positive ? 'text-[var(--green)] bg-[var(--green-dim)]' : 'text-[var(--red)] bg-[var(--red-dim)]'
+                delta.positive ? 'text-[var(--green)] bg-[var(--green-dim)]' : 'text-[var(--red-text)] bg-[var(--red-dim)]'
               )}
             >
               {delta.positive ? '+' : ''}{delta.value}

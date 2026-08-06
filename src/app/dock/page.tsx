@@ -279,7 +279,7 @@ function RegisterModal({ onClose, onCreated }: { onClose: () => void; onCreated:
         <form onSubmit={submit} className="p-5 space-y-4">
           <div>
             <label className="block text-xs text-[var(--text-muted)] mb-1.5">
-              Slug <span className="text-[var(--red)]">*</span>
+              Slug <span className="text-[var(--red-text)]">*</span>
             </label>
             <input
               type="text"
@@ -311,7 +311,7 @@ function RegisterModal({ onClose, onCreated }: { onClose: () => void; onCreated:
               )}
             />
           </div>
-          {error && <p className="text-xs text-[var(--red)]">{error}</p>}
+          {error && <p className="text-xs text-[var(--red-text)]">{error}</p>}
           <div className="flex gap-3 pt-1">
             <button
               type="button"
@@ -603,7 +603,7 @@ function PublishWizard({
 
           {step === 'error' && (
             <div className="space-y-4">
-              <p className="text-sm text-[var(--red)]">{errMsg || 'Something went wrong.'}</p>
+              <p className="text-sm text-[var(--red-text)]">{errMsg || 'Something went wrong.'}</p>
               <button
                 onClick={() => setStep('confirm')}
                 className="w-full px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
@@ -836,7 +836,7 @@ function PostBountyWizard({
               </p>
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5">
-                  Bounty amount (GRT) <span className="text-[var(--red)]">*</span>
+                  Bounty amount (GRT) <span className="text-[var(--red-text)]">*</span>
                 </label>
                 <input
                   type="number" min="1" step="any" placeholder="100"
@@ -1006,7 +1006,7 @@ function PostBountyWizard({
 
           {step === 'error' && (
             <div className="space-y-4">
-              <p className="text-sm text-[var(--red)]">{errMsg || 'Something went wrong.'}</p>
+              <p className="text-sm text-[var(--red-text)]">{errMsg || 'Something went wrong.'}</p>
               <button
                 onClick={() => setStep('form')}
                 className="w-full px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
@@ -1189,7 +1189,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
 
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5">
-                  Allocation ID <span className="text-[var(--red)]">*</span>
+                  Allocation ID <span className="text-[var(--red-text)]">*</span>
                 </label>
                 <input
                   type="text"
@@ -1217,7 +1217,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
                 <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3 space-y-1.5 text-xs">
                   <div className="flex justify-between">
                     <span className="text-[var(--text-faint)]">Allocation</span>
-                    <span className={allocationClosed ? 'text-[var(--red)]' : 'text-[var(--green)]'}>
+                    <span className={allocationClosed ? 'text-[var(--red-text)]' : 'text-[var(--green)]'}>
                       {allocationClosed ? 'Closed, cannot claim' : 'Open'}
                     </span>
                   </div>
@@ -1272,7 +1272,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
                     {poiQueuing ? 'Queuing...' : poiQueued ? 'Queued ✓, waiting for chain confirmation' : 'Queue POI Action'}
                   </button>
                   {poiQueueError && (
-                    <p className="text-xs text-[var(--red)]">{poiQueueError}</p>
+                    <p className="text-xs text-[var(--red-text)]">{poiQueueError}</p>
                   )}
                   {!poiQueued && (
                     <details className="text-xs">
@@ -1343,7 +1343,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
 
           {step === 'error' && (
             <div className="space-y-4">
-              <p className="text-xs text-[var(--red)] font-mono whitespace-pre-wrap break-all">{errMsg}</p>
+              <p className="text-xs text-[var(--red-text)] font-mono whitespace-pre-wrap break-all">{errMsg}</p>
               <button
                 onClick={() => setStep('form')}
                 className="w-full px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
@@ -1802,7 +1802,7 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
             ))}
           </div>
         ) : isError ? (
-          <p className="text-sm text-[var(--red)] py-4">Failed to load subgraphs. Please refresh.</p>
+          <p className="text-sm text-[var(--red-text)] py-4">Failed to load subgraphs. Please refresh.</p>
         ) : subgraphs.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center gap-4 border border-dashed border-[var(--border)] rounded-xl">
             <div className="w-12 h-12 rounded-xl bg-[var(--accent-dim)] flex items-center justify-center">
@@ -1949,7 +1949,7 @@ function BountyQueryPanel({ bounty }: { bounty: SyncBounty }) {
               {running ? 'Running…' : 'Run →'}
             </button>
             {responseError && (
-              <div className="p-2 rounded-[var(--radius-button)] bg-[var(--red-dim)] text-[var(--red)] text-xs font-mono">
+              <div className="p-2 rounded-[var(--radius-button)] bg-[var(--red-dim)] text-[var(--red-text)] text-xs font-mono">
                 {responseError}
               </div>
             )}
@@ -2157,7 +2157,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
             {[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-lg shimmer" />)}
           </div>
         ) : isError ? (
-          <p className="text-sm text-[var(--red)] py-4">Failed to load bounties. Please refresh.</p>
+          <p className="text-sm text-[var(--red-text)] py-4">Failed to load bounties. Please refresh.</p>
         ) : bounties.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-[var(--text-muted)] text-sm">No bounties posted yet.</p>
@@ -2290,7 +2290,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                           <button
                             onClick={() => handleCancel(b)}
                             disabled={isCancelling}
-                            className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--red)] hover:border-[var(--red)] transition-colors disabled:opacity-50"
+                            className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--red-text)] hover:border-[var(--red)] transition-colors disabled:opacity-50"
                           >
                             {isCancelling ? 'Waiting...' : 'Cancel'}
                           </button>
@@ -2395,7 +2395,7 @@ export default function StudioPage() {
             >
               {signing ? 'Waiting for wallet...' : 'Sign in'}
             </button>
-            {authError && <p className="text-xs text-[var(--red)]">{authError}</p>}
+            {authError && <p className="text-xs text-[var(--red-text)]">{authError}</p>}
           </div>
         )}
 

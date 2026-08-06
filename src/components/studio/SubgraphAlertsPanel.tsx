@@ -197,7 +197,7 @@ export default function SubgraphAlertsPanel({
             </button>
             <button
               onClick={remove}
-              className="px-2 py-1 text-xs rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--red)] hover:border-[var(--red)]/40 transition-colors"
+              className="px-2 py-1 text-xs rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--red-text)] hover:border-[var(--red)]/40 transition-colors"
             >
               Delete
             </button>

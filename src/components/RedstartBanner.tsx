@@ -51,10 +51,12 @@ export function RedstartBanner() {
         href={GENERATOR_URL}
         target="_blank"
         rel="noopener noreferrer"
-        onMouseEnter={(e) => (e.currentTarget.style.background = RED_DEEP)}
-        onMouseLeave={(e) => (e.currentTarget.style.background = RED)}
+        // Rests on the deep red and brightens on hover, rather than the other
+        // way round: white on RED is only 3.59:1, while on RED_DEEP it is 7.67:1.
+        onMouseEnter={(e) => (e.currentTarget.style.background = RED)}
+        onMouseLeave={(e) => (e.currentTarget.style.background = RED_DEEP)}
         className="shrink-0 px-3 py-1 text-[12px] font-medium rounded-[var(--radius-button)] transition-colors active:scale-[0.97]"
-        style={{ background: RED, color: '#fff' }}
+        style={{ background: RED_DEEP, color: '#fff' }}
       >
         Try The Generator →
       </a>

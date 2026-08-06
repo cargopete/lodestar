@@ -176,7 +176,7 @@ export default function DelegatorPortfolioPage({
     return (
       <Card className="max-w-lg mx-auto mt-12">
         <CardContent className="py-8 text-center">
-          <p className="text-[var(--red)] mb-2">Failed to load delegator data</p>
+          <p className="text-[var(--red-text)] mb-2">Failed to load delegator data</p>
           <p className="text-[11px] text-[var(--text-faint)] font-mono">{(error as Error).message}</p>
         </CardContent>
       </Card>
@@ -292,7 +292,7 @@ export default function DelegatorPortfolioPage({
               'text-xl font-mono font-semibold',
               portfolioHealth.reoEligiblePercent >= 80 ? 'text-[var(--green)]'
                 : portfolioHealth.reoEligiblePercent >= 50 ? 'text-[var(--amber)]'
-                : 'text-[var(--red)]'
+                : 'text-[var(--red-text)]'
             )}>
               {portfolioHealth.reoEligiblePercent.toFixed(0)}%
             </p>
@@ -326,11 +326,11 @@ export default function DelegatorPortfolioPage({
       {/* Greedy Indexer Warning — any active position with 100% cut */}
       {positions.some((p) => p.isActive && isGreedyCut(p.stake.indexer.indexingRewardCut)) && (
         <div className="flex items-start gap-3 p-4 rounded-lg border bg-[var(--red-dim)] border-[var(--red)]">
-          <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-[var(--red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-[var(--red-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
           <div>
-            <p className="text-sm font-medium text-[var(--red)]">
+            <p className="text-sm font-medium text-[var(--red-text)]">
               You have delegation with a 100% reward cut indexer
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
@@ -441,7 +441,7 @@ export default function DelegatorPortfolioPage({
                                 </svg>
                               )}
                               {isDown && (
-                                <svg className="w-3.5 h-3.5 text-[var(--red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <svg className="w-3.5 h-3.5 text-[var(--red-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                                 </svg>
                               )}
@@ -459,7 +459,7 @@ export default function DelegatorPortfolioPage({
                       <td className="text-right py-3 px-4">
                         <p className={cn(
                           'text-sm font-mono',
-                          isGreedyCut(pos.stake.indexer.indexingRewardCut) ? 'text-[var(--red)] font-semibold' : 'text-[var(--text)]'
+                          isGreedyCut(pos.stake.indexer.indexingRewardCut) ? 'text-[var(--red-text)] font-semibold' : 'text-[var(--text)]'
                         )}>
                           {formatPPM(pos.stake.indexer.indexingRewardCut)}
                         </p>

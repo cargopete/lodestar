@@ -112,7 +112,7 @@ function HandlerCounts({ source }: { source: DataSourceSignal | TemplateSignal }
         </span>
       )}
       {source.blockHandlers > 0 && (
-        <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-[var(--red-dim)] text-[var(--red)]">
+        <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-[var(--red-dim)] text-[var(--red-text)]">
           {source.blockHandlers} block
         </span>
       )}
@@ -215,7 +215,7 @@ function FieldTypePill({ type, typeNames }: { type: string; typeNames: Set<strin
         {base}
       </span>
       {isArray && <span className="text-[var(--text-faint)] text-[10px]">]</span>}
-      {isRequired && <span className="text-[var(--red)] text-[10px] font-bold">!</span>}
+      {isRequired && <span className="text-[var(--red-text)] text-[10px] font-bold">!</span>}
     </span>
   );
 }
@@ -242,7 +242,7 @@ const KIND_BADGE: Record<string, string> = {
   interface: 'bg-[var(--amber-dim)] text-[var(--amber)]',
   input: 'bg-[var(--bg-elevated)] text-[var(--text-muted)]',
   enum: 'bg-[var(--green-dim)] text-[var(--green)]',
-  scalar: 'bg-[var(--red-dim)] text-[var(--red)]',
+  scalar: 'bg-[var(--red-dim)] text-[var(--red-text)]',
 };
 
 function SchemaTypeCard({ type, typeNames }: { type: ParsedType; typeNames: Set<string> }) {
@@ -437,7 +437,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
           <div className="flex items-start gap-2">
             <span aria-hidden>⛔</span>
             <div>
-              <p className="text-sm font-semibold text-[var(--red)]">
+              <p className="text-sm font-semibold text-[var(--red-text)]">
                 {servability.recovering ? 'Effectively dead, rescue in flight' : 'Effectively dead'}
               </p>
               <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
@@ -536,7 +536,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                               if (!g) return null;
                               return (
                                 <span
-                                  className="text-[10px] font-medium text-[var(--red)]"
+                                  className="text-[10px] font-medium text-[var(--red-text)]"
                                   title={`Gateway rejected this indexer: ${g.kind}(${g.detail})`}
                                 >
                                   gateway: {badIndexerLabel(g).toLowerCase()}
@@ -587,7 +587,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                                   ? 'text-[var(--green)]'
                                   : indexer.blocksBehind < 1000
                                     ? 'text-[var(--amber)]'
-                                    : 'text-[var(--red)]',
+                                    : 'text-[var(--red-text)]',
                               )}
                               title={
                                 indexer.networkChainHead
@@ -673,7 +673,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className="p-1.5 rounded bg-[var(--bg-surface)]">
                         <p className="text-[10px] text-[var(--text-faint)]">Behind</p>
-                        <p className={cn('text-xs font-mono', (indexer.blocksBehind ?? 0) <= SYNC_TOLERANCE_BLOCKS ? 'text-[var(--green)]' : (indexer.blocksBehind ?? 0) < 1000 ? 'text-[var(--amber)]' : 'text-[var(--red)]')}>
+                        <p className={cn('text-xs font-mono', (indexer.blocksBehind ?? 0) <= SYNC_TOLERANCE_BLOCKS ? 'text-[var(--green)]' : (indexer.blocksBehind ?? 0) < 1000 ? 'text-[var(--amber)]' : 'text-[var(--red-text)]')}>
                           {indexer.blocksBehind === undefined
                             ? '—'
                             : indexer.blocksBehind <= SYNC_TOLERANCE_BLOCKS
@@ -982,7 +982,7 @@ function ManifestSection({ hash }: { hash: string }) {
                     <p className="text-xs text-[var(--text-faint)]">Contract Address</p>
                     {ds.address
                       ? <p className="text-sm font-mono text-[var(--text)] truncate" title={ds.address}>{ds.address}</p>
-                      : <p className="text-sm font-mono text-[var(--red)] font-semibold">ALL CONTRACTS</p>}
+                      : <p className="text-sm font-mono text-[var(--red-text)] font-semibold">ALL CONTRACTS</p>}
                   </div>
                   <div>
                     <p className="text-xs text-[var(--text-faint)]">Start Block</p>

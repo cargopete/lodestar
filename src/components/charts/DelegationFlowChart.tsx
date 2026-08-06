@@ -103,7 +103,7 @@ export function DelegationFlowChart() {
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
                 <p className="text-[10px] text-[var(--text-faint)] mb-1">Current {WINDOW_LABEL[days]}</p>
-                <p className={`text-lg font-mono font-semibold ${netPositive ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+                <p className={`text-lg font-mono font-semibold ${netPositive ? 'text-[var(--green)]' : 'text-[var(--red-text)]'}`}>
                   {netPositive ? '+' : '−'}{formatGRT(Math.abs(currentNet))}
                 </p>
                 <p className="text-[10px] text-[var(--text-faint)] font-mono">{netPositive ? '+' : '−'}{formatGRTFull(Math.abs(currentNet))} GRT net</p>
@@ -117,7 +117,7 @@ export function DelegationFlowChart() {
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)] flex flex-col justify-center items-center">
                 <p className="text-[10px] text-[var(--text-faint)] mb-1">Change</p>
-                <p className={`text-lg font-mono font-semibold ${deltaPositive ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+                <p className={`text-lg font-mono font-semibold ${deltaPositive ? 'text-[var(--green)]' : 'text-[var(--red-text)]'}`}>
                   {deltaPositive ? '+' : ''}{delta.toFixed(1)}%
                 </p>
               </div>

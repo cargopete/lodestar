@@ -158,7 +158,7 @@ function ConcStat({
   return (
     <div className="rounded-lg bg-[var(--bg-elevated)] px-3 py-2.5">
       <p className="text-[10px] text-[var(--text-faint)] mb-0.5">{label}</p>
-      <p className={cn('text-lg font-semibold font-mono', bad ? 'text-[var(--red)]' : 'text-[var(--text)]')}>
+      <p className={cn('text-lg font-semibold font-mono', bad ? 'text-[var(--red-text)]' : 'text-[var(--text)]')}>
         {value}
       </p>
       {sub && <p className="text-[10px] text-[var(--text-faint)] mt-0.5">{sub}</p>}
@@ -948,7 +948,7 @@ export default function QosPage() {
                       <td className="py-2 pr-4 text-right">
                         <span
                           className={cn(
-                            (r.successRate ?? 1) < 0.9 && 'text-[var(--red)]',
+                            (r.successRate ?? 1) < 0.9 && 'text-[var(--red-text)]',
                             (r.successRate ?? 1) >= 0.99 && 'text-[var(--green)]'
                           )}
                         >
@@ -1094,7 +1094,7 @@ export default function QosPage() {
                               <td className="py-2 pr-4 text-right text-[var(--green)]">
                                 {pct(p.oracle.success_rate)}
                               </td>
-                              <td className="py-2 pr-4 text-right text-[var(--red)]">
+                              <td className="py-2 pr-4 text-right text-[var(--red-text)]">
                                 {pct(p.foghorn.correctness_rate)}
                               </td>
                               <td className="py-2 pr-4 text-right text-[var(--text-muted)]">

@@ -89,7 +89,7 @@ export function DeveloperActivityChart() {
                       ? 'text-[var(--text-muted)]'
                       : wowPositive
                         ? 'text-[var(--green)]'
-                        : 'text-[var(--red)]'
+                        : 'text-[var(--red-text)]'
                   }`}
                 >
                   {wow == null ? '—' : `${wowPositive ? '+' : ''}${wow.toFixed(1)}%`}

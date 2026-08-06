@@ -182,7 +182,7 @@ export default function ProbeDetailPage({ params }: { params: Promise<{ id: stri
                       <span className={cn(
                         'uppercase text-[10px] font-bold w-14 flex-shrink-0 pt-0.5',
                         op.op === 'add' && 'text-[var(--green)]',
-                        op.op === 'remove' && 'text-[var(--red)]',
+                        op.op === 'remove' && 'text-[var(--red-text)]',
                         op.op === 'replace' && 'text-[var(--amber)]'
                       )}>
                         {op.op}
@@ -250,7 +250,7 @@ export default function ProbeDetailPage({ params }: { params: Promise<{ id: stri
                         <span className={cn(
                           'text-xs font-mono',
                           obs.latency_ms !== null && obs.latency_ms < 500 ? 'text-[var(--green)]' :
-                          obs.latency_ms !== null && obs.latency_ms < 2000 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                          obs.latency_ms !== null && obs.latency_ms < 2000 ? 'text-[var(--amber)]' : 'text-[var(--red-text)]'
                         )}>
                           {obs.latency_ms !== null ? `${obs.latency_ms}ms` : '—'}
                         </span>

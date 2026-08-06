@@ -188,7 +188,7 @@ export default function DelegatePage({
           <p className="text-[10px] text-[var(--text-faint)]">Reward Cut</p>
           <p className={cn(
             'text-lg font-mono font-semibold mt-0.5',
-            isGreedyCut(indexer.indexingRewardCut) ? 'text-[var(--red)]' : 'text-[var(--text)]'
+            isGreedyCut(indexer.indexingRewardCut) ? 'text-[var(--red-text)]' : 'text-[var(--text)]'
           )}>
             {formatPPM(indexer.indexingRewardCut)}
           </p>
@@ -209,7 +209,7 @@ export default function DelegatePage({
               'text-lg font-mono font-semibold',
               indexerScore ? (
                 indexerScore.composite >= 80 ? 'text-[var(--green)]' :
-                indexerScore.composite >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                indexerScore.composite >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red-text)]'
               ) : 'text-[var(--text)]'
             )}>
               {indexerScore?.composite ?? '—'}

@@ -273,7 +273,7 @@ On-chain transactions are irreversible. Verify before signing.
           step === 'confirmed'
             ? 'bg-[var(--green)] text-white'
             : error
-              ? 'bg-[var(--red)]/15 text-[var(--red)] hover:bg-[var(--red)]/25'
+              ? 'bg-[var(--red)]/15 text-[var(--red-text)] hover:bg-[var(--red)]/25'
               : mode === 'withdraw'
                 ? 'bg-[var(--green)] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed'
                 : amountGRT > 0 && !exceedsStake

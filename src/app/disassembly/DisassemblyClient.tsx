@@ -55,8 +55,8 @@ const FLAG_RANK: Record<FlagLevel, number> = { critical: 0, warn: 1, info: 2 };
 const PRIORITY_META: Record<RiskPriority, { label: string; variant: 'default' | 'success' | 'warning' | 'error'; color: string }> = {
   low: { label: 'Low priority', variant: 'success', color: 'var(--green)' },
   medium: { label: 'Medium priority', variant: 'warning', color: 'var(--amber)' },
-  high: { label: 'High priority', variant: 'error', color: 'var(--red)' },
-  critical: { label: 'Critical priority', variant: 'error', color: 'var(--red)' },
+  high: { label: 'High priority', variant: 'error', color: 'var(--red-text)' },
+  critical: { label: 'Critical priority', variant: 'error', color: 'var(--red-text)' },
 };
 
 const EXPOSURE_LABEL: Record<SignalExposure, string> = {
@@ -320,7 +320,7 @@ function InspectPanel({ initialId }: { initialId?: string }) {
 
       {error && (
         <Card className="border-[var(--red-dim)]">
-          <p className="text-sm text-[var(--red)] font-mono">{(error as Error).message}</p>
+          <p className="text-sm text-[var(--red-text)] font-mono">{(error as Error).message}</p>
         </Card>
       )}
 
@@ -448,7 +448,7 @@ function ComparePanel() {
 
       {error && (
         <Card className="border-[var(--red-dim)]">
-          <p className="text-sm text-[var(--red)] font-mono">{(error as Error).message}</p>
+          <p className="text-sm text-[var(--red-text)] font-mono">{(error as Error).message}</p>
         </Card>
       )}
 
@@ -497,7 +497,7 @@ const VERDICT_META: Record<Verdict, { label: string; color: string; borderClass:
   },
   diverged: {
     label: '✗ Diverged',
-    color: 'var(--red)',
+    color: 'var(--red-text)',
     borderClass: 'border-[var(--red-dim)]',
     blurb: 'The deployed WASM differs from this source in ways that change which host APIs are reachable, or a module is missing on one side.',
   },
@@ -512,7 +512,7 @@ const VERDICT_META: Record<Verdict, { label: string; color: string; borderClass:
 const MODULE_STATUS_META: Record<ModuleStatus, { label: string; color: string }> = {
   exact: { label: 'byte-exact', color: 'var(--green)' },
   structural: { label: 'structural', color: 'var(--green)' },
-  diverged: { label: 'diverged', color: 'var(--red)' },
+  diverged: { label: 'diverged', color: 'var(--red-text)' },
   'only-built': { label: 'only in source', color: 'var(--amber)' },
   'only-deployed': { label: 'only deployed', color: 'var(--amber)' },
 };
@@ -596,7 +596,7 @@ function SourceVerification({ deploymentId, defaultRepoUrl }: { deploymentId: st
 
           {error && (
             <Card className="border-[var(--red-dim)]">
-              <p className="text-sm text-[var(--red)] font-mono">{error.message}</p>
+              <p className="text-sm text-[var(--red-text)] font-mono">{error.message}</p>
             </Card>
           )}
 
@@ -646,7 +646,7 @@ function VerifyReport({ result }: { result: VerifyData }) {
           </div>
         </CardHeader>
         <CardContent>
-          {result.build.error && <p className="text-[12px] text-[var(--red)] mb-2">{result.build.error}</p>}
+          {result.build.error && <p className="text-[12px] text-[var(--red-text)] mb-2">{result.build.error}</p>}
           <pre className="max-h-80 overflow-auto text-[11px] font-mono text-[var(--text-muted)] whitespace-pre-wrap bg-[var(--bg-elevated)] rounded-[var(--radius-button)] p-3">
             {result.build.log || '(no output)'}
           </pre>
@@ -687,7 +687,7 @@ function ModuleTable({ modules }: { modules: ModuleComparison[] }) {
                         <span key={`+${h}`} className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'var(--green-dim)', color: 'var(--green)' }}>+ {h}</span>
                       ))}
                       {m.hostImportsRemoved.map((h) => (
-                        <span key={`-${h}`} className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'var(--red-dim)', color: 'var(--red)' }}>− {h}</span>
+                        <span key={`-${h}`} className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'var(--red-dim)', color: 'var(--red-text)' }}>− {h}</span>
                       ))}
                     </span>
                   )}
@@ -891,7 +891,7 @@ function DataSourceBlock({ ds, health }: { ds: DataSourceReport; health?: Deploy
           </div>
 
           {ds.error ? (
-            <p className="text-[12px] text-[var(--red)] font-mono">{ds.error}</p>
+            <p className="text-[12px] text-[var(--red-text)] font-mono">{ds.error}</p>
           ) : (
             <HandlerTable handlers={ds.handlers} />
           )}
@@ -965,7 +965,7 @@ function DecodeAuditPanel({ audit, health }: { audit: DecodeAudit; health?: Depl
           </p>
         ) : (
           <div className="space-y-3">
-            <p className="text-[12px] text-[var(--red)]">
+            <p className="text-[12px] text-[var(--red-text)]">
               {audit.findings.length} type string{audit.findings.length === 1 ? '' : 's'} that <strong>ethabi accepted (graph-node ≤0.41)</strong> but{' '}
               <strong>alloy rejects (≥0.42)</strong> — <code className="font-mono">ethereum.decode</code> returns <code className="font-mono">null</code> for these on modern graph-node.
             </p>
@@ -1009,7 +1009,7 @@ function DecodeFindingCard({ f }: { f: DecodeFinding }) {
       </div>
       <div className="text-[11px] text-[var(--text-muted)]">
         <span className="text-[var(--text-faint)]">alloy (≥0.42): </span>
-        <span className="font-mono text-[var(--red)]">rejected</span>
+        <span className="font-mono text-[var(--red-text)]">rejected</span>
         <span className="text-[var(--text-faint)]"> · {f.alloyReason}</span>
       </div>
     </div>
@@ -1027,7 +1027,7 @@ function DecodeHealthNote({ health }: { health?: DeploymentHealth | null }) {
     return (
       <div
         className="text-[12px] rounded-[var(--radius-button)] px-2.5 py-1.5"
-        style={{ background: 'color-mix(in srgb, var(--red) 10%, transparent)', color: 'var(--red)' }}
+        style={{ background: 'color-mix(in srgb, var(--red) 10%, transparent)', color: 'var(--red-text)' }}
       >
         <strong>Loud failure:</strong> {health.failedCount} of {alive} reporting indexer(s) are in a
         deterministic-failure state, consistent with a mapping that asserts on the decode result.
@@ -1111,7 +1111,7 @@ function Collapsible({ label, children }: { label: string; children: React.React
 const HANDLER_STATUS_META: Record<HandlerStatus, { label: string; color: string; symbol: string }> = {
   changed: { label: 'changed', color: 'var(--amber)', symbol: '~' },
   added: { label: 'added', color: 'var(--green)', symbol: '+' },
-  removed: { label: 'removed', color: 'var(--red)', symbol: '−' },
+  removed: { label: 'removed', color: 'var(--red-text)', symbol: '−' },
   unchanged: { label: 'unchanged', color: 'var(--text-faint)', symbol: '=' },
 };
 
@@ -1327,7 +1327,7 @@ function HandlerDiffTable({ rows }: { rows: HandlerDiffEntry[] }) {
                         <span key={`+${c}`} className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'var(--green-dim)', color: 'var(--green)' }}>+ {CATEGORY_META[c].label}</span>
                       ))}
                       {h.categoriesRemoved.map((c) => (
-                        <span key={`-${c}`} className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'var(--red-dim)', color: 'var(--red)' }}>− {CATEGORY_META[c].label}</span>
+                        <span key={`-${c}`} className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'var(--red-dim)', color: 'var(--red-text)' }}>− {CATEGORY_META[c].label}</span>
                       ))}
                       {h.resolvedChanged && (
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'var(--bg-elevated)', color: 'var(--amber)' }} title="Whether the handler resolved as a WASM export">

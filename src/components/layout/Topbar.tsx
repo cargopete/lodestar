@@ -88,7 +88,7 @@ export function Topbar() {
                   <span
                     className={cn(
                       'text-[11px] font-mono',
-                      change24h >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'
+                      change24h >= 0 ? 'text-[var(--green)]' : 'text-[var(--red-text)]'
                     )}
                   >
                     {change24h >= 0 ? '+' : ''}{change24h.toFixed(2)}%
@@ -144,7 +144,7 @@ export function Topbar() {
                       disconnect();
                       setShowAccountMenu(false);
                     }}
-                    className="w-full text-left px-3.5 py-2 text-[13px] text-[var(--red)] hover:bg-[var(--bg-elevated)] transition-colors"
+                    className="w-full text-left px-3.5 py-2 text-[13px] text-[var(--red-text)] hover:bg-[var(--bg-elevated)] transition-colors"
                   >
                     Disconnect
                   </button>

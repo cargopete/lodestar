@@ -78,7 +78,7 @@ function LeaderboardTable() {
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-sm">
                     {realized > 0
-                      ? <span className={cn(returnPct >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]')}>
+                      ? <span className={cn(returnPct >= 0 ? 'text-[var(--green)]' : 'text-[var(--red-text)]')}>
                           {returnPct.toFixed(2)}%
                         </span>
                       : <span className="text-[var(--text-faint)]">—</span>}
@@ -111,7 +111,7 @@ function LeaderboardTable() {
                     <span className="font-mono text-sm text-[var(--text)]">{shortenAddress(curator.id, 6)}</span>
                   </div>
                   {realized > 0 && (
-                    <span className={cn('text-sm font-mono font-semibold', returnPct >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]')}>
+                    <span className={cn('text-sm font-mono font-semibold', returnPct >= 0 ? 'text-[var(--green)]' : 'text-[var(--red-text)]')}>
                       {returnPct.toFixed(2)}%
                     </span>
                   )}

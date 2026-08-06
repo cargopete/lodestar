@@ -190,7 +190,7 @@ export function PnlPanel({ indexer, grtPrice }: { indexer: string; grtPrice: num
                 <Stat
                   label="Net"
                   value={p.net_usd != null ? formatUSD(p.net_usd) : '—'}
-                  valueClass={p.net_usd != null ? (p.net_usd >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]') : undefined}
+                  valueClass={p.net_usd != null ? (p.net_usd >= 0 ? 'text-[var(--green)]' : 'text-[var(--red-text)]') : undefined}
                   sub={p.margin_pct != null ? `${p.margin_pct.toFixed(1)}% margin` : 'set GRT price'}
                 />
               </div>

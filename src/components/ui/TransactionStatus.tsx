@@ -47,7 +47,7 @@ export function TransactionStatus({ steps, txHash, error, className }: Transacti
               'text-xs whitespace-nowrap',
               step.status === 'active' && 'text-[var(--accent-text)] font-medium',
               step.status === 'done' && 'text-[var(--green)]',
-              step.status === 'error' && 'text-[var(--red)]',
+              step.status === 'error' && 'text-[var(--red-text)]',
               step.status === 'pending' && 'text-[var(--text-faint)]',
             )}>
               {step.label}
@@ -65,7 +65,7 @@ export function TransactionStatus({ steps, txHash, error, className }: Transacti
 
       {/* Error message */}
       {error && (
-        <p className="text-xs text-[var(--red)] bg-[var(--red-dim)] px-3 py-2 rounded-md">
+        <p className="text-xs text-[var(--red-text)] bg-[var(--red-dim)] px-3 py-2 rounded-md">
           {error}
         </p>
       )}

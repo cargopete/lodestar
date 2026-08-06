@@ -50,7 +50,7 @@ export function PushSubscribeButton({ className }: PushSubscribeButtonProps) {
         className={cn(
           'px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
           error
-            ? 'bg-[var(--red)]/15 text-[var(--red)] hover:bg-[var(--red)]/25'
+            ? 'bg-[var(--red)]/15 text-[var(--red-text)] hover:bg-[var(--red)]/25'
             : subscribed
               ? 'bg-[var(--green)]/15 text-[var(--green)] hover:bg-[var(--green)]/25'
               : 'bg-[var(--accent)]/15 text-[var(--accent-text)] hover:bg-[var(--accent)]/25',

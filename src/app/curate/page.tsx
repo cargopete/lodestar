@@ -154,7 +154,7 @@ function SignalModal({
                     Max
                   </button>
                 </div>
-                {insufficient && <p className="text-xs text-[var(--red)] mt-1">Insufficient GRT balance</p>}
+                {insufficient && <p className="text-xs text-[var(--red-text)] mt-1">Insufficient GRT balance</p>}
               </div>
 
               <p className="text-xs text-[var(--text-faint)] bg-[var(--bg-elevated)] rounded p-2.5 border border-[var(--border)]">
@@ -328,7 +328,7 @@ function PositionRow({ signal }: { signal: Signal }) {
           </button>
           <button
             onClick={() => setUnsignalModal(true)}
-            className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--red)] hover:border-[var(--red)] transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--red-text)] hover:border-[var(--red)] transition-colors"
           >
             Remove
           </button>

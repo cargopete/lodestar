@@ -34,6 +34,10 @@
   --green-dim: rgba(75, 202, 129, 0.12);
   --red: rgb(237, 74, 109);
   --red-dim: rgba(237, 74, 109, 0.12);
+  /* Red for TEXT. --red is 3.37:1 on --bg-elevated and 2.76:1 on a red-dim
+     tint, so it failed AA everywhere it was used as type. This tint clears
+     4.5:1 on both. Use --red for fills and borders, --red-text for type. */
+  --red-text: rgb(244, 146, 167);
   --amber: rgb(255, 168, 1);
   --amber-dim: rgba(255, 168, 1, 0.12);
   --cyan: rgb(102, 216, 255);

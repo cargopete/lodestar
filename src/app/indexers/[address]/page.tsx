@@ -447,11 +447,11 @@ export default function IndexerDetailPage({
       {/* Greedy Indexer Warning */}
       {isGreedyCut(indexer.indexingRewardCut) && (
         <div className="flex items-start gap-3 p-4 rounded-lg border bg-[var(--red-dim)] border-[var(--red)]">
-          <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-[var(--red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-[var(--red-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
           <div>
-            <p className="text-sm font-medium text-[var(--red)]">
+            <p className="text-sm font-medium text-[var(--red-text)]">
               This indexer takes 100% of indexing rewards
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
@@ -648,7 +648,7 @@ export default function IndexerDetailPage({
                       'text-2xl font-mono font-bold',
                       indexerScore.composite >= 80 ? 'text-[var(--green)]' :
                       indexerScore.composite >= 65 ? 'text-[var(--teal, var(--green))]' :
-                      indexerScore.composite >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                      indexerScore.composite >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red-text)]'
                     )}>
                       {indexerScore.composite}
                     </span>
@@ -678,7 +678,7 @@ export default function IndexerDetailPage({
                           <span className={cn(
                             'text-xs font-mono font-medium',
                             dimScore >= 80 ? 'text-[var(--green)]' :
-                            dimScore >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                            dimScore >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red-text)]'
                           )}>
                             {dimScore}
                           </span>
@@ -924,7 +924,7 @@ export default function IndexerDetailPage({
                             </div>
                           )}
                           {dep.status === 'failed' && dep.fatalError && (
-                            <p className="text-[10px] text-[var(--red)] mt-0.5 max-w-[200px] truncate" title={dep.fatalError}>
+                            <p className="text-[10px] text-[var(--red-text)] mt-0.5 max-w-[200px] truncate" title={dep.fatalError}>
                               {dep.fatalError}
                             </p>
                           )}
@@ -948,7 +948,7 @@ export default function IndexerDetailPage({
                           {dep.blocksBehind != null ? (
                             <span className={cn(
                               'font-mono text-sm',
-                              dep.blocksBehind <= 50 ? 'text-[var(--green)]' : dep.blocksBehind <= 500 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                              dep.blocksBehind <= 50 ? 'text-[var(--green)]' : dep.blocksBehind <= 500 ? 'text-[var(--amber)]' : 'text-[var(--red-text)]'
                             )}>
                               {dep.blocksBehind === 0 ? 'At head' : dep.blocksBehind.toLocaleString()}
                             </span>

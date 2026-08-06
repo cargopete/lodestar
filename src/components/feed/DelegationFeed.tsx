@@ -12,7 +12,7 @@ const EVENT_CONFIG: Record<string, { label: string; color: string; sign: '+' | '
   StakeDelegatedLocked: { label: 'Delegated', color: 'var(--green)', sign: '+' },
   StakeUndelegated: { label: 'Undelegated', color: 'var(--amber)', sign: '-' },
   StakeUndelegatedLocked: { label: 'Undelegated', color: 'var(--amber)', sign: '-' },
-  StakeDelegatedWithdrawn: { label: 'Withdrawn', color: 'var(--red)', sign: '-' },
+  StakeDelegatedWithdrawn: { label: 'Withdrawn', color: 'var(--red-text)', sign: '-' },
 };
 
 interface DelegationFeedProps {

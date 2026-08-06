@@ -270,7 +270,7 @@ function LifecycleModal({
           {step === 'idle' && kind === 'transfer' && (
             <>
               <div className="p-3 rounded-lg bg-[var(--red-dim)] border border-[var(--red)]/30">
-                <p className="text-sm font-medium text-[var(--red)]">This is irreversible.</p>
+                <p className="text-sm font-medium text-[var(--red-text)]">This is irreversible.</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
                   Transferring sends the subgraph NFT (#{nftId}) to another wallet. You will lose all control,
                   you cannot update versions, edit metadata, or take it back. Make absolutely sure the recipient
@@ -279,7 +279,7 @@ function LifecycleModal({
               </div>
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5">
-                  Recipient address <span className="text-[var(--red)]">*</span>
+                  Recipient address <span className="text-[var(--red-text)]">*</span>
                 </label>
                 <input
                   type="text"
@@ -295,7 +295,7 @@ function LifecycleModal({
               </div>
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5">
-                  Confirm recipient address <span className="text-[var(--red)]">*</span>
+                  Confirm recipient address <span className="text-[var(--red-text)]">*</span>
                 </label>
                 <input
                   type="text"
@@ -309,14 +309,14 @@ function LifecycleModal({
                   )}
                 />
                 {recipient.length > 0 && !isAddress(recipient) && (
-                  <p className="text-xs text-[var(--red)] mt-1">Not a valid address.</p>
+                  <p className="text-xs text-[var(--red-text)] mt-1">Not a valid address.</p>
                 )}
                 {isAddress(recipient) &&
                   recipient.toLowerCase() === (address?.toLowerCase() ?? '') && (
-                    <p className="text-xs text-[var(--red)] mt-1">That&apos;s your own address.</p>
+                    <p className="text-xs text-[var(--red-text)] mt-1">That&apos;s your own address.</p>
                   )}
                 {recipientConfirm.length > 0 && recipient.toLowerCase() !== recipientConfirm.toLowerCase() && (
-                  <p className="text-xs text-[var(--red)] mt-1">Addresses don&apos;t match.</p>
+                  <p className="text-xs text-[var(--red-text)] mt-1">Addresses don&apos;t match.</p>
                 )}
               </div>
               <div className="flex gap-3">
@@ -340,7 +340,7 @@ function LifecycleModal({
           {step === 'idle' && kind === 'deprecate' && (
             <>
               <div className="p-3 rounded-lg bg-[var(--red-dim)] border border-[var(--red)]/30">
-                <p className="text-sm font-medium text-[var(--red)]">This deprecates your subgraph.</p>
+                <p className="text-sm font-medium text-[var(--red-text)]">This deprecates your subgraph.</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
                   Calls <code className="font-mono">GNS.deprecateSubgraph</code> on subgraph #{nftId}. The subgraph
                   is removed from The Graph Network, curators can withdraw their signal, and it can no longer be
@@ -452,7 +452,7 @@ function LifecycleModal({
 
           {step === 'error' && (
             <div className="space-y-4">
-              <p className="text-sm text-[var(--red)] whitespace-pre-wrap break-all">{errMsg || 'Something went wrong.'}</p>
+              <p className="text-sm text-[var(--red-text)] whitespace-pre-wrap break-all">{errMsg || 'Something went wrong.'}</p>
               <button
                 onClick={() => setStep('idle')}
                 className="w-full px-4 py-2 text-sm rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
@@ -518,7 +518,7 @@ export function SubgraphLifecyclePanel({
         </button>
         <button
           onClick={() => setActive('deprecate')}
-          className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] border border-[var(--red)]/40 text-[var(--red)] hover:bg-[var(--red-dim)] transition-colors"
+          className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] border border-[var(--red)]/40 text-[var(--red-text)] hover:bg-[var(--red-dim)] transition-colors"
         >
           Deprecate
         </button>

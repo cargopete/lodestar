@@ -328,7 +328,7 @@ function CompareContent() {
                 <button
                   type="button"
                   onClick={() => removeSlot(idx)}
-                  className="text-xs text-[var(--text-faint)] hover:text-[var(--red)] transition-colors"
+                  className="text-xs text-[var(--text-faint)] hover:text-[var(--red-text)] transition-colors"
                 >
                   Remove
                 </button>

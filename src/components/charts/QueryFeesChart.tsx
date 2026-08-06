@@ -183,7 +183,7 @@ export function QueryFeesChart() {
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)] flex flex-col justify-center items-center">
                 <p className="text-[10px] text-[var(--text-faint)] mb-1">QoQ Change (So Far)</p>
-                <p className={`text-lg font-mono font-semibold ${quarterDeltaPositive ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+                <p className={`text-lg font-mono font-semibold ${quarterDeltaPositive ? 'text-[var(--green)]' : 'text-[var(--red-text)]'}`}>
                   {quarterDeltaPositive ? '+' : ''}{quarterDelta.toFixed(1)}%
                 </p>
               </div>
@@ -249,7 +249,7 @@ export function QueryFeesChart() {
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)] flex flex-col justify-center items-center">
                 <p className="text-[10px] text-[var(--text-faint)] mb-1">Change</p>
-                <p className={`text-lg font-mono font-semibold ${deltaPositive ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+                <p className={`text-lg font-mono font-semibold ${deltaPositive ? 'text-[var(--green)]' : 'text-[var(--red-text)]'}`}>
                   {deltaPositive ? '+' : ''}{delta.toFixed(1)}%
                 </p>
               </div>

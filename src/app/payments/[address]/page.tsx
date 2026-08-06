@@ -286,7 +286,7 @@ export default function IndexerPaymentsPage({
                 const typeColors: Record<string, string> = {
                   deposit: 'text-[var(--green)]',
                   redeem: 'text-[var(--green)]',
-                  withdraw: 'text-[var(--red)]',
+                  withdraw: 'text-[var(--red-text)]',
                   thaw: 'text-[var(--amber)]',
                 };
                 return (

@@ -412,7 +412,7 @@ export function IndexerTable() {
                     <span className={cn(
                       'block font-medium',
                       row.reoStatus === 'eligible' ? 'text-[var(--green)]'
-                        : row.reoStatus === 'ineligible' ? 'text-[var(--red)]'
+                        : row.reoStatus === 'ineligible' ? 'text-[var(--red-text)]'
                         : 'text-[var(--text-faint)]'
                     )}>
                       {row.reoStatus === 'eligible' ? 'Eligible'
@@ -446,11 +446,11 @@ export function IndexerTable() {
                         </span>
                       )}
                       {row.recentDelegations.undelegations > 0 && (
-                        <span className="block text-[var(--red)]">
+                        <span className="block text-[var(--red-text)]">
                           {row.recentDelegations.undelegations} undelegation{row.recentDelegations.undelegations !== 1 ? 's' : ''}
                         </span>
                       )}
-                      <span className={`block font-mono mt-0.5 ${row.recentDelegations.netFlowGRT >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+                      <span className={`block font-mono mt-0.5 ${row.recentDelegations.netFlowGRT >= 0 ? 'text-[var(--green)]' : 'text-[var(--red-text)]'}`}>
                         {row.recentDelegations.netFlowGRT >= 0 ? '+' : ''}{formatGRT(row.recentDelegations.netFlowGRT)} GRT
                       </span>
                     </span>
@@ -515,10 +515,10 @@ export function IndexerTable() {
                 </span>
               )}
               {flags?.needsAttention && (
-                <span className="text-[10px] text-[var(--red)]" title="Needs attention">!</span>
+                <span className="text-[10px] text-[var(--red-text)]" title="Needs attention">!</span>
               )}
               {flags?.sybil && (
-                <span className="text-[10px] text-[var(--red)]" title="Sybil swarm member">◆</span>
+                <span className="text-[10px] text-[var(--red-text)]" title="Sybil swarm member">◆</span>
               )}
             </span>
           );
@@ -572,7 +572,7 @@ export function IndexerTable() {
             <div className={greedy ? 'relative group/greedy' : undefined}>
               <span className={cn(
                 'font-mono flex items-center gap-1.5',
-                greedy ? 'text-[var(--red)] font-semibold' : 'text-[var(--text)]'
+                greedy ? 'text-[var(--red-text)] font-semibold' : 'text-[var(--text)]'
               )}>
                 {formatPPM(info.getValue())}
                 {recentChange && (
@@ -879,7 +879,7 @@ export function IndexerTable() {
                         {d.score !== null && (
                           <span className={cn(
                             'text-xs font-mono font-semibold',
-                            d.score >= 80 ? 'text-[var(--green)]' : d.score >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red)]'
+                            d.score >= 80 ? 'text-[var(--green)]' : d.score >= 50 ? 'text-[var(--amber)]' : 'text-[var(--red-text)]'
                           )}>
                             {d.score}{d.scoreGrade && <span className="text-[10px] ml-0.5 opacity-70">{d.scoreGrade}</span>}
                           </span>
@@ -897,7 +897,7 @@ export function IndexerTable() {
                         <p className="text-[10px] text-[var(--text-faint)]">Cut</p>
                         <p className={cn(
                           'text-xs font-mono flex items-center justify-center gap-1',
-                          isGreedyCut(d.rewardCut) ? 'text-[var(--red)] font-semibold' : 'text-[var(--text)]'
+                          isGreedyCut(d.rewardCut) ? 'text-[var(--red-text)] font-semibold' : 'text-[var(--text)]'
                         )}>
                           {formatPPM(d.rewardCut)}
                           {(() => {

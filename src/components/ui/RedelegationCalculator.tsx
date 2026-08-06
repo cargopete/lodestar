@@ -219,7 +219,7 @@ export function RedelegationCalculator({
             <span
               className={cn(
                 'text-xl font-mono font-semibold',
-                result.aprDifference > 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'
+                result.aprDifference > 0 ? 'text-[var(--green)]' : 'text-[var(--red-text)]'
               )}
             >
               {result.aprDifference > 0 ? '+' : ''}{result.aprDifference.toFixed(2)}%
@@ -289,7 +289,7 @@ export function RedelegationCalculator({
                 <p
                   className={cn(
                     'text-sm font-mono font-semibold',
-                    proj.value > 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'
+                    proj.value > 0 ? 'text-[var(--green)]' : 'text-[var(--red-text)]'
                   )}
                 >
                   {proj.value > 0 ? '+' : ''}{formatGRT(proj.value)}

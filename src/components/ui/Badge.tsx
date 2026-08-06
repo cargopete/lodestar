@@ -18,7 +18,7 @@ const variantStyles: Record<BadgeVariant, string> = {
   accent: 'bg-[var(--accent-dim)] text-[var(--accent-text)]',
   success: 'bg-[var(--green-dim)] text-[var(--green)]',
   warning: 'bg-[var(--amber-dim)] text-[var(--amber)]',
-  error: 'bg-[var(--red-dim)] text-[var(--red)]',
+  error: 'bg-[var(--red-dim)] text-[var(--red-text)]',
 };
 
 export function Badge({ children, variant = 'default', className, title, onClick }: BadgeProps) {
