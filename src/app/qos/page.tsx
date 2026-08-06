@@ -1298,7 +1298,7 @@ export default function QosPage() {
               </li>
               <li>
                 <strong>Nulls mean not measured.</strong> Correctness is null when nothing was
-                comparable, never 100%. Fees are null until probes are TAP-paid, never zero.
+                comparable, never 100%. The per-bucket fee fields are null permanently, not pending: probes are now TAP-paid, but what we spend is not what an indexer earns. Realised earnings come from Arbitrum settlement, above.
               </li>
             </ul>
           </section>
