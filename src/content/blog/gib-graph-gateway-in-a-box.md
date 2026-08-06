@@ -13,7 +13,7 @@ excerpt: "Announcing gib v0.2 — a self-hostable Graph Protocol gateway distrib
 
 The Graph decentralized its indexers years ago. Its gateways — the layer that takes your query, picks indexers, pays them per request, and hands you back data — remained, in practice, one company's production deployment. Not because the code is closed (it's MIT, and it's good), but because standing up your own gateway meant reading that code end to end, reverse-engineering an undocumented config schema, wiring up three auxiliary services and a Kafka bus, pulling contract addresses out of a monorepo, and then discovering the parts nobody wrote down.
 
-I know, because I did all of that. **gib** (gateway-in-a-box) is the result: the whole Horizon gateway stack — gateway, TAP aggregator, escrow manager, Redpanda — in a Docker Compose distribution configured from a single documented `.env`.
+I know, because I did all of that. **gib** (gateway-in-a-box) is the result: the whole Horizon gateway stack (gateway, TAP aggregator, escrow manager, Redpanda) in a Docker Compose distribution configured from a single documented `.env`.
 
 **Repo:** [github.com/nightswatchhq/gib](https://github.com/nightswatchhq/gib) · **Release:** v0.2.0
 
@@ -58,12 +58,12 @@ That's the honest shape of gateway decentralization today: the software is one `
 
 The README's Status section says this with no hedging, so the blog post will too. **Proven:** deployment from the published, pinned image; a cold stranger deploy from the README alone; topology sync; receipt signing verified by live indexers; receipt→RAV aggregation, cryptographically verified, negative tests included. **Never done:** no payment has ever flowed — not on any network, not once; on-chain RAV redemption is untouched; no paid query has ever returned data. Those require funded escrow and indexer whitelisting — by design, the operator's step, not the box's.
 
-One number that surprised us: the gateway holds the entire Arbitrum One network topology — ~16k subgraphs, ~26k deployments — in about **207 MB** of resident memory. The whole stack runs in ~570 MB. A €4 VPS runs a Graph gateway. We expected gigabytes; we measured, and the measurements are in the README.
+One number that surprised us: the gateway holds the entire Arbitrum One network topology (~16k subgraphs, ~26k deployments) in about **207 MB** of resident memory. The whole stack runs in ~570 MB. A €4 VPS runs a Graph gateway. We expected gigabytes; we measured, and the measurements are in the README.
 
 ## Why Lodestar is doing this
 
 Lodestar exists to make The Graph's network legible — QoS, indexer analytics, the state of the protocol as it actually is. Gateways are the layer where legibility currently ends: one operator, one selection algorithm, one set of routing decisions. gib is our contribution to changing that — and yes, gib ships with the gateway's indexer-selection weights exposed as configuration, so an operator can decide for themselves how latency trades against price against stake.
 
-If you're a gateway operator — or about to become one — try it. The friction list is the contribution I want most: every step where the docs fail you is a bug, and I'll fix it fast. And if you're an indexer wondering whether independent gateways are worth whitelisting: that conversation is exactly the one this release is meant to start.
+If you're a gateway operator (or about to become one) try it. The friction list is the contribution I want most: every step where the docs fail you is a bug, and I'll fix it fast. And if you're an indexer wondering whether independent gateways are worth whitelisting: that conversation is exactly the one this release is meant to start.
 
 *— Petko ([cargopete](https://github.com/cargopete)) · [Lodestar](https://www.lodestar-dashboard.com) · gib is MIT, built on the excellent open-source work of Edge & Node, Semiotic Labs, and The Graph's core devs.*

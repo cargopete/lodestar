@@ -11,7 +11,7 @@ The Graph's Horizon framework doesn't care what a data service serves. Provision
 
 There's an official Substreams Data Service in the works — the MVP scope is essentially complete, and the team behind it has tested it on their own cluster. But the contract work to make it *permissionless* and the layers of testing and infrastructure to make it *usable by anyone* are still ahead. So rather than wait, we did what this blog tends to do: we forked it, finished the sharp edges ourselves, and shipped something you can actually join.
 
-It's called **SDSCE — the Substreams Data Service Community Edition** — and as of today the contract is **live on Arbitrum One**.
+It's called **SDSCE (the Substreams Data Service Community Edition**) and as of today the contract is **live on Arbitrum One**.
 
 A loud, upfront caveat, because we'd rather you hear it from us: **SDSCE is a community edition. It is not affiliated with, endorsed by, or supported by the Graph Foundation or Edge & Node.** The "Community Edition" name is deliberate — it leaves room for an official Substreams Data Service to ship later, distinct from this one. It is **experimental and has not had an external audit** (only our own internal review). Treat it accordingly. Don't put funds behind it that you can't afford to lose.
 
@@ -64,7 +64,7 @@ SDSCE charges a **fixed 1% data-service cut on every collection — and burns it
 
 ## What's deployed
 
-The contract is **live on Arbitrum One** (chain `42161`). It's **UUPS-upgradeable** behind an ERC1967 proxy — so we can patch or extend it — with two-step (`Ownable2Step`) ownership over upgrades.
+The contract is **live on Arbitrum One** (chain `42161`). It's **UUPS-upgradeable** behind an ERC1967 proxy (so we can patch or extend it) with two-step (`Ownable2Step`) ownership over upgrades.
 
 | | Address |
 |---|---|
@@ -73,7 +73,7 @@ The contract is **live on Arbitrum One** (chain `42161`). It's **UUPS-upgradeabl
 | PaymentsEscrow (Horizon) | `0xf6Fcc27aAf1fcD8B254498c9794451d82afC673E` |
 | HorizonStaking (Horizon) | `0x00669A4CF01450B64E8A2A20E9b1FCB71E61eF03` |
 
-We proved the whole path against a fork of real Arbitrum One before deploying — provisioning, registration, escrow funding, signed-RAV collection, and the burn — plus a full streaming → metered-RAV → collect run through a real `firecore` runtime. The repo's rehearsal scripts and integration tests reproduce all of it.
+We proved the whole path against a fork of real Arbitrum One before deploying (provisioning, registration, escrow funding, signed-RAV collection, and the burn) plus a full streaming → metered-RAV → collect run through a real `firecore` runtime. The repo's rehearsal scripts and integration tests reproduce all of it.
 
 ### Honest status
 

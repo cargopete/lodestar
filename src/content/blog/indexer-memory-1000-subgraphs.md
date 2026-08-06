@@ -83,7 +83,7 @@ Combined: roughly **1–3 GB**. Negligible relative to graph-node and entirely i
 
 No public case study documents a single indexer running 1,000+ subgraphs on one machine. The largest community-documented deployment is a **~30-subgraph setup on AWS** that used **96 GB across three VM nodes** (3 × r6g.xlarge at 32 GB each) plus **64 GB for Aurora PostgreSQL** — ~160 GB total for 30 subgraphs, at ~$7,130/month.
 
-A production Kubernetes deployment documented by Vinta allocated 1 GB per index node container and 8 GB per query node container, with a key observation: *"indexing subgraphs doesn't require too much CPU and memory resources, but serving queries does, especially when you enable GraphQL caching."* Query serving — not indexing — is the primary memory driver above the entity-cache baseline.
+A production Kubernetes deployment documented by Vinta allocated 1 GB per index node container and 8 GB per query node container, with a key observation: *"indexing subgraphs doesn't require too much CPU and memory resources, but serving queries does, especially when you enable GraphQL caching."* Query serving (not indexing) is the primary memory driver above the entity-cache baseline.
 
 The StakeSquid mainnet guide summarises the scaling reality plainly: *"More CPUs, more RAM, faster disks. There is never enough."*
 
@@ -137,7 +137,7 @@ If you're capacity planning for 1,000 subgraphs, spend as much time on your Post
 
 Nobody knows exactly — and that's the honest answer. "All currently used subgraphs" isn't a fixed target, and no public operator data exists for anything close to 15,500 subgraphs on a single stack. But the math from first principles is instructive.
 
-**Not all 15,500 subgraphs are equally alive.** Industry estimates put the active-to-dormant split at roughly 20–30% meaningfully active, with the rest deployed but cold. That's approximately 4,000 subgraphs serving real query traffic and ~11,500 that are kept current but rarely touched. Cold subgraphs still need to be indexed — you can't skip them — but their entity cache can be tuned down aggressively without meaningfully harming latency for the handful of queries they do receive.
+**Not all 15,500 subgraphs are equally alive.** Industry estimates put the active-to-dormant split at roughly 20–30% meaningfully active, with the rest deployed but cold. That's approximately 4,000 subgraphs serving real query traffic and ~11,500 that are kept current but rarely touched. Cold subgraphs still need to be indexed (you can't skip them) but their entity cache can be tuned down aggressively without meaningfully harming latency for the handful of queries they do receive.
 
 Working through the entity cache math with two pools:
 

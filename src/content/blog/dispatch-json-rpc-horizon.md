@@ -13,9 +13,9 @@ excerpt: "Every dApp on Earth relies on Alchemy or Infura for JSON-RPC. Dispatch
 >
 > Feedback, contributions, and wild ideas are very warmly welcome. If you want to help shape what this becomes, open an issue or PR on [GitHub](https://github.com/cargopete/dispatch).
 
-Every dApp on Earth quietly depends on Alchemy or Infura. When you call `eth_getBalance` in your frontend, that request is almost certainly hitting a centralised API run by a handful of companies. They can go down, rate-limit you, change pricing overnight, or — in the extreme case — be compelled to censor specific addresses.
+Every dApp on Earth quietly depends on Alchemy or Infura. When you call `eth_getBalance` in your frontend, that request is almost certainly hitting a centralised API run by a handful of companies. They can go down, rate-limit you, change pricing overnight, or (in the extreme case) be compelled to censor specific addresses.
 
-The Graph Protocol's entire thesis is that blockchain data infrastructure should be decentralised. It's done that for Subgraph data remarkably well. But the most fundamental piece of infrastructure — plain JSON-RPC — has stayed centralised.
+The Graph Protocol's entire thesis is that blockchain data infrastructure should be decentralised. It's done that for Subgraph data remarkably well. But the most fundamental piece of infrastructure (plain JSON-RPC) has stayed centralised.
 
 **Dispatch** is a community attempt to explore what that might look like. It's a proof of concept for a decentralised JSON-RPC data service built on The Graph's Horizon framework. The first provider is live and serving real traffic — but "live" means "the experiment is running", not "production-ready". This is unofficial, unsupported, and very much a work in progress.
 
@@ -137,7 +137,7 @@ cp docker/config.example.toml docker/config.toml
 docker compose -f docker/docker-compose.yml up
 ```
 
-The `@graph-dispatch/indexer-agent` npm package handles the on-chain lifecycle — `register`, `startService`, `stopService` — and reconciles automatically on a cron interval.
+The `@graph-dispatch/indexer-agent` npm package handles the on-chain lifecycle (`register`, `startService`, `stopService`) and reconciles automatically on a cron interval.
 
 ```typescript
 import { IndexerAgent } from "@graph-dispatch/indexer-agent";

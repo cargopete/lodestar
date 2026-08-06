@@ -57,7 +57,7 @@ Edge & Node reports:
 - **4,350x faster backfills** than traditional RPC endpoints
 - Throughput exceeding **4 million events per second**
 
-These are self-reported numbers. But the underlying stack — Rust, Arrow, Parquet, DataFusion — is the same stack that powers some of the fastest analytical databases in the industry, so the claims are at least architecturally plausible.
+These are self-reported numbers. But the underlying stack (Rust, Arrow, Parquet, DataFusion) is the same stack that powers some of the fastest analytical databases in the industry, so the claims are at least architecturally plausible.
 
 ## Query interfaces and integrations
 

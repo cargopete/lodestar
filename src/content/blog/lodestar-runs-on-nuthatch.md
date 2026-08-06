@@ -31,7 +31,7 @@ A nuthatch **nest** is just config plus vendored ABIs. `nuthatch init 0xAddr --c
 
 That last endpoint is the whole integration surface. Lodestar's server-side routes call it exactly the way they'd call Postgres.
 
-One feature earned its keep on day one. Indexing the whole Graph token contract would mean millions of irrelevant `Transfer` rows, so nuthatch grew a per-contract **event allowlist** — `events = ["TokensDelegated", ...]` — that filters both the decode *and* the `getLogs` topic set. Our staking nest indexes four delegation events instead of HorizonStaking's twenty-eight tables.
+One feature earned its keep on day one. Indexing the whole Graph token contract would mean millions of irrelevant `Transfer` rows, so nuthatch grew a per-contract **event allowlist** (`events = ["TokensDelegated", ...]`) that filters both the decode *and* the `getLogs` topic set. Our staking nest indexes four delegation events instead of HorizonStaking's twenty-eight tables.
 
 ## Panel one: delegation activity
 
@@ -91,7 +91,7 @@ A hang that silently freezes your indexer is exactly the kind of failure that sh
 - **No infinite shrink loops.** A single block whose logs exceed a provider's result cap now fails with a clear message instead of retrying the same block forever.
 - **Reorgs below finality halt loudly** rather than silently letting the sealed layer disagree with the canonical chain; the manifest is written atomically so a `kill -9` can't orphan your segments; and nests don't spin up incremental-view circuits they'll never feed.
 
-None of these were on fire — the live nests are small and sealed — but they're the difference between an indexer you trust with a big cold backfill against a flaky endpoint and one you don't. One performance finding (batching the hot-store writes) we deliberately deferred to its own benchmarked slice, because doing it blind on the storage path would be silly.
+None of these were on fire (the live nests are small and sealed), but they're the difference between an indexer you trust with a big cold backfill against a flaky endpoint and one you don't. One performance finding (batching the hot-store writes) we deliberately deferred to its own benchmarked slice, because doing it blind on the storage path would be silly.
 
 ## How to check it yourself
 
@@ -108,7 +108,7 @@ curl -s https://www.lodestar-dashboard.com/api/developer-activity | jq .data.sou
 
 It proves the wedge works: a real product with real users can take a panel off a third-party data API and serve it from an indexer you run yourself, one panel at a time, gated on parity, with an automatic fallback so nothing is bet on the switch. Two panels down, on 86 MB of RAM and one small box.
 
-What it doesn't prove: everything. The QoS-oracle data still lives on The Graph's free tier (it needs calldata and IPFS ingestion nuthatch doesn't have yet). The developer-activity divergence is real, if tiny, and documented rather than hidden. And "the whole dashboard" is a long road of panels — indexers, allocations, epochs, payments — each with its own aggregation quirks to reproduce faithfully.
+What it doesn't prove: everything. The QoS-oracle data still lives on The Graph's free tier (it needs calldata and IPFS ingestion nuthatch doesn't have yet). The developer-activity divergence is real, if tiny, and documented rather than hidden. And "the whole dashboard" is a long road of panels (indexers, allocations, epochs, payments) each with its own aggregation quirks to reproduce faithfully.
 
 But the read path for two of them now belongs to us. That's the point of "be your own indexer": not a flag day, but a migration you can do on your own terms, with your own eyes on the parity, one honest step at a time.
 

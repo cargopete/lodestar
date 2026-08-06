@@ -11,7 +11,7 @@ excerpt: "Concrete, code-derived cost comparisons between Dispatch and the major
 >
 > Dispatch is not affiliated with The Graph Foundation or Edge & Node. It is an independent experiment exploring decentralised JSON-RPC on Horizon. Not production-ready. Use accordingly.
 
-Every time someone compares "centralised vs decentralised RPC" the pricing numbers are either missing, wrong, or hand-wavy. This post uses concrete numbers derived directly from the Dispatch source code — specifically the `base_price_per_cu` constant in `dispatch-gateway` — and compares them against Alchemy, Infura, and QuickNode's published CU pricing.
+Every time someone compares "centralised vs decentralised RPC" the pricing numbers are either missing, wrong, or hand-wavy. This post uses concrete numbers derived directly from the Dispatch source code (specifically the `base_price_per_cu` constant in `dispatch-gateway`) and compares them against Alchemy, Infura, and QuickNode's published CU pricing.
 
 Then it shows you exactly how to get a working RPC URL from the Dispatch network in under two minutes.
 

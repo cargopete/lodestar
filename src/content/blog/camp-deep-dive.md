@@ -184,7 +184,7 @@ Instead, camp uses a defence-in-depth approach:
 
 2. **A regex denylist** catches the known-dangerous patterns: DDL/DML keywords (`INSERT`, `UPDATE`, `DROP`, `CREATE`, `TRUNCATE`…), file-IO functions (`read_csv`, `read_parquet`, `to_csv`…), system catalogs (`information_schema`, `pg_*`), multi-statement separators, and SQL comments.
 
-3. **`block_num` is required.** Every query must reference `block_num` in the SQL text. Without a block range, a query can table-scan the entire dataset. With one, the worst case is a bounded parquet range scan. This is enforced with a simple regex — not a parse tree — but the regex is applied after the denylist, so a comment trick to hide a `block_num` reference is caught first.
+3. **`block_num` is required.** Every query must reference `block_num` in the SQL text. Without a block range, a query can table-scan the entire dataset. With one, the worst case is a bounded parquet range scan. This is enforced with a simple regex (not a parse tree) but the regex is applied after the denylist, so a comment trick to hide a `block_num` reference is caught first.
 
 4. **`LIMIT` is injected** if absent. If you write a SELECT without a LIMIT, the gateway appends `LIMIT 1000` before forwarding. If your LIMIT is above 1,000, the query is rejected — not rewritten.
 
@@ -222,7 +222,7 @@ WHERE block_num BETWEEN 266900000 AND 266910000
 LIMIT 20
 ```
 
-`GET /v1/sql` returns the full contract — available tables, UDF signatures, and a worked example — without making a query.
+`GET /v1/sql` returns the full contract (available tables, UDF signatures, and a worked example) without making a query.
 
 ---
 
@@ -307,7 +307,7 @@ A few concrete use cases that are straightforward with the current API.
 
 **Wallet activity dashboard.** Three endpoints give you a complete picture of any address: `/v1/address/{a}/tx` for raw transactions, `/v1/address/{a}/transfers` for token movements, and `/v1/address/{a}/interactions` for the set of distinct contracts it has called. Build a lightweight "wallet explorer" without an RPC node or a third-party API key.
 
-**Liquidity position tracker.** Pull Uniswap V3 `mint` and `burn` events for a pool filtered to a specific `owner` address. The `tickLower`/`tickUpper` range and `amount0`/`amount1` values let you reconstruct the full history of a position — entries, exits, and the liquidity held at each range — without a subgraph.
+**Liquidity position tracker.** Pull Uniswap V3 `mint` and `burn` events for a pool filtered to a specific `owner` address. The `tickLower`/`tickUpper` range and `amount0`/`amount1` values let you reconstruct the full history of a position (entries, exits, and the liquidity held at each range) without a subgraph.
 
 **Protocol health monitor.** Use `/v1/contract/{a}/activity?bucket=hour` to track event volume over time for any contract. If a protocol's hourly log count drops to zero, something has stopped. Wire this into a Grafana panel or a Prometheus scrape target with a two-liner.
 

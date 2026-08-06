@@ -53,7 +53,7 @@ It's not the end of Dispatch either, though that's a separate decision being mad
 
 ## What We Learned Running It
 
-Two weeks of operating a live indexer — even an idle one — taught us things that months of dashboard-building didn't.
+Two weeks of operating a live indexer (even an idle one) taught us things that months of dashboard-building didn't.
 
 The tap-agent / indexer-agent / indexer-service-rs stack is genuinely complex to operate. Not broken, but complex. The interaction between thaw periods, allocation close timing, and POI submission windows requires careful attention. If your operator scripts aren't right, you don't get slashed immediately — you just silently earn nothing, which is almost worse.
 

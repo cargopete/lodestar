@@ -19,7 +19,7 @@ ERC20 and ERC721 subgraphs are live on The Graph Studio, indexing Arbitrum One r
 
 ## The problem with AssemblyScript
 
-If you've written a production subgraph, you know the pain. The type system fights you constantly. `BigInt` arithmetic requires calling methods instead of operators. Null checks are manual everywhere. The standard library is a stub. Testing requires spinning up a full graph-node stack — Docker, PostgreSQL, an Ethereum archive node — or using Matchstick, which mocks so much of the runtime that you often end up testing the mocks.
+If you've written a production subgraph, you know the pain. The type system fights you constantly. `BigInt` arithmetic requires calling methods instead of operators. Null checks are manual everywhere. The standard library is a stub. Testing requires spinning up a full graph-node stack (Docker, PostgreSQL, an Ethereum archive node) or using Matchstick, which mocks so much of the runtime that you often end up testing the mocks.
 
 The ecosystem is a desert. If a library doesn't exist in AssemblyScript (and most don't), you write it yourself from scratch.
 
@@ -161,7 +161,7 @@ Six examples ship with the repository: ERC20, ERC721, ERC1155, Uniswap V2 (facto
 
 ## Status
 
-This is not a proof of concept. ERC20 and ERC721 subgraphs are deployed to The Graph Studio and indexing Arbitrum One. The entire chain — Rust handler → `graph-as-runtime` → WASM → unmodified graph-node — has been validated on live mainnet data.
+This is not a proof of concept. ERC20 and ERC721 subgraphs are deployed to The Graph Studio and indexing Arbitrum One. The entire chain (Rust handler → `graph-as-runtime` → WASM → unmodified graph-node) has been validated on live mainnet data.
 
 GRC-004, a proposal to the Graph Foundation for official recognition of Rust as a first-class subgraph language, is in draft. If you want to see Rust subgraphs become a supported target on The Graph, the RFC is the place to make noise.
 
@@ -178,6 +178,6 @@ graphite init my-subgraph --network mainnet
 - **Docs:** [cargopete.github.io/graphite](https://cargopete.github.io/graphite)
 - **GRC-004 draft:** in the repository at `GRC-draft.md`
 
-The `no_std` overhead is real — `alloc::format!` instead of `format!`, `alloc::vec!` instead of `vec!` — but it's mechanical, and the compiler tells you exactly what to fix. The tradeoff is getting the entire Rust type system, the full crates.io ecosystem, and a test suite you can actually run.
+The `no_std` overhead is real (`alloc::format!` instead of `format!`, `alloc::vec!` instead of `vec!`), but it's mechanical, and the compiler tells you exactly what to fix. The tradeoff is getting the entire Rust type system, the full crates.io ecosystem, and a test suite you can actually run.
 
 AssemblyScript is not the only option anymore.

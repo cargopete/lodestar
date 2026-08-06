@@ -7,7 +7,7 @@ category: "Guides"
 excerpt: "Developers can now post on-chain GRT bounties for subgraph deployments they need indexed. Here's the complete walkthrough for indexers — from spotting a bounty to collecting the GRT."
 ---
 
-Sync bounties are a new primitive on the Lodestar Bounty Board. A developer locks GRT on-chain against a specific subgraph deployment ID. Any indexer who syncs that deployment and can prove it — by presenting a valid POI — can claim the GRT. Trustless, no intermediary, first valid claim wins.
+Sync bounties are a new primitive on the Lodestar Bounty Board. A developer locks GRT on-chain against a specific subgraph deployment ID. Any indexer who syncs that deployment and can prove it (by presenting a valid POI) can claim the GRT. Trustless, no intermediary, first valid claim wins.
 
 This post walks through the full process from an indexer's perspective.
 

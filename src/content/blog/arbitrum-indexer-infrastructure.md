@@ -117,7 +117,7 @@ Three modes:
 
 **Idle** (at head): waits for the ingestor to store the next block, then processes it immediately.
 
-The problem: if `reorg_threshold` is set too high — say 250 blocks — you're stuck in block-walk mode on fast chains almost permanently. Never far enough behind to use range-scan, never close enough to reach idle. You just lag.
+The problem: if `reorg_threshold` is set too high (say 250 blocks), you're stuck in block-walk mode on fast chains almost permanently. Never far enough behind to use range-scan, never close enough to reach idle. You just lag.
 
 **Important caveat**: lowering the threshold only helps if your lag is *greater than* the threshold. If you're already sitting 10–30 blocks behind with `reorg_threshold=50`, you're already in block-walk mode — lowering to 50 won't change anything because 10–30 < 50. In that case the bottleneck is block-walk throughput itself, not the threshold (more on this below).
 

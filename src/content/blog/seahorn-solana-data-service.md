@@ -75,7 +75,7 @@ seahorn-indexer  ──────────────────▶  Post
 
 **seahorn-indexer** is a Rust binary. It subscribes to Solana Mainnet via a Yellowstone gRPC (Dragon's Mouth) endpoint and receives every confirmed transaction matching specified program IDs. For each transaction, it decodes the instruction data against known program interfaces, assembles a `ChangeSet`, and writes parsed entity rows to Postgres.
 
-**Postgres + PostgREST** form the query layer. PostgREST turns the `entity_changes` table into a full REST API — filtering, ordering, pagination — with zero custom backend code. Queries like `entity_type=eq.JupiterSwap&order=slot.desc&limit=25` work out of the box.
+**Postgres + PostgREST** form the query layer. PostgREST turns the `entity_changes` table into a full REST API (filtering, ordering, pagination) with zero custom backend code. Queries like `entity_type=eq.JupiterSwap&order=slot.desc&limit=25` work out of the box.
 
 **seahorn-gateway** (Axum) sits in front of PostgREST. It validates inbound TAP receipts against the Lodestar dispatch gateway's signing key. Invalid or missing receipts get a 402. Valid ones get proxied through to PostgREST. It also handles rate limiting per IP via tower-governor.
 

@@ -11,7 +11,7 @@ There are many ways to set up your graph-node stack. You can run a single box or
 
 These rules are well-known among experienced indexers (credit to Marc-André Dumas / Ellipfra for articulating them clearly), but they're scattered across Discord threads, office hours recordings, and tribal knowledge. This post collects them in one place, along with the advanced patterns that become possible once the fundamentals are solid.
 
-> **Note on Horizon**: The Graph's Horizon upgrade (December 2025) changed the protocol layer significantly — allocations, payments, staking — but graph-node's internal architecture is completely unchanged. Everything in this post applies equally pre- and post-Horizon. We cover the Horizon-era stack differences at the end.
+> **Note on Horizon**: The Graph's Horizon upgrade (December 2025) changed the protocol layer significantly (allocations, payments, staking) but graph-node's internal architecture is completely unchanged. Everything in this post applies equally pre- and post-Horizon. We cover the Horizon-era stack differences at the end.
 
 ## The stack
 

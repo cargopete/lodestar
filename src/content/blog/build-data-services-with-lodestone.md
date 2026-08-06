@@ -40,7 +40,7 @@ Lodestone asks which shape you're building:
 6. Provide     stake a GRT provision, register on-chain
 ```
 
-In Claude Code you just say *"make a new Horizon data service for X"* (or run `/create-data-service`). Lodestone interviews you — name, archetype, tiers, economics, optional per-endpoint pricing — writes the answers, runs its generator, vendors the contract libraries, and **verifies the result compiles and its tests pass before handing it back.** A scaffold that doesn't build is worse than none, so it won't give you one.
+In Claude Code you just say *"make a new Horizon data service for X"* (or run `/create-data-service`). Lodestone interviews you (name, archetype, tiers, economics, optional per-endpoint pricing) writes the answers, runs its generator, vendors the contract libraries, and **verifies the result compiles and its tests pass before handing it back.** A scaffold that doesn't build is worse than none, so it won't give you one.
 
 ## Proving it: Hermit DS, the inverse analytics service
 
@@ -50,7 +50,7 @@ A generator you only ever run on tidy, sensible specs is a generator you don't t
 
 It works as a product because absence-of-activity is legitimately valuable signal that nobody indexes — it's an inverted query shape, awkward for activity-first pipelines. It's funky because the entire pitch is "we watch people who aren't doing anything and tell you the moment they start."
 
-It is also, structurally, just a Horizon data service. So we gave lodestone one paragraph of that spec, picked the `pipeline` archetype (an indexer of absence is still an indexer), three tiers — `DORMANCY`, `WAKE_ALERTS`, `COHORTS` — and turned on per-endpoint pricing. Then we got out of the way.
+It is also, structurally, just a Horizon data service. So we gave lodestone one paragraph of that spec, picked the `pipeline` archetype (an indexer of absence is still an indexer), three tiers (`DORMANCY`, `WAKE_ALERTS`, `COHORTS`) and turned on per-endpoint pricing. Then we got out of the way.
 
 What came back, with **zero hand-written application code**:
 
@@ -65,15 +65,15 @@ We didn't take its word for it. We stood the gateway up locally against Postgres
 - A request with no `TAP-Receipt` header → `402 Payment Required`. The payment gate is live.
 - A request with a malformed receipt → `402 invalid receipt`. Validation is live.
 
-That's the entire generated stack — contract, indexer, and a serving, payment-gating gateway — from a paragraph, building and running locally. The dormancy logic itself? That's the data plane: you replace the generated mock `Substrate`/`Handler`/`Sink` with your real detection, and fill in the three tiers. Lodestone did the boring, error-prone 90%. [The repo is here](https://github.com/nightswatchhq/hermit-ds), and its README says, plainly, that lodestone built all of it.
+That's the entire generated stack (contract, indexer, and a serving, payment-gating gateway) from a paragraph, building and running locally. The dormancy logic itself? That's the data plane: you replace the generated mock `Substrate`/`Handler`/`Sink` with your real detection, and fill in the three tiers. Lodestone did the boring, error-prone 90%. [The repo is here](https://github.com/nightswatchhq/hermit-ds), and its README says, plainly, that lodestone built all of it.
 
 ## The loop that makes it better
 
 Here's the part we're quietly proud of. To trust the generator, we pointed it back at our own fleet: we ported three of those original hand-built services (camp, seahorn, wsaas) onto `horizon-core` so they'd match what lodestone emits. That deleted roughly **four thousand lines** of drifted copy-paste — and, more importantly, every place a real service *resisted* the port told us exactly what `horizon-core` was missing.
 
-WebSocket relay didn't fit the HTTP proxy. Several services wanted per-endpoint pricing the core couldn't express. So `horizon-core` grew four new capabilities — a pricing policy, a composable router, a pre-forward gate, and a multi-backend resolver — each of which is now both a library feature *and* a lodestone option. Generate a service, find a gap, fix the core, regenerate. The tool sharpens itself on the work.
+WebSocket relay didn't fit the HTTP proxy. Several services wanted per-endpoint pricing the core couldn't express. So `horizon-core` grew four new capabilities (a pricing policy, a composable router, a pre-forward gate, and a multi-backend resolver) each of which is now both a library feature *and* a lodestone option. Generate a service, find a gap, fix the core, regenerate. The tool sharpens itself on the work.
 
-We left Dispatch alone, by the way. It's a genuinely bespoke JSON-RPC engine — multi-chain routing, consumer credit, escrow pre-checks, response attestation — and forcing it through a generic generator would have been a lossy lie. Knowing what *not* to generate is part of the job.
+We left Dispatch alone, by the way. It's a genuinely bespoke JSON-RPC engine (multi-chain routing, consumer credit, escrow pre-checks, response attestation) and forcing it through a generic generator would have been a lossy lie. Knowing what *not* to generate is part of the job.
 
 ## Operating what you generate
 

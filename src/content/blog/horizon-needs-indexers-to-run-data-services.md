@@ -19,7 +19,7 @@ I want to explain why that's the single biggest risk to Horizon actually succeed
 
 ## What Horizon was supposed to unlock
 
-For its entire life, The Graph has been a subgraph network. You index a contract, you serve GraphQL, you get paid query fees. Brilliant, proven, and — crucially — *singular*. One product. One thing an indexer could sell.
+For its entire life, The Graph has been a subgraph network. You index a contract, you serve GraphQL, you get paid query fees. Brilliant, proven, and (crucially) *singular*. One product. One thing an indexer could sell.
 
 Horizon's whole thesis is that this was always too narrow. The protocol's real primitives — staking, provisioning, [GraphTally payments](/blog/how-to-build-a-horizon-data-service), slashing, dispute resolution — aren't subgraph-specific. They're a generic substrate for paying decentralised infrastructure to do *anything verifiable*. Subgraphs were just the first application built on top.
 
@@ -55,14 +55,14 @@ We didn't want to write a think-piece about a problem we'd done nothing about, s
 We've deployed and dogfooded several new data services ourselves, precisely so that "is this even runnable?" stops being a question:
 
 - **[AMP](/blog/intro-to-amp)**: SQL analytics over chain data, [running on Arbitrum](/blog/camp-free-amp-api-arbitrum), self-hostable, with [a public node you can run locally](/blog/run-local-amp-node).
-- **[Dispatch](/blog/dispatch-json-rpc-horizon)**: decentralised JSON-RPC on Horizon, with a QoS-weighted gateway and GraphTally micropayments. It even [picked up a second provider](/blog/dispatch-second-provider-graphtronauts) — PaulieB from the Graphtronauts — which is the only reason its routing logic has anything to actually route.
+- **[Dispatch](/blog/dispatch-json-rpc-horizon)**: decentralised JSON-RPC on Horizon, with a QoS-weighted gateway and GraphTally micropayments. It even [picked up a second provider](/blog/dispatch-second-provider-graphtronauts) (PaulieB from the Graphtronauts), which is the only reason its routing logic has anything to actually route.
 - **[Seahorn](/blog/seahorn-solana-data-service)** (Solana) and others mapped on the catalogue.
 
 Every one of these went through the same path: read the contracts, stand up the infrastructure, provision the GRT, serve real traffic, pay real receipts. We've walked the road end to end so that nobody else can claim it's theoretical.
 
 And here's the part it's tempting to leave out: we can't keep doing this. The expenses have grown faster than anything coming back the other way. We have no budget for it, we're not a real commercial indexer, and one small team simply cannot run every data service on the catalogue alone — least of all with no consumers paying for any of it. But even if we *could* — even if we had infinite servers and a bottomless wallet — we still shouldn't, because one team running everything is the precise opposite of what Horizon is for.
 
-And it hasn't been enough. Because one team running every service is still, economically, one provider per service. We've proven the services *work*. We have not — cannot — prove they're a *network*. That word requires other people.
+And it hasn't been enough. Because one team running every service is still, economically, one provider per service. We've proven the services *work*. We have not (cannot) prove they're a *network*. That word requires other people.
 
 ---
 

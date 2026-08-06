@@ -7,13 +7,13 @@ category: "Infrastructure"
 excerpt: "When we announced SDSCE we said the payment loop was proven on a fork. A fork isn't mainnet. So we staked real GRT against the live contract, registered a provider, and collected a real signed RAV on Arbitrum One — and the 1% burn reconciled to the wei. Here's exactly how we did it, and what it proves about the live service."
 ---
 
-When we [announced SDSCE](/blog/substreams-data-service-community-edition) yesterday, we wrote that the payment loop was "proven on mainnet." That was *almost* true, and the gap matters. What we had actually done was prove the whole path against a **fork** of Arbitrum One — provision, register, collect, burn — using forked state and conjured GRT. It's a genuinely good test. But a fork is a copy. It runs the real bytecode, but with state we control and money that isn't real. The base fee never bites, the GRT costs nothing, and nothing you do is visible to anyone.
+When we [announced SDSCE](/blog/substreams-data-service-community-edition) yesterday, we wrote that the payment loop was "proven on mainnet." That was *almost* true, and the gap matters. What we had actually done was prove the whole path against a **fork** of Arbitrum One (provision, register, collect, burn) using forked state and conjured GRT. It's a genuinely good test. But a fork is a copy. It runs the real bytecode, but with state we control and money that isn't real. The base fee never bites, the GRT costs nothing, and nothing you do is visible to anyone.
 
 There is one test a fork can never be: the real one.
 
 So this week we closed the gap. We took five freshly generated wallets, funded two of them with real GRT and real Arbitrum ETH, and ran the complete provider-and-consumer lifecycle through the **live** `SubstreamsDataService` contract — the same `0x1c3e…640c` proxy anyone can see on Arbiscan. Stake, provision, register, escrow, sign a RAV, `collect()`. Real value moved. Real GRT burned. And the numbers came out exactly where the contract says they should.
 
-This post is the full account: the three-tier method we used to de-risk it, the tricks that let the fork tests cost nothing, the one gotcha that bit us on the real run, and — the point of the whole exercise — what a real on-chain settlement actually *proves* about the live service that a fork cannot.
+This post is the full account: the three-tier method we used to de-risk it, the tricks that let the fork tests cost nothing, the one gotcha that bit us on the real run, and (the point of the whole exercise) what a real on-chain settlement actually *proves* about the live service that a fork cannot.
 
 ## Why bother, if the fork already passed?
 
@@ -21,7 +21,7 @@ Because "the contract works" and "the *live* contract works, under real conditio
 
 A fork rehearsal answers: *is the bytecode correct?* A mainnet run answers a longer list:
 
-- Does the **live** Horizon stack — the real `GraphTallyCollector`, the real `PaymentsEscrow`, the real `HorizonStaking` — accept a provision and a signed RAV from an account it has never seen?
+- Does the **live** Horizon stack (the real `GraphTallyCollector`, the real `PaymentsEscrow`, the real `HorizonStaking`) accept a provision and a signed RAV from an account it has never seen?
 - Is there a hidden **minimum stake** that the live deployment enforces but a fork's permissive defaults would mask?
 - Does an **EIP-712 RAV signed for chain `42161`** actually recover to an authorized signer against the live collector's domain separator?
 - Does the **1% burn** hold under real gas, real protocol tax, and real escrow accounting — not just in a sandbox?
@@ -91,7 +91,7 @@ thawing period range:               0 .. max
 BURN_TAX_PPM:                        10000            (1%)
 ```
 
-**The minimum stake is zero.** The live `SubstreamsDataService` imposes no floor on how much GRT a provider must provision. On the fork we proved this the only way that counts: we provisioned **1 GRT** — a deliberately trivial amount — and `register()` succeeded. We also confirmed that with a `thawingPeriod` of 0, that stake is immediately recoverable. That's the difference between "you need to be a serious indexer to test this" and "you can try the live service for the price of a coffee." It's the latter.
+**The minimum stake is zero.** The live `SubstreamsDataService` imposes no floor on how much GRT a provider must provision. On the fork we proved this the only way that counts: we provisioned **1 GRT** (a deliberately trivial amount) and `register()` succeeded. We also confirmed that with a `thawingPeriod` of 0, that stake is immediately recoverable. That's the difference between "you need to be a serious indexer to test this" and "you can try the live service for the price of a coffee." It's the latter.
 
 And the negative paths reverted exactly as designed: `register()` and `collect()` against an account with no provision both revert with `ProvisionManagerProvisionNotFound`. The guards are real.
 
@@ -124,7 +124,7 @@ max fee per gas less than block base fee:
   maxFeePerGas: 20026000  baseFee: 20036000
 ```
 
-Our Go transaction helper fetched the gas price and then signed with exactly that, with no headroom. Fine on a local devenv where the base fee is effectively zero; on real Arbitrum One the base fee ticked up by ten thousand wei in the gap between fetch and inclusion, and the node rejected the transaction by a hair. A one-line fix — double the fetched gas price as a buffer — and the collect went through. Worth noting precisely because it's the kind of thing a fork *never* shows you: forked base fees don't move.
+Our Go transaction helper fetched the gas price and then signed with exactly that, with no headroom. Fine on a local devenv where the base fee is effectively zero; on real Arbitrum One the base fee ticked up by ten thousand wei in the gap between fetch and inclusion, and the node rejected the transaction by a hair. A one-line fix (double the fetched gas price as a buffer) and the collect went through. Worth noting precisely because it's the kind of thing a fork *never* shows you: forked base fees don't move.
 
 ### The receipts
 

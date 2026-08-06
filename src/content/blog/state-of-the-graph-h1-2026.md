@@ -9,7 +9,7 @@ excerpt: "An independent narrative update covering Q4 2025 through H1 2026, pick
 
 *An independent narrative update covering Q4 2025 through H1 2026 (Q1 and Q2 2026), picking up where Messari's State of The Graph Q4 2025 (published February 12, 2026) left off. Published on the Lodestar analytics dashboard blog.*
 
-> **Editorial note on data:** Messari has not published a State of The Graph report for Q1 2026 or Q2 2026 (other chains received Q1 2026 reports in May 2026; The Graph did not). As a result, the precise, audited quarterly figures that normally anchor this series — query volume, demand-side fees, active subgraphs, Substreams revenue, indexing rewards — do **not** yet exist for H1 2026. Where exact H1 2026 quarterly numbers are unavailable, we say so explicitly and substitute live on-chain proxy data (from The Graph's Explorer, retrieved June 17, 2026) and primary-source disclosures (core-team forum updates, governance votes, official blogs). All Q2 2026 commentary is preliminary, as the quarter only just closed.
+> **Editorial note on data:** Messari has not published a State of The Graph report for Q1 2026 or Q2 2026 (other chains received Q1 2026 reports in May 2026; The Graph did not). As a result, the precise, audited quarterly figures that normally anchor this series (query volume, demand-side fees, active subgraphs, Substreams revenue, indexing rewards) do **not** yet exist for H1 2026. Where exact H1 2026 quarterly numbers are unavailable, we say so explicitly and substitute live on-chain proxy data (from The Graph's Explorer, retrieved June 17, 2026) and primary-source disclosures (core-team forum updates, governance votes, official blogs). All Q2 2026 commentary is preliminary, as the quarter only just closed.
 
 ## Key Insights
 
@@ -50,7 +50,7 @@ Indexing rewards continue to be funded by protocol issuance. The Explorer report
 
 The financial narrative of H1 2026 is unambiguous: a deep, persistent drawdown. GRT **ended Q4 2025 at roughly $0.03, down 58.8% QoQ**, and the slide continued into the new year. GRT printed a **new all-time low around $0.0228 in February 2026** (some trackers place the cycle low marginally lower at roughly $0.0231 in late March 2026 — the discrepancy reflects differing exchange-aggregation methodologies, but the takeaway is the same: GRT bottomed in Q1 2026 at a fresh ATL).
 
-Through Q2 2026, the token traded in a depressed band: roughly **$0.025–$0.028 in April**, near $0.026 in early May, then back toward $0.020 with an intra-quarter low near $0.0185 in June. Circulating market cap spent the half in the low-to-mid hundreds of millions of dollars — roughly $215–290 million depending on the date — against a circulating supply that rose past 10.8 billion GRT on continued issuance.
+Through Q2 2026, the token traded in a depressed band: roughly **$0.025–$0.028 in April**, near $0.026 in early May, then back toward $0.020 with an intra-quarter low near $0.0185 in June. Circulating market cap spent the half in the low-to-mid hundreds of millions of dollars (roughly $215–290 million depending on the date) against a circulating supply that rose past 10.8 billion GRT on continued issuance.
 
 Two market-structure events compounded the weakness:
 

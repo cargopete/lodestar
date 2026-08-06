@@ -9,7 +9,7 @@ excerpt: "camp is a free, tip-fresh REST API for decoded Arbitrum One data — E
 
 Getting useful data out of Arbitrum One takes more effort than it should. Raw RPC gives you encoded logs and hex everything. Dune gives you clean SQL but you're querying a shared cache that can be hours behind. The Graph gives you subgraphs, but writing a subgraph to answer a one-off question is like hiring a contractor to change a lightbulb.
 
-**camp** takes a different path. It's a free, tip-fresh REST API for decoded Arbitrum One data — ERC-20 transfers, protocol events, gas analytics, block-level data — built on top of a self-hosted [Amp](https://amp.thegraph.com) node running on a ThinkPad in a home lab.
+**camp** takes a different path. It's a free, tip-fresh REST API for decoded Arbitrum One data (ERC-20 transfers, protocol events, gas analytics, block-level data) built on top of a self-hosted [Amp](https://amp.thegraph.com) node running on a ThinkPad in a home lab.
 
 No signup. No API key. No dashboard. Just HTTP.
 
@@ -19,7 +19,7 @@ No signup. No API key. No dashboard. Just HTTP.
 
 Before camp makes sense, Amp needs a quick introduction. (There's a [longer writeup here](/blog/intro-to-amp) if you want the full picture.)
 
-**Amp** is a blockchain-native database built by Edge & Node, the core development team behind The Graph Protocol. It runs a daemon called `ampd` that ingests raw blockchain data — blocks, transactions, logs, events — and stores it in a columnar format (Apache Arrow / Parquet) on local disk. Once the data is there, you query it with SQL.
+**Amp** is a blockchain-native database built by Edge & Node, the core development team behind The Graph Protocol. It runs a daemon called `ampd` that ingests raw blockchain data (blocks, transactions, logs, events) and stores it in a columnar format (Apache Arrow / Parquet) on local disk. Once the data is there, you query it with SQL.
 
 The key thing Amp does that a regular database doesn't: it decodes smart contract events automatically. Give it an ABI, and it turns raw encoded log data into typed SQL tables. An ERC-20 Transfer event becomes a row in a `transfer` table with `from`, `to`, `value`, and `token` columns — not `0x000000000000000000000000...` blobs you have to decode yourself.
 
@@ -94,7 +94,7 @@ camp (Next.js on Vercel)        REST API — translates HTTP → SQL → JSON
 client                          You
 ```
 
-The Amp node indexes Arbitrum One directly — blocks, logs, decoded events, the lot — storing everything in Parquet on local SSD. The node runs continuously, staying at chain tip.
+The Amp node indexes Arbitrum One directly (blocks, logs, decoded events, the lot) storing everything in Parquet on local SSD. The node runs continuously, staying at chain tip.
 
 nginx sits in front of `ampd`, checking a shared secret header and enforcing Redis-backed rate limits. The Cloudflare tunnel gives `ampd` a public HTTPS endpoint without port-forwarding or exposing the home IP. When the tunnel URL rotates, the ops automation updates the Vercel environment variable and redeploys.
 

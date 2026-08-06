@@ -25,7 +25,7 @@ We're proud of it.
 
 It is not the beginning of a new feature sprint.
 
-The honest reason is financial. [Stopping the Lodestar indexer](/blog/stopping-the-lodestar-indexer) cost us real money and took real time, and it's one of several decisions we've had to make in the past months about where to put limited resources. The dashboard is open source and self-sustaining operationally — the VPS pays for itself, the Vercel deployment is free-tier — but engineering time is not free.
+The honest reason is financial. [Stopping the Lodestar indexer](/blog/stopping-the-lodestar-indexer) cost us real money and took real time, and it's one of several decisions we've had to make in the past months about where to put limited resources. The dashboard is open source and self-sustaining operationally (the VPS pays for itself, the Vercel deployment is free-tier) but engineering time is not free.
 
 For now, Lodestar 3.0.0 is the version. We will fix bugs. We will not be taking feature requests or planning new dimensions in the near term.
 
@@ -41,7 +41,7 @@ That means something. Building things that people actually use in a protocol eco
 
 ## Dispatch: Deployed, Working, Waiting
 
-The Dispatch service — JSON-RPC over the Graph's Horizon payment layer — is live. The contracts work. The indexer registry is running. The cost comparisons are published. The [dogfooding post](/blog/dispatch-dogfooding) documented the rough edges we found and fixed.
+The Dispatch service (JSON-RPC over the Graph's Horizon payment layer) is live. The contracts work. The indexer registry is running. The cost comparisons are published. The [dogfooding post](/blog/dispatch-dogfooding) documented the rough edges we found and fixed.
 
 The problem is adoption, and adoption has a chicken-and-egg structure that we can't resolve unilaterally: without providers there are no consumers, and without consumers there are no providers. We were one of the providers, and we've stepped back from that role. [Graphtronauts joined as a second provider](/blog/dispatch-second-provider-graphtronauts), which is a good sign, but the network is still very thin.
 
@@ -61,7 +61,7 @@ That might change if Solana gains traction within the Graph ecosystem. Until the
 
 We're not going anywhere. The Graph is a protocol we believe in and have spent real time understanding from the inside — as indexers, as dashboard builders, as Dispatch operators. That perspective doesn't disappear because a particular sprint has ended.
 
-If community-driven initiatives emerge — governance processes, working groups, network health discussions, tooling projects — we'll be there. The things we care about on the Graph are the things that require community coordination to work, and those are exactly the kinds of efforts where showing up matters more than having a product roadmap.
+If community-driven initiatives emerge (governance processes, working groups, network health discussions, tooling projects) we'll be there. The things we care about on the Graph are the things that require community coordination to work, and those are exactly the kinds of efforts where showing up matters more than having a product roadmap.
 
 Lodestar will keep running. We'll keep watching. And if the network moves in directions where we can contribute meaningfully, we will.
 

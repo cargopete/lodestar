@@ -31,7 +31,7 @@ The fact that the second provider came from the Graphtronauts rather than, say, 
 
 ## What technically changes with two providers
 
-When Dispatch launched with one provider, the gateway's routing logic had exactly one candidate for every request. There was nothing to score, nothing to race, nothing to fall back to. The QoS system — with its latency EMA, availability tracking, and freshness scoring — was technically operational but practically pointless.
+When Dispatch launched with one provider, the gateway's routing logic had exactly one candidate for every request. There was nothing to score, nothing to race, nothing to fall back to. The QoS system (with its latency EMA, availability tracking, and freshness scoring) was technically operational but practically pointless.
 
 Now it has something to work with.
 
@@ -45,9 +45,9 @@ This is good for consumers immediately: lower p99 latency, because you're gettin
 
 ### Quorum consensus becomes meaningful
 
-For deterministic state methods — `eth_call`, `eth_getLogs`, `eth_getBalance`, `eth_getTransactionReceipt` — the gateway uses quorum dispatch: all `k` providers respond, and the majority result wins.
+For deterministic state methods (`eth_call`, `eth_getLogs`, `eth_getBalance`, `eth_getTransactionReceipt`) the gateway uses quorum dispatch: all `k` providers respond, and the majority result wins.
 
-With one provider, "majority" means whatever one node says, unchallenged. With two, a disagreement between them is detectable and logged. Neither provider can silently return a wrong result without the gateway noticing a mismatch. This isn't full Byzantine fault tolerance at two providers — a true majority requires three — but it's a meaningful step toward honest response verification that simply wasn't possible before.
+With one provider, "majority" means whatever one node says, unchallenged. With two, a disagreement between them is detectable and logged. Neither provider can silently return a wrong result without the gateway noticing a mismatch. This isn't full Byzantine fault tolerance at two providers (a true majority requires three), but it's a meaningful step toward honest response verification that simply wasn't possible before.
 
 ### Failover becomes real
 
@@ -63,7 +63,7 @@ The practical change is resilience and competitive latency.
 
 Before today, pointing your app at the Dispatch gateway meant trusting that a single server in EU Central was always up and always fast. Any consumer who tried Dispatch was implicitly relying on one person's uptime. That's fine for experimentation; it's not fine as something you'd build on.
 
-Two geographically distributed providers changes the risk profile. Not enough to call it production-ready — we're not going to pretend otherwise — but enough to make it genuinely usable for low-stakes applications, internal tooling, or development environments where Alchemy's rate limits are annoying and the exact 99.999% SLA doesn't matter.
+Two geographically distributed providers changes the risk profile. Not enough to call it production-ready (we're not going to pretend otherwise) but enough to make it genuinely usable for low-stakes applications, internal tooling, or development environments where Alchemy's rate limits are annoying and the exact 99.999% SLA doesn't matter.
 
 For anyone currently using the [Dispatch gateway endpoint](https://www.lodestar-dashboard.com/dispatch#add-to-wallet): you're now automatically benefiting from this. The gateway's QoS-weighted selection and concurrent dispatch are routing across both providers without any configuration change on your end.
 

@@ -9,7 +9,7 @@ excerpt: "The Graph's token is near historical lows. Here's the honest story of 
 
 Someone tried to swap 400,000 GRT on a decentralised exchange recently. Not an unusual thing to want to do, in principle. They received a price impact warning of **45.26%**.
 
-To put that in human terms: they would have handed over roughly half the value of their position simply for the privilege of exiting it. At a spot price already sitting somewhere between $0.013 and $0.025 — near the lowest GRT has ever traded — that is the kind of number that makes you close the browser tab and go for a walk.
+To put that in human terms: they would have handed over roughly half the value of their position simply for the privilege of exiting it. At a spot price already sitting somewhere between $0.013 and $0.025 (near the lowest GRT has ever traded) that is the kind of number that makes you close the browser tab and go for a walk.
 
 The tempting interpretation is that GRT has hit a bottom so hard and so inviolable that the market itself refuses to go lower. The less romantic interpretation, and the one we think is closer to the truth, is that the market simply *can't* go lower right now, because no one with meaningful size can actually sell. That's not a floor built on conviction. That's a floor built on illiquidity, and they are very different things.
 
@@ -23,13 +23,13 @@ To understand the 45.26% figure, you need to understand what market makers actua
 
 In a healthy market, professional arbitrageurs sit between centralised exchanges (CEXs) and decentralised exchanges (DEXs). When the price of GRT on Uniswap drifts above Binance, they buy on Binance and sell on Uniswap. When it drifts below, they do the reverse. This constant, boring, mechanical activity is what keeps prices aligned across venues and, crucially, what keeps DEX liquidity pools topped up. It's the invisible hand, and it works precisely because you never notice it.
 
-Then [Binance delisted the GRTBTC trading pair](https://www.binance.com/en/square/post/309893584203218). On the surface, losing one trading pair on one exchange sounds like a footnote. In practice, GRTBTC was a primary corridor for market makers operating between Bitcoin-denominated books and GRT spot. When it disappeared, the arbitrage math stopped working, and market makers — rational creatures who follow profitability rather than protocol loyalty — quietly redirected their capital elsewhere.
+Then [Binance delisted the GRTBTC trading pair](https://www.binance.com/en/square/post/309893584203218). On the surface, losing one trading pair on one exchange sounds like a footnote. In practice, GRTBTC was a primary corridor for market makers operating between Bitcoin-denominated books and GRT spot. When it disappeared, the arbitrage math stopped working, and market makers (rational creatures who follow profitability rather than protocol loyalty) quietly redirected their capital elsewhere.
 
 Coinbase had already delisted GRT perpetual futures in March 2026. The combination was a one-two to the market structure.
 
 DEX liquidity pools that had been continuously refreshed by arbitrage began to thin. Concentrated liquidity positions drifted out of range and became inert. The result is the situation we're in now: a token trading near historical lows where attempting to exit any meaningful size produces slippage figures that look like typos.
 
-"Can't go lower if no one can sell" sounds almost like a bullish thesis. It isn't. It means the price discovery mechanism is broken. When market makers return — if GRTBTC is re-listed, or new CEX presence develops — the market will restabilise. Whether that happens at current prices or lower depends on the fundamentals. Which brings us to the uncomfortable part.
+"Can't go lower if no one can sell" sounds almost like a bullish thesis. It isn't. It means the price discovery mechanism is broken. When market makers return (if GRTBTC is re-listed, or new CEX presence develops) the market will restabilise. Whether that happens at current prices or lower depends on the fundamentals. Which brings us to the uncomfortable part.
 
 ---
 
@@ -85,6 +85,6 @@ GRT at $0.013–0.025 with a 45.26% swap impact is not a comfortable place to be
 
 What we can say, having watched the protocol up close, is that the work being done at the infrastructure level is real. Horizon was a genuine architectural shift. The AI agent integration is thoughtful. The direction toward fee-based revenue is, in intention, correct. Whether execution arrives fast enough, and whether the market structure can recover enough to let the token reflect any of that, are genuinely open questions.
 
-The honest answer is: we don't know. Nobody does. What we think is that the next twelve months — particularly Q3 2026 — will tell us more about GRT's long-term trajectory than the previous three years combined. The pieces for a different story are being assembled. Whether they come together in time is the question we'll all be watching.
+The honest answer is: we don't know. Nobody does. What we think is that the next twelve months (particularly Q3 2026) will tell us more about GRT's long-term trajectory than the previous three years combined. The pieces for a different story are being assembled. Whether they come together in time is the question we'll all be watching.
 
 *This post reflects the opinions of the Lodestar team based on publicly available data and our own analysis of The Graph network. It is not financial advice.*
