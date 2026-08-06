@@ -253,7 +253,7 @@ function UnsignalModal({
                 />
                 <div className="flex justify-between mt-1">
                   {[25, 50, 75, 100].map((p) => (
-                    <button key={p} onClick={() => setPct(p)} className={cn('text-xs px-2 py-0.5 rounded transition-colors', pct === p ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-faint)] hover:text-[var(--text)]')}>
+                    <button key={p} onClick={() => setPct(p)} className={cn('text-xs px-2 py-0.5 rounded transition-colors', pct === p ? 'text-[var(--accent-text)] font-medium' : 'text-[var(--text-faint)] hover:text-[var(--text)]')}>
                       {p}%
                     </button>
                   ))}
@@ -302,7 +302,7 @@ function PositionRow({ signal }: { signal: Signal }) {
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent-hover)] transition-colors">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <Link href={`/subgraphs/${signal.subgraphDeployment.ipfsHash}`} className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors">
+            <Link href={`/subgraphs/${signal.subgraphDeployment.ipfsHash}`} className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent-text)] transition-colors">
               {displayName}
             </Link>
             {opportunityScore > 1 && <Badge variant="success">High yield</Badge>}
@@ -322,7 +322,7 @@ function PositionRow({ signal }: { signal: Signal }) {
         <div className="flex gap-2 flex-shrink-0">
           <button
             onClick={() => setSignalModal(true)}
-            className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent-dim)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent-dim)] text-[var(--accent-text)] hover:bg-[var(--accent)] hover:text-white transition-colors"
           >
             + Signal
           </button>
@@ -387,7 +387,7 @@ function MyPositionsTab({ address }: { address: string }) {
       {!curator || curator.signals.length === 0 ? (
         <div className="flex flex-col items-center py-16 text-center gap-4 border border-dashed border-[var(--border)] rounded-xl">
           <div className="w-12 h-12 rounded-xl bg-[var(--accent-dim)] flex items-center justify-center">
-            <svg className="w-6 h-6 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <svg className="w-6 h-6 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
             </svg>
           </div>
@@ -553,7 +553,7 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
                   <code className="flex-1 text-xs font-mono text-[var(--text-faint)] truncate">{highlightDeployment}</code>
                   <button
                     onClick={() => setSignalTarget({ id: ipfsHashToBytes32(highlightDeployment), name: shortenAddress(highlightDeployment, 6) })}
-                    className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent-dim)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors flex-shrink-0"
+                    className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent-dim)] text-[var(--accent-text)] hover:bg-[var(--accent)] hover:text-white transition-colors flex-shrink-0"
                   >
                     Signal GRT
                   </button>
@@ -570,7 +570,7 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
                 <span className="text-xs font-mono text-[var(--text-faint)] w-6 flex-shrink-0">#{idx + 1}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Link href={`/subgraphs/${d.ipfsHash}`} className="text-sm font-medium text-[var(--text)] hover:text-[var(--accent)] truncate transition-colors">
+                    <Link href={`/subgraphs/${d.ipfsHash}`} className="text-sm font-medium text-[var(--text)] hover:text-[var(--accent-text)] truncate transition-colors">
                       {d.displayName ?? shortenAddress(d.ipfsHash, 6)}
                     </Link>
                     {d.score > 2 && <Badge variant="success">Hot</Badge>}
@@ -597,7 +597,7 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
                   </div>
                   <button
                     onClick={() => setSignalTarget({ id: d.id, name: d.displayName ?? shortenAddress(d.ipfsHash, 6) })}
-                    className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent-dim)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors"
+                    className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent-dim)] text-[var(--accent-text)] hover:bg-[var(--accent)] hover:text-white transition-colors"
                   >
                     Signal
                   </button>
@@ -661,7 +661,7 @@ export default function CuratePage() {
         {address && (
           <Link
             href={`/curators/${address}`}
-            className="text-xs text-[var(--accent)] hover:underline flex-shrink-0 self-start"
+            className="text-xs text-[var(--accent-text)] hover:underline flex-shrink-0 self-start"
           >
             Full portfolio view →
           </Link>
@@ -671,7 +671,7 @@ export default function CuratePage() {
       {!isConnected ? (
         <div className="flex flex-col items-center justify-center py-24 text-center gap-6">
           <div className="w-16 h-16 rounded-2xl bg-[var(--accent-dim)] flex items-center justify-center">
-            <svg className="w-8 h-8 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <svg className="w-8 h-8 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
             </svg>
           </div>
@@ -683,7 +683,7 @@ export default function CuratePage() {
           </div>
           <p className="text-sm text-[var(--text-muted)]">
             Not sure where to start?{' '}
-            <button onClick={() => setTab('discover')} className="text-[var(--accent)] hover:underline">
+            <button onClick={() => setTab('discover')} className="text-[var(--accent-text)] hover:underline">
               Browse Discover
             </button>{' '}
             to find top curation opportunities.
@@ -699,7 +699,7 @@ export default function CuratePage() {
                 className={cn(
                   'px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px',
                   tab === t.id
-                    ? 'border-[var(--accent)] text-[var(--accent)]'
+                    ? 'border-[var(--accent)] text-[var(--accent-text)]'
                     : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]',
                 )}
               >

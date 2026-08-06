@@ -31,7 +31,7 @@ export default function DelegatorsPage() {
     <div className="space-y-8">
     <div className="flex flex-col items-center justify-center text-center pt-4">
       <div className="w-16 h-16 rounded-full bg-[var(--accent-dim)] flex items-center justify-center mb-6">
-        <svg className="w-8 h-8 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-8 h-8 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
         </svg>
       </div>
@@ -58,11 +58,11 @@ export default function DelegatorsPage() {
                 </svg>
               </div>
               <div className="text-left">
-                <p className="text-sm font-semibold text-[var(--accent)]">View My Portfolio</p>
+                <p className="text-sm font-semibold text-[var(--accent-text)]">View My Portfolio</p>
                 <p className="text-[11px] font-mono text-[var(--text-muted)]">{shortenAddress(connectedAddress, 6)}</p>
               </div>
             </div>
-            <svg className="w-5 h-5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
             </svg>
           </Link>

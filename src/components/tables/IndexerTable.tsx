@@ -370,6 +370,7 @@ export function IndexerTable() {
         id: 'select',
         header: ({ table }) => (
           <input
+            aria-label="Select all indexers"
             type="checkbox"
             checked={table.getIsAllRowsSelected()}
             onChange={table.getToggleAllRowsSelectedHandler()}
@@ -378,6 +379,7 @@ export function IndexerTable() {
         ),
         cell: ({ row }) => (
           <input
+            aria-label="Select indexer"
             type="checkbox"
             checked={row.getIsSelected()}
             onChange={row.getToggleSelectedHandler()}
@@ -392,7 +394,7 @@ export function IndexerTable() {
           const row = info.row.original;
           return (
             <div>
-              <p className="font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors inline-flex items-center gap-1.5 whitespace-nowrap">
+              <p className="font-medium text-[var(--text)] hover:text-[var(--accent-text)] transition-colors inline-flex items-center gap-1.5 whitespace-nowrap">
                 <Link href={`/indexers/${row.address}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
                   {info.getValue()}
                 </Link>
@@ -433,7 +435,7 @@ export function IndexerTable() {
                 {/* Recent delegation activity indicator */}
                 {row.recentDelegations && (
                   <span className="relative group/del inline-flex">
-                    <svg className="w-3 h-3 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg className="w-3 h-3 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
                     </svg>
                     <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-48 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/del:opacity-100 transition-opacity z-50 text-[11px] font-normal">
@@ -668,7 +670,7 @@ export function IndexerTable() {
         cell: ({ row }) => (
           <Link
             href={`/indexers/${row.original.address}`}
-            className="text-[var(--accent)] hover:underline text-sm"
+            className="text-[var(--accent-text)] hover:underline text-sm"
             onClick={(e) => e.stopPropagation()}
           >
             Details →
@@ -806,6 +808,7 @@ export function IndexerTable() {
             <label className="text-sm text-[var(--text-muted)]">Min stake:</label>
             <div className="relative">
               <select
+                aria-label="Min stake"
                 value={minStake}
                 onChange={(e) => setMinStake(Number(e.target.value))}
                 className={cn(
@@ -864,7 +867,7 @@ export function IndexerTable() {
                               : 'bg-[var(--text-faint)]'
                           )} />
                           {d.recentDelegations && (
-                            <svg className="w-3 h-3 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <svg className="w-3 h-3 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
                             </svg>
                           )}
@@ -944,7 +947,7 @@ export function IndexerTable() {
                       <div className="flex items-center gap-1">
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {header.column.getIsSorted() && (
-                          <span className="text-[var(--accent)]">
+                          <span className="text-[var(--accent-text)]">
                             {header.column.getIsSorted() === 'asc' ? '\u2191' : '\u2193'}
                           </span>
                         )}

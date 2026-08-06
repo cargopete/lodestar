@@ -579,7 +579,7 @@ export default function QosPage() {
             className={cn(
               'px-3 py-1 text-xs rounded border transition-colors',
               hours === h
-                ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-dim)]'
+                ? 'border-[var(--accent)] text-[var(--accent-text)] bg-[var(--accent-dim)]'
                 : 'border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]'
             )}
           >
@@ -684,7 +684,7 @@ export default function QosPage() {
                       <td className="py-2 pr-4">
                         <Link
                           href={`/indexers/${ix.indexer_address}`}
-                          className="text-[var(--accent)] hover:underline text-xs"
+                          className="text-[var(--accent-text)] hover:underline text-xs"
                           title={ix.indexer_address}
                         >
                           {ix.ens_name ?? shortenAddress(ix.indexer_address)}
@@ -931,7 +931,7 @@ export default function QosPage() {
                       <td className="py-2 pr-4">
                         <Link
                           href={`/indexers/${r.indexer}`}
-                          className="text-[var(--accent)] hover:underline text-xs"
+                          className="text-[var(--accent-text)] hover:underline text-xs"
                           title={r.indexer}
                         >
                           {nameOf(r.indexer)}
@@ -1079,7 +1079,7 @@ export default function QosPage() {
                               <td className="py-2 pr-4">
                                 <Link
                                   href={`/indexers/${p.indexer_address}`}
-                                  className="text-[var(--accent)] hover:underline"
+                                  className="text-[var(--accent-text)] hover:underline"
                                   title={p.indexer_address}
                                 >
                                   {nameOf(p.indexer_address)}

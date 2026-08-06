@@ -155,10 +155,10 @@ export function DelegatePanel({
       <CardContent className="space-y-4">
         {/* Experimental banner */}
         <div className="flex items-center gap-2 p-2.5 rounded-md bg-[var(--accent-dim)] border border-[var(--accent-hover)]">
-          <svg className="w-4 h-4 text-[var(--accent)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-4 h-4 text-[var(--accent-text)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M4.5 15h15M4.5 15a2.25 2.25 0 00-2.25 2.25v.75a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25v-.75A2.25 2.25 0 0019.5 15" />
           </svg>
-          <span className="text-[11px] text-[var(--accent)]">
+          <span className="text-[11px] text-[var(--accent-text)]">
 On-chain delegation is irreversible. Double-check amounts before signing.
           </span>
         </div>
@@ -196,7 +196,7 @@ On-chain delegation is irreversible. Double-check amounts before signing.
                     if (step !== 'idle') reset();
                   }}
                   disabled={isProcessing}
-                  className="flex-1 px-2 py-1 text-[11px] font-medium rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent-hover)] hover:text-[var(--accent)] transition-colors disabled:opacity-50"
+                  className="flex-1 px-2 py-1 text-[11px] font-medium rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent-hover)] hover:text-[var(--accent-text)] transition-colors disabled:opacity-50"
                 >
                   {pct === 1 ? 'MAX' : `${pct * 100}%`}
                 </button>

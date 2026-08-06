@@ -128,7 +128,7 @@ function ConnectGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center gap-6">
         <div className="w-16 h-16 rounded-2xl bg-[var(--accent-dim)] flex items-center justify-center">
-          <svg className="w-8 h-8 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className="w-8 h-8 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </div>
@@ -203,7 +203,7 @@ function SubgraphCard({ sg, onClick }: { sg: StudioSubgraph; onClick: () => void
       className="w-full text-left flex items-center gap-4 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent-hover)] hover:bg-[var(--bg-surface)] transition-all cursor-pointer"
     >
       <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center">
-        <svg className="w-5 h-5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <svg className="w-5 h-5 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
         </svg>
       </div>
@@ -215,7 +215,7 @@ function SubgraphCard({ sg, onClick }: { sg: StudioSubgraph; onClick: () => void
           <span className={cn(
             'text-xs px-2 py-0.5 rounded-full font-medium',
             isPublished
-              ? 'bg-[var(--accent-dim)] text-[var(--accent)]'
+              ? 'bg-[var(--accent-dim)] text-[var(--accent-text)]'
               : 'bg-[var(--bg-surface)] text-[var(--text-faint)] border border-[var(--border)]',
           )}>
             {isPublished ? 'Published' : 'Draft'}
@@ -527,7 +527,7 @@ function PublishWizard({
 
           {step === 'wallet' && metaHashes && (
             <>
-              <div className="flex items-center gap-2 text-sm text-[var(--accent)]">
+              <div className="flex items-center gap-2 text-sm text-[var(--accent-text)]">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
@@ -555,7 +555,7 @@ function PublishWizard({
                   href={`https://arbiscan.io/tx/${minedTxHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-[var(--accent)] hover:underline font-mono"
+                  className="text-xs text-[var(--accent-text)] hover:underline font-mono"
                 >
                   {minedTxHash.slice(0, 20)}...
                 </a>
@@ -566,7 +566,7 @@ function PublishWizard({
           {step === 'done' && (
             <div className="flex flex-col items-center py-8 gap-4 text-center">
               <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] flex items-center justify-center">
-                <svg className="w-7 h-7 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-7 h-7 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -581,13 +581,13 @@ function PublishWizard({
                 </p>
               </div>
               <div className="w-full p-3 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent)]/20 text-left">
-                <p className="text-xs font-medium text-[var(--accent)] mb-1">Next: attract indexers</p>
+                <p className="text-xs font-medium text-[var(--accent-text)] mb-1">Next: attract indexers</p>
                 <p className="text-xs text-[var(--text-muted)]">
                   Signal GRT on your subgraph to show indexers it&apos;s worth syncing. It may take a few minutes to appear in Curate after publishing.
                 </p>
                 <a
                   href={`/curate?deployment=${sg.deployment_id ?? ''}`}
-                  className="inline-block mt-2 text-xs font-medium text-[var(--accent)] hover:underline"
+                  className="inline-block mt-2 text-xs font-medium text-[var(--accent-text)] hover:underline"
                 >
                   Go to Curate →
                 </a>
@@ -852,6 +852,7 @@ function PostBountyWizard({
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5">Expires after</label>
                 <select
+                  aria-label="Expires after"
                   value={expiresInDays}
                   onChange={(e) => setExpiresInDays(e.target.value)}
                   className={cn(
@@ -929,7 +930,7 @@ function PostBountyWizard({
               <p className="text-sm text-[var(--text-muted)]">Waiting for approval confirmation...</p>
               {approveTxHash && (
                 <a href={`https://arbiscan.io/tx/${approveTxHash}`} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-[var(--accent)] hover:underline font-mono">
+                  className="text-xs text-[var(--accent-text)] hover:underline font-mono">
                   {approveTxHash.slice(0, 20)}...
                 </a>
               )}
@@ -938,7 +939,7 @@ function PostBountyWizard({
 
           {step === 'post' && (
             <>
-              <div className="flex items-center gap-2 text-sm text-[var(--accent)]">
+              <div className="flex items-center gap-2 text-sm text-[var(--accent-text)]">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
@@ -963,7 +964,7 @@ function PostBountyWizard({
               <p className="text-sm text-[var(--text-muted)]">Locking GRT on-chain...</p>
               {postTxHash && (
                 <a href={`https://arbiscan.io/tx/${postTxHash}`} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-[var(--accent)] hover:underline font-mono">
+                  className="text-xs text-[var(--accent-text)] hover:underline font-mono">
                   {postTxHash.slice(0, 20)}...
                 </a>
               )}
@@ -973,7 +974,7 @@ function PostBountyWizard({
           {step === 'done' && (
             <div className="flex flex-col items-center py-8 gap-4 text-center">
               <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] flex items-center justify-center">
-                <svg className="w-7 h-7 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-7 h-7 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -1163,25 +1164,25 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
               {/* Steps checklist */}
               <ol className="space-y-2 text-xs text-[var(--text-muted)]">
                 <li className="flex gap-2">
-                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[10px]">1</span>
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent-text)] flex items-center justify-center font-semibold text-[10px]">1</span>
                   <span>Deploy the subgraph to your graph-node and wait for it to sync</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[10px]">2</span>
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent-text)] flex items-center justify-center font-semibold text-[10px]">2</span>
                   <span>Allocate to this deployment via your indexer-agent (<code>setIndexingRule</code> or <code>queueActions</code>)</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[10px]">3</span>
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent-text)] flex items-center justify-center font-semibold text-[10px]">3</span>
                   <span>Present a POI via your management API (port 8000). See below</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[10px]">4</span>
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent-text)] flex items-center justify-center font-semibold text-[10px]">4</span>
                   <span>Enter your allocation ID here. Both checks must be green before the Claim button enables</span>
                 </li>
               </ol>
               <p className="text-xs text-[var(--text-faint)]">
                 New to this?{' '}
-                <a href="/blog/sync-bounty-indexer-guide" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
+                <a href="/blog/sync-bounty-indexer-guide" target="_blank" rel="noopener noreferrer" className="text-[var(--accent-text)] hover:underline">
                   Full guide for indexers →
                 </a>
               </p>
@@ -1205,7 +1206,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
                   The <code>0x</code> address created when you allocated, not your indexer address.
                   Query <code>{'{ allocations(filter: {}) { id subgraphDeployment } }'}</code> on your management API, or find a{' '}
                   <code>ServiceStarted</code> event on{' '}
-                  <a href={`https://arbiscan.io/address/${CONTRACTS.subgraphService}#events`} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
+                  <a href={`https://arbiscan.io/address/${CONTRACTS.subgraphService}#events`} target="_blank" rel="noopener noreferrer" className="text-[var(--accent-text)] hover:underline">
                     Arbiscan
                   </a>.
                 </p>
@@ -1308,7 +1309,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
               <p className="text-sm text-[var(--text-muted)]">Transaction submitted...</p>
               {claimTxHash && (
                 <a href={`https://arbiscan.io/tx/${claimTxHash}`} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-[var(--accent)] hover:underline font-mono">
+                  className="text-xs text-[var(--accent-text)] hover:underline font-mono">
                   {claimTxHash.slice(0, 20)}...
                 </a>
               )}
@@ -1318,7 +1319,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
           {step === 'done' && (
             <div className="flex flex-col items-center py-8 gap-4 text-center">
               <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] flex items-center justify-center">
-                <svg className="w-7 h-7 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-7 h-7 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -1488,7 +1489,7 @@ function SubgraphDetailModal({
           <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] flex-shrink-0">
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center">
-                <svg className="w-4 h-4 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-4 h-4 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
               </div>
@@ -1500,7 +1501,7 @@ function SubgraphDetailModal({
                   <span className={cn(
                     'text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0',
                     isPublished
-                      ? 'bg-[var(--accent-dim)] text-[var(--accent)]'
+                      ? 'bg-[var(--accent-dim)] text-[var(--accent-text)]'
                       : 'bg-[var(--bg-elevated)] text-[var(--text-faint)] border border-[var(--border)]',
                   )}>
                     {isPublished ? 'Published' : 'Draft'}
@@ -1612,7 +1613,7 @@ function SubgraphDetailModal({
                     </div>
                     <Link
                       href={`/subgraphs/${sg.deployment_id}`}
-                      className="text-xs text-[var(--accent)] hover:underline"
+                      className="text-xs text-[var(--accent-text)] hover:underline"
                     >
                       View indexing status →
                     </Link>
@@ -1805,7 +1806,7 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
         ) : subgraphs.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center gap-4 border border-dashed border-[var(--border)] rounded-xl">
             <div className="w-12 h-12 rounded-xl bg-[var(--accent-dim)] flex items-center justify-center">
-              <svg className="w-6 h-6 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="w-6 h-6 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
             </div>
@@ -1911,7 +1912,7 @@ function BountyQueryPanel({ bounty }: { bounty: SyncBounty }) {
             className={cn(
               'px-3 py-2 text-xs font-medium capitalize transition-colors',
               tab === t
-                ? 'text-[var(--accent)] border-b-2 border-[var(--accent)] -mb-px'
+                ? 'text-[var(--accent-text)] border-b-2 border-[var(--accent)] -mb-px'
                 : 'text-[var(--text-muted)] hover:text-[var(--text)]',
             )}
           >
@@ -1977,7 +1978,7 @@ function BountyQueryPanel({ bounty }: { bounty: SyncBounty }) {
             <div className="flex gap-3 flex-wrap">
               <Link
                 href={`/subgraphs/${bounty.deployment_id}`}
-                className="text-[var(--accent)] hover:underline"
+                className="text-[var(--accent-text)] hover:underline"
               >
                 Check indexing status →
               </Link>
@@ -1985,7 +1986,7 @@ function BountyQueryPanel({ bounty }: { bounty: SyncBounty }) {
                 href="https://thegraph.com/studio"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[var(--accent)] hover:underline"
+                className="text-[var(--accent-text)] hover:underline"
               >
                 Get API key at The Graph Studio →
               </a>
@@ -2111,28 +2112,28 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
             <div className="px-4 pb-4 space-y-3 border-t border-[var(--border)]">
               <ol className="mt-3 space-y-3 text-sm text-[var(--text-muted)]">
                 <li className="flex gap-3">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[11px] mt-0.5">1</span>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent-text)] flex items-center justify-center font-semibold text-[11px] mt-0.5">1</span>
                   <div>
                     <p className="font-medium text-[var(--text)]">Deploy the subgraph to your graph-node</p>
                     <p className="text-xs mt-0.5">Use the deployment ID shown on the bounty. Call <code>subgraph_create</code> then <code>subgraph_deploy</code> on your graph-node admin API (port 8020). Wait for <code>synced: true</code>.</p>
                   </div>
                 </li>
                 <li className="flex gap-3">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[11px] mt-0.5">2</span>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent-text)] flex items-center justify-center font-semibold text-[11px] mt-0.5">2</span>
                   <div>
                     <p className="font-medium text-[var(--text)]">Allocate to the deployment</p>
                     <p className="text-xs mt-0.5">Use <code>setIndexingRule</code> with <code>decisionBasis: always</code> or queue an <code>allocate</code> action via your indexer-agent management API (port 8000). Note your allocation ID; it&apos;s a <code>0x</code> address, not your indexer address.</p>
                   </div>
                 </li>
                 <li className="flex gap-3">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[11px] mt-0.5">3</span>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent-text)] flex items-center justify-center font-semibold text-[11px] mt-0.5">3</span>
                   <div>
                     <p className="font-medium text-[var(--text)]">Present a POI</p>
                     <p className="text-xs mt-0.5">Queue a <code>presentPOI</code> action via your management API. This calls <code>SubgraphService.collect()</code> and sets <code>lastPOIPresentedAt</code> on-chain, the timestamp the contract checks. Keep your allocation <strong>open</strong> until after claiming.</p>
                   </div>
                 </li>
                 <li className="flex gap-3">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[11px] mt-0.5">4</span>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent-text)] flex items-center justify-center font-semibold text-[11px] mt-0.5">4</span>
                   <div>
                     <p className="font-medium text-[var(--text)]">Click Claim and sign</p>
                     <p className="text-xs mt-0.5">Open the claim modal, enter your allocation ID. The status panel polls the chain every 10s. Once both checks are green, click <strong>Claim GRT</strong> and sign with your indexer wallet. GRT is paid out immediately.</p>
@@ -2143,7 +2144,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                 href="/blog/sync-bounty-indexer-guide"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block text-xs text-[var(--accent)] hover:underline mt-1"
+                className="inline-block text-xs text-[var(--accent-text)] hover:underline mt-1"
               >
                 Full step-by-step guide with code snippets →
               </a>
@@ -2196,7 +2197,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs text-[var(--text)] truncate">{b.deployment_id}</span>
                         <CopyButton text={b.deployment_id} />
-                        <Link href={`/subgraphs/${b.deployment_id}`} className="text-xs text-[var(--accent)] hover:underline flex-shrink-0">
+                        <Link href={`/subgraphs/${b.deployment_id}`} className="text-xs text-[var(--accent-text)] hover:underline flex-shrink-0">
                           View
                         </Link>
                         {b.chain_bounty_id && (
@@ -2204,7 +2205,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                             href={`https://arbiscan.io/address/${CONTRACTS.bountyBoard}#readContract`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-[var(--text-faint)] hover:text-[var(--accent)] transition-colors"
+                            className="text-xs text-[var(--text-faint)] hover:text-[var(--accent-text)] transition-colors"
                           >
                             #{b.chain_bounty_id} ↗
                           </a>
@@ -2238,7 +2239,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className={cn('text-base font-semibold', (isClaimed || isExpired) ? 'text-[var(--text-muted)] line-through' : 'text-[var(--accent)]')}>
+                      <span className={cn('text-base font-semibold', (isClaimed || isExpired) ? 'text-[var(--text-muted)] line-through' : 'text-[var(--accent-text)]')}>
                         {b.amount_grt} GRT
                       </span>
                       {isClaimed ? (
@@ -2247,8 +2248,8 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                           className={cn(
                             'px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] transition-colors',
                             queryOpen
-                              ? 'bg-[var(--accent-dim)] text-[var(--accent)]'
-                              : 'border border-[var(--accent)]/40 text-[var(--accent)] hover:bg-[var(--accent-dim)]',
+                              ? 'bg-[var(--accent-dim)] text-[var(--accent-text)]'
+                              : 'border border-[var(--accent)]/40 text-[var(--accent-text)] hover:bg-[var(--accent-dim)]',
                           )}
                         >
                           {queryOpen ? 'Hide Query' : 'Query →'}
@@ -2267,7 +2268,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                           <button
                             onClick={() => handleRefund(b)}
                             disabled={isRefunding}
-                            className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors disabled:opacity-50"
+                            className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent-text)] hover:border-[var(--accent)] transition-colors disabled:opacity-50"
                             title="Return the locked GRT to the developer"
                           >
                             {isRefunding ? 'Waiting...' : 'Refund'}
@@ -2377,7 +2378,7 @@ export default function StudioPage() {
         {!sessionAddress && (
           <div className="flex flex-col items-center py-16 text-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-[var(--accent-dim)] flex items-center justify-center">
-              <svg className="w-7 h-7 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="w-7 h-7 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
               </svg>
             </div>
@@ -2409,7 +2410,7 @@ export default function StudioPage() {
                   className={cn(
                     'px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px',
                     tab === t.id
-                      ? 'border-[var(--accent)] text-[var(--accent)]'
+                      ? 'border-[var(--accent)] text-[var(--accent-text)]'
                       : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]',
                   )}
                 >

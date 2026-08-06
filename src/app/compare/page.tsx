@@ -351,7 +351,7 @@ function CompareContent() {
               className={cn(
                 'px-4 py-2 text-sm rounded-[var(--radius-button)]',
                 'border-[0.5px] border-dashed border-[var(--border-mid)]',
-                'text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]',
+                'text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent-text)]',
                 'transition-colors',
               )}
             >
@@ -421,7 +421,7 @@ function CompareContent() {
                           key={idx}
                           className={cn(
                             'px-4 py-3 text-center font-mono text-sm',
-                            isBest ? 'text-[var(--accent)] font-semibold' : 'text-[var(--text)]',
+                            isBest ? 'text-[var(--accent-text)] font-semibold' : 'text-[var(--text)]',
                           )}
                         >
                           {formatMetric(value, metric.format)}

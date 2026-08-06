@@ -57,7 +57,7 @@ export function Playground({ service }: { service: DataService }) {
   return (
     <div className="mt-6 pt-5 border-t border-[var(--border)]">
       <div className="flex items-center gap-2 mb-3">
-        <h4 className="text-[11px] font-semibold text-[var(--accent)] uppercase tracking-wide">Playground</h4>
+        <h4 className="text-[11px] font-semibold text-[var(--accent-text)] uppercase tracking-wide">Playground</h4>
         <span className="text-[10px] text-[var(--text-faint)] font-mono truncate">{pg.endpoint}</span>
       </div>
 
@@ -75,7 +75,7 @@ export function Playground({ service }: { service: DataService }) {
                   'shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-[var(--radius-button)] transition-colors',
                   state === 'loading'
                     ? 'bg-[var(--bg-elevated)] text-[var(--text-faint)] cursor-wait'
-                    : 'bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25',
+                    : 'bg-[var(--accent)]/15 text-[var(--accent-text)] hover:bg-[var(--accent)]/25',
                 )}
               >
                 {state === 'loading' ? (
@@ -131,7 +131,7 @@ export function Playground({ service }: { service: DataService }) {
             <ol className="space-y-1.5">
               {pg.prerequisites.map((p, i) => (
                 <li key={i} className="flex gap-2 text-[11px] text-[var(--text-muted)] leading-relaxed">
-                  <span className="font-mono text-[9px] text-[var(--accent)] shrink-0 mt-0.5">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="font-mono text-[9px] text-[var(--accent-text)] shrink-0 mt-0.5">{String(i + 1).padStart(2, '0')}</span>
                   <span>{p}</span>
                 </li>
               ))}
@@ -146,7 +146,7 @@ export function Playground({ service }: { service: DataService }) {
               <button
                 type="button"
                 onClick={copyCode}
-                className="text-[10px] text-[var(--text-faint)] hover:text-[var(--accent)] transition-colors"
+                className="text-[10px] text-[var(--text-faint)] hover:text-[var(--accent-text)] transition-colors"
               >
                 {copied ? 'copied ✓' : 'copy'}
               </button>

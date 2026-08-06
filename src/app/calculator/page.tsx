@@ -51,7 +51,7 @@ export default function CalculatorPage() {
       <div className="p-4 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-hover)]">
         <div className="flex gap-3">
           <svg
-            className="w-5 h-5 text-[var(--accent)] flex-shrink-0 mt-0.5"
+            className="w-5 h-5 text-[var(--accent-text)] flex-shrink-0 mt-0.5"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

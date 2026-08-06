@@ -181,14 +181,14 @@ export function DelegationFeed({ indexerAddress: initialFilter }: DelegationFeed
                   <span className="text-[11px] text-[var(--text-faint)] truncate hidden sm:inline font-mono">
                     <Link
                       href={`/delegators/${event.delegator}`}
-                      className="hover:text-[var(--accent)] transition-colors"
+                      className="hover:text-[var(--accent-text)] transition-colors"
                     >
                       {event.delegator}
                     </Link>
                     <span className="mx-1">→</span>
                     <Link
                       href={`/indexers/${event.indexer}`}
-                      className="hover:text-[var(--accent)] transition-colors"
+                      className="hover:text-[var(--accent-text)] transition-colors"
                     >
                       {indexerName ?? event.indexer}
                     </Link>
@@ -201,7 +201,7 @@ export function DelegationFeed({ indexerAddress: initialFilter }: DelegationFeed
                       href={`https://arbiscan.io/tx/${event.txHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:text-[var(--accent)] transition-colors"
+                      className="hover:text-[var(--accent-text)] transition-colors"
                       title="View on Arbiscan"
                     >
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

@@ -35,7 +35,7 @@ export function RewardSplitDonut() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <ChartSkeleton height="280px" />
+          <ChartSkeleton height="315px" />
         ) : (
           <div className="h-[280px] relative">
             <ResponsiveContainer width="100%" height="100%">

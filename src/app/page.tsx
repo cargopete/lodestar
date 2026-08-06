@@ -124,7 +124,7 @@ export default function ProtocolOverview() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-3">
             <div className="flex items-center gap-3">
               <span className="text-sm text-[var(--text-muted)]">Current Epoch</span>
-              <span className="text-lg font-mono font-semibold text-[var(--accent)]">
+              <span className="text-lg font-mono font-semibold text-[var(--accent-text)]">
                 {actualEpoch || '—'}
               </span>
             </div>
@@ -202,7 +202,7 @@ export default function ProtocolOverview() {
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
                 <p className="text-[13px] text-[var(--text-muted)]">Indexers</p>
-                <p className="text-xl font-mono font-semibold text-[var(--accent)] mt-1">
+                <p className="text-xl font-mono font-semibold text-[var(--accent-text)] mt-1">
                   {network?.stakedIndexersCount ?? '—'}
                 </p>
                 <p className="text-xs text-[var(--text-faint)] mt-0.5">
@@ -301,7 +301,7 @@ export default function ProtocolOverview() {
             </div>
             <Link
               href="/subgraphs"
-              className="text-xs text-[var(--accent)] hover:underline shrink-0"
+              className="text-xs text-[var(--accent-text)] hover:underline shrink-0"
             >
               View all →
             </Link>
@@ -342,13 +342,13 @@ export default function ProtocolOverview() {
                         <td className="py-3 pr-4 max-w-[200px]">
                           <Link
                             href={`/subgraphs/${sg.ipfsHash}`}
-                            className="text-[var(--text)] hover:text-[var(--accent)] transition-colors truncate block font-medium"
+                            className="text-[var(--text)] hover:text-[var(--accent-text)] transition-colors truncate block font-medium"
                             title={name}
                           >
                             {name}
                           </Link>
                         </td>
-                        <td className="py-3 pr-4 text-right font-mono text-[var(--accent)]">
+                        <td className="py-3 pr-4 text-right font-mono text-[var(--accent-text)]">
                           {formatGRT(fees30d)} GRT
                         </td>
                         <td className="py-3 pr-4 text-right font-mono text-[var(--text-muted)] text-xs">

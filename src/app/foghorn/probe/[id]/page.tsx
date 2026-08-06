@@ -75,7 +75,7 @@ export default function ProbeDetailPage({ params }: { params: Promise<{ id: stri
     return (
       <div className="text-center py-24">
         <p className="text-[var(--text-muted)]">Probe not found.</p>
-        <Link href="/foghorn" className="text-sm text-[var(--accent)] hover:underline mt-4 inline-block">
+        <Link href="/foghorn" className="text-sm text-[var(--accent-text)] hover:underline mt-4 inline-block">
           ← Back to Foghorn
         </Link>
       </div>

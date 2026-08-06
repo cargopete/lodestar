@@ -46,7 +46,7 @@ function PageHeader() {
           href="https://thegraph.com/explorer/subgraphs/DZz4kDTdmzWLWsV373w2bSmoar3umKKH9y82SUKr5qmp"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[var(--accent)] hover:underline"
+          className="text-[var(--accent-text)] hover:underline"
         >
           network subgraph
         </a>.
@@ -76,7 +76,7 @@ function ReceiverLink({ address, names }: { address: string; names: Map<string, 
   return (
     <Link
       href={`/payments/${address}`}
-      className="text-[var(--accent)] hover:underline font-medium"
+      className="text-[var(--accent-text)] hover:underline font-medium"
     >
       {name || shortenAddress(address)}
     </Link>
@@ -92,7 +92,7 @@ function PayerLink({ address }: { address: string }) {
       rel="noopener noreferrer"
       title={address}
       className={cn(
-        'text-sm hover:text-[var(--accent)] transition-colors',
+        'text-sm hover:text-[var(--accent-text)] transition-colors',
         alias ? 'font-medium text-[var(--text)]' : 'font-mono text-[var(--text)]'
       )}
     >
@@ -431,7 +431,7 @@ function PaymentsInner() {
               <div className="flex gap-6">
                 <div>
                   <p className="text-[10px] text-[var(--text-faint)]">Query Fees</p>
-                  <p className="text-lg font-mono font-semibold text-[var(--accent)]">
+                  <p className="text-lg font-mono font-semibold text-[var(--accent-text)]">
                     {formatGRT(weiToGRT(networkData.graphNetwork.totalQueryFees))} GRT
                   </p>
                 </div>
@@ -715,7 +715,7 @@ function TransactionsPanel({
                         rel="noopener noreferrer"
                         title={tx.payer.id}
                         className={cn(
-                          'hover:text-[var(--accent)] text-[var(--text-faint)]',
+                          'hover:text-[var(--accent-text)] text-[var(--text-faint)]',
                           GATEWAY_ALIASES[tx.payer.id.toLowerCase()] ? 'text-sm font-medium' : 'font-mono'
                         )}
                       >

@@ -275,7 +275,7 @@ export function TokenPriceChart({
                   onClick={() => setMode(m)}
                   className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${
                     mode === m
-                      ? 'bg-[var(--accent)]/15 text-[var(--accent)]'
+                      ? 'bg-[var(--accent)]/15 text-[var(--accent-text)]'
                       : 'text-[var(--text-muted)] hover:text-[var(--text)]'
                   }`}
                 >
@@ -291,7 +291,7 @@ export function TokenPriceChart({
                   onClick={() => setWindowId(w.id)}
                   className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${
                     windowId === w.id
-                      ? 'bg-[var(--accent)]/15 text-[var(--accent)]'
+                      ? 'bg-[var(--accent)]/15 text-[var(--accent-text)]'
                       : 'text-[var(--text-muted)] hover:text-[var(--text)]'
                   }`}
                 >

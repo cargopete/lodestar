@@ -144,7 +144,7 @@ export default function NetworkStatePage() {
               <CardTitle>Top Subgraphs by Revenue</CardTitle>
               <p className="text-sm text-[var(--text-muted)] mt-1">Ranked by query fees collected in the last 30 days</p>
             </div>
-            <Link href="/subgraphs" className="text-xs text-[var(--accent)] hover:underline shrink-0">
+            <Link href="/subgraphs" className="text-xs text-[var(--accent-text)] hover:underline shrink-0">
               View all →
             </Link>
           </div>
@@ -181,13 +181,13 @@ export default function NetworkStatePage() {
                         <td className="py-3 pr-4 max-w-[200px]">
                           <Link
                             href={`/subgraphs/${sg.ipfsHash}`}
-                            className="text-[var(--text)] hover:text-[var(--accent)] transition-colors truncate block font-medium"
+                            className="text-[var(--text)] hover:text-[var(--accent-text)] transition-colors truncate block font-medium"
                             title={name}
                           >
                             {name}
                           </Link>
                         </td>
-                        <td className="py-3 pr-4 text-right font-mono text-[var(--accent)]">{formatGRT(fees30d)} GRT</td>
+                        <td className="py-3 pr-4 text-right font-mono text-[var(--accent-text)]">{formatGRT(fees30d)} GRT</td>
                         <td className="py-3 pr-4 text-right font-mono text-[var(--text-muted)] text-xs">{formatGRT(signal)}</td>
                         <td className="py-3 text-right font-mono text-[var(--text-muted)] text-xs">{sg.indexerAllocations.length}</td>
                       </tr>
@@ -201,9 +201,9 @@ export default function NetworkStatePage() {
       </Card>
 
       <p className="text-xs text-[var(--text-faint)] text-center pt-2">
-        Looking for more? See the full <Link href="/" className="text-[var(--accent)] hover:underline">Protocol Overview</Link>,{' '}
-        <Link href="/payments" className="text-[var(--accent)] hover:underline">Payments</Link>, and{' '}
-        <Link href="/grt-flow" className="text-[var(--accent)] hover:underline">GRT Flow</Link>.
+        Looking for more? See the full <Link href="/" className="text-[var(--accent-text)] hover:underline">Protocol Overview</Link>,{' '}
+        <Link href="/payments" className="text-[var(--accent-text)] hover:underline">Payments</Link>, and{' '}
+        <Link href="/grt-flow" className="text-[var(--accent-text)] hover:underline">GRT Flow</Link>.
       </p>
     </div>
   );

@@ -201,7 +201,7 @@ export function ProvisionsPanel({ provisions, isLoading, selfStakeGRT }: Provisi
           </div>
           <div className="text-center">
             <p className="text-xs text-[var(--text-faint)]">Allocated</p>
-            <p className="text-base font-mono font-semibold text-[var(--accent)]">
+            <p className="text-base font-mono font-semibold text-[var(--accent-text)]">
               {formatGRT(totals.allocated)}
             </p>
           </div>

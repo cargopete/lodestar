@@ -9,7 +9,7 @@ const EFFECTIVE = 'June 11, 2026';
 
 export default function PrivacyPage() {
   return (
-    <article className="prose prose-invert mx-auto max-w-3xl prose-headings:font-semibold prose-a:text-[var(--accent)]">
+    <article className="prose prose-invert mx-auto max-w-3xl prose-headings:font-semibold prose-a:text-[var(--accent-text)]">
       <h1>Privacy Policy</h1>
       <p className="text-[var(--text-muted)]">Effective {EFFECTIVE}</p>
 

@@ -65,7 +65,7 @@ export function RewardsBreakdown({
             className={cn(
               'px-2 py-1 text-xs font-medium rounded-md transition-colors',
               'border border-[var(--border)] hover:border-[var(--accent-hover)]',
-              showUSD ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-[var(--text-muted)]'
+              showUSD ? 'bg-[var(--accent-dim)] text-[var(--accent-text)]' : 'text-[var(--text-muted)]'
             )}
           >
             {showUSD ? 'USD' : 'GRT'}

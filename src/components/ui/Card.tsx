@@ -47,10 +47,13 @@ interface CardTitleProps {
 }
 
 export function CardTitle({ children, className }: CardTitleProps) {
+  // h2, not h3. Cards are the top-level sections beneath each page's h1, and
+  // since nothing in the app renders an h2 the old h3 made every page skip a
+  // heading level. Size comes from the class, so nothing moves visually.
   return (
-    <h3 className={cn('text-[15px] font-semibold text-[var(--text)] tracking-tight', className)} style={{ fontFamily: 'var(--font-display)' }}>
+    <h2 className={cn('text-[15px] font-semibold text-[var(--text)] tracking-tight', className)} style={{ fontFamily: 'var(--font-display)' }}>
       {children}
-    </h3>
+    </h2>
   );
 }
 

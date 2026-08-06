@@ -5,7 +5,7 @@ import type { TokenTag } from '@/lib/tokens/types';
 const STYLES: Record<TokenTag, string> = {
   Stablecoin: 'bg-[var(--green)]/12 text-[var(--green)]',
   Wrapped: 'bg-[#5BC2FF]/12 text-[#5BC2FF]',
-  DEX: 'bg-[var(--accent)]/12 text-[var(--accent)]',
+  DEX: 'bg-[var(--accent)]/12 text-[var(--accent-text)]',
   Lending: 'bg-[#6E92FF]/12 text-[#6E92FF]',
   LST: 'bg-[#9B7BFF]/12 text-[#B395FF]',
   Restaking: 'bg-[#7C5CFF]/12 text-[#A78BFA]',

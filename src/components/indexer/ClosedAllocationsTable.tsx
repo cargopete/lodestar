@@ -51,7 +51,7 @@ export function ClosedAllocationsTable({ allocations }: { allocations: ClosedAll
                   <div className="flex flex-col">
                     <Link
                       href={ipfsHash ? `/subgraphs/${ipfsHash}` : '#'}
-                      className="text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors truncate max-w-[200px]"
+                      className="text-sm text-[var(--text)] hover:text-[var(--accent-text)] transition-colors truncate max-w-[200px]"
                     >
                       {displayName ?? shortenAddress(alloc.subgraphDeployment.id)}
                     </Link>

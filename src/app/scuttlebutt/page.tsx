@@ -209,7 +209,7 @@ export default function ScuttlebuttPage() {
             />
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            Anonymous chatter, like the old days. Add <code className="font-mono text-[var(--accent)]">#secret</code>{' '}
+            Anonymous chatter, like the old days. Add <code className="font-mono text-[var(--accent-text)]">#secret</code>{' '}
             to your name for a tripcode. Mind your manners; the bilge has a mop.
           </p>
         </div>
@@ -220,7 +220,7 @@ export default function ScuttlebuttPage() {
                 onClick={() => setModView((v) => !v)}
                 className={cn(
                   'text-[11px] px-2 py-1 rounded-[var(--radius-button)] border border-[var(--border)]',
-                  modView ? 'bg-[var(--accent)]/15 text-[var(--accent)]' : 'text-[var(--text-muted)]',
+                  modView ? 'bg-[var(--accent)]/15 text-[var(--accent-text)]' : 'text-[var(--text-muted)]',
                 )}
               >
                 {modView ? 'Exit mod' : 'Mod view'}
@@ -287,7 +287,7 @@ export default function ScuttlebuttPage() {
                 {m.name || 'Anonymous'}
               </span>
               {m.tripcode && (
-                <span className="font-mono text-[11px] text-[var(--accent)]">{m.tripcode}</span>
+                <span className="font-mono text-[11px] text-[var(--accent-text)]">{m.tripcode}</span>
               )}
               <span className="text-[11px] text-[var(--text-faint)]">{relativeTime(m.created_at)}</span>
               {modView && m.ip_hash && (

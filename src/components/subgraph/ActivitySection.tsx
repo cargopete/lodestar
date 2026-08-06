@@ -44,7 +44,7 @@ export function ActivitySection({ hash }: { hash: string }) {
                   {e.kind === 'version' ? (
                     <p className="text-sm text-[var(--text)]">
                       Version <span className="font-medium">{e.label}</span> deployed
-                      <Link href={`/subgraphs/${e.ipfsHash}`} className="ml-2 text-[11px] font-mono text-[var(--text-faint)] hover:text-[var(--accent)]">
+                      <Link href={`/subgraphs/${e.ipfsHash}`} className="ml-2 text-[11px] font-mono text-[var(--text-faint)] hover:text-[var(--accent-text)]">
                         {e.ipfsHash.slice(0, 10)}…
                       </Link>
                     </p>

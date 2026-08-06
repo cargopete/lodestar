@@ -11,7 +11,7 @@ export function NuthatchBadge() {
       target="_blank"
       rel="noopener noreferrer"
       title="Served by nuthatch, a self-hosted, single-binary indexer. Click to learn more."
-      className="inline-flex items-center gap-1 text-[10px] text-[var(--text-faint)] hover:text-[var(--accent)] transition-colors"
+      className="inline-flex items-center gap-1 text-[10px] text-[var(--text-faint)] hover:text-[var(--accent-text)] transition-colors"
     >
       <span aria-hidden>⚡</span>
       <span>Indexed by nuthatch</span>

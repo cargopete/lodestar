@@ -73,7 +73,7 @@ export function DisputesSection({ address }: { address: string }) {
                       <td className="px-4 py-3">
                         <span className="text-sm text-[var(--text)]">{d.dispute_type ?? 'Dispute'}</span>
                         {d.deployment_id && (
-                          <Link href={`/subgraphs/${d.deployment_id}`} className="block text-[10px] font-mono text-[var(--text-faint)] hover:text-[var(--accent)] truncate max-w-[160px]">
+                          <Link href={`/subgraphs/${d.deployment_id}`} className="block text-[10px] font-mono text-[var(--text-faint)] hover:text-[var(--accent-text)] truncate max-w-[160px]">
                             {d.deployment_id.slice(0, 10)}…
                           </Link>
                         )}
@@ -93,7 +93,7 @@ export function DisputesSection({ address }: { address: string }) {
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         {d.fisherman ? (
-                          <a href={`https://arbiscan.io/address/${d.fisherman}`} target="_blank" rel="noopener noreferrer" className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent)]">
+                          <a href={`https://arbiscan.io/address/${d.fisherman}`} target="_blank" rel="noopener noreferrer" className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent-text)]">
                             {shortenAddress(d.fisherman)}
                           </a>
                         ) : <span className="text-[var(--text-faint)]">—</span>}

@@ -11,11 +11,19 @@
   --accent: rgb(111, 76, 255);
   --accent-dim: rgba(111, 76, 255, 0.12);
   --accent-hover: rgba(111, 76, 255, 0.20);
+  /* Accent for TEXT. The brand purple is a fill colour: as text it lands at
+     2.41:1 on --bg-elevated, well under the 4.5:1 AA floor. This lighter tint
+     (the same value as --star-top) reaches 5.17:1 there and 7.73:1 on --bg.
+     Use --accent for fills and borders, --accent-text for type. */
+  --accent-text: rgb(176, 154, 255);
 
   /* Text — white opacity ladder */
   --text: rgba(255, 255, 255, 0.92);
   --text-muted: rgba(255, 255, 255, 0.55);
-  --text-faint: rgba(255, 255, 255, 0.35);
+  /* 0.52, not 0.35: at 0.35 this was 2.86:1 on --bg-elevated and failed AA on
+     every page. 0.52 is the lowest alpha that clears 4.5:1 on the darkest
+     surface it sits on. */
+  --text-faint: rgba(255, 255, 255, 0.52);
 
   /* Borders */
   --border: rgba(255, 255, 255, 0.13);

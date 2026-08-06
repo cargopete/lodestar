@@ -174,7 +174,7 @@ function PerpsBadge({ coin }: { coin: string }) {
   return (
     <span
       title={`${coin} has a Hyperliquid perp market. Click into the detail page for OI, funding, liquidations, and positioning.`}
-      className="inline-flex items-center text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30"
+      className="inline-flex items-center text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--accent)]/15 text-[var(--accent-text)] border border-[var(--accent)]/30"
     >
       Perps
     </span>
@@ -254,7 +254,7 @@ export default function TokensPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--text)]" style={{ fontFamily: 'var(--font-display)' }}>
           Tokens
-          <span className="ml-2 align-middle inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)] font-medium">v0 prototype</span>
+          <span className="ml-2 align-middle inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent-text)] font-medium">v0 prototype</span>
         </h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
           Token analytics powered exclusively by The Graph. Prices and supply via Token API + canonical Uniswap V3 pools; DEX volume aggregated across Uniswap V2/V3 and Curve subgraphs on The Graph Network.
@@ -305,7 +305,7 @@ export default function TokensPage() {
                     <td className="py-2 pl-2 pr-3 text-[var(--text-faint)] tabular-nums">{pageStart + i + 1}</td>
                     <td className="py-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Link href={`/tokens/${t.chain}/${t.contract}`} className="flex items-center gap-2 hover:text-[var(--accent)]">
+                        <Link href={`/tokens/${t.chain}/${t.contract}`} className="flex items-center gap-2 hover:text-[var(--accent-text)]">
                           <TokenIcon symbol={t.symbol} slug={t.icon} logoUri={t.logoUri} contract={t.contract} chain={t.chain} />
                           <span className="font-medium">{t.symbol}</span>
                           <span className="text-[var(--text-faint)] text-xs">{t.name}</span>
@@ -321,7 +321,7 @@ export default function TokensPage() {
                             rel="noreferrer"
                             title={`Visit ${t.name} project page`}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-[var(--text-faint)] hover:text-[var(--accent)] transition-colors"
+                            className="text-[var(--text-faint)] hover:text-[var(--accent-text)] transition-colors"
                           >
                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />

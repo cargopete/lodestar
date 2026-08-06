@@ -439,7 +439,7 @@ export function LodieWidget() {
               <div className="mt-3 space-y-2">
                 <div className="flex items-center justify-between">
                   {showOnboarding ? (
-                    <button onClick={completeTour} className="text-[11px] text-[var(--accent)] hover:opacity-80 transition-opacity">
+                    <button onClick={completeTour} className="text-[11px] text-[var(--accent-text)] hover:opacity-80 transition-opacity">
                       Got it, I&apos;ll explore →
                     </button>
                   ) : depth === 0 && hasDeep ? (
@@ -458,7 +458,7 @@ export function LodieWidget() {
                 {!showOnboarding && (
                   <button
                     onClick={() => setMode('chat')}
-                    className="w-full text-[11px] px-3 py-1.5 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--bg)] text-[var(--accent)] hover:opacity-80 transition-opacity text-center"
+                    className="w-full text-[11px] px-3 py-1.5 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--bg)] text-[var(--accent-text)] hover:opacity-80 transition-opacity text-center"
                   >
                     Chat with Lodie →
                   </button>

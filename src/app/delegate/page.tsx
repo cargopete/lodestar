@@ -141,7 +141,7 @@ function RecommendationCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-bold text-[var(--accent)]">
+            <span className="text-sm font-bold text-[var(--accent-text)]">
               {name.slice(0, 2).toUpperCase()}
             </span>
           </div>
@@ -161,7 +161,7 @@ function RecommendationCard({
         </div>
         <button
           onClick={onSwap}
-          className="flex-shrink-0 text-xs text-[var(--accent)] hover:underline whitespace-nowrap"
+          className="flex-shrink-0 text-xs text-[var(--accent-text)] hover:underline whitespace-nowrap"
         >
           change →
         </button>
@@ -248,7 +248,7 @@ function CandidatePicker({
                 <div className="flex items-center gap-1.5">
                   <p className="text-sm font-medium text-[var(--text)] truncate">{name}</p>
                   {isActive && (
-                    <span className="text-[10px] text-[var(--accent)] font-medium">current</span>
+                    <span className="text-[10px] text-[var(--accent-text)] font-medium">current</span>
                   )}
                 </div>
                 <p className="text-[11px] text-[var(--text-faint)]">
@@ -270,7 +270,7 @@ function CandidatePicker({
       {/* Escape hatch */}
       <Link
         href="/indexers"
-        className="block px-4 py-3 text-xs text-center text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--bg-surface)] transition-colors"
+        className="block px-4 py-3 text-xs text-center text-[var(--text-muted)] hover:text-[var(--accent-text)] hover:bg-[var(--bg-surface)] transition-colors"
       >
         None of these? Browse all indexers →
       </Link>
@@ -372,20 +372,20 @@ export default function DelegatePage() {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <button
                 onClick={() => { setShowPrefs((v) => !v); }}
-                className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors"
               >
                 <svg className={cn('w-3 h-3 transition-transform', showPrefs && 'rotate-90')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                 </svg>
                 {showPrefs ? 'Hide preferences' : 'Customise selection'}
                 {!isDefaultPrefs && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[var(--accent-dim)] text-[var(--accent)]">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[var(--accent-dim)] text-[var(--accent-text)]">
                     custom
                   </span>
                 )}
               </button>
               <span className="text-[var(--border)] text-xs">·</span>
-              <Link href="/indexers" className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
+              <Link href="/indexers" className="text-xs text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors">
                 Browse all indexers
               </Link>
             </div>
@@ -454,7 +454,7 @@ export default function DelegatePage() {
             },
           ].map(({ n, title, body }) => (
             <div key={n} className="flex gap-3">
-              <span className="w-6 h-6 rounded-full bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--accent)]">
+              <span className="w-6 h-6 rounded-full bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--accent-text)]">
                 {n}
               </span>
               <div>

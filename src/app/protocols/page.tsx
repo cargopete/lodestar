@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { ProtocolLogo, buildProtocolSources, buildNetworkSources } from '@/components/ProtocolLogo';
 
 const CATEGORY_STYLES: Record<string, string> = {
-  'DEX': 'bg-[var(--accent)]/10 text-[var(--accent)]',
+  'DEX': 'bg-[var(--accent)]/10 text-[var(--accent-text)]',
   'Lending': 'bg-[var(--green)]/10 text-[var(--green)]',
   'Liquid Staking': 'bg-[#00A3FF]/12 text-[#5BC2FF]',
   'Yield Aggregator': 'bg-[#0657F9]/12 text-[#6E92FF]',
@@ -252,7 +252,7 @@ export default function ProtocolsPage() {
                   onClick={() => setCategory(c)}
                   className={`text-[11px] px-2 py-1 rounded-[var(--radius-button)] border transition-colors ${
                     active
-                      ? 'bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent)]'
+                      ? 'bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent-text)]'
                       : 'bg-transparent border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--border-mid)] hover:text-[var(--text)]'
                   }`}
                 >
@@ -329,7 +329,7 @@ export default function ProtocolsPage() {
                                   sources={buildProtocolSources(row.primary.config.family ?? row.primary.config.slug)}
                                   size={20}
                                 />
-                                <span className="font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                                <span className="font-medium text-[var(--text)] group-hover:text-[var(--accent-text)] transition-colors">
                                   {row.name}
                                 </span>
                                 <span className="text-[10px] text-[var(--text-faint)] hidden sm:inline">
@@ -348,7 +348,7 @@ export default function ProtocolsPage() {
                                   sources={buildProtocolSources(row.primary.config.family ?? row.primary.config.slug)}
                                   size={20}
                                 />
-                                <span className="font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                                <span className="font-medium text-[var(--text)] group-hover:text-[var(--accent-text)] transition-colors">
                                   {row.name}
                                 </span>
                                 <span className="text-[10px] text-[var(--text-faint)] hidden sm:inline">
@@ -366,7 +366,7 @@ export default function ProtocolsPage() {
                           <td className="py-3 pr-4 text-right font-mono text-[var(--text-muted)] text-xs whitespace-nowrap">
                             {showDash ? '—' : row.hasData ? formatUSD(row.volume30dUSD) : '—'}
                           </td>
-                          <td className="py-3 text-right font-mono text-[var(--accent)] text-xs whitespace-nowrap">
+                          <td className="py-3 text-right font-mono text-[var(--accent-text)] text-xs whitespace-nowrap">
                             {showDash ? '—' : row.hasData ? formatUSD(row.fees30dUSD) : '—'}
                           </td>
                         </tr>
@@ -391,7 +391,7 @@ export default function ProtocolsPage() {
                               sources={buildNetworkSources(child.config.chains[0] ?? '')}
                               size={16}
                             />
-                            <span className="text-xs text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors">
+                            <span className="text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-text)] transition-colors">
                               {child.config.chains.join(' / ')}
                             </span>
                           </Link>
@@ -405,7 +405,7 @@ export default function ProtocolsPage() {
                         <td className="py-2.5 pr-4 text-right font-mono text-[var(--text-faint)] text-[11px] whitespace-nowrap">
                           {child.failed ? '—' : summary ? formatUSD(summary.volume30dUSD) : '—'}
                         </td>
-                        <td className="py-2.5 text-right font-mono text-[var(--accent)]/70 text-[11px] whitespace-nowrap">
+                        <td className="py-2.5 text-right font-mono text-[var(--accent-text)]/70 text-[11px] whitespace-nowrap">
                           {child.failed ? '—' : summary ? formatUSD(summary.fees30dUSD) : '—'}
                         </td>
                       </tr>
@@ -431,7 +431,7 @@ export default function ProtocolsPage() {
           href="https://thegraph.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[var(--accent)] hover:underline"
+          className="text-[var(--accent-text)] hover:underline"
         >
           The Graph
         </a>

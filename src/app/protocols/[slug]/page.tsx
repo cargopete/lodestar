@@ -63,7 +63,7 @@ function MetricCard({ label, value, sub }: { label: string; value: string; sub?:
   return (
     <div className="p-4 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
       <p className="text-[11px] text-[var(--text-faint)] mb-1">{label}</p>
-      <p className="text-xl font-mono font-semibold text-[var(--accent)]">{value}</p>
+      <p className="text-xl font-mono font-semibold text-[var(--accent-text)]">{value}</p>
       {sub && <p className="text-[10px] text-[var(--text-faint)] mt-0.5">{sub}</p>}
     </div>
   );
@@ -225,7 +225,7 @@ function ProtocolHeader({ config, onWebsiteClick }: { config: ProtocolConfig; on
   return (
     <div className="pb-2 border-b border-[var(--border)]">
       <div className="flex items-center gap-2 text-xs text-[var(--text-faint)] mb-2">
-        <Link href="/protocols" className="hover:text-[var(--accent)] transition-colors">Protocols</Link>
+        <Link href="/protocols" className="hover:text-[var(--accent-text)] transition-colors">Protocols</Link>
         <span>/</span>
         <span>{config.name}</span>
       </div>
@@ -251,7 +251,7 @@ function ProtocolHeader({ config, onWebsiteClick }: { config: ProtocolConfig; on
             target="_blank"
             rel="noopener noreferrer"
             onClick={onWebsiteClick}
-            className="text-xs text-[var(--accent)] hover:underline"
+            className="text-xs text-[var(--accent-text)] hover:underline"
           >
             {config.website.replace('https://', '')} ↗
           </a>
@@ -424,7 +424,7 @@ function PredictionMarketsView({
                           href={`https://polymarket.com/event/${m.slug}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[var(--text)] hover:text-[var(--accent)] transition-colors line-clamp-2 leading-snug"
+                          className="text-[var(--text)] hover:text-[var(--accent-text)] transition-colors line-clamp-2 leading-snug"
                         >
                           {m.title}
                         </a>
@@ -535,7 +535,7 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
       {/* Header */}
       <div className="pb-2 border-b border-[var(--border)]">
         <div className="flex items-center gap-2 text-xs text-[var(--text-faint)] mb-2">
-          <Link href="/protocols" className="hover:text-[var(--accent)] transition-colors">Protocols</Link>
+          <Link href="/protocols" className="hover:text-[var(--accent-text)] transition-colors">Protocols</Link>
           <span>/</span>
           <span>{config.name}</span>
         </div>
@@ -561,7 +561,7 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
               target="_blank"
               rel="noopener noreferrer"
               onClick={handleWebsiteClick}
-              className="text-xs text-[var(--accent)] hover:underline"
+              className="text-xs text-[var(--accent-text)] hover:underline"
             >
               {config.website.replace('https://', '')} ↗
             </a>
@@ -766,12 +766,12 @@ export default function ProtocolDetailPage({ params }: { params: Promise<{ slug:
             href={`https://thegraph.com/explorer/subgraphs/${config.subgraphId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[var(--accent)] hover:underline"
+            className="text-[var(--accent-text)] hover:underline"
           >
             The Graph ↗
           </a>
         </span>
-        <Link href="/protocols" className="hover:text-[var(--accent)] transition-colors">
+        <Link href="/protocols" className="hover:text-[var(--accent-text)] transition-colors">
           ← All protocols
         </Link>
       </div>

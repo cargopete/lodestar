@@ -117,7 +117,7 @@ export default function POIDashboard() {
             className={cn(
               'px-3 py-1.5 text-xs rounded-[var(--radius-button)] transition-colors',
               sortMode === mode
-                ? 'bg-[var(--accent-dim)] text-[var(--accent)] font-medium'
+                ? 'bg-[var(--accent-dim)] text-[var(--accent-text)] font-medium'
                 : 'bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--text)]',
             )}
           >
@@ -195,7 +195,7 @@ export default function POIDashboard() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/poi/${dep.ipfsHash}`}
-                      className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+                      className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent-text)] transition-colors"
                       title={dep.ipfsHash}
                     >
                       {dep.ipfsHash.slice(0, 8)}...{dep.ipfsHash.slice(-6)}

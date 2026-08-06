@@ -11,7 +11,7 @@ export function Footer() {
             href="https://edgeandedgeandedge.com/blog/lodestar"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-[var(--accent)] transition-colors"
+            className="hover:text-[var(--accent-text)] transition-colors"
             title="Voluntarily incorporated. No electricity was threatened."
           >
             part of the Perimeter at Edge &amp; Edge
@@ -20,12 +20,12 @@ export function Footer() {
         <div className="flex flex-col items-center sm:flex-row sm:justify-between gap-4 text-xs text-[var(--text-faint)]">
           <p>
             Made with{' '}
-            <span className="text-[var(--accent)]">&hearts;</span> by{' '}
+            <span className="text-[var(--accent-text)]">&hearts;</span> by{' '}
             <a
               href="https://github.com/cargopete"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+              className="text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors"
             >
               cargopete
             </a>
@@ -38,7 +38,7 @@ export function Footer() {
               href="https://github.com/sponsors/cargopete"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+              className="text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors"
             >
               buying me a coffee
             </a>
@@ -50,7 +50,7 @@ export function Footer() {
               href="https://discord.gg/484vgDETEZ"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+              className="text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors"
             >
               {'⚔️'} The Night&apos;s Watch
             </a>
@@ -58,7 +58,7 @@ export function Footer() {
               href="https://github.com/nightswatchhq/lodestar"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+              className="text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors"
             >
               {'\uD83D\uDC27'} Source code
             </a>
@@ -66,7 +66,7 @@ export function Footer() {
               href="https://github.com/sponsors/cargopete"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+              className="text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors"
             >
               {'\uD83D\uDC9C'} Sponsor
             </a>

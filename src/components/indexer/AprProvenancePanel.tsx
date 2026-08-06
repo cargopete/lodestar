@@ -223,7 +223,7 @@ export function AprProvenancePanel({
             <span className="text-sm font-semibold text-[var(--text)]">= Delegator APR</span>
             <span className="flex items-baseline gap-2">
               <span
-                className="text-lg font-semibold font-mono text-[var(--accent)]"
+                className="text-lg font-semibold font-mono text-[var(--accent-text)]"
                 title="Per-allocation signal-to-stake ratios clamped to the P95 of this indexer's allocations, so one tiny-stake/high-signal subgraph can't run away with the estimate."
               >
                 {apr.toFixed(2)}%
@@ -293,7 +293,7 @@ export function AprProvenancePanel({
             type="button"
             onClick={() => setShowEvents((v) => !v)}
             aria-expanded={showEvents}
-            className="flex w-full items-center justify-between gap-2 text-sm font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+            className="flex w-full items-center justify-between gap-2 text-sm font-medium text-[var(--text)] hover:text-[var(--accent-text)] transition-colors"
           >
             <span>
               Why did it change?

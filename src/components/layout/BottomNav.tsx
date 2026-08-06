@@ -350,7 +350,7 @@ export function BottomNav() {
                         className={cn(
                           'flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border transition-all active:scale-95',
                           isActive
-                            ? 'bg-[var(--accent-dim)] border-[var(--accent)]/30 text-[var(--accent)]'
+                            ? 'bg-[var(--accent-dim)] border-[var(--accent)]/30 text-[var(--accent-text)]'
                             : 'bg-[var(--bg-elevated)] border-transparent text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-elevated)]'
                         )}
                       >
@@ -382,7 +382,7 @@ export function BottomNav() {
                 href={tab.href}
                 className={cn(
                   'flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-full px-2 transition-colors active:scale-[0.92]',
-                  isActive ? 'text-[var(--accent)]' : 'text-[var(--text-faint)]'
+                  isActive ? 'text-[var(--accent-text)]' : 'text-[var(--text-faint)]'
                 )}
               >
                 {tab.icon}
@@ -396,7 +396,7 @@ export function BottomNav() {
             onClick={() => setShowMore(!showMore)}
             className={cn(
               'flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-full px-2 transition-colors active:scale-[0.92]',
-              isMoreActive || showMore ? 'text-[var(--accent)]' : 'text-[var(--text-faint)]'
+              isMoreActive || showMore ? 'text-[var(--accent-text)]' : 'text-[var(--text-faint)]'
             )}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

@@ -39,7 +39,7 @@ export function VersionsTable({ versions }: { versions: SubgraphVersion[] }) {
                 ) : (
                   <Link
                     href={`/subgraphs/${v.ipfsHash}`}
-                    className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                    className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors"
                   >
                     {v.ipfsHash.slice(0, 10)}…{v.ipfsHash.slice(-6)}
                   </Link>

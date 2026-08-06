@@ -92,7 +92,7 @@ function DeploymentChip({ id, name }: { id: string; name?: string }) {
     <Link
       href={`/subgraphs/${id}`}
       className={cn(
-        'text-[11px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors max-w-[200px] truncate',
+        'text-[11px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors max-w-[200px] truncate',
         !name && 'font-mono'
       )}
       title={name ? `${name} · ${id}` : id}
@@ -120,7 +120,7 @@ function AttentionCard({ item, names }: { item: AttentionItem; names: Record<str
             <Badge variant="warning">{kindLabel(item.kind)}</Badge>
             <Link
               href={`/indexers/${item.indexer_address}`}
-              className="text-sm font-medium text-[var(--text)] hover:text-[var(--accent)] truncate"
+              className="text-sm font-medium text-[var(--text)] hover:text-[var(--accent-text)] truncate"
             >
               {indexerLabel(item.indexer_address, item.ens_name)}
             </Link>
@@ -138,7 +138,7 @@ function AttentionCard({ item, names }: { item: AttentionItem; names: Record<str
                 <button
                   type="button"
                   onClick={() => setExpanded(true)}
-                  className="text-[11px] font-medium px-1.5 py-0.5 rounded text-[var(--accent)] hover:bg-[var(--bg-elevated)] transition-colors"
+                  className="text-[11px] font-medium px-1.5 py-0.5 rounded text-[var(--accent-text)] hover:bg-[var(--bg-elevated)] transition-colors"
                 >
                   +{hidden} more
                 </button>
@@ -337,7 +337,7 @@ function Leaderboard() {
                     <td className="px-3 py-2">
                       <Link
                         href={`/indexers/${ix.indexer_address}`}
-                        className="text-[var(--text)] hover:text-[var(--accent)]"
+                        className="text-[var(--text)] hover:text-[var(--accent-text)]"
                       >
                         {indexerLabel(ix.indexer_address, ix.ens_name)}
                       </Link>
@@ -426,6 +426,16 @@ function VerdictsSection() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              {/* The design has no visible header row, but the columns still
+                  need names for anyone navigating this table by screen reader. */}
+              <thead className="sr-only">
+                <tr>
+                  <th scope="col">Severity</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Indexer and finding</th>
+                  <th scope="col">Last seen</th>
+                </tr>
+              </thead>
               <tbody>
                 {verdicts.map((v) => (
                   <tr
@@ -441,7 +451,7 @@ function VerdictsSection() {
                     <td className="px-3 py-2">
                       <Link
                         href={`/indexers/${v.indexer_address}`}
-                        className="text-[var(--text)] hover:text-[var(--accent)]"
+                        className="text-[var(--text)] hover:text-[var(--accent-text)]"
                       >
                         {indexerLabel(v.indexer_address, v.ens_name)}
                       </Link>
@@ -485,7 +495,7 @@ function SybilSection() {
                 <Link
                   key={m}
                   href={`/indexers/${m}`}
-                  className="font-mono text-[11px] text-[var(--accent)] hover:underline"
+                  className="font-mono text-[11px] text-[var(--accent-text)] hover:underline"
                 >
                   {shortenAddress(m, 4)}
                 </Link>
@@ -568,7 +578,7 @@ function DivergenceFeed() {
                   <td className="px-3 py-2">
                     <Link
                       href={`/foghorn/probe/${e.probe_id}`}
-                      className="font-mono text-[11px] text-[var(--accent)] hover:underline"
+                      className="font-mono text-[11px] text-[var(--accent-text)] hover:underline"
                     >
                       {e.probe_id.slice(0, 8)}
                     </Link>

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function SupportPage() {
   return (
-    <article className="prose prose-invert mx-auto max-w-3xl prose-headings:font-semibold prose-a:text-[var(--accent)]">
+    <article className="prose prose-invert mx-auto max-w-3xl prose-headings:font-semibold prose-a:text-[var(--accent-text)]">
       <h1>Support</h1>
       <p>
         Lodestar Dashboard is analytics, indexer intelligence, and portfolio tracking for The Graph

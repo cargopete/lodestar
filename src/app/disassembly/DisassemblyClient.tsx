@@ -359,7 +359,7 @@ function ShareLink({ id }: { id: string }) {
   return (
     <div className="flex items-center gap-2 text-[12px]">
       <span className="text-[var(--text-muted)]">Shareable link:</span>
-      <a href={href} className="font-mono text-[var(--accent)] hover:underline truncate">{href}</a>
+      <a href={href} className="font-mono text-[var(--accent-text)] hover:underline truncate">{href}</a>
       <button
         type="button"
         onClick={copy}

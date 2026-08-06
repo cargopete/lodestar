@@ -45,7 +45,7 @@ function ChainChip({ service }: { service: DataService }) {
         className={cn(
           'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono whitespace-nowrap',
           isMainnet
-            ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+            ? 'bg-[var(--accent)]/10 text-[var(--accent-text)]'
             : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
         )}
         title={isMainnet ? 'Payments settle on a production mainnet' : 'Payments on testnet / local chain'}
@@ -118,7 +118,7 @@ function ServiceCard({
           <svg
             className={cn(
               'w-4 h-4 text-[var(--text-faint)] transition-transform duration-300',
-              expanded && 'rotate-180 text-[var(--accent)]'
+              expanded && 'rotate-180 text-[var(--accent-text)]'
             )}
             fill="none"
             viewBox="0 0 24 24"
@@ -163,7 +163,7 @@ function StepList({ title, steps }: { title: string; steps?: string[] }) {
       <ol className="space-y-2">
         {steps.map((step, i) => (
           <li key={i} className="flex gap-2.5 text-xs text-[var(--text-muted)] leading-relaxed">
-            <span className="font-mono text-[10px] text-[var(--accent)] shrink-0 mt-0.5">{String(i + 1).padStart(2, '0')}</span>
+            <span className="font-mono text-[10px] text-[var(--accent-text)] shrink-0 mt-0.5">{String(i + 1).padStart(2, '0')}</span>
             <span>{step}</span>
           </li>
         ))}
@@ -283,7 +283,7 @@ const DetailPanel = ({
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-mono text-[10px] text-[var(--accent)] hover:underline break-all"
+                        className="font-mono text-[10px] text-[var(--accent-text)] hover:underline break-all"
                       >
                         {c.address}
                       </a>
@@ -310,7 +310,7 @@ const DetailPanel = ({
             href={l.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)]/30 hover:text-[var(--accent)] transition-colors"
+            className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)]/30 hover:text-[var(--accent-text)] transition-colors"
           >
             {l.label}
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

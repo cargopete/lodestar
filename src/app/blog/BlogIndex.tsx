@@ -22,7 +22,7 @@ function PostCard({ post, featured = false }: { post: PostMeta; featured?: boole
                 <Badge key={tag} variant="default">{tag}</Badge>
               ))}
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text)] leading-tight group-hover:text-[var(--accent)] transition-colors">
+            <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text)] leading-tight group-hover:text-[var(--accent-text)] transition-colors">
               {post.title}
             </h2>
             {post.excerpt && (
@@ -34,7 +34,7 @@ function PostCard({ post, featured = false }: { post: PostMeta; featured?: boole
               </span>
               {post.author && <span className="text-sm text-[var(--text-faint)]">by {post.author}</span>}
             </div>
-            <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-[var(--accent)] group-hover:gap-3 transition-all">
+            <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-[var(--accent-text)] group-hover:gap-3 transition-all">
               View Post
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
@@ -57,7 +57,7 @@ function PostCard({ post, featured = false }: { post: PostMeta; featured?: boole
               <Badge key={tag} variant="default">{tag}</Badge>
             ))}
           </div>
-          <h3 className="text-base font-semibold text-[var(--text)] leading-snug group-hover:text-[var(--accent)] transition-colors">
+          <h3 className="text-base font-semibold text-[var(--text)] leading-snug group-hover:text-[var(--accent-text)] transition-colors">
             {post.title}
           </h3>
           {post.excerpt && (
@@ -151,6 +151,7 @@ export default function BlogIndex({ posts }: { posts: PostMeta[] }) {
         </div>
         <div className="relative">
           <select
+            aria-label="Filter by category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="appearance-none pl-3 pr-8 py-2 text-[13px] bg-[var(--bg-surface)] border border-[var(--border)] rounded-[var(--radius-button)] text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors cursor-pointer"

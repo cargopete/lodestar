@@ -184,7 +184,7 @@ export function DelegationCalculator({
           <div className="p-4 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-hover)]">
             <div className="flex justify-between items-center">
               <span className="text-sm text-[var(--text-muted)]">Current APR</span>
-              <span className="text-2xl font-mono font-semibold text-[var(--accent)]">
+              <span className="text-2xl font-mono font-semibold text-[var(--accent-text)]">
                 {currentAPR.toFixed(2)}%
               </span>
             </div>

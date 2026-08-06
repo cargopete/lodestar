@@ -255,7 +255,7 @@ export default function IndexerDetailPage({
         <div className="flex items-center gap-4 min-w-0">
           {/* Avatar */}
           <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0">
-            <span className="text-xl sm:text-2xl font-bold text-[var(--accent)]">
+            <span className="text-xl sm:text-2xl font-bold text-[var(--accent-text)]">
               {name.slice(0, 2).toUpperCase()}
             </span>
           </div>
@@ -267,7 +267,7 @@ export default function IndexerDetailPage({
                 href={`https://arbiscan.io/address/${indexer.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--accent)] hover:underline flex-shrink-0"
+                className="text-[var(--accent-text)] hover:underline flex-shrink-0"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -285,7 +285,7 @@ export default function IndexerDetailPage({
                     href={`https://arbiscan.io/address/${op.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                    className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors"
                     title={op.id}
                   >
                     {shortenAddress(op.id)}
@@ -485,7 +485,7 @@ export default function IndexerDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <svg className="w-5 h-5 text-[var(--accent)] group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-5 h-5 text-[var(--accent-text)] group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>
         </div>
@@ -896,7 +896,7 @@ export default function IndexerDetailPage({
                           <div className="flex flex-col">
                             <Link
                               href={dep.ipfsHash ? `/subgraphs/${dep.ipfsHash}` : '#'}
-                              className="text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors truncate max-w-[200px]"
+                              className="text-sm text-[var(--text)] hover:text-[var(--accent-text)] transition-colors truncate max-w-[200px]"
                             >
                               {dep.displayName ?? shortenAddress(dep.deploymentId)}
                             </Link>
@@ -1064,7 +1064,7 @@ export default function IndexerDetailPage({
                       <span className="text-sm text-[var(--text-faint)] flex-shrink-0">#{i + 1}</span>
                       <Link
                         href={`/delegators/${del.delegator.id}`}
-                        className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors truncate"
+                        className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent-text)] transition-colors truncate"
                       >
                         {del.delegator.id}
                       </Link>

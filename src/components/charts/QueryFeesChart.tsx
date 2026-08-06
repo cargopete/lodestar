@@ -150,7 +150,7 @@ export function QueryFeesChart() {
                 onClick={() => setTimeWindow(w)}
                 className={`px-2 py-0.5 text-[11px] rounded-[var(--radius-button)] border transition-colors ${
                   timeWindow === w
-                    ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10'
+                    ? 'border-[var(--accent)] text-[var(--accent-text)] bg-[var(--accent)]/10'
                     : 'border-[var(--border)] text-[var(--text-faint)] hover:border-[var(--border-mid)]'
                 }`}
               >
@@ -162,7 +162,7 @@ export function QueryFeesChart() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <ChartSkeleton height="320px" />
+          <ChartSkeleton height="340px" />
         ) : isYearly ? (
           <>
             {/* Quarterly summary stats */}
@@ -171,7 +171,7 @@ export function QueryFeesChart() {
                 <p className="text-[10px] text-[var(--text-faint)] mb-1">
                   {quarterData[quarterData.length - 1]?.label ?? 'Current Q'}
                 </p>
-                <p className="text-lg font-mono font-semibold text-[var(--accent)]">{formatGRT(currentQ)}</p>
+                <p className="text-lg font-mono font-semibold text-[var(--accent-text)]">{formatGRT(currentQ)}</p>
                 <p className="text-[10px] text-[var(--text-faint)] font-mono">{formatGRTFull(currentQ)} GRT</p>
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
@@ -239,7 +239,7 @@ export function QueryFeesChart() {
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
                 <p className="text-[10px] text-[var(--text-faint)] mb-1">Current {timeWindow}</p>
-                <p className="text-lg font-mono font-semibold text-[var(--accent)]">{formatGRT(currentTotal)}</p>
+                <p className="text-lg font-mono font-semibold text-[var(--accent-text)]">{formatGRT(currentTotal)}</p>
                 <p className="text-[10px] text-[var(--text-faint)] font-mono">{formatGRTFull(currentTotal)} GRT</p>
               </div>
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">

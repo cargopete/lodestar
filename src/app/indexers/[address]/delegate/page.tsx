@@ -113,7 +113,7 @@ export default function DelegatePage({
         <h2 className="text-xl font-semibold text-[var(--text)] mb-2">Indexer Not Found</h2>
         <Link
           href="/indexers"
-          className="text-sm text-[var(--accent)] hover:underline"
+          className="text-sm text-[var(--accent-text)] hover:underline"
         >
           Back to Directory
         </Link>
@@ -161,7 +161,7 @@ export default function DelegatePage({
       {/* Back link */}
       <Link
         href={`/indexers/${address}`}
-        className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -172,7 +172,7 @@ export default function DelegatePage({
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="w-14 h-14 rounded-xl bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0">
-          <span className="text-xl font-bold text-[var(--accent)]">
+          <span className="text-xl font-bold text-[var(--accent-text)]">
             {name.slice(0, 2).toUpperCase()}
           </span>
         </div>
@@ -264,7 +264,7 @@ export default function DelegatePage({
         <Card>
           <CardContent className="py-12 text-center">
             <div className="w-16 h-16 rounded-full bg-[var(--accent-dim)] flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="w-8 h-8 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 013 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 013 6v3" />
               </svg>
             </div>
@@ -325,21 +325,21 @@ export default function DelegatePage({
         <p className="text-xs font-semibold text-[var(--text-muted)] mb-3">How delegation works</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="flex gap-3">
-            <span className="w-6 h-6 rounded-full bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--accent)]">1</span>
+            <span className="w-6 h-6 rounded-full bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--accent-text)]">1</span>
             <div>
               <p className="text-sm font-medium text-[var(--text)]">Approve &amp; Delegate</p>
               <p className="text-[11px] text-[var(--text-faint)]">Approve GRT spend, then delegate to the indexer. No protocol tax since Horizon.</p>
             </div>
           </div>
           <div className="flex gap-3">
-            <span className="w-6 h-6 rounded-full bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--accent)]">2</span>
+            <span className="w-6 h-6 rounded-full bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--accent-text)]">2</span>
             <div>
               <p className="text-sm font-medium text-[var(--text)]">Earn Rewards</p>
               <p className="text-[11px] text-[var(--text-faint)]">Rewards accrue automatically as the indexer earns from allocations.</p>
             </div>
           </div>
           <div className="flex gap-3">
-            <span className="w-6 h-6 rounded-full bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--accent)]">3</span>
+            <span className="w-6 h-6 rounded-full bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--accent-text)]">3</span>
             <div>
               <p className="text-sm font-medium text-[var(--text)]">Undelegate</p>
               <p className="text-[11px] text-[var(--text-faint)]">28-day thawing period to withdraw. Manage positions from your portfolio.</p>

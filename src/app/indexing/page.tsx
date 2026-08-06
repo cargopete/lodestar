@@ -329,7 +329,7 @@ export default function IndexingStatusPage() {
                         )}
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                          <p className="text-sm font-medium text-[var(--text)] group-hover:text-[var(--accent-text)] transition-colors">
                             {sg.metadata?.displayName ?? 'Unnamed'}
                           </p>
                           <p className="text-[10px] text-[var(--text-faint)] font-mono truncate">
@@ -385,7 +385,7 @@ export default function IndexingStatusPage() {
                   )}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-mono text-[var(--text)] group-hover:text-[var(--accent)] truncate transition-colors">
+                    <p className="text-sm font-mono text-[var(--text)] group-hover:text-[var(--accent-text)] truncate transition-colors">
                       {shortenAddress(dep.ipfsHash, 12)}
                     </p>
                     <div className="flex gap-3 mt-0.5">

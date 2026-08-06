@@ -20,7 +20,7 @@ function PayerLink({ address }: { address: string }) {
       rel="noopener noreferrer"
       title={address}
       className={cn(
-        'text-sm hover:text-[var(--accent)] transition-colors',
+        'text-sm hover:text-[var(--accent-text)] transition-colors',
         alias ? 'font-medium text-[var(--text)]' : 'font-mono text-[var(--text)]'
       )}
     >
@@ -103,7 +103,7 @@ export default function IndexerPaymentsPage({
         </div>
         <Link
           href={`/indexers/${address}`}
-          className="ml-auto text-xs text-[var(--accent)] hover:underline"
+          className="ml-auto text-xs text-[var(--accent-text)] hover:underline"
         >
           View Indexer Profile &rarr;
         </Link>
@@ -313,7 +313,7 @@ export default function IndexerPaymentsPage({
                           rel="noopener noreferrer"
                           title={tx.payer.id}
                           className={cn(
-                            'text-sm text-[var(--text-faint)] hover:text-[var(--accent)]',
+                            'text-sm text-[var(--text-faint)] hover:text-[var(--accent-text)]',
                             GATEWAY_ALIASES[tx.payer.id.toLowerCase()] ? 'font-medium' : 'font-mono'
                           )}
                         >
@@ -358,7 +358,7 @@ export default function IndexerPaymentsPage({
                       rel="noopener noreferrer"
                       title={c.payer.id}
                       className={cn(
-                        'text-sm text-[var(--text)] hover:text-[var(--accent)]',
+                        'text-sm text-[var(--text)] hover:text-[var(--accent-text)]',
                         GATEWAY_ALIASES[c.payer.id.toLowerCase()] ? 'font-medium' : 'font-mono'
                       )}
                     >

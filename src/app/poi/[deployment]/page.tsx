@@ -71,7 +71,7 @@ export default function POIDeploymentPage({
             </p>
             <button
               onClick={() => navigator.clipboard.writeText(detail.ipfsHash)}
-              className="text-[var(--accent)] hover:text-[var(--text)] transition-colors flex-shrink-0"
+              className="text-[var(--accent-text)] hover:text-[var(--text)] transition-colors flex-shrink-0"
               title="Copy hash"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -181,7 +181,7 @@ export default function POIDeploymentPage({
                   <div className="flex items-center justify-between mb-2">
                     <Link
                       href={`/indexers/${idx.indexer}`}
-                      className="font-medium text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+                      className="font-medium text-sm text-[var(--text)] hover:text-[var(--accent-text)] transition-colors"
                     >
                       {idx.name}
                     </Link>
@@ -222,7 +222,7 @@ export default function POIDeploymentPage({
                       <td className="px-4 py-3">
                         <Link
                           href={`/indexers/${idx.indexer}`}
-                          className="hover:text-[var(--accent)] transition-colors"
+                          className="hover:text-[var(--accent-text)] transition-colors"
                         >
                           <p className="font-medium text-sm text-[var(--text)]">{idx.name}</p>
                           <p className="text-xs text-[var(--text-faint)] font-mono">

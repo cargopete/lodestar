@@ -193,7 +193,7 @@ export function FeedCard({ item }: FeedCardProps) {
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--accent)] hover:underline"
+                  className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--accent-text)] hover:underline"
                 >
                   Open source
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

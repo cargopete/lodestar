@@ -74,7 +74,7 @@ function ArbiscanLink({ hash }: { hash: `0x${string}` }) {
       href={`https://arbiscan.io/tx/${hash}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-xs text-[var(--accent)] hover:underline font-mono"
+      className="text-xs text-[var(--accent-text)] hover:underline font-mono"
     >
       {hash.slice(0, 20)}...
     </a>
@@ -409,7 +409,7 @@ function LifecycleModal({
           {step === 'done' && (
             <div className="flex flex-col items-center py-8 gap-4 text-center">
               <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] flex items-center justify-center">
-                <svg className="w-7 h-7 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-7 h-7 text-[var(--accent-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>

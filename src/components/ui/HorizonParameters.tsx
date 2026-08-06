@@ -118,7 +118,7 @@ export function HorizonParameters() {
                   <div className="flex items-center gap-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <code className="text-sm font-mono text-[var(--accent)]">
+                        <code className="text-sm font-mono text-[var(--accent-text)]">
                           {param.name}
                         </code>
                         <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
@@ -171,7 +171,7 @@ export function HorizonParameters() {
                               href={`https://arbiscan.io/address/${param.contractAddress}#readProxyContract`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-mono text-[var(--accent)] hover:underline"
+                              className="font-mono text-[var(--accent-text)] hover:underline"
                             >
                               {param.contractAddress.slice(0, 10)}...{param.contractAddress.slice(-8)}
                             </a>
@@ -193,9 +193,9 @@ export function HorizonParameters() {
                         <div className="mt-3 p-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)]">
                           <p className="text-xs text-[var(--text-faint)]">
                             <strong className="text-[var(--text-muted)]">To verify on-chain:</strong>{' '}
-                            Call <code className="text-[var(--accent)]">maxPOIStaleness()</code> on Arbiscan
+                            Call <code className="text-[var(--accent-text)]">maxPOIStaleness()</code> on Arbiscan
                             or query the Graph Network subgraph with{' '}
-                            <code className="text-[var(--accent)]">
+                            <code className="text-[var(--accent-text)]">
                               {'{ graphNetwork(id: "1") { maxPOIStaleness } }'}
                             </code>
                           </p>
@@ -212,7 +212,7 @@ export function HorizonParameters() {
         {/* Summary note */}
         <div className="mt-4 p-3 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-hover)]">
           <p className="text-sm text-[var(--text-muted)]">
-            <strong className="text-[var(--accent)]">Horizon Summary:</strong>{' '}
+            <strong className="text-[var(--accent-text)]">Horizon Summary:</strong>{' '}
             Shifted from epoch-counting to POI-freshness enforcement. Allocations are now long-lived
             with continuous participation incentives, rather than requiring periodic 28-epoch cycling.
           </p>

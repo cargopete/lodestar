@@ -93,7 +93,7 @@ export function TokenIssuanceChart() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <ChartSkeleton height="300px" />
+          <ChartSkeleton height="330px" />
         ) : !hasData ? (
           <div className="h-[300px] flex items-center justify-center">
             <p className="text-sm text-[var(--text-faint)]">No epoch data available</p>

@@ -63,7 +63,7 @@ function LeaderboardTable() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/curators/${curator.id}`}
-                      className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+                      className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent-text)] transition-colors"
                     >
                       {shortenAddress(curator.id, 8)}
                     </Link>

@@ -92,7 +92,7 @@ export function DelegationFlowChart() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <ChartSkeleton height="300px" />
+          <ChartSkeleton height="400px" />
         ) : !hasData ? (
           <div className="h-[300px] flex items-center justify-center">
             <p className="text-sm text-[var(--text-faint)]">No delegation flow data available</p>

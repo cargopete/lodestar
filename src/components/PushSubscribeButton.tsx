@@ -53,7 +53,7 @@ export function PushSubscribeButton({ className }: PushSubscribeButtonProps) {
             ? 'bg-[var(--red)]/15 text-[var(--red)] hover:bg-[var(--red)]/25'
             : subscribed
               ? 'bg-[var(--green)]/15 text-[var(--green)] hover:bg-[var(--green)]/25'
-              : 'bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25',
+              : 'bg-[var(--accent)]/15 text-[var(--accent-text)] hover:bg-[var(--accent)]/25',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           className
         )}

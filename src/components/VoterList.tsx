@@ -31,7 +31,7 @@ export function VoterList({ indexerAddress, period }: VoterListProps) {
     <div>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="text-xs text-[var(--accent)] hover:underline"
+        className="text-xs text-[var(--accent-text)] hover:underline"
       >
         {tally?.weighted_votes ?? 0} weighted vote{(tally?.weighted_votes ?? 0) !== 1 ? 's' : ''} from {indexerVoters.length} voter{indexerVoters.length !== 1 ? 's' : ''}
         {expanded ? ' (hide)' : ' (show)'}
@@ -55,7 +55,7 @@ function VoterRow({ voter }: { voter: CommunityVote }) {
         {shortenAddress(voter.voter_address)}
       </span>
       {voter.is_delegator ? (
-        <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] text-[10px] font-medium">
+        <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent-text)] text-[10px] font-medium">
           Delegator (5x)
         </span>
       ) : (

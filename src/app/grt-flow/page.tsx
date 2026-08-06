@@ -109,7 +109,7 @@ export default function GrtFlowPage() {
           A live trace of GRT supply, issuance, and burns across Ethereum mainnet and Arbitrum One.
           Net supply = issuance − burns: linear per-block minting through the RewardsManager funds indexing
           rewards, while query-fee, curation and delegation taxes (plus slashing) burn GRT. Figures are
-          sourced live from the <code className="text-[var(--accent)]">graph-network-arbitrum</code> GraphNetwork
+          sourced live from the <code className="text-[var(--accent-text)]">graph-network-arbitrum</code> GraphNetwork
           entity.
         </p>
         {d?.blockNumber && (
@@ -271,9 +271,9 @@ export default function GrtFlowPage() {
             <p>
               GRT is an uncapped ERC-20, minted at genesis as 10B tokens on Ethereum and now canonically the
               L2GraphToken on Arbitrum One. The <strong className="text-[var(--text)]">RewardsManager</strong> mints
-              indexing rewards on reward collection (<code className="text-[var(--accent)]">graphToken().mint(staking, rewards)</code>),
-              emitting <code className="text-[var(--accent)]">RewardsAssigned</code>. GIP-0037 replaced the original
-              ~3% compounding model with a linear <code className="text-[var(--accent)]">issuancePerBlock</code>.
+              indexing rewards on reward collection (<code className="text-[var(--accent-text)]">graphToken().mint(staking, rewards)</code>),
+              emitting <code className="text-[var(--accent-text)]">RewardsAssigned</code>. GIP-0037 replaced the original
+              ~3% compounding model with a linear <code className="text-[var(--accent-text)]">issuancePerBlock</code>.
             </p>
             <p>
               Rewards split across subgraphs in proportion to curation signal, then to indexers by allocated stake,
@@ -283,7 +283,7 @@ export default function GrtFlowPage() {
             </p>
             <p>
               Deflationary sinks: the 1% query-fee protocol tax, 1% curation tax, 0.5% delegation tax, rejected-dispute
-              deposits, and slashing of malicious indexers, all burned via the ERC20Burnable <code className="text-[var(--accent)]">_burn</code>.
+              deposits, and slashing of malicious indexers, all burned via the ERC20Burnable <code className="text-[var(--accent-text)]">_burn</code>.
             </p>
           </div>
         </Section>
@@ -298,12 +298,20 @@ export default function GrtFlowPage() {
                 <p className="text-[11px] text-[var(--text-faint)] mb-2.5">{g.subtitle}</p>
                 <div className="overflow-x-auto">
                   <table className="w-full">
+                    {/* No visible header row by design; named for screen readers. */}
+                    <thead className="sr-only">
+                      <tr>
+                        <th scope="col">Contract</th>
+                        <th scope="col">Address</th>
+                        <th scope="col">Note</th>
+                      </tr>
+                    </thead>
                     <tbody className="divide-y divide-[var(--border)]">
                       {g.contracts.map((c) => (
                         <tr key={c.address} className="hover:bg-[var(--bg-elevated)]">
                           <td className="py-2 pr-3 text-[12px] text-[var(--text)] whitespace-nowrap">{c.name}</td>
                           <td className="py-2 pr-3">
-                            <a href={`${g.explorerBase}${c.address}`} target="_blank" rel="noopener noreferrer" className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors break-all">
+                            <a href={`${g.explorerBase}${c.address}`} target="_blank" rel="noopener noreferrer" className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent-text)] transition-colors break-all">
                               {c.address}
                             </a>
                           </td>
@@ -324,7 +332,7 @@ export default function GrtFlowPage() {
               <li key={t.date} className="ml-4">
                 <span className="absolute -left-[5px] w-2.5 h-2.5 rounded-full bg-[var(--accent)]" />
                 <div className="flex items-baseline gap-2">
-                  <span className="text-[11px] font-mono text-[var(--accent)] whitespace-nowrap">{t.date}</span>
+                  <span className="text-[11px] font-mono text-[var(--accent-text)] whitespace-nowrap">{t.date}</span>
                   <span className="text-[12px] font-medium text-[var(--text)]">{t.title}</span>
                 </div>
                 <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{t.detail}</p>
@@ -337,7 +345,7 @@ export default function GrtFlowPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
             {KEY_GIPS.map((g) => (
               <div key={g.id} className="flex items-start gap-2.5 rounded-lg bg-[var(--bg-elevated)] px-3 py-2">
-                <span className="text-[11px] font-mono text-[var(--accent)] whitespace-nowrap mt-px">{g.id}</span>
+                <span className="text-[11px] font-mono text-[var(--accent-text)] whitespace-nowrap mt-px">{g.id}</span>
                 <span className="text-[11px] text-[var(--text-muted)]">{g.title}</span>
               </div>
             ))}

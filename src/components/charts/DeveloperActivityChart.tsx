@@ -60,7 +60,7 @@ export function DeveloperActivityChart() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <ChartSkeleton height="300px" />
+          <ChartSkeleton height="380px" />
         ) : !hasData ? (
           <div className="h-[300px] flex items-center justify-center">
             <p className="text-sm text-[var(--text-faint)]">No developer activity data available</p>
@@ -71,7 +71,7 @@ export function DeveloperActivityChart() {
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="p-3 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border border-[var(--border)]">
                 <p className="text-[10px] text-[var(--text-faint)] mb-1">Published ({data!.windowMonths}m)</p>
-                <p className="text-lg font-mono font-semibold text-[var(--accent)]">
+                <p className="text-lg font-mono font-semibold text-[var(--accent-text)]">
                   {formatNumber(data!.totalInWindow)}
                 </p>
               </div>

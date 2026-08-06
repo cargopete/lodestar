@@ -38,7 +38,7 @@ export function StatCard({
           <p className="text-[11px] text-[var(--text-muted)] mb-1.5 flex items-center gap-1.5">
             {label}
             {tag && (
-              <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-[var(--accent-dim)] text-[var(--accent)] uppercase tracking-wide leading-none">
+              <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-[var(--accent-dim)] text-[var(--accent-text)] uppercase tracking-wide leading-none">
                 {tag}
               </span>
             )}

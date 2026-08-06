@@ -145,7 +145,7 @@ function McpCard({ mcp }: { mcp: McpEntry }) {
             {mcp.clients.map((client) => (
               <span
                 key={client}
-                className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] font-medium"
+                className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--accent-dim)] text-[var(--accent-text)] font-medium"
               >
                 {client}
               </span>

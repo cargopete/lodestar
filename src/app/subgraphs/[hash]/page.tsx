@@ -210,7 +210,7 @@ function FieldTypePill({ type, typeNames }: { type: string; typeNames: Set<strin
       {isArray && <span className="text-[var(--text-faint)] text-[10px]">[</span>}
       <span className={cn(
         'font-mono text-xs',
-        isPrimitive ? 'text-[var(--text-muted)]' : isEntity ? 'text-[var(--accent)]' : 'text-[var(--text)]',
+        isPrimitive ? 'text-[var(--text-muted)]' : isEntity ? 'text-[var(--accent-text)]' : 'text-[var(--text)]',
       )}>
         {base}
       </span>
@@ -227,7 +227,7 @@ function DirectiveBadge({ directive }: { directive: string }) {
     <span className={cn(
       'text-[10px] font-mono px-1.5 py-0.5 rounded',
       isDerivedFrom
-        ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+        ? 'bg-[var(--accent)]/10 text-[var(--accent-text)]'
         : isEntity
           ? 'bg-[var(--green-dim)] text-[var(--green)]'
           : 'bg-[var(--bg-elevated)] text-[var(--text-faint)]',
@@ -238,7 +238,7 @@ function DirectiveBadge({ directive }: { directive: string }) {
 }
 
 const KIND_BADGE: Record<string, string> = {
-  type: 'bg-[var(--accent)]/15 text-[var(--accent)]',
+  type: 'bg-[var(--accent)]/15 text-[var(--accent-text)]',
   interface: 'bg-[var(--amber-dim)] text-[var(--amber)]',
   input: 'bg-[var(--bg-elevated)] text-[var(--text-muted)]',
   enum: 'bg-[var(--green-dim)] text-[var(--green)]',
@@ -514,7 +514,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                     {data.indexers.map((indexer) => (
                       <tr key={indexer.indexerId} className="hover:bg-[var(--bg-elevated)] transition-colors">
                         <td className="px-4 py-3">
-                          <Link href={`/indexers/${indexer.indexerId}`} className="hover:text-[var(--accent)] transition-colors">
+                          <Link href={`/indexers/${indexer.indexerId}`} className="hover:text-[var(--accent-text)] transition-colors">
                             <p className="font-medium text-[var(--text)] text-sm">
                               <IndexerNameDisplay indexerId={indexer.indexerId} indexerName={indexer.indexerName} />
                             </p>
@@ -634,7 +634,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                         )}
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <Link href={`/indexers/${indexer.indexerId}`} className="text-xs font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors">
+                          <Link href={`/indexers/${indexer.indexerId}`} className="text-xs font-medium text-[var(--text)] hover:text-[var(--accent-text)] transition-colors">
                             <IndexerNameDisplay indexerId={indexer.indexerId} indexerName={indexer.indexerName} />
                           </Link>
                           <StatusBadge status={indexer.status} />
@@ -655,7 +655,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
                 {data.indexers.map((indexer) => (
                   <div key={`m-${indexer.indexerId}`} className="p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]">
                     <div className="flex items-start justify-between mb-3">
-                      <Link href={`/indexers/${indexer.indexerId}`} className="hover:text-[var(--accent)] transition-colors">
+                      <Link href={`/indexers/${indexer.indexerId}`} className="hover:text-[var(--accent-text)] transition-colors">
                         <p className="font-medium text-sm text-[var(--text)]"><IndexerNameDisplay indexerId={indexer.indexerId} indexerName={indexer.indexerName} /></p>
                         <p className="text-[10px] text-[var(--text-faint)] font-mono">{shortenAddress(indexer.indexerId, 6)}</p>
                       </Link>
@@ -768,7 +768,7 @@ function CurationSection({ hash }: { hash: string }) {
                   {signals.map((s) => (
                     <tr key={s.id} className="hover:bg-[var(--bg-elevated)] transition-colors">
                       <td className="px-4 py-3">
-                        <Link href={`/curators/${s.curatorAddress}`} className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors">
+                        <Link href={`/curators/${s.curatorAddress}`} className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent-text)] transition-colors">
                           {shortenAddress(s.curatorAddress, 6)}
                         </Link>
                       </td>
@@ -794,7 +794,7 @@ function CurationSection({ hash }: { hash: string }) {
               {signals.map((s) => (
                 <div key={`m-${s.id}`} className="p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]">
                   <div className="flex items-center justify-between mb-2">
-                    <Link href={`/curators/${s.curatorAddress}`} className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors">
+                    <Link href={`/curators/${s.curatorAddress}`} className="font-mono text-sm text-[var(--text)] hover:text-[var(--accent-text)] transition-colors">
                       {shortenAddress(s.curatorAddress, 6)}
                     </Link>
                     <span className="text-[10px] text-[var(--text-faint)]">{formatEpoch(s.lastSignalChange)}</span>
@@ -1095,7 +1095,7 @@ function PlaygroundSection({ hash }: { hash: string }) {
               <span className="text-xs text-[var(--text-faint)] font-mono truncate hidden sm:block">{endpointPath}</span>
               <button
                 onClick={() => navigator.clipboard.writeText(`${window.location.origin}${endpointPath}`)}
-                className="text-[var(--accent)] hover:text-[var(--text)] transition-colors flex-shrink-0"
+                className="text-[var(--accent-text)] hover:text-[var(--text)] transition-colors flex-shrink-0"
                 title="Copy Lodestar proxy URL"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1112,7 +1112,7 @@ function PlaygroundSection({ hash }: { hash: string }) {
             <code className="text-xs font-mono text-[var(--text-muted)] truncate flex-1">{gatewayUrl}</code>
             <button
               onClick={() => navigator.clipboard.writeText(gatewayUrl)}
-              className="text-[var(--accent)] hover:text-[var(--text)] transition-colors flex-shrink-0"
+              className="text-[var(--accent-text)] hover:text-[var(--text)] transition-colors flex-shrink-0"
               title="Copy gateway query URL"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1198,7 +1198,7 @@ function DeploymentPageInner({ hash }: { hash: string }) {
             <p className="text-xs sm:text-sm text-[var(--text-faint)] font-mono truncate">{hash}</p>
             <button
               onClick={() => navigator.clipboard.writeText(hash)}
-              className="text-[var(--accent)] hover:text-[var(--text)] transition-colors flex-shrink-0"
+              className="text-[var(--accent-text)] hover:text-[var(--text)] transition-colors flex-shrink-0"
               title="Copy hash"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1228,7 +1228,7 @@ function DeploymentPageInner({ hash }: { hash: string }) {
             className={cn(
               'px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px',
               activeTab === tab.id
-                ? 'border-[var(--accent)] text-[var(--accent)]'
+                ? 'border-[var(--accent)] text-[var(--accent-text)]'
                 : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]',
             )}
           >

@@ -35,7 +35,7 @@ export default function IndexerDirectory() {
               <p className="text-xs text-[var(--text-muted)]">
                 Pick an indexer below, then use the Delegate panel on their profile page.
                 {balance > 0 && (
-                  <span className="font-mono text-[var(--accent)]"> {formatGRTFull(balance)} GRT available.</span>
+                  <span className="font-mono text-[var(--accent-text)]"> {formatGRTFull(balance)} GRT available.</span>
                 )}
               </p>
             </div>

@@ -73,7 +73,7 @@ function LiveQuoteIndicator({ asOf }: { asOf: number }) {
         href="https://thegraph.com/explorer/subgraphs/5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV"
         target="_blank"
         rel="noreferrer"
-        className="underline decoration-dotted underline-offset-2 hover:text-[var(--accent)]"
+        className="underline decoration-dotted underline-offset-2 hover:text-[var(--accent-text)]"
       >
         Uniswap V3 subgraph
       </a>{' '}
@@ -275,7 +275,7 @@ function HeaderInfoRow({
           href={`https://etherscan.io/token/${contract}`}
           target="_blank"
           rel="noreferrer"
-          className="font-mono text-[var(--text-muted)] hover:text-[var(--accent)]"
+          className="font-mono text-[var(--text-muted)] hover:text-[var(--accent-text)]"
         >
           {shortenAddress(contract, 6)}
         </a>
@@ -298,7 +298,7 @@ function HeaderInfoRow({
                 target="_blank"
                 rel="noreferrer"
                 title={`${ex.name}: ${addr}`}
-                className="inline-flex items-center px-1.5 py-0 rounded border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+                className="inline-flex items-center px-1.5 py-0 rounded border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent-text)] transition-colors"
               >
                 {ex.name}
               </a>
@@ -311,7 +311,7 @@ function HeaderInfoRow({
           href={website}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--accent)]"
+          className="inline-flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--accent-text)]"
         >
           <span>Visit {name}</span>
           {host && <span className="text-[var(--text-faint)]">· {host}</span>}
@@ -524,7 +524,7 @@ function HyperliquidCard({
             href={hyperliquid.marketUrl}
             target="_blank"
             rel="noreferrer"
-            className="ml-auto inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--accent)] whitespace-nowrap"
+            className="ml-auto inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--accent-text)] whitespace-nowrap"
           >
             <ProtocolIcon slug="hyperliquid" size={18} />
             Open {hyperliquid.coin} market
@@ -667,7 +667,7 @@ function HyperliquidCard({
               href={`https://app.hyperliquid.xyz/explorer/address/${hyperliquid.largestLiquidation24h.user}`}
               target="_blank"
               rel="noreferrer"
-              className="font-mono text-[10px] hover:text-[var(--accent)]"
+              className="font-mono text-[10px] hover:text-[var(--accent-text)]"
             >
               {shortenAddress(hyperliquid.largestLiquidation24h.user, 5)}
             </a>
@@ -988,7 +988,7 @@ function LendingCard({
                           target="_blank"
                           rel="noreferrer"
                           title={`Open the ${symbol} reserve on Aave V3 (${chainLabel[m.chain]})`}
-                          className="inline-flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--accent)] whitespace-nowrap"
+                          className="inline-flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--accent-text)] whitespace-nowrap"
                         >
                           <ProtocolIcon slug="aave" size={18} />
                           Open in Aave
@@ -1170,7 +1170,7 @@ function Markets({
                     </td>
                     <td className="py-2 pl-8 text-left">
                       {trade ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline">
+                        <span className="inline-flex items-center gap-1.5 text-xs text-[var(--accent-text)] hover:underline">
                           <ProtocolIcon slug={defiLlamaSlugFor(m.protocol) ?? defiLlamaSlugFor(trade.venue)} size={18} />
                           {trade.venue}
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -1328,7 +1328,7 @@ function RecentSwaps({
                         href={`https://etherscan.io/address/${s.trader}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent)]"
+                        className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent-text)]"
                         title={s.trader}
                       >
                         {shortenAddress(s.trader, 4)}
@@ -1352,7 +1352,7 @@ function RecentSwaps({
                       href={`https://etherscan.io/tx/${s.txHash}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent)]"
+                      className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent-text)]"
                       title={s.txHash}
                     >
                       {shortenAddress(s.txHash, 6)}
@@ -1402,7 +1402,7 @@ function TradeCTA({
         destination_url: trade.url,
       })}
       title={`Swap ${symbol} on ${trade.venue} (top pool by TVL)`}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25 transition-colors text-sm font-medium"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--accent)]/15 text-[var(--accent-text)] hover:bg-[var(--accent)]/25 transition-colors text-sm font-medium"
     >
       <ProtocolIcon slug={defiLlamaSlugFor(top.protocol) ?? defiLlamaSlugFor(trade.venue)} size={18} />
       Trade on {trade.venue}
@@ -1456,7 +1456,7 @@ export default function TokenDetailPage({ params }: Props) {
   if (!data)
     return (
       <div className="px-6 py-6 text-sm text-[var(--text-muted)]">
-        Not in v0 seed list. <Link href="/tokens" className="text-[var(--accent)]">Back to tokens.</Link>
+        Not in v0 seed list. <Link href="/tokens" className="text-[var(--accent-text)]">Back to tokens.</Link>
       </div>
     );
 
@@ -1496,7 +1496,7 @@ export default function TokenDetailPage({ params }: Props) {
             target="_blank"
             rel="noreferrer"
             title="View on Etherscan"
-            className="inline-flex items-center text-[var(--text-faint)] hover:text-[var(--accent)] transition-colors"
+            className="inline-flex items-center text-[var(--text-faint)] hover:text-[var(--accent-text)] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
@@ -1715,7 +1715,7 @@ export default function TokenDetailPage({ params }: Props) {
                               target="_blank"
                               rel="noreferrer"
                               title={h.address}
-                              className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent)] shrink-0"
+                              className="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--accent-text)] shrink-0"
                             >
                               {shortenAddress(h.address, 8)}
                             </a>

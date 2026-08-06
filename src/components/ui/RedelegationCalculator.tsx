@@ -203,12 +203,12 @@ export function RedelegationCalculator({
           <div className="p-4 rounded-lg bg-[var(--bg-elevated)] border-l-4 border-[var(--text-faint)]">
             <p className="text-xs text-[var(--text-faint)] mb-1">Current</p>
             <p className="font-semibold text-[var(--text)]">{currentIndexer.name}</p>
-            <p className="text-sm font-mono text-[var(--accent)]">{result.currentAPR.toFixed(2)}% APR</p>
+            <p className="text-sm font-mono text-[var(--accent-text)]">{result.currentAPR.toFixed(2)}% APR</p>
           </div>
           <div className="p-4 rounded-lg bg-[var(--bg-elevated)] border-l-4 border-[var(--accent)]">
             <p className="text-xs text-[var(--text-faint)] mb-1">Target</p>
             <p className="font-semibold text-[var(--text)]">{targetIndexer.name}</p>
-            <p className="text-sm font-mono text-[var(--accent)]">{result.targetAPR.toFixed(2)}% APR</p>
+            <p className="text-sm font-mono text-[var(--accent-text)]">{result.targetAPR.toFixed(2)}% APR</p>
           </div>
         </div>
 
@@ -396,6 +396,7 @@ export function RedelegationPage({
                 Current Indexer
               </label>
               <select
+                aria-label="Current Indexer"
                 value={currentIndexerId}
                 onChange={(e) => setCurrentIndexerId(e.target.value)}
                 className={cn(
@@ -417,6 +418,7 @@ export function RedelegationPage({
                 Target Indexer
               </label>
               <select
+                aria-label="Target Indexer"
                 value={targetIndexerId}
                 onChange={(e) => setTargetIndexerId(e.target.value)}
                 className={cn(

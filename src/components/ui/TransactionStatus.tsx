@@ -45,7 +45,7 @@ export function TransactionStatus({ steps, txHash, error, className }: Transacti
             </div>
             <span className={cn(
               'text-xs whitespace-nowrap',
-              step.status === 'active' && 'text-[var(--accent)] font-medium',
+              step.status === 'active' && 'text-[var(--accent-text)] font-medium',
               step.status === 'done' && 'text-[var(--green)]',
               step.status === 'error' && 'text-[var(--red)]',
               step.status === 'pending' && 'text-[var(--text-faint)]',
@@ -76,7 +76,7 @@ export function TransactionStatus({ steps, txHash, error, className }: Transacti
           href={`https://arbiscan.io/tx/${txHash}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline"
+          className="inline-flex items-center gap-1.5 text-xs text-[var(--accent-text)] hover:underline"
         >
           View on Arbiscan
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

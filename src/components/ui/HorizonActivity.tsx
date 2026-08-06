@@ -138,7 +138,7 @@ export function HorizonActivity() {
                   <span className="text-[11px] text-[var(--text-faint)] font-mono truncate flex-1 hidden sm:block">
                     <a
                       href={`/indexers/${event.serviceProvider}`}
-                      className="hover:text-[var(--accent)] transition-colors"
+                      className="hover:text-[var(--accent-text)] transition-colors"
                     >
                       {shortAddr(event.serviceProvider)}
                     </a>
@@ -147,7 +147,7 @@ export function HorizonActivity() {
                         <span className="mx-1.5 text-[var(--text-faint)]">←</span>
                         <a
                           href={`/delegators/${event.delegator}`}
-                          className="hover:text-[var(--accent)] transition-colors"
+                          className="hover:text-[var(--accent-text)] transition-colors"
                         >
                           {shortAddr(event.delegator)}
                         </a>
@@ -169,7 +169,7 @@ export function HorizonActivity() {
                         href={`https://arbiscan.io/tx/${event.txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="hover:text-[var(--accent)] transition-colors"
+                        className="hover:text-[var(--accent-text)] transition-colors"
                         title="View on Arbiscan"
                       >
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

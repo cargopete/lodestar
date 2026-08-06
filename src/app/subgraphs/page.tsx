@@ -362,7 +362,7 @@ function SubgraphDirectory() {
 
   const renderSortArrow = (key: SortKey) =>
     sortKey === key ? (
-      <span className="text-[var(--accent)] ml-1">{sortDesc ? '\u2193' : '\u2191'}</span>
+      <span className="text-[var(--accent-text)] ml-1">{sortDesc ? '\u2193' : '\u2191'}</span>
     ) : null;
 
   if (isLoading && page === 0) {
@@ -440,6 +440,7 @@ function SubgraphDirectory() {
         </button>
         {knownComplexities.size > 0 && (
           <select
+            aria-label="Filter by complexity"
             value={complexityFilter}
             onChange={(e) => setComplexityFilter(e.target.value)}
             className={cn(
@@ -459,6 +460,7 @@ function SubgraphDirectory() {
         )}
         {knownCategories.size > 0 && (
           <select
+            aria-label="Filter by category"
             value={categoryFilter}
             onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }}
             className={cn(
@@ -476,6 +478,7 @@ function SubgraphDirectory() {
         )}
         {(knownNetworks.size > 0 || registryData?.networks) && (
           <select
+            aria-label="Filter by network"
             value={networkFilter}
             onChange={(e) => setNetworkFilter(e.target.value)}
             className={cn(
@@ -539,7 +542,7 @@ function SubgraphDirectory() {
       {/* Selection summary bar */}
       {selectedHashes.size > 0 && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-[var(--radius-card)] text-sm">
-          <span className="font-medium text-[var(--accent)]">{selectedHashes.size} selected</span>
+          <span className="font-medium text-[var(--accent-text)]">{selectedHashes.size} selected</span>
           <span className="text-[var(--border-mid)]">·</span>
           <span className="text-[var(--text-muted)] font-mono">{formatGRT(selectionFees)} GRT {is30d ? '30d fees' : 'fees'}</span>
           <span className="text-[var(--border-mid)]">·</span>
@@ -607,7 +610,7 @@ function SubgraphDirectory() {
             <Link key={row.id} href={`/subgraphs/${row.ipfsHash}`} className="block relative">
               <Card className={`transition-colors ${selectedHashes.has(row.ipfsHash) ? 'border-[var(--accent)]/50 bg-[var(--accent)]/5' : 'hover:border-[var(--accent-hover)]'}`}>
                 <button
-                  className={`absolute top-2.5 right-2.5 z-10 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                  className={`absolute top-2.5 right-2.5 z-10 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
                     selectedHashes.has(row.ipfsHash)
                       ? 'border-[var(--accent)] bg-[var(--accent)]'
                       : 'border-[var(--border-mid)] bg-[var(--bg-surface)]'
@@ -717,6 +720,7 @@ function SubgraphDirectory() {
               <tr>
                 <th className={cn(thBase, 'w-10 text-center')}>
                   <input
+                    aria-label="Select all subgraphs"
                     type="checkbox"
                     className="cursor-pointer accent-[var(--accent)]"
                     checked={rows.length > 0 && rows.every((r) => selectedHashes.has(r.ipfsHash))}
@@ -767,6 +771,7 @@ function SubgraphDirectory() {
                       onClick={(e) => { e.stopPropagation(); toggleSelection(row.ipfsHash); }}
                     >
                       <input
+                        aria-label="Select subgraph"
                         type="checkbox"
                         className="cursor-pointer accent-[var(--accent)]"
                         checked={selectedHashes.has(row.ipfsHash)}
@@ -778,7 +783,7 @@ function SubgraphDirectory() {
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/subgraphs/${row.ipfsHash}`}
-                          className="hover:text-[var(--accent)] transition-colors"
+                          className="hover:text-[var(--accent-text)] transition-colors"
                           title={row.ipfsHash}
                         >
                           {row.displayName ? (

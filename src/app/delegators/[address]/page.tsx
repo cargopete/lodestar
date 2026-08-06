@@ -382,7 +382,7 @@ export default function DelegatorPortfolioPage({
                       <td className="py-3 pr-4">
                         <Link
                           href={`/indexers/${pos.stake.indexer.id}`}
-                          className="hover:text-[var(--accent)] transition-colors"
+                          className="hover:text-[var(--accent-text)] transition-colors"
                         >
                           <p className="text-sm font-medium text-[var(--text)]">{indexerName}</p>
                           <p className="text-[11px] font-mono text-[var(--text-faint)]">{shortenAddress(pos.stake.indexer.id)}</p>
@@ -498,7 +498,7 @@ export default function DelegatorPortfolioPage({
                                 'px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
                                 managingPosition === pos.stake.id
                                   ? 'bg-[var(--accent)] text-white'
-                                  : 'bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25'
+                                  : 'bg-[var(--accent)]/15 text-[var(--accent-text)] hover:bg-[var(--accent)]/25'
                               )}
                             >
                               {managingPosition === pos.stake.id ? 'Close' : 'Manage'}

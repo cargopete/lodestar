@@ -53,7 +53,7 @@ export function FoghornScorecard({ address }: { address: string }) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Foghorn Grade</CardTitle>
-          <Link href="/foghorn" className="text-[11px] text-[var(--accent)] hover:underline">
+          <Link href="/foghorn" className="text-[11px] text-[var(--accent-text)] hover:underline">
             Network-quality judge ↗
           </Link>
         </div>
