@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   }
   if (agentUrl && !(await isSafeUrlResolved(agentUrl))) {
     return NextResponse.json(
-      { error: 'Invalid agentUrl — must be a public http/https URL' },
+      { error: 'Invalid agentUrl: must be a public http/https URL' },
       { status: 503 },
     );
   }

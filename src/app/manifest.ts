@@ -5,7 +5,7 @@ import type { MetadataRoute } from 'next';
 // Colours track the "Graph Midnight" theme (--bg #141034, --accent #6F4CFF).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Lodestar — The Graph Protocol Analytics',
+    name: 'Lodestar | The Graph Protocol Analytics',
     short_name: 'Lodestar',
     description:
       'Staking analytics, indexer intelligence, and portfolio tracking for The Graph Protocol.',

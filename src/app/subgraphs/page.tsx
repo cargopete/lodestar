@@ -661,7 +661,7 @@ function SubgraphDirectory() {
                       <span className="relative group/lowidx">
                         <Badge variant="warning" className="text-[10px] px-1.5">1 idx</Badge>
                         <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-[10px] text-white bg-[var(--bg-elevated)] border border-[var(--border)] rounded whitespace-nowrap opacity-0 group-hover/lowidx:opacity-100 transition-opacity z-50">
-                          Only {row.indexerCount} active indexer — may be hard to sync
+                          Only {row.indexerCount} active indexer, so it may be hard to sync
                         </span>
                       </span>
                     )}
@@ -837,7 +837,7 @@ function SubgraphDirectory() {
                           <span className="relative group/lowidx">
                             <span className="text-[var(--amber)] text-xs cursor-default">&#9888;</span>
                             <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 px-2 py-1 text-[10px] text-white bg-[var(--bg-elevated)] border border-[var(--border)] rounded whitespace-nowrap opacity-0 group-hover/lowidx:opacity-100 transition-opacity z-50">
-                              Only {row.indexerCount} active indexer — may be hard to sync
+                              Only {row.indexerCount} active indexer, so it may be hard to sync
                             </span>
                           </span>
                         )}

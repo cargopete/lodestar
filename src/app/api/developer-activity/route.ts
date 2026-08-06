@@ -118,7 +118,7 @@ export async function GET() {
           rows = await fetchNuthatchRows(cutoff);
           source = 'nuthatch';
         } catch (err) {
-          log.api.error({ err }, 'nuthatch developer-activity failed — falling back to subgraph');
+          log.api.error({ err }, 'nuthatch developer-activity failed, falling back to subgraph');
           rows = await fetchSubgraphRows(cutoff);
         }
       } else {

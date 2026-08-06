@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 const MESSAGES = [
-  "Apologies for the wait — this one's taking the scenic route. On a total infrastructure budget of $0 we're honestly doing our best. Sit back, it'll come.",
+  "Apologies for the wait; this one's taking the scenic route. On a total infrastructure budget of $0 we're honestly doing our best. Sit back, it'll come.",
   "Still loading, I'm afraid. The network is having a little think. Between you and me, we run this whole thing on $0, so a touch of patience is part of the deal.",
-  "My sincerest apologies. I haven't crashed — I'm just doing what I can with precisely no budget whatsoever. Make yourself comfortable, the data is on its way.",
+  "My sincerest apologies. I haven't crashed. I'm just doing what I can with precisely no budget whatsoever. Make yourself comfortable, the data is on its way.",
 ];
 
 export function ChartSkeleton({ height = '280px' }: { height?: string }) {

@@ -173,7 +173,7 @@ function HlOiCell({
 function PerpsBadge({ coin }: { coin: string }) {
   return (
     <span
-      title={`${coin} has a Hyperliquid perp market — click into the detail page for OI, funding, liquidations, and positioning.`}
+      title={`${coin} has a Hyperliquid perp market. Click into the detail page for OI, funding, liquidations, and positioning.`}
       className="inline-flex items-center text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30"
     >
       Perps
@@ -295,7 +295,7 @@ export default function TokensPage() {
                   <th className="py-2 text-right text-[11px] font-medium text-[var(--text-faint)] pl-4">30d</th>
                   {header('DEX Vol', 'volume', 'right', 'Latest day’s volume aggregated across the Uniswap V2 + V3 mainnet subgraphs. Hover any value for the per-venue breakdown.')}
                   {header('Mcap', 'mcap')}
-                  {header('Holders', 'holders', 'right', 'Token API holder count. Hover the value to see top-10 holder concentration split into EOA vs contract share — a higher EOA share is a tighter wallet distribution.')}
+                  {header('Holders', 'holders', 'right', 'Token API holder count. Hover the value to see top-10 holder concentration split into EOA vs contract share. A higher EOA share is a tighter wallet distribution.')}
                   {header('HL OI', 'hlOi', 'right', 'Hyperliquid open interest in USD. ↑ = long-pay funding (longs paying shorts to hold). ↓ = short-pay funding. · = at HL\'s per-asset baseline (no directional skew). Click any row to drill into the perps card on the detail page.', 'pl-4')}
                 </tr>
               </thead>
@@ -402,7 +402,7 @@ export default function TokensPage() {
         (per-token <code>tokenDayData.volumeUSD</code>), plus Curve Finance mainnet (pool-walk: latest
         <code>dailySnapshots</code> volume attributed equally across each pool&apos;s input tokens).
         Hover any value for the per-venue × per-chain breakdown. CEX volume is intentionally excluded.
-        Balancer and SushiSwap aren&apos;t in yet — also Messari schema, would need the same pool-walk
+        Balancer and SushiSwap aren&apos;t in yet; also Messari schema, would need the same pool-walk
         treatment, queued for the next iteration.
       </p>
     </div>

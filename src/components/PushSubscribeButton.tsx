@@ -30,7 +30,7 @@ export function PushSubscribeButton({ className }: PushSubscribeButtonProps) {
   };
 
   const label = error
-    ? 'Failed — retry?'
+    ? 'Failed, retry?'
     : isPending
       ? subscribed ? 'Unsubscribing…' : 'Signing…'
       : statusLoading

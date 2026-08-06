@@ -288,7 +288,7 @@ export async function refreshIndexers(opts: {
     reoMap = await batchCheckEligibility(indexerIds);
     log.refresh.info({ count: reoMap.size }, 'REO oracle checked');
   } catch (e) {
-    log.refresh.warn({ err: e }, 'REO oracle batch call failed — indexers left unknown (no heuristic fallback)');
+    log.refresh.warn({ err: e }, 'REO oracle batch call failed, indexers left unknown (no heuristic fallback)');
   }
 
   // Step 5b: Fetch closed allocations (last 90d) for rolling APY

@@ -457,7 +457,7 @@ function PublishWizard({
             <>
               <p className="text-sm text-[var(--text-muted)]">
                 {isNewVersion
-                  ? <>Publishing a new version — calls <code className="font-mono text-xs bg-[var(--bg-elevated)] px-1 rounded">GNS.publishNewVersion</code> on Arbitrum One.</>
+                  ? <>Publishing a new version, which calls <code className="font-mono text-xs bg-[var(--bg-elevated)] px-1 rounded">GNS.publishNewVersion</code> on Arbitrum One.</>
                   : <>Uploads metadata to IPFS and calls <code className="font-mono text-xs bg-[var(--bg-elevated)] px-1 rounded">GNS.publishNewSubgraph</code> on Arbitrum One.</>}
               </p>
               <div className="space-y-0 text-sm divide-y divide-[var(--border)] border border-[var(--border)] rounded-lg overflow-hidden">
@@ -549,7 +549,7 @@ function PublishWizard({
           {step === 'mining' && (
             <div className="flex flex-col items-center py-8 gap-3">
               <div className="w-10 h-10 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
-              <p className="text-sm text-[var(--text-muted)]">Transaction submitted — waiting for confirmation...</p>
+              <p className="text-sm text-[var(--text-muted)]">Transaction submitted. Waiting for confirmation...</p>
               {minedTxHash && (
                 <a
                   href={`https://arbiscan.io/tx/${minedTxHash}`}
@@ -655,7 +655,7 @@ function DeployKeyPanel() {
       <p className="text-xs font-medium text-[var(--text-muted)]">Deploy Key</p>
       {plainKey ? (
         <div>
-          <p className="text-xs text-amber-500 mb-2">Save this — it won&apos;t be shown again.</p>
+          <p className="text-xs text-amber-500 mb-2">Save this now; it won&apos;t be shown again.</p>
           <div className="flex items-center gap-2 p-3 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border)]">
             <code className="flex-1 text-xs font-mono text-[var(--text)] break-all">{plainKey}</code>
             <CopyButton text={plainKey} />
@@ -817,7 +817,7 @@ function PostBountyWizard({
         <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
           <div>
             <h3 className="font-semibold text-[var(--text)]">Post Sync Bounty</h3>
-            <p className="text-xs text-amber-500 mt-0.5">Experimental — on-chain GRT escrow</p>
+            <p className="text-xs text-amber-500 mt-0.5">Experimental: on-chain GRT escrow</p>
           </div>
           {canClose && (
             <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text)]">
@@ -870,7 +870,7 @@ function PostBountyWizard({
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5">Message to indexers (optional)</label>
                 <textarea
-                  placeholder="Please sync ASAP — production depends on this."
+                  placeholder="Please sync ASAP, production depends on this."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={2}
@@ -882,7 +882,7 @@ function PostBountyWizard({
                 />
               </div>
               <p className="text-xs text-[var(--text-faint)] bg-[var(--bg-elevated)] rounded p-2.5 border border-[var(--border)]">
-                GRT is locked for 72h before you can cancel. The contract verifies the POI on-chain — no admin can interfere.
+                GRT is locked for 72h before you can cancel. The contract verifies the POI on-chain, so no admin can interfere.
               </p>
               <div className="flex gap-3">
                 <button
@@ -1172,11 +1172,11 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
                 </li>
                 <li className="flex gap-2">
                   <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[10px]">3</span>
-                  <span>Present a POI via your management API (port 8000) — see below</span>
+                  <span>Present a POI via your management API (port 8000). See below</span>
                 </li>
                 <li className="flex gap-2">
                   <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[10px]">4</span>
-                  <span>Enter your allocation ID here — both checks must be green before the Claim button enables</span>
+                  <span>Enter your allocation ID here. Both checks must be green before the Claim button enables</span>
                 </li>
               </ol>
               <p className="text-xs text-[var(--text-faint)]">
@@ -1202,7 +1202,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
                   )}
                 />
                 <p className="text-xs text-[var(--text-faint)] mt-1">
-                  The <code>0x</code> address created when you allocated — not your indexer address.
+                  The <code>0x</code> address created when you allocated, not your indexer address.
                   Query <code>{'{ allocations(filter: {}) { id subgraphDeployment } }'}</code> on your management API, or find a{' '}
                   <code>ServiceStarted</code> event on{' '}
                   <a href={`https://arbiscan.io/address/${CONTRACTS.subgraphService}#events`} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
@@ -1217,13 +1217,13 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
                   <div className="flex justify-between">
                     <span className="text-[var(--text-faint)]">Allocation</span>
                     <span className={allocationClosed ? 'text-[var(--red)]' : 'text-[var(--green)]'}>
-                      {allocationClosed ? 'Closed — cannot claim' : 'Open'}
+                      {allocationClosed ? 'Closed, cannot claim' : 'Open'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[var(--text-faint)]">POI verified on-chain</span>
                     <span className={poiReady ? 'text-[var(--green)]' : 'text-[var(--text-muted)]'}>
-                      {poiReady ? 'Yes — ready to claim' : 'Not yet (polling every 10s)'}
+                      {poiReady ? 'Yes, ready to claim' : 'Not yet (polling every 10s)'}
                     </span>
                   </div>
                 </div>
@@ -1232,7 +1232,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
               {/* POI — interactive form when allocation open but POI not yet confirmed */}
               {validAddress && allocState && !allocationClosed && !poiReady && (
                 <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3 space-y-3">
-                  <p className="text-xs font-medium text-[var(--text-muted)]">Step 3 — Present a POI</p>
+                  <p className="text-xs font-medium text-[var(--text-muted)]">Step 3: Present a POI</p>
                   <div className="space-y-2">
                     <div>
                       <label className="block text-xs text-[var(--text-faint)] mb-1">Management API URL</label>
@@ -1268,7 +1268,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
                     disabled={poiQueuing || poiQueued || !agentUrl.trim()}
                     className="w-full px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 transition-colors disabled:opacity-50"
                   >
-                    {poiQueuing ? 'Queuing...' : poiQueued ? 'Queued ✓ — waiting for chain confirmation' : 'Queue POI Action'}
+                    {poiQueuing ? 'Queuing...' : poiQueued ? 'Queued ✓, waiting for chain confirmation' : 'Queue POI Action'}
                   </button>
                   {poiQueueError && (
                     <p className="text-xs text-[var(--red)]">{poiQueueError}</p>
@@ -1535,8 +1535,8 @@ function SubgraphDetailModal({
                   </button>
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs text-[var(--text)] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                     {!hasNewDeployment
-                      ? 'No new deployment — run graph deploy again (step 3) first'
-                      : 'Resolving on-chain subgraph ID — try again in a moment'}
+                      ? 'No new deployment. Run graph deploy again (step 3) first'
+                      : 'Resolving on-chain subgraph ID. Try again in a moment'}
                     <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[var(--border)]" />
                   </div>
                 </div>
@@ -1701,8 +1701,8 @@ function SubgraphDetailModal({
                       ? 'Deploy first, then click Publish to make your subgraph discoverable on The Graph Network.'
                       : isPublished
                       ? hasNewDeployment
-                        ? 'New deployment detected — click Update Version above to publish it on-chain.'
-                        : 'Published ✓ — update your code, run graph deploy again (step 3), then click Update Version above.'
+                        ? 'New deployment detected. Click Update Version above to publish it on-chain.'
+                        : 'Published ✓. Update your code, run graph deploy again (step 3), then click Update Version above.'
                       : 'Click the Publish button above to list your subgraph on The Graph Network.'}
                   </p>
                 </div>
@@ -1885,7 +1885,7 @@ function BountyQueryPanel({ bounty }: { bounty: SyncBounty }) {
         const msg: string = data.errors[0]?.message ?? 'GraphQL error';
         if (msg.includes('not found') || msg.includes('not available')) {
           setResponseError(
-            'Subgraph not available via gateway — the indexer who claimed this bounty may have closed their allocation after syncing. Try querying the indexer directly, or wait for another indexer to pick it up.',
+            'Subgraph not available via gateway. The indexer who claimed this bounty may have closed their allocation after syncing. Try querying the indexer directly, or wait for another indexer to pick it up.',
           );
         } else {
           setResponseError(msg);
@@ -2090,7 +2090,7 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
       <div className="space-y-4">
         <div className="p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
           <p className="text-sm text-amber-600 dark:text-amber-400">
-            <strong>Experimental.</strong> GRT is locked on-chain in the BountyBoard contract — fully trustless, no admin.
+            <strong>Experimental.</strong> GRT is locked on-chain in the BountyBoard contract: fully trustless, no admin.
             The contract verifies on-chain that the indexer has an open allocation with a POI submitted after the bounty was posted.
             First valid claim wins.
           </p>
@@ -2121,14 +2121,14 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                   <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[11px] mt-0.5">2</span>
                   <div>
                     <p className="font-medium text-[var(--text)]">Allocate to the deployment</p>
-                    <p className="text-xs mt-0.5">Use <code>setIndexingRule</code> with <code>decisionBasis: always</code> or queue an <code>allocate</code> action via your indexer-agent management API (port 8000). Note your allocation ID — it&apos;s a <code>0x</code> address, not your indexer address.</p>
+                    <p className="text-xs mt-0.5">Use <code>setIndexingRule</code> with <code>decisionBasis: always</code> or queue an <code>allocate</code> action via your indexer-agent management API (port 8000). Note your allocation ID; it&apos;s a <code>0x</code> address, not your indexer address.</p>
                   </div>
                 </li>
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] flex items-center justify-center font-semibold text-[11px] mt-0.5">3</span>
                   <div>
                     <p className="font-medium text-[var(--text)]">Present a POI</p>
-                    <p className="text-xs mt-0.5">Queue a <code>presentPOI</code> action via your management API. This calls <code>SubgraphService.collect()</code> and sets <code>lastPOIPresentedAt</code> on-chain — the timestamp the contract checks. Keep your allocation <strong>open</strong> until after claiming.</p>
+                    <p className="text-xs mt-0.5">Queue a <code>presentPOI</code> action via your management API. This calls <code>SubgraphService.collect()</code> and sets <code>lastPOIPresentedAt</code> on-chain, the timestamp the contract checks. Keep your allocation <strong>open</strong> until after claiming.</p>
                   </div>
                 </li>
                 <li className="flex gap-3">
@@ -2353,7 +2353,7 @@ export default function StudioPage() {
             </span>
           </div>
           <p className="text-[var(--text-muted)] text-sm mt-1">
-            Deploy subgraphs to The Graph Network — no limits, no gatekeepers.
+            Deploy subgraphs to The Graph Network. No limits, no gatekeepers.
           </p>
         </div>
         {sessionAddress && (
@@ -2384,7 +2384,7 @@ export default function StudioPage() {
             <div>
               <h2 className="text-lg font-semibold text-[var(--text)]">Sign in with your wallet</h2>
               <p className="text-sm text-[var(--text-muted)] mt-1 max-w-sm">
-                One signature — no gas, no transaction. Proves you own this address.
+                One signature, no gas, no transaction. Proves you own this address.
               </p>
             </div>
             <button

@@ -168,7 +168,7 @@ export default function CuratorsPage() {
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Jump to address — 0x…"
+              placeholder="Jump to address, e.g. 0x…"
               className="flex-1 px-4 py-2.5 text-sm font-mono bg-[var(--bg-elevated)] text-[var(--text)] border-[0.5px] border-[var(--border)] rounded-[var(--radius-button)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] transition-colors"
             />
             <button

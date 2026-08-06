@@ -79,7 +79,7 @@ export async function GET() {
           measured_indexers: rows.filter((r) => r.q_score !== null).length,
           note:
             'Scored by the Lodestar Oracle, which grades only what it has probed. Unscored means ' +
-            'not measured — never measured and found wanting.',
+            'not measured, never measured and found wanting.',
         },
       };
     });

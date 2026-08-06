@@ -15,7 +15,7 @@ export default function IndexerDirectory() {
       <div>
         <h1 className="text-xl font-semibold text-[var(--text)]">Indexer Directory</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Performance and economic metrics for all indexers — APR, effective cut, stake, and more.
+          Performance and economic metrics for all indexers: APR, effective cut, stake, and more.
         </p>
       </div>
 

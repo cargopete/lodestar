@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   }
   if (a === b) {
     return NextResponse.json(
-      { error: 'Both deployment IDs are identical — nothing to compare' },
+      { error: 'Both deployment IDs are identical, so there is nothing to compare' },
       { status: 400 },
     );
   }

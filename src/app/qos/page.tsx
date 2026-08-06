@@ -231,7 +231,7 @@ const FIELD_MAPPING: { field: string; meaning: string }[] = [
   {
     field: 'avg_indexer_blocks_behind',
     meaning:
-      "The indexer's reported head against chainhead at probe time. We resolve the reference; the position is their claim — an indexer misreporting its head would read as fresh.",
+      "The indexer's reported head against chainhead at probe time. We resolve the reference; the position is their claim, so an indexer misreporting its head would read as fresh.",
   },
   {
     field: 'avg_query_fee / total_query_fees',
@@ -240,7 +240,7 @@ const FIELD_MAPPING: { field: string; meaning: string }[] = [
   {
     field: 'correctness_rate',
     meaning:
-      'Lodestar addition — no traffic census can produce it. Share of comparable responses matching the stake-weighted majority. Null when nothing was comparable; never read null as 100%.',
+      'A Lodestar addition that no traffic census can produce. Share of comparable responses matching the stake-weighted majority. Null when nothing was comparable; never read null as 100%.',
   },
   {
     field: 'gateway_id',
@@ -470,14 +470,14 @@ export default function QosPage() {
         <p className="text-sm text-[var(--text-muted)] max-w-3xl">
           An independent QoS oracle for The Graph, built on active probing rather than gateway
           telemetry. Every number below was measured here. It is served in the QoS oracle&apos;s own
-          schema — <code>gateway_id</code> is on every data point because the format was built for
-          several gateways — so an existing consumer query works against it unchanged, with no API
+          schema (<code>gateway_id</code> is on every data point because the format was built for
+          several gateways), so an existing consumer query works against it unchanged, with no API
           key and nobody&apos;s gateway in the read path.
         </p>
         <p className="text-sm text-[var(--text-muted)] max-w-3xl">
           There is no canonical QoS oracle. There is this one and there is Edge &amp; Node&apos;s,
-          and they are not the same instrument: theirs counts what their gateway actually routed —
-          real traffic, real fees, real demand — while this one probes deliberately and can tell you
+          and they are not the same instrument: theirs counts what their gateway actually routed:
+          real traffic, real fees, real demand, while this one probes deliberately and can tell you
           whether a response was <em>correct</em>, which no traffic census can. Lodestar mirrored and
           served their feed until 2026-08-05 and has stopped. Their numbers are still read here for
           one purpose: comparing ours against a second opinion, below.
@@ -527,8 +527,8 @@ export default function QosPage() {
           }
           tooltip={
             comparableTotal === 0
-              ? 'Correctness needs two or more indexers answering the identical probe. Gateway dispatch rarely provides that, so nothing has been checked — this is "not established", not "all clean".'
-              : 'A response that disagreed with a majority of at least two other indexers on the same probe. With this few corroborated responses it is an observation, not a verdict on any operator — the oracle cannot see it at all, which is why it is worth showing.'
+              ? 'Correctness needs two or more indexers answering the identical probe. Gateway dispatch rarely provides that, so nothing has been checked. This is "not established", not "all clean".'
+              : 'A response that disagreed with a majority of at least two other indexers on the same probe. With this few corroborated responses it is an observation, not a verdict on any operator. The oracle cannot see it at all, which is why it is worth showing.'
           }
           loading={bucketsLoading}
         />
@@ -575,7 +575,7 @@ export default function QosPage() {
       {/* ── Indexer quality, on our own numbers ── */}
       <Card>
         <CardHeader>
-          <CardTitle>Indexer quality — scored on Lodestar&apos;s measurements</CardTitle>
+          <CardTitle>Indexer quality, scored on Lodestar&apos;s measurements</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-[var(--text-muted)]">
@@ -584,20 +584,20 @@ export default function QosPage() {
             else&apos;s feed, so a stall upstream leaves every number here untouched.
           </p>
           <p className="text-xs text-[var(--text-muted)]">
-            Only indexers Lodestar has actually probed appear. That is the whole list — roughly a
+            Only indexers Lodestar has actually probed appear. That is the whole list: roughly a
             third of the active set, not all of it. An indexer missing from this table has not been
             judged and found wanting; it has not been judged.
           </p>
           <p className="text-xs text-[var(--text-muted)]">
             A fifth component, query volume, was removed rather than left at zero. Volume is{' '}
-            <em>demand</em> — a fact about which indexers a gateway chose to route to — and no amount
+            <em>demand</em>, a fact about which indexers a gateway chose to route to, and no amount
             of probing reproduces it. Scoring operators on a number we cannot measure, from a feed
             that had been stale for a month, was rewarding and punishing them for our blind spot.
           </p>
 
           {scoredIndexers.length === 0 ? (
             <div className="text-sm text-[var(--text-muted)]">
-              No rated indexers yet — scoring needs enough probes to be meaningful.
+              No rated indexers yet. Scoring needs enough probes to be meaningful.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -651,7 +651,7 @@ export default function QosPage() {
                         )}
                         title={
                           ix.probe_count < THIN_EVIDENCE_PROBES
-                            ? `Only ${ix.probe_count} probes — this grade is a weak signal, not a verdict`
+                            ? `Only ${ix.probe_count} probes, so this grade is a weak signal rather than a verdict`
                             : undefined
                         }
                       >
@@ -673,7 +673,7 @@ export default function QosPage() {
             <p>
               A dash means that component had nothing to score, never that it scored zero. Freshness
               is dashed most often: it now comes only from chainhead lag we measured ourselves, where
-              it used to fall back to the oracle&apos;s figure — which reads as pristine and was last
+              it used to fall back to the oracle&apos;s figure, which reads as pristine and was last
               written on 1 July.
             </p>
             <p>
@@ -699,7 +699,7 @@ export default function QosPage() {
           <CardContent className="space-y-3">
             <p className="text-sm text-[var(--text-muted)]">
               Allocated stake earns indexing rewards. This is how it splits across the quality bands
-              the Lodestar Oracle measured — which is a different question from how much stake exists,
+              the Lodestar Oracle measured, which is a different question from how much stake exists,
               and the one that says whether rewards are reaching indexers who serve.
             </p>
 
@@ -756,7 +756,7 @@ export default function QosPage() {
               {captureCoverage && (
                 <>
                   {' '}
-                  — {captureCoverage.measured_indexers} of {captureCoverage.allocated_indexers}{' '}
+                  · {captureCoverage.measured_indexers} of {captureCoverage.allocated_indexers}{' '}
                   allocated indexers have been
                 </>
               )}
@@ -820,7 +820,7 @@ export default function QosPage() {
               </div>
             </div>
             <p className="text-xs text-[var(--text-muted)] mt-3">
-              Averaged across probed allocations, weighted by probe count — not weighted by real
+              Averaged across probed allocations, weighted by probe count, not by real
               traffic, so this is not a network-wide user-experience figure. Gaps are buckets with no
               probes, left broken rather than interpolated.
             </p>
@@ -831,7 +831,7 @@ export default function QosPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <CardTitle>Lodestar&apos;s own measurements — worst first</CardTitle>
+            <CardTitle>Lodestar&apos;s own measurements, worst first</CardTitle>
             <ExportButton
               onExport={exportCsv}
               filename={`foghorn-qos-${hours}h.csv`}
@@ -898,7 +898,7 @@ export default function QosPage() {
                         {r.correctness === null ? (
                           <span
                             className="text-[var(--text-muted)]"
-                            title="Not checked — no comparable majority cluster in this window"
+                            title="Not checked: no comparable majority cluster in this window"
                           >
                             —
                           </span>
@@ -948,7 +948,7 @@ export default function QosPage() {
             <div className="text-sm text-[var(--text-muted)]">Loading…</div>
           ) : !compare ? (
             <div className="text-sm text-[var(--text-muted)]">
-              Comparison unavailable — needs both feeds to have data for the same allocations.
+              Comparison unavailable. It needs both feeds to have data for the same allocations.
             </div>
           ) : (
             <>
@@ -1067,7 +1067,7 @@ export default function QosPage() {
               <li>
                 Responses are canonicalised with JCS (RFC 8785), hashed with SHA-256 and clustered.
                 An indexer in the minority cluster returned confident, well-formed{' '}
-                <em>wrong data</em> — the signal a 200-counting oracle cannot produce.
+                <em>wrong data</em>, the signal a 200-counting oracle cannot produce.
               </li>
               <li>
                 Success rate counts HTTP 200s with no transport or GraphQL error. Latency covers{' '}
@@ -1077,7 +1077,7 @@ export default function QosPage() {
               <li>
                 Freshness is chainhead lag: the indexer&apos;s own reported head compared against
                 chainhead at probe time, which we resolve ourselves rather than taking on trust.
-                Clamped at zero, and conservative by a few seconds of block production — it will not
+                Clamped at zero, and conservative by a few seconds of block production, so it will not
                 resolve a lag of tens of blocks on a sub-second chain, but an indexer hundreds or
                 thousands of blocks behind measures cleanly.
               </li>
@@ -1105,7 +1105,7 @@ export default function QosPage() {
                 <span className="text-[var(--amber)]">Our success rate is an upper bound, not a
                 measurement.</span>{' '}
                 Probes are dispatched through Edge &amp; Node&apos;s gateway, which routes to
-                indexers it believes are healthy — so failures it already avoids are invisible to
+                indexers it believes are healthy, so failures it already avoids are invisible to
                 us. The comparison above shows it plainly: across every overlapping allocation our
                 success rate came out higher than theirs, never lower. That is selection bias in our
                 method, not an error in theirs. Removing it needs direct-to-indexer dispatch, and
@@ -1116,7 +1116,7 @@ export default function QosPage() {
               <li>
                 <strong>Which fields are unaffected.</strong> Correctness is the genuinely
                 independent one: responses are compared against each other, so nothing an indexer
-                asserts about itself can move it. Blocks-behind is <em>partly</em> independent — we
+                asserts about itself can move it. Blocks-behind is <em>partly</em> independent: we
                 resolve chainhead ourselves, but the indexer&apos;s position is taken from its own{' '}
                 <code>_meta</code>, so an operator misreporting its head would appear current.
                 Success rate is the weakest of the three, for the selection-bias reason above.
@@ -1124,7 +1124,7 @@ export default function QosPage() {
               <li>
                 <span className="text-[var(--amber)]">Correctness is currently thin.</span> Judging a
                 response requires at least two indexers answering the <em>identical</em> probe, and
-                gateway dispatch seldom provides that corroboration — so most rows read{' '}
+                gateway dispatch seldom provides that corroboration, so most rows read{' '}
                 <code>—</code>, meaning not established rather than clean. An earlier version scored
                 a &quot;minority of one&quot; as wrong and briefly accused a named indexer on a
                 sample where nothing had been compared; requiring a real majority fixed that and
@@ -1154,7 +1154,7 @@ export default function QosPage() {
                 it, and no amount of probing recovers a counterfactual.
               </li>
               <li>
-                Your own traffic from that gateway — but that one isn&apos;t a mystery: it is in
+                Your own traffic from that gateway, though that one isn&apos;t a mystery: it is in
                 your <code>indexer-service</code> logs and your TAP receipts already.
               </li>
             </ul>
@@ -1164,22 +1164,22 @@ export default function QosPage() {
             <h3 className="font-medium">Why this exists</h3>
             <p className="text-[var(--text-muted)]">
               On 2026-07-29 Edge &amp; Node&apos;s oracle stopped publishing for over 35 hours. The relayer
-              was fine — funded, no failed transactions, no stuck nonce — so nothing on-chain
+              was fine (funded, no failed transactions, no stuck nonce), so nothing on-chain
               revealed it, and every consumer kept serving stale numbers that looked current, this
               dashboard included.
             </p>
             <p className="text-[var(--text-muted)]">
               Watching for that turned up something larger. Since 2026-07-01 the oracle&apos;s
               main subgraph deployment (<code>Dtr9r…</code>) has rejected every message the publisher
-              sends, with <code>&quot;… is not a valid submitter&quot;</code> — the publisher moved
-              to a signer its allowlist does not carry — while sitting at chain tip reporting no
+              sends, with <code>&quot;… is not a valid submitter&quot;</code>. The publisher moved
+              to a signer its allowlist does not carry, all while sitting at chain tip reporting no
               indexing errors. The posts keep arriving and none become data. Anyone querying that
               deployment has received 1 July figures ever since, with nothing in the response to
               say so.
             </p>
             <p className="text-[var(--text-muted)]">
               The data itself was never lost, and it is worth being precise about that. The
-              publisher is live — you can watch it post to Gnosis at the top of this page — and a
+              publisher is live (you can watch it post to Gnosis at the top of this page) and a
               community fork of the subgraph (<code>CnfJ5…</code>, maintained by ellipfra) carries
               an updated allowlist and has indexed every message throughout. It is current to today.
               So the oracle is not down; one deployment of its subgraph is, and the consumers
@@ -1212,7 +1212,7 @@ export default function QosPage() {
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           <section className="space-y-2">
-            <h3 className="font-medium">GraphQL — drop-in for the oracle subgraph</h3>
+            <h3 className="font-medium">GraphQL: a drop-in for the oracle subgraph</h3>
             <p className="text-[var(--text-muted)]">
               The endpoint reuses the QoS oracle&apos;s entities and field names, including{' '}
               <code>allocationDailyDataPoints</code>, <code>indexer(id:)</code>,{' '}
@@ -1249,8 +1249,8 @@ export default function QosPage() {
             <h3 className="font-medium">Field mapping</h3>
             <p className="text-xs text-[var(--text-muted)]">
               What each field means on <strong>the Lodestar Oracle</strong>. Edge &amp; Node&apos;s
-              feed uses the same names for different things — most importantly{' '}
-              <code>query_count</code> — so a consumer switching between the two must reread this
+              feed uses the same names for different things, most importantly{' '}
+              <code>query_count</code>, so a consumer switching between the two must reread this
               table, not assume it.
             </p>
             <div className="overflow-x-auto">

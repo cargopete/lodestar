@@ -27,7 +27,7 @@ function errMessage(e: unknown): string {
 
 export async function runDisassembly(deploymentId: string): Promise<DisassemblyReport> {
   if (!IPFS_HASH_RE.test(deploymentId)) {
-    throw new Error('Invalid deployment ID — expected a CIDv0 hash (Qm…)');
+    throw new Error('Invalid deployment ID: expected a CIDv0 hash (Qm…)');
   }
 
   const yamlString = await ipfsCatText(deploymentId);
@@ -37,7 +37,7 @@ export async function runDisassembly(deploymentId: string): Promise<DisassemblyR
 
   const manifest = parseDisassemblyManifest(yamlString);
   const caveats: string[] = [
-    'Static analysis only — host-import reachability is computed from the deployed WASM, not by executing it.',
+    'Static analysis only: host-import reachability is computed from the deployed WASM, not by executing it.',
   ];
 
   const allSources = manifest.dataSources.slice(0, MAX_DATA_SOURCES);
@@ -96,7 +96,7 @@ export async function runDisassembly(deploymentId: string): Promise<DisassemblyR
     .map((d) => d.decodeAudit)
     .filter((a): a is DecodeAudit => !!a);
   if (decodeAudits.some((a) => a.usesDecode)) {
-    caveats.push('Decode Compatibility Audit is a static data-segment scan with no dataflow — flagged type strings may not be the exact argument passed to ethereum.decode, and dynamically built type strings are not detected.');
+    caveats.push('Decode Compatibility Audit is a static data-segment scan with no dataflow, so flagged type strings may not be the exact argument passed to ethereum.decode, and dynamically built type strings are not detected.');
   }
   if (decodeAudits.some((a) => a.unavailable)) {
     caveats.push('The exact-parity ethabi/alloy classifier could not be loaded in this runtime; decode compatibility could not be evaluated for some modules.');

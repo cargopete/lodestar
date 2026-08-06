@@ -157,12 +157,12 @@ export default function ProbeDetailPage({ params }: { params: Promise<{ id: stri
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />
                 <span className="text-[var(--text-muted)]">
-                  Cluster C1 — {divergence.largest_by_count.size} allocations (largest by count)
+                  Cluster C1 · {divergence.largest_by_count.size} allocations (largest by count)
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--amber)' }} />
-                <span className="text-[var(--text-muted)]">Cluster C2 — remainder</span>
+                <span className="text-[var(--text-muted)]">Cluster C2 · remainder</span>
               </div>
             </div>
             <div className="space-y-2 max-h-96 overflow-y-auto">

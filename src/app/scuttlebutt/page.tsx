@@ -210,7 +210,7 @@ export default function ScuttlebuttPage() {
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
             Anonymous chatter, like the old days. Add <code className="font-mono text-[var(--accent)]">#secret</code>{' '}
-            to your name for a tripcode. Mind your manners — the bilge has a mop.
+            to your name for a tripcode. Mind your manners; the bilge has a mop.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -339,7 +339,7 @@ export default function ScuttlebuttPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Name (optional) — try Name#secret for a tripcode"
+            placeholder="Name (optional), try Name#secret for a tripcode"
             maxLength={60}
             className="w-full px-3 py-2 text-[13px] bg-[var(--bg-elevated)] rounded-[var(--radius-button)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
           />

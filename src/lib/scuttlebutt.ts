@@ -49,12 +49,12 @@ export async function floodCheck(ipHash: string): Promise<FloodResult> {
   }
   try {
     const gap = await client.set(`sb:gap:${ipHash}`, '1', 'PX', MIN_GAP_MS, 'NX');
-    if (gap === null) return { ok: false, reason: 'Posting too fast — slow down a touch.' };
+    if (gap === null) return { ok: false, reason: 'Posting too fast, slow down a touch.' };
 
     const winKey = `sb:win:${ipHash}`;
     const count = await client.incr(winKey);
     if (count === 1) await client.expire(winKey, WINDOW_SEC);
-    if (count > MAX_IN_WINDOW) return { ok: false, reason: 'Too many messages — take a breather.' };
+    if (count > MAX_IN_WINDOW) return { ok: false, reason: 'Too many messages, take a breather.' };
 
     return { ok: true };
   } catch {

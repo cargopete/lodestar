@@ -40,7 +40,7 @@ export function NightsWatchCTA() {
             <span className="text-[13px] font-semibold text-[var(--text)]">The Night&apos;s Watch</span>
           </div>
           <p className="mt-1 text-[11px] text-[var(--text-muted)] leading-snug">
-            The Night&apos;s Watch is an open community of people who believe in The Graph&apos;s original vision — of an open, permissionless and thriving network for all ecosystem participants.
+            The Night&apos;s Watch is an open community of people who believe in The Graph&apos;s original vision of an open, permissionless and thriving network for all ecosystem participants.
           </p>
           <span
             className="mt-2 inline-flex items-center justify-center w-full px-3 py-1.5 text-[12px] font-medium rounded-[var(--radius-button)] transition-[filter] group-hover:brightness-110"

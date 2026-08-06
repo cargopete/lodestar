@@ -146,9 +146,9 @@ export default function SubgraphAlertsPanel({
         method: 'POST',
         credentials: 'include',
       });
-      setNotice(r.ok ? 'Test alert sent — check your channel.' : 'Test failed — check the webhook URL.');
+      setNotice(r.ok ? 'Test alert sent; check your channel.' : 'Test failed; check the webhook URL.');
     } catch {
-      setNotice('Test failed — check the webhook URL.');
+      setNotice('Test failed; check the webhook URL.');
     } finally {
       setTesting(false);
     }

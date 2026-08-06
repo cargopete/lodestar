@@ -28,7 +28,7 @@ export interface ContractGroup {
 export const CONTRACT_GROUPS: ContractGroup[] = [
   {
     chain: 'Arbitrum One',
-    subtitle: 'Principal deployment — 100% of indexing-reward issuance since 28 Jun 2024',
+    subtitle: 'Principal deployment: 100% of indexing-reward issuance since 28 Jun 2024',
     explorerBase: 'https://arbiscan.io/address/',
     contracts: [
       { name: 'L2GraphToken (proxy)', address: '0x9623063377AD1B27544C965cCd7342f7EA7e88C7', note: 'impl 0xaffcb9…b28df' },
@@ -44,7 +44,7 @@ export const CONTRACT_GROUPS: ContractGroup[] = [
   },
   {
     chain: 'Ethereum Mainnet (L1)',
-    subtitle: 'Deprecated for rewards (Dec 2024) — still holds GRT; bridge & escrow remain live',
+    subtitle: 'Deprecated for rewards (Dec 2024); still holds GRT, bridge & escrow remain live',
     explorerBase: 'https://etherscan.io/address/',
     contracts: [
       { name: 'GraphToken', address: '0xc944E90C64B2c07662A292be6244BDf05Cda44a7', note: 'genesis 10B, verified 2020-12-14' },
@@ -57,13 +57,13 @@ export const CONTRACT_GROUPS: ContractGroup[] = [
   },
   {
     chain: 'Horizon (Arbitrum One)',
-    subtitle: 'Mainnet-live 2 Dec 2025 — relocates allocations & payments; issuance formula unchanged',
+    subtitle: 'Mainnet-live 2 Dec 2025; relocates allocations & payments, issuance formula unchanged',
     explorerBase: 'https://arbiscan.io/address/',
     contracts: [
       { name: 'HorizonStaking', address: '0x00669A4CF01450B64E8A2A20E9b1FCB71E61eF03', note: 'L2Staking upgraded/renamed' },
       { name: 'SubgraphService', address: '0xb2Bb92d0DE618878E438b55D5846cfecD9301105', note: 'first data service' },
-      { name: 'GraphTallyCollector', address: '0x8f69F5C07477Ac46FBc491B1E6D91E2be0111A9e', note: 'TAPv2 verifier — name-verify on Arbiscan' },
-      { name: 'PaymentsEscrow', address: '0x8f477709eF277d4A880801D01A140a9CF88bA0d3', note: 'TAP escrow — name-verify on Arbiscan' },
+      { name: 'GraphTallyCollector', address: '0x8f69F5C07477Ac46FBc491B1E6D91E2be0111A9e', note: 'TAPv2 verifier, name-verify on Arbiscan' },
+      { name: 'PaymentsEscrow', address: '0x8f477709eF277d4A880801D01A140a9CF88bA0d3', note: 'TAP escrow, name-verify on Arbiscan' },
     ],
   },
 ];
@@ -80,7 +80,7 @@ export const L2_TIMELINE: TimelineEntry[] = [
   { date: 'GIP-0037', title: 'Linear L2 issuance', detail: 'issuanceRate replaced by linear issuancePerBlock; native L2 minting + L2 Mint Allowance protection.' },
   { date: 'Sep 2023', title: '50% rewards on L2', detail: 'GIP-0052 staged the L2 reward share 5% → 25% → 50%.' },
   { date: '28 Jun 2024', title: '100% rewards on L2', detail: 'L1 issuancePerBlock reduced to zero; all indexing rewards now issued on Arbitrum.' },
-  { date: 'Dec 2024', title: 'L1 deprecated', detail: 'GIP-0067 completed: mainnet protocol deprecated (not destroyed — token & bridge persist).' },
+  { date: 'Dec 2024', title: 'L1 deprecated', detail: 'GIP-0067 completed: mainnet protocol deprecated (not destroyed; token & bridge persist).' },
   { date: '2 Dec 2025', title: 'Horizon live', detail: 'GIP-0066 on Arbitrum mainnet: HorizonStaking, SubgraphService, generalized payments layer.' },
 ];
 
@@ -116,8 +116,8 @@ export const KEY_GIPS: GipRow[] = [
 
 export const CAVEATS: string[] = [
   '“Total supply” is reported inconsistently across sources: retail aggregators show circulating supply (~10.8B), the Graph Explorer shows on-chain token supply (~11.47B), and “minted” (~15.1B) is gross cumulative issuance including the 10B genesis.',
-  'On the Arbitrum subgraph, gross Minted/Burned are dominated by bridge flows (every L2 deposit mints, every withdrawal burns) — they are NOT a clean issuance/burn measure. Cumulative indexing rewards and the per-block issuance rate are the honest issuance figures.',
-  'Realized burn has historically run well below the ~1%/yr design target, because query-fee and curation activity were low relative to issuance — so net inflation tracks close to gross issuance.',
+  'On the Arbitrum subgraph, gross Minted/Burned are dominated by bridge flows (every L2 deposit mints, every withdrawal burns), so they are NOT a clean issuance/burn measure. Cumulative indexing rewards and the per-block issuance rate are the honest issuance figures.',
+  'Realized burn has historically run well below the ~1%/yr design target, because query-fee and curation activity were low relative to issuance, so net inflation tracks close to gross issuance.',
   'A complete supply trace must still read L1 totalSupply and the BridgeEscrow balance: the L1 protocol is deprecated, not destroyed.',
   'If GIP-0070/0087/0088 ship an Issuance Allocator distributing issuance beyond indexing rewards, that contract becomes a new emission node. GIP-0070 expects >99% of issuance to remain in Indexing Rewards initially.',
 ];

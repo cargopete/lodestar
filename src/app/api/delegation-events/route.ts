@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
           { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }
         );
       } catch (err) {
-        log.api.error({ err }, 'nuthatch delegation events failed — falling back to subgraph');
+        log.api.error({ err }, 'nuthatch delegation events failed, falling back to subgraph');
       }
     }
 

@@ -60,7 +60,7 @@ export default function ProtocolOverview() {
       <div className="pb-2 border-b border-[var(--border)]">
         <h1 className="text-2xl font-semibold text-[var(--text)]">The Graph Protocol</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Decentralised indexing infrastructure — live network data
+          Decentralised indexing infrastructure · live network data
         </p>
       </div>
 

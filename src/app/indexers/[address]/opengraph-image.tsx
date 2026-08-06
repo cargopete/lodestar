@@ -4,7 +4,7 @@ import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { EnrichedIndexer } from '@/lib/enriched';
 
 export const runtime = 'edge';
-export const alt = 'Indexer Profile — Lodestar';
+export const alt = 'Indexer Profile | Lodestar';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 

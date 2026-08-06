@@ -170,7 +170,7 @@ export async function buildSubgraphInSandbox(input: BuildInput): Promise<BuildRe
       const names = Object.keys(await readScripts(exec, base));
       return fail(
         `Subgraph manifest "${manifestPath}" not found, and no prepare step produced it` +
-          (names.length ? ` — available scripts: ${names.slice(0, 20).join(', ')}. ` : '. ') +
+          (names.length ? `. Available scripts: ${names.slice(0, 20).join(', ')}. ` : '. ') +
           'Try setting a custom prepare command.',
       );
     }

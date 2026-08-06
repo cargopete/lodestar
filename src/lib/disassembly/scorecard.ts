@@ -64,7 +64,7 @@ export function buildScorecard(manifest: ParsedManifest, dataSources: DataSource
     flags.push({ level: 'critical', title: 'Full-text search enabled', detail: 'Fulltext indexing is not deterministic and is a known fatal-panic source in graph-node.' });
   }
   if (ipfsHandlers > 0 || hasNonDetIpfs) {
-    flags.push({ level: 'warn', title: 'IPFS / file-data access', detail: `${ipfsHandlers} handler(s) reach ipfs.* — file data sources and on-chain IPFS reads are non-deterministic.` });
+    flags.push({ level: 'warn', title: 'IPFS / file-data access', detail: `${ipfsHandlers} handler(s) reach ipfs.*; file data sources and on-chain IPFS reads are non-deterministic.` });
   }
   if (manifest.graft) {
     flags.push({ level: 'info', title: 'Grafted deployment', detail: `Built on ${manifest.graft.base.slice(0, 14)}… at block ${manifest.graft.block.toLocaleString()}; history is inherited, not re-derived.` });
@@ -72,21 +72,21 @@ export function buildScorecard(manifest: ParsedManifest, dataSources: DataSource
 
   // --- performance / sync cost ---
   if (ethCallHandlers > 0) {
-    flags.push({ level: 'warn', title: 'eth_call in handlers', detail: `${ethCallHandlers} handler(s) reach ethereum.call — synchronous contract reads dominate indexing time and add revert/determinism risk.` });
+    flags.push({ level: 'warn', title: 'eth_call in handlers', detail: `${ethCallHandlers} handler(s) reach ethereum.call; synchronous contract reads dominate indexing time and add revert/determinism risk.` });
   }
   if (hasBlockHandlers) {
     flags.push({ level: 'warn', title: 'Block handlers', detail: 'Block handlers run per matching block and can sharply increase sync cost; call-filtered variants also require trace data.' });
   }
   if (hasCallHandlers) {
-    flags.push({ level: 'info', title: 'Call handlers', detail: 'Call handlers require transaction call traces (EXTENDED Firehose / trace-capable RPC) — heavier to index.' });
+    flags.push({ level: 'info', title: 'Call handlers', detail: 'Call handlers require transaction call traces (EXTENDED Firehose / trace-capable RPC), which is heavier to index.' });
   }
 
   // --- footprint / surface ---
   if (wildcard) {
-    flags.push({ level: 'warn', title: 'Wildcard indexing', detail: 'A data source has no source.address — it matches events from ALL contracts, a large index surface.' });
+    flags.push({ level: 'warn', title: 'Wildcard indexing', detail: 'A data source has no source.address, so it matches events from ALL contracts, a large index surface.' });
   }
   if (dynamicDsHandlers > 0) {
-    flags.push({ level: 'info', title: 'Dynamic data sources', detail: `${dynamicDsHandlers} handler(s) reach dataSource.create* — templates are spawned at runtime, so the indexed surface grows during sync.` });
+    flags.push({ level: 'info', title: 'Dynamic data sources', detail: `${dynamicDsHandlers} handler(s) reach dataSource.create*; templates are spawned at runtime, so the indexed surface grows during sync.` });
   }
   if (features.includes('nonFatalErrors')) {
     flags.push({ level: 'info', title: 'Non-fatal errors', detail: 'Subgraph continues past handler errors; data may be partial without halting.' });

@@ -266,7 +266,7 @@ export function PnlPanel({ indexer, grtPrice }: { indexer: string; grtPrice: num
             {/* Archive-node cost selector */}
             <div className="mt-4 pt-4 border-t border-[var(--border)]">
               <p className="text-[11px] text-[var(--text-muted)] mb-2">
-                Archive nodes run (toggle to model infra cost — these are editable estimates, not gospel):
+                Archive nodes run (toggle to model infra cost; these are editable estimates, not gospel):
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {Object.values(defaultChains).map((c) => (
@@ -314,7 +314,7 @@ export function PnlPanel({ indexer, grtPrice }: { indexer: string; grtPrice: num
 
             <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
               Revenue: query-fee redemptions (RAV) + indexing rewards realised at allocation close.
-              Infra cost is a modeled estimate from archive-node selection — override per operator.
+              Infra cost is a modeled estimate from archive-node selection; override per operator.
               Informational only, not financial advice.
             </p>
           </>

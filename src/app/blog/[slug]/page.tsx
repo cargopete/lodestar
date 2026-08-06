@@ -18,7 +18,7 @@ export async function generateMetadata({
   if (!post) return {};
 
   return {
-    title: `${post.title} — Lodestar Blog`,
+    title: `${post.title} | Lodestar Blog`,
     description: post.excerpt,
     openGraph: {
       title: post.title,

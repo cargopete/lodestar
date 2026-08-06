@@ -82,7 +82,7 @@ export function UndelegatePanel({ position, className, onClose }: UndelegatePane
   }, [step, mode]);
 
   const buttonLabel = (() => {
-    if (error) return 'Failed — try again';
+    if (error) return 'Failed, try again';
     if (step === 'confirmed') return mode === 'withdraw' ? 'Withdrawn!' : 'Undelegation started!';
     if (isProcessing) return mode === 'withdraw' ? 'Withdrawing...' : 'Undelegating...';
     if (mode === 'withdraw') return 'Withdraw Thawed GRT';

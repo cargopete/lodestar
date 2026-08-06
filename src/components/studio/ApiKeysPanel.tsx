@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
  *
  * Lists the caller's Lodestar API keys with this-month usage + remaining quota,
  * mints new keys (plaintext shown ONCE, copy-once box), and revokes keys.
- * No deposits, no billing — just a monthly query allowance.
+ * No deposits, no billing, just a monthly query allowance.
  */
 
 interface KeyRow {
@@ -99,7 +99,7 @@ export default function ApiKeysPanel() {
       <p className="text-xs font-medium text-[var(--text-muted)]">Query API Keys</p>
       <p className="text-xs text-[var(--text-faint)]">
         Free-tier metered access to The Graph network via Lodestar&apos;s gateway. No deposits, no
-        billing — just a monthly query allowance.
+        billing, just a monthly query allowance.
       </p>
 
       {data && (
@@ -112,7 +112,7 @@ export default function ApiKeysPanel() {
 
       {plaintext && (
         <div className="space-y-1.5">
-          <p className="text-xs text-amber-500">Save this — it won&apos;t be shown again.</p>
+          <p className="text-xs text-amber-500">Save this now; it won&apos;t be shown again.</p>
           <div className="flex items-center gap-2 p-3 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border)]">
             <code className="flex-1 text-xs font-mono text-[var(--text)] break-all">{plaintext}</code>
             <CopyButton text={plaintext} />

@@ -329,7 +329,7 @@ export default function IndexerDetailPage({
                 <p className="text-xs font-semibold text-[var(--text)] mb-2">Rewards Eligibility (GIP-0079)</p>
                 {reoData.status.status === 'unknown' ? (
                   <p className="text-[11px] text-[var(--text-muted)]">
-                    The on-chain REO oracle couldn&apos;t be reached — eligibility can&apos;t be determined right now.
+                    The on-chain REO oracle couldn&apos;t be reached, so eligibility can&apos;t be determined right now.
                   </p>
                 ) : (
                   <>
@@ -363,7 +363,7 @@ export default function IndexerDetailPage({
           label="Total Delegated"
           value={`${formatGRT(delegated)} GRT`}
           subtitle={formatUSD(delegated * grtPrice)}
-          tooltip="Active delegation only — tokens currently in the 28-day thaw period are excluded, as they earn no rewards and would distort APR/APY figures."
+          tooltip="Active delegation only. Tokens currently in the 28-day thaw period are excluded, as they earn no rewards and would distort APR/APY figures."
         />
         <StatCard
           label="Allocated"
@@ -582,7 +582,7 @@ export default function IndexerDetailPage({
                       The on-chain REO oracle couldn&apos;t be reached, so this indexer&apos;s rewards eligibility can&apos;t be determined right now.
                     </p>
                     <p className="text-[10px] text-[var(--text-faint)] leading-relaxed">
-                      Eligibility is read straight from the REO oracle contract (GIP-0079) — we never estimate it. Please try again shortly.
+                      Eligibility is read straight from the REO oracle contract (GIP-0079); we never estimate it. Please try again shortly.
                     </p>
                   </div>
                 ) : (
@@ -606,7 +606,7 @@ export default function IndexerDetailPage({
                     )}
                     {reoData.status.renewalTimestamp === 0 && (
                       <p className="text-sm text-[var(--text-muted)]">
-                        No renewal on record — the oracle has not yet posted an eligibility attestation for this indexer.
+                        No renewal on record: the oracle has not yet posted an eligibility attestation for this indexer.
                       </p>
                     )}
                     {/* Timestamps */}
@@ -629,7 +629,7 @@ export default function IndexerDetailPage({
                       )}
                     </div>
                     <p className="text-[10px] text-[var(--text-faint)] leading-relaxed">
-                      Source: REO oracle contract (GIP-0079). The oracle evaluates indexer service quality — HTTP status, response speed, and data freshness — over 28-day windows with 14-day renewal cycles. The badge above reflects the oracle&apos;s own eligibility verdict; a due renewal does not mean an eligible indexer has stopped earning.
+                      Source: REO oracle contract (GIP-0079). The oracle evaluates indexer service quality (HTTP status, response speed, and data freshness) over 28-day windows with 14-day renewal cycles. The badge above reflects the oracle&apos;s own eligibility verdict; a due renewal does not mean an eligible indexer has stopped earning.
                     </p>
                   </div>
                 )}

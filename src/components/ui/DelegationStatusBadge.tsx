@@ -11,7 +11,7 @@ import type { DelegationStatus } from '@/lib/rewards';
 export function DelegationStatusBadge({ status }: { status: DelegationStatus }) {
   switch (status) {
     case 'withdrawable':
-      return <Badge variant="accent" title="Thawing complete — ready to withdraw">Withdrawable</Badge>;
+      return <Badge variant="accent" title="Thawing complete, ready to withdraw">Withdrawable</Badge>;
     case 'thawing':
       return <Badge variant="warning">Thawing</Badge>;
     case 'active':

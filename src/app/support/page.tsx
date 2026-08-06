@@ -18,7 +18,7 @@ export default function SupportPage() {
       <ul>
         <li>
           <strong>Community chat:</strong>{' '}
-          <a href="https://discord.gg/484vgDETEZ">Discord</a> — the fastest way to ask a question.
+          <a href="https://discord.gg/484vgDETEZ">Discord</a> is the fastest way to ask a question.
         </li>
         <li>
           <strong>Bugs &amp; feature requests:</strong>{' '}

@@ -68,7 +68,7 @@ export function HorizonParameters() {
       unit: 'PPM',
       contract: 'HorizonStaking',
       contractAddress: '0x00669A4CF01450B64E8A2A20E9b1FCB71E61eF03',
-      details: `The 0.5% delegation tax was eliminated at the code level in Horizon. The storage slot still holds the legacy value (5,000 PPM) for proxy compatibility, but HorizonStaking._delegate() completely bypasses it. No governance proposal zeroed it — the new implementation simply ignores it. Slashable delegation (enabled ~3 months post-Horizon) provides the attack deterrent that the tax originally offered.`,
+      details: `The 0.5% delegation tax was eliminated at the code level in Horizon. The storage slot still holds the legacy value (5,000 PPM) for proxy compatibility, but HorizonStaking._delegate() completely bypasses it. No governance proposal zeroed it; the new implementation simply ignores it. Slashable delegation (enabled ~3 months post-Horizon) provides the attack deterrent that the tax originally offered.`,
     },
     {
       name: 'maxAllocationEpochs',
@@ -77,7 +77,7 @@ export function HorizonParameters() {
       value: network?.maxAllocationEpochs ?? 28,
       unit: 'epochs',
       contract: 'Staking (Legacy)',
-      details: `Still active for legacy allocations being wound down during the transition period. The setter function remains functional (not marked __DEPRECATED_). New allocations under SubgraphService have no epoch-based lifetime limit — freshness is enforced via maxPOIStaleness instead. The indexer-agent currently cycles allocations every ~28 days for compatibility; a future version will use long-lived allocations natively.`,
+      details: `Still active for legacy allocations being wound down during the transition period. The setter function remains functional (not marked __DEPRECATED_). New allocations under SubgraphService have no epoch-based lifetime limit; freshness is enforced via maxPOIStaleness instead. The indexer-agent currently cycles allocations every ~28 days for compatibility; a future version will use long-lived allocations natively.`,
     },
   ];
 

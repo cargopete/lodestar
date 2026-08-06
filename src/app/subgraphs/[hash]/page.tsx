@@ -326,7 +326,7 @@ function SchemaTab({ hash }: { hash: string }) {
       <Card>
         <CardContent>
           <p className="text-sm text-[var(--text-muted)] py-8 text-center">
-            Schema not available — the manifest may not include an IPFS-pinned schema reference.
+            Schema not available; the manifest may not include an IPFS-pinned schema reference.
           </p>
         </CardContent>
       </Card>
@@ -438,7 +438,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
             <span aria-hidden>⛔</span>
             <div>
               <p className="text-sm font-semibold text-[var(--red)]">
-                {servability.recovering ? 'Effectively dead — rescue in flight' : 'Effectively dead'}
+                {servability.recovering ? 'Effectively dead, rescue in flight' : 'Effectively dead'}
               </p>
               <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
                 All allocated stake belongs to operators with no working serving path; queries will fail despite any
@@ -450,7 +450,7 @@ function IndexingHealthSection({ hash }: { hash: string }) {
       ) : servability && servability.dominantOperatorShare >= 0.66 ? (
         <Card className="border-[var(--amber)]">
           <p className="text-[13px] text-[var(--amber)]">
-            ⚠ Fragile redundancy — {Math.round(servability.dominantOperatorShare * 100)}% of allocated stake sits with a
+            ⚠ Fragile redundancy · {Math.round(servability.dominantOperatorShare * 100)}% of allocated stake sits with a
             single operator. The gateway sees several indexers of headroom, but they share one fate.
           </p>
         </Card>
@@ -1157,7 +1157,7 @@ function DeploymentPageInner({ hash }: { hash: string }) {
 
   useEffect(() => {
     const parts = [displayName, networkLabel].filter(Boolean);
-    if (parts.length > 0) document.title = `${parts.join(' · ')} — Lodestar`;
+    if (parts.length > 0) document.title = `${parts.join(' · ')} | Lodestar`;
   }, [displayName, networkLabel]);
 
   const setTab = (tab: Tab) => {

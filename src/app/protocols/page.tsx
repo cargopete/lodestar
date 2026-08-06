@@ -232,7 +232,7 @@ export default function ProtocolsPage() {
       <div className="pb-2 border-b border-[var(--border)]">
         <h1 className="text-2xl font-semibold text-[var(--text)]">DeFi Protocols</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Live analytics for leading DeFi protocols — all data sourced from The Graph
+          Live analytics for leading DeFi protocols, all data sourced from The Graph
         </p>
       </div>
 
@@ -435,7 +435,7 @@ export default function ProtocolsPage() {
         >
           The Graph
         </a>
-        {' '}— open, permissionless blockchain data
+        {' '}· open, permissionless blockchain data
       </p>
     </div>
   );

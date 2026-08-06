@@ -175,7 +175,7 @@ function DroppedChainDot({ address }: { address: string }) {
   if (!dropped.length) return null;
 
   const label = dropped.length <= 2 ? dropped.join(', ') : `${dropped.slice(0, 2).join(', ')} +${dropped.length - 2}`;
-  const tipBody = `This indexer appears to have stopped serving: ${dropped.join(', ')}. Chains missing from their node since the last snapshot — may indicate infra changes. Check before delegating.`;
+  const tipBody = `This indexer appears to have stopped serving: ${dropped.join(', ')}. Chains missing from their node since the last snapshot, which may indicate infra changes. Check before delegating.`;
 
   return (
     <span className="relative group/drop inline-flex items-center">
@@ -532,7 +532,7 @@ export function IndexerTable() {
         ),
       }),
       columnHelper.accessor('delegated', {
-        header: () => <HeaderTip label="Delegated" tip="Active GRT delegated to this indexer — tokens currently in the 28-day thaw period are excluded, since they earn no rewards and would inflate the denominator." />,
+        header: () => <HeaderTip label="Delegated" tip="Active GRT delegated to this indexer. Tokens currently in the 28-day thaw period are excluded, since they earn no rewards and would inflate the denominator." />,
         cell: (info) => (
           <span className="font-mono text-[var(--green)]">
             {formatGRT(info.getValue())} GRT
@@ -540,7 +540,7 @@ export function IndexerTable() {
         ),
       }),
       columnHelper.accessor('capacity', {
-        header: () => <HeaderTip label="Capacity" tip="How full the indexer's delegation pool is. Over 100% means overdelegated — your rewards get diluted proportionally." />,
+        header: () => <HeaderTip label="Capacity" tip="How full the indexer's delegation pool is. Over 100% means overdelegated, so your rewards get diluted proportionally." />,
         cell: (info) => {
           const value = info.getValue();
           return (
@@ -559,7 +559,7 @@ export function IndexerTable() {
         },
       }),
       columnHelper.accessor('rewardCut', {
-        header: () => <HeaderTip label="Reward Cut" tip="The % of indexing rewards the indexer keeps. 'Effective cut' below factors in overdelegation dilution — what you actually lose. A 100% cut means delegators earn nothing." />,
+        header: () => <HeaderTip label="Reward Cut" tip="The % of indexing rewards the indexer keeps. 'Effective cut' below factors in overdelegation dilution: what you actually lose. A 100% cut means delegators earn nothing." />,
         cell: (info) => {
           const row = info.row.original;
           const lastUpdate = row.raw.lastDelegationParameterUpdate;
@@ -582,7 +582,7 @@ export function IndexerTable() {
               </span>
               {greedy && (
                 <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 w-56 p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl opacity-0 pointer-events-none group-hover/greedy:opacity-100 transition-opacity z-50 text-[11px] font-normal text-[var(--text)]">
-                  100% Reward Cut — delegators earn nothing from this indexer
+                  100% Reward Cut: delegators earn nothing from this indexer
                 </span>
               )}
               {row.effectiveCut !== null && (
@@ -607,7 +607,7 @@ export function IndexerTable() {
         sortUndefined: 'last',
       }),
       columnHelper.accessor('apr', {
-        header: () => <HeaderTip label="APR" tip="Forward-looking annualised return based on live allocations. Calculated against active delegation only — thawing tokens are excluded so they don't depress the figure. Snapshot, not a guarantee." />,
+        header: () => <HeaderTip label="APR" tip="Forward-looking annualised return based on live allocations. Calculated against active delegation only; thawing tokens are excluded so they don't depress the figure. Snapshot, not a guarantee." />,
         cell: (info) => {
           const value = info.getValue();
           if (value === null) return <span className="text-[var(--text-faint)]">—</span>;
@@ -622,7 +622,7 @@ export function IndexerTable() {
         },
       }),
       columnHelper.accessor('rollingAPY90d', {
-        header: () => <HeaderTip label="APY 90d" tip="Compounded return over the last 90 days from delegation pool share growth. Per-share rate — immune to thawing distortion. Hover a value to see 30d APY." />,
+        header: () => <HeaderTip label="APY 90d" tip="Compounded return over the last 90 days from delegation pool share growth. Per-share rate, immune to thawing distortion. Hover a value to see 30d APY." />,
         cell: (info) => {
           const value = info.getValue();
           const row = info.row.original;

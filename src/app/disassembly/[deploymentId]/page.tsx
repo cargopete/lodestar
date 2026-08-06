@@ -17,7 +17,7 @@ export async function generateMetadata({
 
   if (!data) {
     return {
-      title: 'Subgraph Disassembly — Lodestar',
+      title: 'Subgraph Disassembly | Lodestar',
       description: 'Static disassembly and transparency scorecard for a deployed subgraph.',
     };
   }
@@ -28,7 +28,7 @@ export async function generateMetadata({
   const hosts = totals.hostCategories.join(', ') || 'none';
   const signalStr = signal && signal.signalledGRT > 0 ? ` · ${formatGRT(signal.signalledGRT)} GRT signalled` : '';
 
-  const title = `Subgraph ${short(deploymentId)} — Grade ${scorecard.grade} · risk ${scorecard.riskScore} | Lodestar`;
+  const title = `Subgraph ${short(deploymentId)} · Grade ${scorecard.grade} · risk ${scorecard.riskScore} | Lodestar`;
   const description =
     `Static disassembly: ${totals.handlers} handlers across ${totals.dataSources} data source(s). ` +
     `Host APIs: ${hosts}. ${flagCount} risk flag(s)${signalStr}.`;

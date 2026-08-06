@@ -51,14 +51,14 @@ export const metadata: Metadata = {
   },
   formatDetection: { telephone: false },
   openGraph: {
-    title: 'Lodestar — Stay oriented.',
+    title: 'Lodestar: Stay oriented.',
     description: 'Analytics dashboard for The Graph Protocol ecosystem.',
     siteName: 'Lodestar',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Lodestar — Stay oriented.',
+    title: 'Lodestar: Stay oriented.',
     description: 'Analytics dashboard for The Graph Protocol ecosystem.',
   },
   icons: {

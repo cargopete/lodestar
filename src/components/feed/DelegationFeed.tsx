@@ -86,7 +86,7 @@ export function DelegationFeed({ indexerAddress: initialFilter }: DelegationFeed
           <div className="flex items-center gap-3">
             {nuthatchBacked && <NuthatchBadge />}
             <span className="text-[10px] text-[var(--text-faint)]">
-              {activeFilter ? 'Filtered' : 'Live'} — last 50
+              {activeFilter ? 'Filtered' : 'Live'} · last 50
             </span>
           </div>
         </div>

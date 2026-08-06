@@ -158,7 +158,7 @@ function SignalModal({
               </div>
 
               <p className="text-xs text-[var(--text-faint)] bg-[var(--bg-elevated)] rounded p-2.5 border border-[var(--border)]">
-                Signalling uses a bonding curve — you may receive fewer GRT when unsignalling due to a 0.5% burn. Slippage protection is disabled for simplicity; the transaction may revert if the curve moves sharply.
+                Signalling uses a bonding curve, so you may receive fewer GRT when unsignalling due to a 0.5% burn. Slippage protection is disabled for simplicity; the transaction may revert if the curve moves sharply.
               </p>
 
               {/* Steps */}
@@ -169,7 +169,7 @@ function SignalModal({
                     onClick={() => approve({ address: CONTRACTS.grt, abi: ERC20_ABI, functionName: 'approve', args: [CONTRACTS.gns, tokensIn], chainId: arbitrum.id })}
                     className="w-full px-4 py-2.5 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
                   >
-                    {approvePending ? 'Approving...' : 'Step 1 — Approve GRT'}
+                    {approvePending ? 'Approving...' : 'Step 1: Approve GRT'}
                   </button>
                 )}
                 <button
@@ -177,7 +177,7 @@ function SignalModal({
                   onClick={() => signal({ address: CONTRACTS.gns, abi: GNS_ABI, functionName: 'mintSignal', args: [deploymentId as `0x${string}`, tokensIn, 0n], chainId: arbitrum.id })}
                   className="w-full px-4 py-2.5 text-sm font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
-                  {signalPending ? 'Signalling...' : needsApproval && step === 'approve' ? 'Step 2 — Signal GRT' : 'Signal GRT'}
+                  {signalPending ? 'Signalling...' : needsApproval && step === 'approve' ? 'Step 2: Signal GRT' : 'Signal GRT'}
                 </button>
               </div>
             </>
@@ -519,7 +519,7 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <p className="text-sm text-[var(--text-muted)] flex-1">
-            Ranked by query fees generated relative to current signal — higher ratio means more fees earned per GRT curated.
+            Ranked by query fees generated relative to current signal. A higher ratio means more fees earned per GRT curated.
           </p>
           <input
             type="text"
@@ -547,7 +547,7 @@ function DiscoverTab({ highlightDeployment }: { highlightDeployment?: string | n
             ) : highlightDeployment && search === highlightDeployment ? (
               <div className="flex flex-col items-center gap-4">
                 <p className="text-sm text-[var(--text-muted)]">
-                  This deployment isn&apos;t in the protocol yet — it likely has no signal or allocations. You can still be the first to signal it.
+                  This deployment isn&apos;t in the protocol yet, so it likely has no signal or allocations. You can still be the first to signal it.
                 </p>
                 <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] max-w-lg w-full">
                   <code className="flex-1 text-xs font-mono text-[var(--text-faint)] truncate">{highlightDeployment}</code>

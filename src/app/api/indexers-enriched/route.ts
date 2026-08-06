@@ -7,7 +7,7 @@ export async function GET() {
 
   if (!data) {
     return NextResponse.json(
-      { error: 'Enriched data not yet available — cron has not run' },
+      { error: 'Enriched data not yet available; cron has not run' },
       { status: 503 }
     );
   }

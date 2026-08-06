@@ -79,7 +79,7 @@ export function formatMessage(
   if (status === 'failed') {
     msg = `❌ Subgraph "${name}" (${id}) has a fatal error: ${errorMsg ?? 'unknown error'}`;
   } else if (status === 'lagging') {
-    msg = `⚠️ Subgraph "${name}" (${id}) is lagging — ${fmtNum(lagBlocks ?? 0)} blocks behind`;
+    msg = `⚠️ Subgraph "${name}" (${id}) is lagging, ${fmtNum(lagBlocks ?? 0)} blocks behind`;
   } else {
     // 'recovered' (or any ok transition)
     msg = `✅ Subgraph "${name}" (${id}) has recovered`;

@@ -5,7 +5,7 @@ import { formatGRT } from '@/lib/utils';
 // Node runtime (not edge): lets us reuse runDisassembly + the Redis cache via
 // loadShareReport instead of re-fetching over HTTP.
 export const runtime = 'nodejs';
-export const alt = 'Subgraph Disassembly — Lodestar';
+export const alt = 'Subgraph Disassembly | Lodestar';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 

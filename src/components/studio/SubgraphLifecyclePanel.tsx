@@ -272,7 +272,7 @@ function LifecycleModal({
               <div className="p-3 rounded-lg bg-[var(--red-dim)] border border-[var(--red)]/30">
                 <p className="text-sm font-medium text-[var(--red)]">This is irreversible.</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
-                  Transferring sends the subgraph NFT (#{nftId}) to another wallet. You will lose all control —
+                  Transferring sends the subgraph NFT (#{nftId}) to another wallet. You will lose all control,
                   you cannot update versions, edit metadata, or take it back. Make absolutely sure the recipient
                   address is correct.
                 </p>
@@ -401,7 +401,7 @@ function LifecycleModal({
           {step === 'mining' && (
             <div className="flex flex-col items-center py-8 gap-3">
               <div className="w-10 h-10 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
-              <p className="text-sm text-[var(--text-muted)]">Transaction submitted — waiting for confirmation...</p>
+              <p className="text-sm text-[var(--text-muted)]">Transaction submitted. Waiting for confirmation...</p>
               {txHash && <ArbiscanLink hash={txHash} />}
             </div>
           )}

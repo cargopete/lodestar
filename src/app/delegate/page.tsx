@@ -331,7 +331,7 @@ export default function DelegatePage() {
         <Card>
           <CardContent className="py-6 text-center">
             <p className="text-sm text-[var(--text-muted)]">
-              Could not load recommendation — indexer data may still be warming up.
+              Could not load recommendation; indexer data may still be warming up.
             </p>
           </CardContent>
         </Card>

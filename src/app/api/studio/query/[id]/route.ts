@@ -42,7 +42,7 @@ export async function POST(
   }
   if (!sg.deployment_id) {
     return NextResponse.json(
-      { error: 'No deployment yet — run graph deploy first (step 3)' },
+      { error: 'No deployment yet. Run graph deploy first (step 3)' },
       { status: 422 },
     );
   }

@@ -252,7 +252,7 @@ function NeedsAttentionSection() {
       ) : items.length === 0 ? (
         <Card className="border-l-2 border-l-[var(--green)]">
           <p className="text-sm text-[var(--green)]">
-            All clear — no indexers are currently serving bad or no data.
+            All clear. No indexers are currently serving bad or no data.
           </p>
         </Card>
       ) : filtered.length === 0 ? (
@@ -346,7 +346,7 @@ function Leaderboard() {
                       {ix.rated ? (
                         <Badge variant={gradeVariant(ix.grade)}>{ix.grade}</Badge>
                       ) : (
-                        <Badge variant="default" title="Inactive — no queries, allocations, or probe coverage">NR</Badge>
+                        <Badge variant="default" title="Inactive: no queries, allocations, or probe coverage">NR</Badge>
                       )}
                     </td>
                     <td className="px-3 py-2 text-right font-mono">
@@ -445,7 +445,7 @@ function VerdictsSection() {
                       >
                         {indexerLabel(v.indexer_address, v.ens_name)}
                       </Link>
-                      <span className="text-[var(--text-muted)]"> — {v.title}</span>
+                      <span className="text-[var(--text-muted)]"> · {v.title}</span>
                       <span className="block text-[11px] text-[var(--text-faint)]">{evidenceLine(v.evidence)}</span>
                     </td>
                     <td className="px-3 py-2 text-right text-[11px] text-[var(--text-faint)] whitespace-nowrap">
@@ -509,7 +509,7 @@ function NonDeterministicSection() {
     <section className="space-y-3">
       <h2 className="text-lg font-semibold text-[var(--text)]">Non-deterministic Subgraphs</h2>
       <p className="text-sm text-[var(--text-muted)]">
-        These deployments diverge across indexers every probe round — their mappings are
+        These deployments diverge across indexers every probe round; their mappings are
         non-deterministic (the subgraph&apos;s issue, not the indexers&apos;). Indexers are
         <span className="text-[var(--text)]"> not penalised</span> for serving them.
       </p>
@@ -618,7 +618,7 @@ function MethodologyPanel() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="rounded-[var(--radius-card)] bg-[var(--bg-elevated)] p-3">
             <p className="text-[var(--text)] font-medium mb-1">
-              Directly probed by Foghorn — <span className="text-[var(--green)]">correctness</span>
+              Directly probed by Foghorn: <span className="text-[var(--green)]">correctness</span>
             </p>
             <p>
               Block-pinned GraphQL queries sent through the gateway, responses canonicalised (JCS)
@@ -635,9 +635,9 @@ function MethodologyPanel() {
             )}
           </div>
           <div className="rounded-[var(--radius-card)] bg-[var(--bg-elevated)] p-3">
-            <p className="text-[var(--text)] font-medium mb-1">Read from the network — applies to all indexers</p>
+            <p className="text-[var(--text)] font-medium mb-1">Read from the network, applies to all indexers</p>
             <ul className="list-disc pl-4 space-y-0.5">
-              <li><span className="text-[var(--text)]">QoS oracle:</span> success rate (errors/400s), latency, chainhead lag, query volume — measured from real query traffic, not Foghorn.</li>
+              <li><span className="text-[var(--text)]">QoS oracle:</span> success rate (errors/400s), latency, chainhead lag, query volume, all measured from real query traffic rather than Foghorn.</li>
               <li><span className="text-[var(--text)]">On-chain / network subgraph:</span> self-stake, allocations (coverage), REO eligibility.</li>
               <li><span className="text-[var(--text)]">Derived by Foghorn:</span> sybil-swarm clustering and leech detection from roster patterns.</li>
             </ul>
@@ -691,7 +691,7 @@ export default function FoghornPage() {
         </div>
         <p className="text-sm text-[var(--text-muted)] mt-1">
           A composite A–F grade per indexer, fusing Foghorn&apos;s own correctness probing with
-          The Graph&apos;s QoS oracle, on-chain stake and REO data — plus actionable verdicts and a
+          The Graph&apos;s QoS oracle, on-chain stake and REO data, plus actionable verdicts and a
           live needs-attention triage.
         </p>
       </div>

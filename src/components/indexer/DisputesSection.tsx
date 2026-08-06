@@ -49,7 +49,7 @@ export function DisputesSection({ address }: { address: string }) {
           </div>
         ) : disputes.length === 0 ? (
           <p className="text-sm text-[var(--text-muted)] py-2">
-            No disputes on record — this indexer has never been disputed or slashed.
+            No disputes on record. This indexer has never been disputed or slashed.
           </p>
         ) : (
           <div className="overflow-x-auto">

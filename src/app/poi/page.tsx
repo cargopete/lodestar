@@ -253,7 +253,7 @@ export default function POIDashboard() {
             <p className="text-sm text-[var(--text-muted)]">
               A Proof of Indexing (POI) is a cryptographic hash of the entity store state at a given block.
               When multiple indexers submit different POIs for the same deployment and epoch, it indicates
-              at least one indexer has divergent data — which can lead to disputes and slashing of staked GRT.
+              at least one indexer has divergent data, which can lead to disputes and slashing of staked GRT.
               Consensus is stake-weighted: the POI backed by the most allocated tokens is treated as correct.
             </p>
           </div>
@@ -261,7 +261,7 @@ export default function POIDashboard() {
             <h4 className="font-semibold text-[var(--text)] mb-2">Data Source &amp; Limitations</h4>
             <p className="text-sm text-[var(--text-muted)]">
               This dashboard analyses <span className="text-[var(--text)]">on-chain allocation POIs</span> from
-              the network subgraph — the POI each indexer submitted when closing an allocation. Tools like
+              the network subgraph: the POI each indexer submitted when closing an allocation. Tools like
               POIfier and Subgraph Radio compare real-time POIs queried directly from indexer graph-nodes
               via the <span className="font-mono text-xs">proofOfIndexing</span> API, which requires
               self-hosted infrastructure. Lodestar is the only public dashboard for POI consensus, but

@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 
 export const runtime = 'edge';
-export const alt = 'Subgraph Deployment — Lodestar';
+export const alt = 'Subgraph Deployment | Lodestar';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 

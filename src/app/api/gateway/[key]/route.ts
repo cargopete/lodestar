@@ -102,10 +102,10 @@ export async function POST(
   // caller can't inject path segments (e.g. "../") to reach other gateway routes.
   // deployment = IPFS CIDv0 (Qm…); subgraphId = 0x… 64-hex (GNS NFT id / subgraph hash).
   if (deployment && !/^Qm[1-9A-HJ-NP-Za-km-z]{44}$/.test(deployment)) {
-    return NextResponse.json({ error: 'Invalid "deployment" — expect an IPFS CIDv0 (Qm…)' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid "deployment": expect an IPFS CIDv0 (Qm…)' }, { status: 400 });
   }
   if (subgraphId && !/^0x[0-9a-fA-F]{64}$/.test(subgraphId)) {
-    return NextResponse.json({ error: 'Invalid "subgraphId" — expect 0x… (64 hex)' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid "subgraphId": expect 0x… (64 hex)' }, { status: 400 });
   }
 
   const targetUrl = deployment

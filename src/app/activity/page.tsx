@@ -2,7 +2,7 @@ import { HorizonActivity } from '@/components/ui/HorizonActivity';
 
 export const metadata = {
   title: 'Activity | Lodestar',
-  description: 'Live on-chain activity from The Graph\'s Horizon contract — delegations, provisions, slashing and more.',
+  description: 'Live on-chain activity from The Graph\'s Horizon contract: delegations, provisions, slashing and more.',
 };
 
 export default function ActivityPage() {
@@ -11,7 +11,7 @@ export default function ActivityPage() {
       <div>
         <h1 className="text-[22px] font-semibold text-[var(--text)] tracking-tight">Activity</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Real-time staking activity from The Graph&apos;s Horizon contract — who&apos;s staking, delegating, and getting slashed.
+          Real-time staking activity from The Graph&apos;s Horizon contract: who&apos;s staking, delegating, and getting slashed.
         </p>
       </div>
 

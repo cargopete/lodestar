@@ -34,7 +34,7 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Wallet address (optional).</strong> If you connect a wallet, it stays in your
-          browser/app and we do not store it — <em>except</em> when you opt into notifications, where
+          browser/app and we do not store it, <em>except</em> when you opt into notifications, where
           we store your public wallet address (and, on iOS, a push notification device token) solely
           to deliver the alerts you asked for. You can revoke this at any time.
         </li>

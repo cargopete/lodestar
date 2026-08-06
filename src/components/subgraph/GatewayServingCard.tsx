@@ -43,7 +43,7 @@ export function GatewayServingCard({ result, indexers }: Props) {
             <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
               A live query returned attested data
               {result.servedBlock != null ? ` at block ${formatNumber(result.servedBlock)}` : ''}. This is the
-              consumer&apos;s-eye view — the same path a paid API key takes.
+              consumer&apos;s-eye view: the same path a paid API key takes.
             </p>
           </div>
         </div>
@@ -60,7 +60,7 @@ export function GatewayServingCard({ result, indexers }: Props) {
           <span aria-hidden>⛔</span>
           <div className="w-full">
             <p className="text-sm font-semibold text-[var(--red)]">
-              Gateway can&apos;t serve this subgraph — 0 of {n} indexer{n === 1 ? '' : 's'} usable
+              Gateway can&apos;t serve this subgraph: 0 of {n} indexer{n === 1 ? '' : 's'} usable
             </p>
             <p className="text-[13px] text-[var(--text-muted)] mt-0.5 mb-3">
               A live query through the gateway was rejected by every allocated indexer it tried. This is why queries

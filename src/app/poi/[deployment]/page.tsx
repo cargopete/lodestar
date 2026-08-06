@@ -257,7 +257,7 @@ export default function POIDeploymentPage({
       {detail.epochs.length === 0 && (
         <Card>
           <div className="p-8 text-center">
-            <p className="text-[var(--text-muted)]">No real POIs submitted for this deployment — only empty allocation closes.</p>
+            <p className="text-[var(--text-muted)]">No real POIs submitted for this deployment, only empty allocation closes.</p>
           </div>
         </Card>
       )}

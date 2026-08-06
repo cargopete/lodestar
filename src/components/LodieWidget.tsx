@@ -9,8 +9,8 @@ import { useAccount } from 'wagmi';
 
 const PAGE_TIPS: Record<string, { basic: string; deep?: string }> = {
   '/': {
-    basic: "These are the headline numbers — stake, allocations, query fees. A good place to find your bearings.",
-    deep: "Total stake is GRT locked by indexers as collateral. Allocations show how that stake is directed at subgraphs. Query fees are what data consumers have paid — the core revenue signal. If fees are low relative to allocations, the network may be over-indexed on that deployment.",
+    basic: "These are the headline numbers: stake, allocations, query fees. A good place to find your bearings.",
+    deep: "Total stake is GRT locked by indexers as collateral. Allocations show how that stake is directed at subgraphs. Query fees are what data consumers have paid, the core revenue signal. If fees are low relative to allocations, the network may be over-indexed on that deployment.",
   },
   '/indexers': {
     basic: "Every indexer runs a different course. Check the risk score and cut rate before committing your delegation.",
@@ -18,11 +18,11 @@ const PAGE_TIPS: Record<string, { basic: string; deep?: string }> = {
   },
   '/delegators': {
     basic: "Positions, rewards, and anything thawing. Track your anchors here.",
-    deep: "Undelegating starts a 28-day thawing period — your GRT is locked and earns nothing during that time. The portfolio page shows unrealised rewards, which only materialise when you undelegate.",
+    deep: "Undelegating starts a 28-day thawing period, during which your GRT is locked and earns nothing during that time. The portfolio page shows unrealised rewards, which only materialise when you undelegate.",
   },
   '/payments': {
-    basic: "The TAP pipeline — escrow balances and redemptions. What's been earned and what's been collected.",
-    deep: "TAP replaces the old voucher system. Gateways deposit escrow and issue RAVs to indexers, who redeem them on-chain. The gap between escrow and redeemed is the outstanding obligation — useful for spotting redemption delays.",
+    basic: "The TAP pipeline: escrow balances and redemptions. What's been earned and what's been collected.",
+    deep: "TAP replaces the old voucher system. Gateways deposit escrow and issue RAVs to indexers, who redeem them on-chain. The gap between escrow and redeemed is the outstanding obligation, which is useful for spotting redemption delays.",
   },
   '/subgraphs': {
     basic: "Each subgraph charts different territory. The complexity score tells you how demanding it is to index.",
@@ -34,38 +34,38 @@ const PAGE_TIPS: Record<string, { basic: string; deep?: string }> = {
   },
   '/calculator': {
     basic: "Run the numbers before you move. Redelegation carries a cost.",
-    deep: "The 0.5% delegation tax compounds with the opportunity cost of the 28-day thawing period. The calculator shows the break-even point — how long you need to stay with the new indexer before the switch pays off.",
+    deep: "The 0.5% delegation tax compounds with the opportunity cost of the 28-day thawing period. The calculator shows the break-even point: how long you need to stay with the new indexer before the switch pays off.",
   },
   '/compare': {
     basic: "Side by side. Useful when you've narrowed it down to two.",
     deep: "Focus on cut rate stability over time, self-stake ratio, and allocation efficiency. A high-performing indexer with a volatile cut history is a risk.",
   },
   '/governance': {
-    basic: "The protocol's compass. GIPs shape the rules — worth knowing what's in the water ahead.",
-    deep: "GIPs go through Draft → Candidate → Accepted → Deployed. Candidate-stage GIPs are the ones to watch — they'll affect indexer economics within epochs once deployed.",
+    basic: "The protocol's compass. GIPs shape the rules, so it's worth knowing what's in the water ahead.",
+    deep: "GIPs go through Draft → Candidate → Accepted → Deployed. Candidate-stage GIPs are the ones to watch; they'll affect indexer economics within epochs once deployed.",
   },
   '/roadmap': {
     basic: "What's being built and what's next. The Graph moves steadily.",
     deep: "The next major unlocks are on-chain indexing agreements (GIP-0087/0088 still in draft) and a richer rewards model tied to service quality rather than allocation size.",
   },
   '/activity': {
-    basic: "Live on-chain events from the Horizon staking contract — delegations, self-stakes, provisions, and the occasional slashing.",
+    basic: "Live on-chain events from the Horizon staking contract: delegations, self-stakes, provisions, and the occasional slashing.",
     deep: "Powered by Amp, E&N's blockchain indexer. Events are queried directly from raw Arbitrum One logs, so what you see here is as close to the chain as you can get without running your own node.",
   },
   '/blog': {
     basic: "Guides and notes from the network's edge.",
-    deep: "Practical indexer infrastructure — archive node setup, graph-node configuration, chain lag debugging. Sourced from real conversations in The Graph's community.",
+    deep: "Practical indexer infrastructure: archive node setup, graph-node configuration, chain lag debugging. Sourced from real conversations in The Graph's community.",
   },
   '/indexing': {
     basic: "Sync progress and health across subgraphs. Useful for indexers keeping watch on their fleet.",
-    deep: "If a subgraph is stuck behind chain head, check graph-node logs for eth_call latency or reorg_threshold misconfiguration. On fast chains, the default 250-block reorg threshold keeps you in slow block-walk mode — 50 is usually fine.",
+    deep: "If a subgraph is stuck behind chain head, check graph-node logs for eth_call latency or reorg_threshold misconfiguration. On fast chains, the default 250-block reorg threshold keeps you in slow block-walk mode; 50 is usually fine.",
   },
 };
 
 const WISDOMS = [
   "Steady as she goes. I'm here if you need your bearings.",
   "The sea doesn't rush. Neither should a good delegation decision.",
-  "A lighthouse doesn't chase ships — it simply stays lit.",
+  "A lighthouse doesn't chase ships; it simply stays lit.",
   "Every epoch is a new tide. The network keeps turning.",
   "The best indexers are the ones still here in two years.",
   "Fog doesn't mean danger. It just means look more carefully.",
@@ -253,7 +253,7 @@ export function LodieWidget() {
         } else if (cut >= 900_000) {
           setDataWarning(`This indexer takes ${(cut / 10_000).toFixed(0)}% of indexing rewards. Delegators keep ${(100 - cut / 10_000).toFixed(0)}%.`);
         } else if ((ix.allocationCount as number) === 0) {
-          setDataWarning("No active allocations — this indexer isn't earning indexing rewards right now.");
+          setDataWarning("No active allocations, so this indexer isn't earning indexing rewards right now.");
         }
       })
       .catch(() => {});
@@ -273,7 +273,7 @@ export function LodieWidget() {
         const greedy = stakes.filter((s) => s.indexer.indexingRewardCut >= 900_000);
         const thawing = stakes.filter((s) => BigInt(s.lockedTokens || '0') > 0n);
         if (greedy.length > 0) {
-          setWalletWarning(`${greedy.length} of your indexed position${greedy.length > 1 ? 's have' : ' has'} a 90%+ cut — worth reviewing.`);
+          setWalletWarning(`${greedy.length} of your indexed position${greedy.length > 1 ? 's have' : ' has'} a 90%+ cut, worth reviewing.`);
         } else if (thawing.length > 0) {
           setWalletWarning(`${thawing.length} undelegation${thawing.length > 1 ? 's are' : ' is'} currently thawing.`);
         } else {
@@ -346,7 +346,7 @@ export function LodieWidget() {
         const updated = [...m];
         updated[updated.length - 1] = {
           role: 'assistant',
-          content: full || "The lantern flickered. No response came through — try again.",
+          content: full || "The lantern flickered. No response came through. Try again.",
           streaming: false,
         };
         return updated;
@@ -354,7 +354,7 @@ export function LodieWidget() {
     } catch {
       setMessages((m) => {
         const updated = [...m];
-        updated[updated.length - 1] = { role: 'assistant', content: "The lantern flickered. Couldn't get a response — try again.", streaming: false };
+        updated[updated.length - 1] = { role: 'assistant', content: "The lantern flickered. Couldn't get a response. Try again.", streaming: false };
         return updated;
       });
     } finally {
@@ -417,7 +417,7 @@ export function LodieWidget() {
             <div className="p-4">
               {showOnboarding && (
                 <p className="text-[12.5px] text-[var(--text-muted)] leading-relaxed">
-                  Welcome aboard. I&apos;m Lodie — spirit of this lighthouse. Navigate to any page and I&apos;ll tell you what to look for. Press{' '}
+                  Welcome aboard. I&apos;m Lodie, spirit of this lighthouse. Navigate to any page and I&apos;ll tell you what to look for. Press{' '}
                   <kbd className="px-1 py-px rounded bg-[var(--bg)] text-[var(--text-faint)] text-[10px] font-mono">L</kbd>
                   {' '}to summon me anytime, or switch to <strong className="text-[var(--text)]">Ask</strong> to chat.
                 </p>
@@ -474,7 +474,7 @@ export function LodieWidget() {
               <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[160px]">
                 {messages.length === 0 && (
                   <div className="space-y-2">
-                    <p className="text-[11px] text-[var(--text-faint)]">Ask me anything about The Graph — or pick a question:</p>
+                    <p className="text-[11px] text-[var(--text-faint)]">Ask me anything about The Graph, or pick a question:</p>
                     <div className="flex flex-wrap gap-1.5">
                       {suggestedQuestions.map((q) => (
                         <button
@@ -507,7 +507,7 @@ export function LodieWidget() {
                             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce" style={{ animationDelay: '300ms' }} />
                           </span>
                           <p className="text-[10px] text-[var(--text-faint)] leading-relaxed italic">
-                            This might take a while. Please be patient — our budget this month is three times last month&apos;s. (Last month&apos;s budget was $0.)
+                            This might take a while. Please be patient; our budget this month is three times last month&apos;s. (Last month&apos;s budget was $0.)
                           </p>
                         </div>
                       ) : null)}

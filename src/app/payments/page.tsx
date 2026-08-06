@@ -39,7 +39,7 @@ function PageHeader() {
     <div>
       <h1 className="text-xl font-semibold text-[var(--text)]">Payment Pipeline</h1>
       <p className="text-sm text-[var(--text-muted)] mt-1">
-        Query fee payments flowing through Horizon&apos;s GraphTally/TAP system — escrow balances,
+        Query fee payments flowing through Horizon&apos;s GraphTally/TAP system: escrow balances,
         on-chain redemptions, and collection activity. Data sourced from the PaymentsEscrow and
         GraphTallyCollector contracts via the{' '}
         <a

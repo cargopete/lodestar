@@ -44,7 +44,7 @@ export const TIERS: TierMeta[] = [
   {
     tier: 4,
     label: 'Local reference / demo',
-    blurb: 'Pedagogical scaffolds — exercise the payment lifecycle on a local chain.',
+    blurb: 'Pedagogical scaffolds for exercising the payment lifecycle on a local chain.',
   },
 ];
 
@@ -133,7 +133,7 @@ export const DATA_SERVICES: DataService[] = [
     grc: 'GIP-0068',
     builtBy: 'graphprotocol',
     homeTeam: false,
-    tagline: 'The first and only widely-used data service — subgraph indexing and GraphQL query-serving.',
+    tagline: 'The first and only widely-used data service: subgraph indexing and GraphQL query-serving.',
     description:
       'The production implementation of subgraph indexing on Horizon. Indexers index subgraph deployments and serve GraphQL queries; consumers query via The Graph gateway. The only data service with real slashing (allocation-based POI dispute proofs).',
     tier: 1,
@@ -169,7 +169,7 @@ export const DATA_SERVICES: DataService[] = [
       'Provision stake to the SubgraphService via HorizonStaking.provision().',
       'Register directly with the SubgraphService (no separate ServiceRegistry).',
       'Open allocations against subgraph deployments.',
-      'Submit POIs periodically — stale POIs (>28d maxPOIStaleness) can be force-closed by anyone. Run graph-node, indexer-service-rs, indexer-tap-agent, indexer-agent.',
+      'Submit POIs periodically. Stale POIs (>28d maxPOIStaleness) can be force-closed by anyone. Run graph-node, indexer-service-rs, indexer-tap-agent, indexer-agent.',
     ],
     consume: [
       'Create an API key in Subgraph Studio.',
@@ -186,7 +186,7 @@ export const DATA_SERVICES: DataService[] = [
     grc: 'GRC-005',
     builtBy: 'cargopete',
     homeTeam: true,
-    tagline: 'Decentralized JSON-RPC / dRPC data service — stake, register a chain, get paid per request.',
+    tagline: 'Decentralized JSON-RPC / dRPC data service: stake, register a chain, get paid per request.',
     description:
       'A decentralized JSON-RPC data service. Indexers stake GRT, register to serve specific chains, and get paid per request via GraphTally. The canonical reference for Lodestar\'s "How to Build a Horizon Data Service" guide.',
     tier: 1,
@@ -228,12 +228,12 @@ export const DATA_SERVICES: DataService[] = [
       runnable: true,
       sampleLabel: 'eth_blockNumber via the Dispatch gateway (Arbitrum One)',
       prerequisites: [
-        'For this demo the Lodestar gateway pays on your behalf — nothing required.',
+        'For this demo the Lodestar gateway pays on your behalf, so nothing is required.',
         'To integrate your own app: deposit GRT into PaymentsEscrow keyed to (you, GraphTallyCollector, provider), then either run the dispatch-proxy locally or use @lodestar-dispatch/consumer-sdk, which signs a TAP receipt per request.',
-        'The gateway path (shown here) needs only an X-Consumer-Address header — the gateway holds the escrow and signs receipts for you.',
+        'The gateway path (shown here) needs only an X-Consumer-Address header. The gateway holds the escrow and signs receipts for you.',
       ],
       exampleLang: 'bash',
-      exampleCode: `# Via the gateway — it pays + signs receipts for you (just identify yourself):
+      exampleCode: `# Via the gateway (it pays + signs receipts for you, just identify yourself):
 curl -s https://rpc.cargopete.com/rpc/42161 \\
   -H 'content-type: application/json' \\
   -H 'X-Consumer-Address: 0xYourAddress' \\
@@ -249,7 +249,7 @@ npm i @lodestar-dispatch/consumer-sdk`,
     grc: 'GRC-008',
     builtBy: 'nightswatchhq',
     homeTeam: true,
-    tagline: 'A Solana structured-data service — the "missing third lane" alongside Subgraphs and Substreams.',
+    tagline: 'A Solana structured-data service: the "missing third lane" alongside Subgraphs and Substreams.',
     description:
       'Indexes Solana program activity (Pump.fun, Raydium CLMM, Jupiter v6) into typed, fork-correct, queryable entities served over a PostgREST REST API, gating access via TAP v2 micropayments.',
     tier: 1,
@@ -285,11 +285,11 @@ npm i @lodestar-dispatch/consumer-sdk`,
     ],
     fees: '1% burn + 1% data service cut per collect().',
     notable:
-      'Experimental, community-led — explicitly not endorsed by Graph Foundation or Edge & Node. Axum 0.8 gateway, UUPS proxy, 37 contract tests.',
+      'Experimental and community-led; explicitly not endorsed by Graph Foundation or Edge & Node. Axum 0.8 gateway, UUPS proxy, 37 contract tests.',
     playground: {
       endpoint: 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3',
       runnable: true,
-      sampleLabel: 'Latest Pump.fun buys — live Solana, indexed via Yellowstone',
+      sampleLabel: 'Latest Pump.fun buys: live Solana, indexed via Yellowstone',
       prerequisites: [
         'Sign an EIP-712 TAP v2 receipt (GraphTallyCollector domain, chainId 42161) and pass it as the TAP-Receipt header on every request.',
         'For on-chain settlement the payer must fund PaymentsEscrow keyed to (payer, GraphTallyCollector, provider 0xCfBB…5C5b) and authorise the signing key on GraphTallyCollector.',
@@ -312,7 +312,7 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
     name: 'Substreams Data Service',
     builtBy: 'graphprotocol',
     homeTeam: false,
-    tagline: 'Payment infrastructure for Substreams — the "second data service being built on the network".',
+    tagline: 'Payment infrastructure for Substreams, the "second data service being built on the network".',
     description:
       'A Go implementation of the payment infrastructure for the Substreams Data Service. Uses a sidecar/session model (persistent bidirectional gRPC payment session) rather than per-HTTP-request receipts.',
     tier: 3,
@@ -320,7 +320,7 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
     statusVariant: 'default',
     stage: 'MVP / pre-launch',
     providerStatus: 'none',
-    providerNote: 'None on mainnet — development stage. Core payment loop works end-to-end in a local Anvil devenv.',
+    providerNote: 'None on mainnet; still at development stage. Core payment loop works end-to-end in a local Anvil devenv.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One (target)', dataLabel: 'Anvil devenv today', isMainnet: false },
     stack: ['Go', 'Solidity'],
     links: [
@@ -341,10 +341,10 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
   },
   {
     slug: 'sdsce',
-    name: 'Substreams Data Service — Community Edition (SDSCE)',
+    name: 'Substreams Data Service: Community Edition (SDSCE)',
     builtBy: 'nightswatchhq',
     homeTeam: true,
-    tagline: 'A community edition of the Substreams Data Service — live on Arbitrum One, with a fixed 1% burn.',
+    tagline: 'A community edition of the Substreams Data Service, live on Arbitrum One with a fixed 1% burn.',
     description:
       'A community-maintained payment layer for Substreams on Horizon: a consumer sidecar signs EIP-712 RAVs over a persistent payment session, a provider gateway meters usage authoritatively from the Firehose plugin path, and an on-chain SubstreamsDataService settles via GraphTally. Forked from the graphprotocol MVP and hardened to a live, upgradeable mainnet contract.',
     tier: 1,
@@ -387,7 +387,7 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
     ],
     fees: 'Fixed 1% data-service cut, burned (0% retained by the deployer).',
     notable:
-      'Experimental, community-led — explicitly not affiliated with the Graph Foundation or Edge & Node. UUPS-upgradeable (Ownable2Step), ERC1967 proxy. Distinct from the official Substreams Data Service. Unaudited; not yet usable end-to-end (no live provider).',
+      'Experimental and community-led; explicitly not affiliated with the Graph Foundation or Edge & Node. UUPS-upgradeable (Ownable2Step), ERC1967 proxy. Distinct from the official Substreams Data Service. Unaudited; not yet usable end-to-end (no live provider).',
     playground: {
       endpoint: 'substreams.89.167.109.4.sslip.io/sample → gRPC via consumer sidecar',
       runnable: true,
@@ -395,7 +395,7 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
       note: 'Substreams is server-streaming gRPC, so a browser cannot speak it directly. "Run" calls a shim that streams a few blocks through the consumer sidecar. Currently a clock-demo substrate (zero upstream cost); a real Pinax-backed firehose can be enabled on demand.',
       prerequisites: [
         'Deposit GRT into PaymentsEscrow for the provider and authorise your signer on GraphTallyCollector.',
-        'Run the consumer sidecar locally (sds consumer sidecar) — it signs RAVs and proxies the stream.',
+        'Run the consumer sidecar locally (sds consumer sidecar). It signs RAVs and proxies the stream.',
         'Point the substreams CLI at the sidecar endpoint.',
       ],
       exampleLang: 'bash',
@@ -412,10 +412,10 @@ substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +2
   },
   {
     slug: 'fhsce',
-    name: 'File Hosting Service — Community Edition (FHSCE)',
+    name: 'File Hosting Service: Community Edition (FHSCE)',
     builtBy: 'nightswatchhq',
     homeTeam: true,
-    tagline: 'A community edition of the File Hosting Service — chunked, IPFS-verified file sharing, brought onto Horizon with TAP v2.',
+    tagline: 'A community edition of the File Hosting Service: chunked, IPFS-verified file sharing, brought onto Horizon with TAP v2.',
     description:
       'Forked from graphops/file-hosting-service: a trust-minimised, peer-to-peer marketplace for sharing chunked, SHA2-256-verified file data (Firehose flatfiles, subgraph snapshots, arbitrary datasets) addressed by an IPFS manifest. The upstream data plane is excellent but its payment layer was legacy Scalar TAP and never finished. FHSCE keeps the data plane and replaces payments with a Horizon-native, UUPS-upgradeable FileHostingDataService and a TAP v2 (GraphTally) gateway built on the new horizon-core crate. Providers register and startService per IPFS manifest CID; consumers pay per request via signed TAP receipts redeemed as RAVs.',
     tier: 3,
@@ -444,9 +444,9 @@ substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +2
       'Sign an EIP-712 TAP v2 receipt (GraphTallyCollector domain, chainId 42161) per request; pass it in the TAP-Receipt header.',
       'Download chunks over HTTP (range requests supported); each chunk is SHA2-256-verifiable against the IPFS manifest.',
     ],
-    fees: 'Fixed 1% data-service cut, burned (0% retained) — Community Edition policy, matching SDSCE.',
+    fees: 'Fixed 1% data-service cut, burned (0% retained), matching SDSCE under Community Edition policy.',
     notable:
-      'First consumer of horizon-core (nightswatchhq\'s reusable Horizon payment plumbing: TAP v2 validation, RAV aggregation, on-chain collection, persistence, generic TAP-gated proxy). Experimental, community-led — not affiliated with the Graph Foundation, Edge & Node, or GraphOps. Unaudited. Distinct from the upstream graphops File Hosting Service.',
+      'First consumer of horizon-core (nightswatchhq\'s reusable Horizon payment plumbing: TAP v2 validation, RAV aggregation, on-chain collection, persistence, generic TAP-gated proxy). Experimental and community-led; not affiliated with the Graph Foundation, Edge & Node, or GraphOps. Unaudited. Distinct from the upstream graphops File Hosting Service.',
   },
   {
     slug: 'mainline-firehose',
@@ -454,13 +454,13 @@ substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +2
     grc: 'GRC-006',
     builtBy: 'PaulieB14 · GRC by cargopete',
     homeTeam: false,
-    tagline: 'A decentralized Firehose data service — raw, fork-aware, cursor-resumable block streams over gRPC.',
+    tagline: 'A decentralized Firehose data service: raw, fork-aware, cursor-resumable block streams over gRPC.',
     description:
       'Reference implementation for GRC-006 "Mainline". Positioned as the decentralized substrate beneath Substreams / Subgraphs / Tycho / Token API / Dispatch. Wraps streamingfast/firehose-core unchanged.',
     tier: 1,
     statusLabel: 'Live · Production',
     statusVariant: 'success',
-    stage: 'Live on Arbitrum One — serving Ethereum mainnet firehose',
+    stage: 'Live on Arbitrum One, serving Ethereum mainnet firehose',
     providerStatus: 'single-self-run',
     providerNote: 'Live: FirehoseDataService deployed to Arbitrum One; a self-run operator serves REAL Ethereum mainnet firehose (proxied from Pinax), each block EIP-712 attested + TAP-gated, verified end-to-end by the SDK consumer. Single self-run provider; unaudited.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Ethereum mainnet blocks', isMainnet: true },
@@ -496,7 +496,7 @@ substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +2
         'This demo signs an ephemeral receipt server-side, streams a few blocks, and verifies their attestations.',
       ],
       exampleLang: 'bash',
-      exampleCode: `# gRPC consumer (mainline-sdk, Rust/TS) — TAP receipt rides in x-tap-receipt metadata:
+      exampleCode: `# gRPC consumer (mainline-sdk, Rust/TS). TAP receipt rides in x-tap-receipt metadata:
 cargo run --example stream_blocks -- \\
   --operator https://<operator-endpoint> \\
   --fds-address 0x12C722149804a8C1Bb5924374e675956315B4456 \\
@@ -510,7 +510,7 @@ cargo run --example stream_blocks -- \\
     name: 'WSaaS (WebSocket)',
     builtBy: 'nightswatchhq',
     homeTeam: true,
-    tagline: 'A WebSocket data service — pre-parsed transfers, swaps and exchange events over one connection, billed per message.',
+    tagline: 'A WebSocket data service: pre-parsed transfers, swaps and exchange events over one connection, billed per message.',
     description:
       'A Horizon data service that streams pre-parsed transfers / swaps / exchange events over a single WebSocket, gated by TAP v2 and settled on-chain. It sits in front of an upstream Pinax WebSocket feed: a consumer opens a WS with a signed TAP receipt, and the gateway relays every pre-parsed message back, billing per message.',
     tier: 1,
@@ -563,7 +563,7 @@ wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
     grc: 'GRC-007',
     builtBy: 'nightswatchhq',
     homeTeam: true,
-    tagline: 'A decentralized Subgraph-MCP gateway — every subgraph becomes a pay-per-call MCP tool for AI agents.',
+    tagline: 'A decentralized Subgraph-MCP gateway, turning every subgraph into a pay-per-call MCP tool for AI agents.',
     description:
       'Turns every subgraph an indexer serves into a discoverable, pay-per-call Model Context Protocol (MCP) tool, settled in GRT via TAP v2 or in USDC via x402. Any MCP-speaking AI agent (Claude, Cursor, OpenAI Agents, Eliza) can query subgraphs for under a cent each.',
     tier: 3,
@@ -597,7 +597,7 @@ wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
     name: 'camp-data-service',
     builtBy: 'nightswatchhq',
     homeTeam: true,
-    tagline: 'Monetizes a self-hosted camp instance — pay per request in GRT for decoded Arbitrum One data.',
+    tagline: 'Monetizes a self-hosted camp instance: pay per request in GRT for decoded Arbitrum One data.',
     description:
       'Puts a TAP/GraphTally payment layer in front of camp (a free REST API for decoded Arbitrum One data backed by an Amp node). "The ThinkPad running ampd becomes an indexer on Horizon, and anyone who wants decoded Arbitrum One data pays in GRT to query it."',
     tier: 1,
@@ -626,7 +626,7 @@ wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
     becomeProvider: [
       'HorizonStaking.provision(addr, CampDataService, ≥555e18, maxVerifierCut, thawingPeriod).',
       'CampDataService.register(addr, abi.encode(endpoint, geoHash, paymentsDestination)).',
-      'startService per tier (BASIC=0, DECODED=1, SQL=2 — a provider can serve all three).',
+      'startService per tier (BASIC=0, DECODED=1, SQL=2; a provider can serve all three).',
       'Serve queries: receipts → RAVs every 60s → collect() hourly. Requires a running camp instance + camp-gateway.',
     ],
     consume: [
@@ -635,7 +635,7 @@ wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
       'Tiered endpoints: BASIC (1 CU), STANDARD (5 CU), AGGREGATE (10 CU), SQL (20 CU).',
     ],
     notable:
-      'Payment contracts on Sepolia but the data served is real Arbitrum One mainnet data — real data paid for with testnet GRT. No graph-node needed — proxies to Amp directly. TAP aggregation built into camp-gateway (no indexer-tap-agent).',
+      'Payment contracts on Sepolia but the data served is real Arbitrum One mainnet data, so it is real data paid for with testnet GRT. No graph-node needed; it proxies to Amp directly. TAP aggregation built into camp-gateway (no indexer-tap-agent).',
     playground: {
       endpoint: 'https://camp.89.167.109.4.sslip.io/v1/status',
       runnable: true,
@@ -661,16 +661,16 @@ curl -s 'https://camp.89.167.109.4.sslip.io/v1/transfers?token=0xaf88…&limit=1
     name: 'Hermit DS',
     builtBy: 'lodestone (nightswatchhq)',
     homeTeam: true,
-    tagline: 'The inverse analytics service — indexes wallets that have gone quiet and fires wake alerts when dormant ones stir.',
+    tagline: 'The inverse analytics service: it indexes wallets that have gone quiet and fires wake alerts when dormant ones stir.',
     description:
-      'The inverse of every analytics service on the network: instead of activity, Hermit indexes absence. Sophisticated dormancy detection — whales idle 18+ months, DAOs where quorum has been unreachable for N proposals, LPs who have missed K rebalance cycles — and it serves "wake alerts" the moment a dormant wallet moves. Consumers: MEV bots hunting stale approvals, security teams watching for compromised custody waking up, on-chain historians. Notable for being generated end-to-end by lodestone from a single paragraph of spec.',
+      'The inverse of every analytics service on the network: instead of activity, Hermit indexes absence. Sophisticated dormancy detection (whales idle 18+ months, DAOs where quorum has been unreachable for N proposals, LPs who have missed K rebalance cycles), and it serves "wake alerts" the moment a dormant wallet moves. Consumers: MEV bots hunting stale approvals, security teams watching for compromised custody waking up, on-chain historians. Notable for being generated end-to-end by lodestone from a single paragraph of spec.',
     tier: 3,
     statusLabel: 'Scaffold · built by lodestone',
     statusVariant: 'accent',
     stage: 'Generated by lodestone from a one-paragraph spec; builds, tests, and runs locally',
     providerStatus: 'none',
     providerNote:
-      'Not deployed. Generated entirely by lodestone with no hand-written code: the contract + 7/7 passing Foundry tests, a Substrate→Handler→Sink indexer that runs, and a horizon-core payment gateway that serves /health + /ready and TAP-gates requests (402 without a receipt) — all verified locally. The dormancy-detection data plane is the generated mock, awaiting real detection logic.',
+      'Not deployed. Generated entirely by lodestone with no hand-written code: the contract + 7/7 passing Foundry tests, a Substrate→Handler→Sink indexer that runs, and a horizon-core payment gateway that serves /health + /ready and TAP-gates requests (402 without a receipt), all verified locally. The dormancy-detection data plane is the generated mock, awaiting real detection logic.',
     chain: { payment: 'arbitrum-sepolia', paymentLabel: 'Arbitrum Sepolia (target)', dataLabel: 'Dormancy signal (concept)', isMainnet: false },
     stack: ['Rust', 'Solidity'],
     links: [
@@ -681,7 +681,7 @@ curl -s 'https://camp.89.167.109.4.sslip.io/v1/transfers?token=0xaf88…&limit=1
     minProvision: '555 GRT',
     becomeProvider: [
       'Generated lifecycle: HorizonStaking.provision → HermitDataService.register(addr, abi.encode(endpoint, geoHash, paymentsDestination)).',
-      'startService per tier — DORMANCY (0), WAKE_ALERTS (1), COHORTS (2).',
+      'startService per tier: DORMANCY (0), WAKE_ALERTS (1), COHORTS (2).',
       'Run the stack: the dormancy indexer (Substrate→Handler→Sink) → Postgres → hermit-gateway (horizon-core, per-endpoint pricing).',
     ],
     consume: [
@@ -690,7 +690,7 @@ curl -s 'https://camp.89.167.109.4.sslip.io/v1/transfers?token=0xaf88…&limit=1
     ],
     fees: '1% burn + 1% data-service cut per collect(); optional per-endpoint compute-unit pricing.',
     notable:
-      'lodestone\'s proof-of-concept: a deliberately funky spec ("we watch people who aren\'t doing anything and tell you when they start") turned into a building, payment-gated Horizon data service with zero hand-written code. The inverted-query shape is exactly why nobody indexes it — and why it is useful.',
+      'lodestone\'s proof-of-concept: a deliberately funky spec ("we watch people who aren\'t doing anything and tell you when they start") turned into a building, payment-gated Horizon data service with zero hand-written code. The inverted-query shape is exactly why nobody indexes it, and why it is useful.',
   },
   {
     slug: 'vince-data-service',
@@ -728,9 +728,9 @@ curl -s 'https://camp.89.167.109.4.sslip.io/v1/transfers?token=0xaf88…&limit=1
     name: 'Hello Data Service',
     builtBy: 'nightswatchhq · cargopete',
     homeTeam: true,
-    tagline: 'A minimal (~120-line) working Horizon data service reference — the simplest of the set.',
+    tagline: 'A minimal (~120-line) working Horizon data service reference, the simplest of the set.',
     description:
-      'A starting point/reference for building your own service. Pure on-chain contract with no off-chain serving component — a payment-lifecycle reference, not a data-serving endpoint.',
+      'A starting point/reference for building your own service. Pure on-chain contract with no off-chain serving component: a payment-lifecycle reference, not a data-serving endpoint.',
     tier: 4,
     statusLabel: 'Local reference',
     statusVariant: 'default',

@@ -778,7 +778,7 @@ function LendingCard({
         <p className="mt-1 text-xs text-[var(--text-muted)] leading-snug">
           You can <span className="text-[var(--green)]">supply {symbol}</span> to earn yield, or post it as
           collateral to <span className="text-[var(--text)]">borrow</span> other assets. Each row below is the
-          same {symbol} market on a different chain — Aave&apos;s deployments price risk independently, so APRs vary.
+          same {symbol} market on a different chain. Aave&apos;s deployments price risk independently, so APRs vary.
         </p>
       </CardHeader>
       <CardContent>
@@ -902,7 +902,7 @@ function LendingCard({
                       label="Borrow APR"
                       className="justify-end"
                     >
-                      Annualized rate <span className="text-[var(--text)]">you pay</span> if you borrow {symbol} (variable rate). Always higher than Supply APR — Aave keeps the spread.
+                      Annualized rate <span className="text-[var(--text)]">you pay</span> if you borrow {symbol} (variable rate). Always higher than Supply APR, since Aave keeps the spread.
                     </HelpTooltip>
                   </th>
                   <th className="text-right font-medium py-1.5 px-2">
@@ -1580,7 +1580,7 @@ export default function TokenDetailPage({ params }: Props) {
                 {summary.dexVolume24hUsd != null ? formatUSD(summary.dexVolume24hUsd) : '—'}
               </div>
               {/* Turnover = volume / mcap. A token with $1B mcap and $50M
-                  daily volume turns over 5%/day — meaningful trading. A
+                  daily volume turns over 5%/day, meaning meaningful trading. A
                   token with 0.1% turnover is effectively held, not traded. */}
               {summary.dexVolume24hUsd != null &&
                 summary.marketCapUsd != null &&

@@ -53,7 +53,7 @@ export function DeveloperActivityChart() {
               {data?.source === 'nuthatch' && <NuthatchBadge />}
             </div>
             <p className="text-sm text-[var(--text-muted)] mt-1">
-              Subgraphs published per week{data ? ` — last ${data.windowMonths} months` : ''}
+              Subgraphs published per week{data ? ` · last ${data.windowMonths} months` : ''}
             </p>
           </div>
         </div>

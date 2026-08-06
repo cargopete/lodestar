@@ -33,7 +33,7 @@ export function downloadThawingReminder(opts: {
     `DTSTAMP:${toICSDate(now)}`,
     `DTSTART:${toICSDate(completionDate)}`,
     `DTEND:${toICSDate(endDate)}`,
-    `SUMMARY:GRT Thawing Complete — Withdraw ${amtStr} GRT`,
+    `SUMMARY:GRT Thawing Complete: Withdraw ${amtStr} GRT`,
     `DESCRIPTION:Your undelegation of ${amtStr} GRT from ${indexerName} is ready to withdraw on Lodestar Dashboard (lodestar-dashboard.com/profile).`,
     // Reminder 24h before
     'BEGIN:VALARM',

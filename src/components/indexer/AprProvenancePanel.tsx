@@ -48,14 +48,14 @@ function cooldownNote(
   if (isLocked) {
     const remaining = Math.max(1, Math.ceil(cooldownDays - (nowSec - lastUpdate) / 86400));
     return {
-      text: `Cut locked for ${remaining}d (cooldown) · last changed ${daysSince}d ago — terms can't change until then`,
+      text: `Cut locked for ${remaining}d (cooldown) · last changed ${daysSince}d ago, so terms can't change until then`,
       tone: 'up',
     };
   }
   if (daysSince <= 30) {
-    return { text: `Cut changed ${daysSince}d ago — recheck before delegating`, tone: 'down' };
+    return { text: `Cut changed ${daysSince}d ago, recheck before delegating`, tone: 'down' };
   }
-  return { text: `Cut stable — unchanged for ${daysSince}d`, tone: 'neutral' };
+  return { text: `Cut stable, unchanged for ${daysSince}d`, tone: 'neutral' };
 }
 
 function fmtPpmFromValue(v: number | null | undefined): string {
@@ -83,9 +83,9 @@ function eventSentence(e: ProvenanceEvent): { text: string; tone: 'down' | 'up' 
   const amount = e.tokensGRT != null ? `${formatGRT(e.tokensGRT)} GRT` : '';
   switch (e.kind) {
     case 'undelegation':
-      return { text: `${who} undelegated ${amount} — moved to the thawing pool, no longer earning`, tone: 'down' };
+      return { text: `${who} undelegated ${amount}, moved to the thawing pool and no longer earning`, tone: 'down' };
     case 'delegation':
-      return { text: `${who} delegated ${amount} — added to the active earning base`, tone: 'up' };
+      return { text: `${who} delegated ${amount}, added to the active earning base`, tone: 'up' };
     case 'withdrawal':
       return { text: `${who} withdrew ${amount} of fully-thawed stake`, tone: 'neutral' };
     case 'reward_cut':
@@ -159,9 +159,9 @@ export function AprProvenancePanel({
   const negativeEffCut = effectiveCut < 0;
   const displayEffCut = Math.max(0, effectiveCut);
   const cutSub = negativeEffCut
-    ? `Raw ${(rawCut * 100).toFixed(1)}% nominal · effectively ~0% — high self-stake offsets the cut, so delegators keep their full delegated-stake share`
+    ? `Raw ${(rawCut * 100).toFixed(1)}% nominal · effectively ~0%: high self-stake offsets the cut, so delegators keep their full delegated-stake share`
     : overDelegated
-      ? `Raw ${(rawCut * 100).toFixed(1)}% · effective ${(effectiveCut * 100).toFixed(1)}% — over-delegated, so some delegated stake earns nothing`
+      ? `Raw ${(rawCut * 100).toFixed(1)}% · effective ${(effectiveCut * 100).toFixed(1)}%, over-delegated, so some delegated stake earns nothing`
       : `Raw ${(rawCut * 100).toFixed(1)}% set by indexer · ${(effectiveCut * 100).toFixed(1)}% effective on delegated-stake rewards`;
   const reconcile = data?.reconcile ?? null;
   const events = data?.events ?? [];
@@ -182,7 +182,7 @@ export function AprProvenancePanel({
               title={
                 reconcile.verified
                   ? 'On-chain getDelegationPool matches the subgraph block-for-block'
-                  : `Subgraph trails the chain by ${formatGRT(Math.abs(reconcile.driftGRT))} GRT (${(reconcile.driftPct * 100).toFixed(2)}%) — likely indexing lag`
+                  : `Subgraph trails the chain by ${formatGRT(Math.abs(reconcile.driftGRT))} GRT (${(reconcile.driftPct * 100).toFixed(2)}%), likely indexing lag`
               }
             >
               {reconcile.verified ? (
@@ -197,7 +197,7 @@ export function AprProvenancePanel({
           ) : null}
         </div>
         <p className="text-xs text-[var(--text-muted)] mt-1">
-          The headline APR, decomposed — and every event that moved it. No black box.
+          The headline APR, decomposed, with every event that moved it. No black box.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -231,7 +231,7 @@ export function AprProvenancePanel({
               {clampMatters && (
                 <span
                   className="text-[11px] font-mono text-[var(--text-faint)]"
-                  title="The same projection without the P95 clamp — the raw run-rate. Other dashboards pick different percentiles (95/99/100), which is the main source of cross-dashboard divergence."
+                  title="The same projection without the P95 clamp: the raw run-rate. Other dashboards pick different percentiles (95/99/100), which is the main source of cross-dashboard divergence."
                 >
                   · {aprUncapped.toFixed(2)}% uncapped
                 </span>

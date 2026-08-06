@@ -103,7 +103,7 @@ function ChainHealthPanel() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-[var(--text-muted)] py-2">
-            No chain data yet — the cron job populates this every 30 minutes.
+            No chain data yet. The cron job populates this every 30 minutes.
           </p>
         </CardContent>
       </Card>

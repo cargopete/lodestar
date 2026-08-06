@@ -39,7 +39,7 @@ export function RedstartBanner() {
         <span className="font-semibold" style={{ color: RED }}>
           Redstart
         </span>{' '}
-        — the typed language for The Graph subgraphs. Paste any contract into{' '}
+        is the typed language for The Graph subgraphs. Paste any contract into{' '}
         <span className="font-semibold" style={{ color: EMBER }}>
           The Generator
         </span>{' '}

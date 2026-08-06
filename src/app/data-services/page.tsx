@@ -272,7 +272,7 @@ const DetailPanel = ({
                       {c.unverified && (
                         <span
                           className="text-[9px] px-1 py-0.5 rounded bg-[var(--amber-dim)] text-[var(--amber)] leading-none"
-                          title="Sourced from repo config / forum — verify on a block explorer before relying on it"
+                          title="Sourced from repo config / forum; verify on a block explorer before relying on it"
                         >
                           unverified
                         </span>
@@ -370,7 +370,7 @@ export default function DataServicesPage() {
       <div className="pb-2 border-b border-[var(--border)]">
         <h1 className="text-2xl font-semibold text-[var(--text)]">Data Services</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          The catalogue of data services on Graph Horizon — every service follows the same TAP v2 / GraphTally payment
+          The catalogue of data services on Graph Horizon. Every service follows the same TAP v2 / GraphTally payment
           pattern. The signal that matters most is whether anyone is actually serving paid queries.
         </p>
       </div>
@@ -450,7 +450,7 @@ export default function DataServicesPage() {
 
       <p className="text-xs text-center text-[var(--text-faint)]">
         Curated research · reviewed {DATA_SERVICES_LAST_REVIEWED} · provider counts and addresses are point-in-time
-        snapshots — verify on-chain before relying on them.
+        snapshots; verify on-chain before relying on them.
       </p>
     </div>
   );

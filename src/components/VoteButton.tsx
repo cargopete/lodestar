@@ -65,7 +65,7 @@ export function VoteButton({ indexerAddress, period, className }: VoteButtonProp
   };
 
   const label = error
-    ? 'Failed — retry?'
+    ? 'Failed, retry?'
     : isPending
       ? 'Signing...'
       : isConnected

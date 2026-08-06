@@ -82,7 +82,7 @@ export default function DelegatorsPage() {
               </div>
               <div className="text-left">
                 <p className="text-sm font-semibold text-[var(--text)]">Delegate GRT</p>
-                <p className="text-[11px] text-[var(--text-muted)]">We pick the best indexer — enter an amount and confirm</p>
+                <p className="text-[11px] text-[var(--text-muted)]">We pick the best indexer; enter an amount and confirm</p>
               </div>
             </div>
             <svg className="w-5 h-5 text-[var(--text-faint)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -125,7 +125,7 @@ export async function POST(
 
   if (bounty.status !== 'claimed') {
     return NextResponse.json(
-      { error: 'Bounty not yet claimed — no query endpoint available' },
+      { error: 'Bounty not yet claimed, so no query endpoint is available' },
       { status: 422 },
     );
   }
@@ -226,7 +226,7 @@ export async function POST(
   }
 
   return NextResponse.json(
-    { error: 'Could not resolve query endpoint — no direct indexer URL and no gateway key configured' },
+    { error: 'Could not resolve query endpoint: no direct indexer URL and no gateway key configured' },
     { status: 502 },
   );
 }

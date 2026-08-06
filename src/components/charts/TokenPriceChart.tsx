@@ -252,7 +252,7 @@ export function TokenPriceChart({
                 {stats.vol != null && (
                   <>
                     {' · '}
-                    <span title="Annualised realised volatility computed from daily log returns of the selected window. Standard 'stddev × √365' formula — same convention TradingView and CoinGecko use.">
+                    <span title="Annualised realised volatility computed from daily log returns of the selected window. Standard 'stddev × √365' formula, the same convention TradingView and CoinGecko use.">
                       vol {stats.vol.toFixed(0)}%
                       {stats.ethRatio != null && (
                         <span className="text-[var(--text-faint)]">

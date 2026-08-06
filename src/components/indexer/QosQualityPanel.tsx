@@ -77,7 +77,7 @@ export function QosQualityPanel({ indexer }: { indexer: string }) {
           <div>
             <CardTitle>QoS Quality</CardTitle>
             <p className="text-[11px] text-[var(--text-faint)] mt-0.5">
-              Selection-bias-aware service quality — not raw query volume
+              Selection-bias-aware service quality, not raw query volume
             </p>
           </div>
           {grade && (
@@ -101,14 +101,14 @@ export function QosQualityPanel({ indexer }: { indexer: string }) {
         ) : !latest || q == null ? (
           <div className="h-[120px] flex items-center justify-center text-center">
             <p className="text-sm text-[var(--text-faint)]">
-              No QoS quality score yet — the oracle records data only for queries the gateway routed
+              No QoS quality score yet; the oracle records data only for queries the gateway routed
               to this indexer.
             </p>
           </div>
         ) : (
           <>
             <div className="space-y-3 mb-4">
-              <Bar label="Reliability (Wilson)" value={latest.reliability} hint="Wilson lower-bound success rate — small samples can't fake a high score" />
+              <Bar label="Reliability (Wilson)" value={latest.reliability} hint="Wilson lower-bound success rate, so small samples can't fake a high score" />
               <Bar label="Latency" value={latest.lat_util} hint="Exponential-decay utility, normalised to the per-deployment peer cohort" />
               <Bar label="Freshness" value={latest.fresh_util} hint="Closeness to chain head (seconds behind)" />
               <Bar label="Coverage" value={latest.coverage} hint="Breadth of deployments served with credible volume" />
@@ -130,9 +130,9 @@ export function QosQualityPanel({ indexer }: { indexer: string }) {
                     <p className="text-xs font-medium text-[var(--text)]">Served-vs-allocated gap</p>
                     <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                       {flagged
-                        ? 'Holds allocation but the gateway routes queries around it — capturing rewards without serving proportional traffic.'
+                        ? 'Holds allocation but the gateway routes queries around it, capturing rewards without serving proportional traffic.'
                         : gap < 0
-                          ? 'Serves more query traffic than its allocation share — pulling its weight.'
+                          ? 'Serves more query traffic than its allocation share, pulling its weight.'
                           : 'Served share roughly tracks allocation share.'}
                     </p>
                   </div>
@@ -168,7 +168,7 @@ export function QosQualityPanel({ indexer }: { indexer: string }) {
             <p className="text-[10px] text-[var(--text-faint)] mt-3 leading-relaxed">
               Wilson-reliability × latency-decay × freshness (weighted product), EWMA-decayed over 30 days
               and normalised per-deployment, then weighted by served-query share. QoS Oracle V1 data;
-              latency uses averages (p90/p99 pending V2). Absence of data ≠ absence of problems — a low
+              latency uses averages (p90/p99 pending V2). Absence of data ≠ absence of problems: a low
               score can mean the gateway routes around this indexer.
             </p>
           </>

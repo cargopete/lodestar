@@ -137,7 +137,7 @@ export function DisassemblyClient({ initialId }: { initialId?: string }) {
       >
         <span aria-hidden>⚗️</span>
         <span>
-          <strong>Experimental.</strong> Subgraph Disassembly is under active development — results may be
+          <strong>Experimental.</strong> Subgraph Disassembly is under active development, so results may be
           incomplete and the feature may change.
         </span>
       </div>
@@ -145,7 +145,7 @@ export function DisassemblyClient({ initialId }: { initialId?: string }) {
       <header className="pb-2 border-b border-[var(--border)]">
         <h1 className="text-2xl font-semibold text-[var(--text)]">Subgraph Disassembly</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1 max-w-3xl">
-          Fetch a deployed subgraph&apos;s compiled WASM straight from IPFS and statically disassemble it — which
+          Fetch a deployed subgraph&apos;s compiled WASM straight from IPFS and statically disassemble it, which
           host APIs each handler can reach, recovered strings and names, and a transparency scorecard. No build,
           no execution.
         </p>
@@ -327,9 +327,9 @@ function InspectPanel({ initialId }: { initialId?: string }) {
       {!target && !error && (
         <Card>
           <p className="text-sm text-[var(--text-muted)]">
-            Search for a subgraph by name and pick it from the list — or paste a deployment ID (the
+            Search for a subgraph by name and pick it from the list, or paste a deployment ID (the
             <span className="font-mono text-[var(--text)]"> Qm… </span>hash) directly. The deployment ID <em>is</em> the
-            IPFS hash of the manifest, so the compiled mapping modules are fetched and disassembled directly — no
+            IPFS hash of the manifest, so the compiled mapping modules are fetched and disassembled directly, with no
             source repository required.
           </p>
         </Card>
@@ -455,8 +455,8 @@ function ComparePanel() {
       {!pair && !error && (
         <Card>
           <p className="text-sm text-[var(--text-muted)]">
-            Paste two deployment IDs of the <em>same</em> subgraph — an older <span className="font-mono text-[var(--text)]">Base</span> and a
-            newer <span className="font-mono text-[var(--text)]">Target</span> — to see exactly what changed between versions: handlers added or
+            Paste two deployment IDs of the <em>same</em> subgraph, an older <span className="font-mono text-[var(--text)]">Base</span> and a
+            newer <span className="font-mono text-[var(--text)]">Target</span>, to see exactly what changed between versions: handlers added or
             removed, handlers that gained or lost an <span className="font-mono text-[var(--text)]">eth_call</span>/IPFS reach, and how the
             transparency scorecard moved.
           </p>
@@ -484,13 +484,13 @@ interface VerifyApiResponse {
 
 const VERDICT_META: Record<Verdict, { label: string; color: string; borderClass: string; blurb: string }> = {
   'verified-exact': {
-    label: '✓ Verified — byte-identical',
+    label: '✓ Verified: byte-identical',
     color: 'var(--green)',
     borderClass: 'border-[var(--green-dim)]',
     blurb: 'Every deployed module is byte-for-byte the build of this source. The strongest possible proof.',
   },
   'verified-structural': {
-    label: '✓ Verified — structural match',
+    label: '✓ Verified: structural match',
     color: 'var(--green)',
     borderClass: 'border-[var(--green-dim)]',
     blurb: 'Bytes differ (build-toolchain noise) but every module exposes an identical reachable host-API surface.',
@@ -499,7 +499,7 @@ const VERDICT_META: Record<Verdict, { label: string; color: string; borderClass:
     label: '✗ Diverged',
     color: 'var(--red)',
     borderClass: 'border-[var(--red-dim)]',
-    blurb: 'The deployed WASM differs from this source in ways that change which host APIs are reachable — or a module is missing on one side.',
+    blurb: 'The deployed WASM differs from this source in ways that change which host APIs are reachable, or a module is missing on one side.',
   },
   unbuildable: {
     label: '⚠ Unbuildable',
@@ -568,19 +568,19 @@ function SourceVerification({ deploymentId, defaultRepoUrl }: { deploymentId: st
         <div className="mt-3 space-y-3">
           <p className="text-[12px] text-[var(--text-muted)]">
             The deployed WASM above came straight from the deployment hash. To check it against its source, point us at
-            the public repo — we build it in an ephemeral sandbox and compare the produced WASM byte-for-byte.
+            the public repo. We build it in an ephemeral sandbox and compare the produced WASM byte-for-byte.
           </p>
 
           <form onSubmit={submit} className="space-y-2">
             <input value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="Source repo URL (https://github.com/org/repo)" spellCheck={false} className={`w-full ${inputCls}`} />
             {defaultRepoUrl && repoUrl === defaultRepoUrl && (
-              <p className="text-[11px] text-[var(--green)]">↪ auto-resolved from the subgraph&apos;s on-chain metadata — edit if needed.</p>
+              <p className="text-[11px] text-[var(--green)]">↪ auto-resolved from the subgraph&apos;s on-chain metadata; edit if needed.</p>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Ref — branch / tag / commit (optional)" spellCheck={false} className={inputCls} />
+              <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Ref: branch / tag / commit (optional)" spellCheck={false} className={inputCls} />
               <input value={manifestPath} onChange={(e) => setManifestPath(e.target.value)} placeholder="Manifest path (default subgraph.yaml)" spellCheck={false} className={inputCls} />
             </div>
-            <input value={prepareCommand} onChange={(e) => setPrepareCommand(e.target.value)} placeholder="Prepare command (advanced — e.g. yarn prepare:mainnet)" spellCheck={false} className={`w-full ${inputCls}`} />
+            <input value={prepareCommand} onChange={(e) => setPrepareCommand(e.target.value)} placeholder="Prepare command (advanced, e.g. yarn prepare:mainnet)" spellCheck={false} className={`w-full ${inputCls}`} />
             <button
               type="submit"
               className="px-4 py-2 rounded-[var(--radius-button)] bg-[var(--accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
@@ -816,7 +816,7 @@ function SignalExposureCard({
       <Card>
         <CardContent className="py-2">
           <p className="text-[12px] text-[var(--text-faint)]">
-            Curation signal unavailable — risk flags can&apos;t be weighted by stake right now.
+            Curation signal unavailable, so risk flags can&apos;t be weighted by stake right now.
           </p>
         </CardContent>
       </Card>
@@ -849,7 +849,7 @@ function SignalExposureCard({
             {formatGRT(signal.signalledGRT)} GRT signalled is exposed to {flagCount} risk flag{flagCount === 1 ? '' : 's'}.
           </p>
         ) : flagCount === 0 ? (
-          <p className="text-[12px] text-[var(--green)] mt-3">No warn/critical flags — nothing at stake here regardless of signal.</p>
+          <p className="text-[12px] text-[var(--green)] mt-3">No warn/critical flags, so nothing is at stake here regardless of signal.</p>
         ) : null}
       </CardContent>
     </Card>
@@ -952,11 +952,11 @@ function DecodeAuditPanel({ audit, health }: { audit: DecodeAudit; health?: Depl
       <div className="mt-2">
         {audit.unavailable ? (
           <p className="text-[12px] text-[var(--text-faint)]">
-            Exact-parity ethabi/alloy classifier unavailable in this runtime — decode compatibility could not be evaluated.
+            Exact-parity ethabi/alloy classifier unavailable in this runtime, so decode compatibility could not be evaluated.
           </p>
         ) : audit.status === 'no-import' ? (
           <p className="text-[12px] text-[var(--green)]">
-            No <code className="font-mono">ethereum.decode</code> import — unaffected by the graph-node 0.42 alloy migration.
+            No <code className="font-mono">ethereum.decode</code> import, so this is unaffected by the graph-node 0.42 alloy migration.
           </p>
         ) : audit.status === 'clean' ? (
           <p className="text-[12px] text-[var(--green)]">
@@ -977,7 +977,7 @@ function DecodeAuditPanel({ audit, health }: { audit: DecodeAudit; health?: Depl
             </div>
 
             <p className="text-[11px] text-[var(--text-faint)] leading-relaxed">
-              Static data-segment scan with no dataflow — a flagged string may not be the exact argument passed to{' '}
+              Static data-segment scan with no dataflow, so a flagged string may not be the exact argument passed to{' '}
               <code className="font-mono">ethereum.decode</code>, and dynamically built type strings aren&apos;t detected.
               Background:{' '}
               <a href={DECODE_ISSUE_6683} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--text)]">#6683</a>
@@ -1010,7 +1010,7 @@ function DecodeFindingCard({ f }: { f: DecodeFinding }) {
       <div className="text-[11px] text-[var(--text-muted)]">
         <span className="text-[var(--text-faint)]">alloy (≥0.42): </span>
         <span className="font-mono text-[var(--red)]">rejected</span>
-        <span className="text-[var(--text-faint)]"> — {f.alloyReason}</span>
+        <span className="text-[var(--text-faint)]"> · {f.alloyReason}</span>
       </div>
     </div>
   );
@@ -1030,7 +1030,7 @@ function DecodeHealthNote({ health }: { health?: DeploymentHealth | null }) {
         style={{ background: 'color-mix(in srgb, var(--red) 10%, transparent)', color: 'var(--red)' }}
       >
         <strong>Loud failure:</strong> {health.failedCount} of {alive} reporting indexer(s) are in a
-        deterministic-failure state — consistent with a mapping that asserts on the decode result.
+        deterministic-failure state, consistent with a mapping that asserts on the decode result.
       </div>
     );
   }
@@ -1042,7 +1042,7 @@ function DecodeHealthNote({ health }: { health?: DeploymentHealth | null }) {
         style={{ background: 'color-mix(in srgb, var(--amber) 12%, transparent)', color: 'var(--amber)' }}
       >
         <strong>Likely silent data loss:</strong> {health.healthyCount} of {alive} reporting indexer(s) are
-        healthy/synced despite the divergent type string — if the mapping null-checks and early-returns, entities
+        healthy/synced despite the divergent type string: if the mapping null-checks and early-returns, entities
         are being dropped and POIs diverging while the subgraph looks fine.
       </div>
     );
@@ -1072,7 +1072,7 @@ function HandlerTable({ handlers }: { handlers: HandlerAnalysis[] }) {
               <td className="py-1.5 pr-3 font-mono text-[var(--text)]">
                 {h.handler}
                 {!h.resolved && <span className="ml-1.5 text-[var(--amber)]" title="Not found as a WASM export">⚠</span>}
-                {h.incomplete && <span className="ml-1.5 text-[var(--amber)]" title="Some reachable body used unmodelled opcodes — reachability may be partial">◐</span>}
+                {h.incomplete && <span className="ml-1.5 text-[var(--amber)]" title="Some reachable body used unmodelled opcodes, so reachability may be partial">◐</span>}
               </td>
               <td className="py-1.5 pr-3 text-[var(--text-muted)]">{h.kind}</td>
               <td className="py-1.5 pr-3 font-mono text-[var(--text-faint)] max-w-[16rem] truncate" title={h.trigger ?? ''}>{h.trigger ?? '—'}</td>
@@ -1134,7 +1134,7 @@ function DiffReport({
       {diff.identical && (
         <Card className="border-[var(--green-dim)]">
           <p className="text-sm text-[var(--green)]">
-            No material differences — same handlers, same reachable host APIs, same risk surface. (Recovered
+            No material differences: same handlers, same reachable host APIs, same risk surface. (Recovered
             strings may still differ; see below.)
           </p>
         </Card>

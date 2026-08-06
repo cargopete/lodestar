@@ -55,7 +55,7 @@ export default function NetworkStatePage() {
       <div className="pb-2 border-b border-[var(--border)]">
         <h1 className="text-2xl font-semibold text-[var(--text)]">State of the Network</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          The health of The Graph Protocol at a glance — how heavily it&apos;s used, what developers
+          The health of The Graph Protocol at a glance: how heavily it&apos;s used, what developers
           are building, and the revenue flowing through it. Live on-chain data, no price speculation.
         </p>
       </div>
@@ -98,14 +98,14 @@ export default function NetworkStatePage() {
       {/* ===================== 2. DEVELOPER ACTIVITY ===================== */}
       <SectionHeader
         title="Developer activity"
-        blurb="New subgraphs published over time — the clearest signal of builders shipping on the network."
+        blurb="New subgraphs published over time, the clearest signal of builders shipping on the network."
       />
       <DeveloperActivityChart />
 
       {/* ===================== 3. REVENUE ===================== */}
       <SectionHeader
         title="Revenue"
-        blurb="Query fees and indexing rewards — what participants earn for serving data."
+        blurb="Query fees and indexing rewards: what participants earn for serving data."
       />
       <StatGrid>
         <StatCard

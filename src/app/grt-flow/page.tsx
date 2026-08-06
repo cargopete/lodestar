@@ -122,7 +122,7 @@ export default function GrtFlowPage() {
       {isError && (
         <Card>
           <CardContent className="py-5">
-            <p className="text-sm text-[var(--red)]">Couldn&apos;t reach the network subgraph. Live figures unavailable — reference material below is unaffected.</p>
+            <p className="text-sm text-[var(--red)]">Couldn&apos;t reach the network subgraph. Live figures unavailable; reference material below is unaffected.</p>
           </CardContent>
         </Card>
       )}
@@ -141,7 +141,7 @@ export default function GrtFlowPage() {
           }
         />
         <StatCard label="Annual Issuance" value={d ? `${d.issuanceRatePct.toFixed(2)}%` : '—'} subtitle={d ? `${formatGRT(d.annualIssuance)} GRT/yr` : undefined} loading={isLoading} tag="live" tooltip="Per-block protocol issuance annualised over the global GRT supply (L1 + L2 − bridge escrow). This is the basis Messari / Graph Explorer use, so it is directly comparable to the ~2.8% they report." />
-        <StatCard label="L2 Net Supply" value={fmt(d?.supply)} subtitle="Arbitrum mint − burn" loading={isLoading} tooltip="The network subgraph's totalSupply: GRT minted minus burned on Arbitrum (net tokens present on L2). A subset of global supply, shown here as the L2 footprint — NOT the issuance denominator." />
+        <StatCard label="L2 Net Supply" value={fmt(d?.supply)} subtitle="Arbitrum mint − burn" loading={isLoading} tooltip="The network subgraph's totalSupply: GRT minted minus burned on Arbitrum (net tokens present on L2). A subset of global supply, shown here as the L2 footprint, NOT the issuance denominator." />
         <StatCard label="Issuance / Block" value={d ? d.issuancePerBlock.toFixed(2) : '—'} subtitle="GRT, linear (GIP-0037)" loading={isLoading} />
         <StatCard label="Cumulative Indexing Rewards" value={fmt(d?.indexingRewards)} subtitle="lifetime issued to indexers + delegators" loading={isLoading} />
         <StatCard label="Cumulative Query Fees" value={fmt(d?.queryFees)} subtitle="GRT collected" loading={isLoading} />
@@ -204,7 +204,7 @@ export default function GrtFlowPage() {
             })()}
             <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
               Global supply is the L1 GraphToken total plus the L2GraphToken total minus the GRT locked in the L1
-              bridge escrow — the escrow backs the bridged L2 tokens, so it is subtracted to avoid double-counting.
+              bridge escrow, which backs the bridged L2 tokens, so it is subtracted to avoid double-counting.
               Genesis was a fixed {formatGRT(GENESIS_SUPPLY)} mint on Ethereum L1 (2020); the rest is net protocol
               issuance since.
             </p>
@@ -232,7 +232,7 @@ export default function GrtFlowPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
               </svg>
               <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                On Arbitrum, gross mint/burn is dominated by <strong className="text-[var(--text)]">bridge flows</strong> —
+                On Arbitrum, gross mint/burn is dominated by <strong className="text-[var(--text)]">bridge flows</strong>,
                 every L2 deposit mints and every withdrawal burns. These are not a clean issuance/burn measure;
                 use cumulative indexing rewards and the per-block rate for issuance.
               </p>
@@ -256,7 +256,7 @@ export default function GrtFlowPage() {
             ))}
           </div>
           <p className="text-[10px] text-[var(--text-faint)] mt-4 leading-relaxed">
-            These use the global circulating supply as denominator — the same basis as the live{' '}
+            These use the global circulating supply as denominator, the same basis as the live{' '}
             <strong className="text-[var(--text-muted)]">{d ? `${d.issuanceRatePct.toFixed(2)}%` : '—'}</strong> stat
             above ({d ? `${formatGRT(d.annualIssuance)} GRT/yr` : '~317M GRT/yr'} over ~11.5B global supply), so the
             figures are directly comparable.
@@ -283,7 +283,7 @@ export default function GrtFlowPage() {
             </p>
             <p>
               Deflationary sinks: the 1% query-fee protocol tax, 1% curation tax, 0.5% delegation tax, rejected-dispute
-              deposits, and slashing of malicious indexers — all burned via the ERC20Burnable <code className="text-[var(--accent)]">_burn</code>.
+              deposits, and slashing of malicious indexers, all burned via the ERC20Burnable <code className="text-[var(--accent)]">_burn</code>.
             </p>
           </div>
         </Section>

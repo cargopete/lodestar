@@ -32,7 +32,7 @@ async function getRedisClient(): Promise<any> {
       _redis = client;
       return client;
     } catch (e) {
-      log.cache.warn({ err: String(e) }, 'Redis connect failed — falling back to in-memory cache');
+      log.cache.warn({ err: String(e) }, 'Redis connect failed, falling back to in-memory cache');
       try { client.disconnect(); } catch { /* noop */ }
       throw e;
     } finally {

@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     );
     return NextResponse.json({ status: reoStatus });
   } catch (err) {
-    log.api.warn({ err, address }, 'REO oracle read failed — reporting unavailable');
+    log.api.warn({ err, address }, 'REO oracle read failed, reporting unavailable');
     return NextResponse.json({ status: unavailable(address) });
   }
 }

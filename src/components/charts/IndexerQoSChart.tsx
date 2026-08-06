@@ -149,7 +149,7 @@ export function IndexerQoSChart({ indexer }: { indexer: string }) {
           <Link
             href="/qos"
             className="text-[11px] text-[var(--text-faint)] hover:text-[var(--accent)]"
-            title="These figures come from Edge & Node's QoS oracle, which counts queries their gateway actually routed. The Lodestar Oracle measures by probing and reports different things — see /qos."
+            title="These figures come from Edge & Node's QoS oracle, which counts queries their gateway actually routed. The Lodestar Oracle measures by probing and reports different things; see /qos."
           >
             source: Edge &amp; Node QoS oracle
           </Link>
