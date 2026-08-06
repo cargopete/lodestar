@@ -205,7 +205,10 @@ function FeedContent({
           <div
             key={i}
             className="rounded-lg bg-[var(--bg-elevated)] border-l-[3px] border-[var(--border)] p-3 animate-pulse"
-            style={{ height: 118 }}
+            // Measured against loaded cards, which run 140-158px depending on
+            // whether the summary wraps to a third line. Undersizing this shifts
+            // every card below the first by the difference, cumulatively.
+            style={{ height: 145 }}
           />
         ))}
       </div>
