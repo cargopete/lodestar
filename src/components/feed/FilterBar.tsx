@@ -5,7 +5,7 @@ import type { FeedItemType } from '@/lib/feed';
 
 const FILTERS: { label: string; value: FeedItemType | 'all' }[] = [
   { label: 'All', value: 'all' },
-{ label: 'GIPs', value: 'gip' },
+  { label: 'GIPs', value: 'gip' },
   { label: 'Votes', value: 'vote' },
   { label: 'Epochs', value: 'epoch' },
   { label: 'News', value: 'news' },
@@ -21,7 +21,10 @@ interface FilterBarProps {
 
 export function FilterBar({ active, onChange }: FilterBarProps) {
   return (
-    <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+    // Wraps rather than scrolls. In a rail this narrow the last three filters
+    // (Issues, PRs, Releases) fell off the right edge, and `scrollbar-none` left
+    // no hint they were there at all.
+    <div className="flex flex-wrap gap-1.5 pb-1">
       {FILTERS.map((f) => (
         <button
           key={f.value}

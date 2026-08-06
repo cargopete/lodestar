@@ -23,8 +23,8 @@ export function NightsWatchCTA() {
       >
         <button
           onClick={dismiss}
-          className="absolute top-1 right-1.5 text-[var(--text-faint)] hover:text-[var(--text)] transition-colors text-base leading-none p-1"
-          aria-label="Dismiss for this session"
+          className="absolute top-1 right-1.5 flex h-6 w-6 items-center justify-center text-[var(--text-faint)] hover:text-[var(--text)] transition-colors text-base leading-none"
+          aria-label="Dismiss"
         >
           &times;
         </button>

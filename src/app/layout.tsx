@@ -34,7 +34,9 @@ const geistMono = Geist_Mono({
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  // No maximumScale: capping it at 1 blocks pinch-zoom, which anyone who needs
+  // to magnify dense tables depends on. The iOS input-zoom it used to suppress
+  // is better handled by keeping input font-size at 16px or above.
   viewportFit: 'cover',
   themeColor: '#141034',
 };
