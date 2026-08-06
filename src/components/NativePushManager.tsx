@@ -5,6 +5,8 @@ import { Capacitor } from '@capacitor/core';
 import { useRouter } from 'next/navigation';
 import { useAccount, useSignMessage } from 'wagmi';
 import { subscribeMessage } from '@/lib/push-auth';
+import { useDismissible } from '@/hooks/useDismissible';
+import { useHydrated } from '@/hooks/useHydrated';
 
 // Native push registration + deep-linking. Renders (and does) nothing on the
 // web — only inside the iOS Capacitor shell, where Capacitor injects its bridge
@@ -32,11 +34,16 @@ export function NativePushManager() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHydrated();
 
-  useEffect(() => setMounted(true), []);
+  // Persisted: this address has bound a device, so never offer again.
+  const { dismissed: alreadyRegistered, dismiss: markRegistered } = useDismissible(
+    address ? regKey(address) : 'lodestar.push.registered.unknown',
+  );
+  // Session-only: iOS permission was refused. Deliberately not persisted, so the
+  // offer returns on the next visit. Keyed by address so switching wallets re-asks.
+  const [deniedFor, setDeniedFor] = useState<string | null>(null);
 
   // Deep-link: navigate to the notification's `path` when the user taps it.
   useEffect(() => {
@@ -57,13 +64,15 @@ export function NativePushManager() {
   }, [mounted, router]);
 
   // Offer to enable once a wallet is connected and this address isn't bound yet.
-  useEffect(() => {
-    if (!mounted || !isNative() || !isConnected || !address) {
-      setShow(false);
-      return;
-    }
-    setShow(!localStorage.getItem(regKey(address)));
-  }, [mounted, isConnected, address]);
+  // Every input is synchronous, so this derives during render rather than from an
+  // effect that would schedule a second render on mount.
+  const show =
+    mounted &&
+    isNative() &&
+    isConnected &&
+    !!address &&
+    !alreadyRegistered &&
+    deniedFor !== address.toLowerCase();
 
   const enable = useCallback(async () => {
     if (!address) return;
@@ -73,7 +82,7 @@ export function NativePushManager() {
 
       const perm = await PushNotifications.requestPermissions();
       if (perm.receive !== 'granted') {
-        setShow(false);
+        setDeniedFor(address.toLowerCase());
         return;
       }
 
@@ -106,8 +115,7 @@ export function NativePushManager() {
         body: JSON.stringify({ address, signature, token }),
       });
       if (res.ok) {
-        localStorage.setItem(regKey(address), '1');
-        setShow(false);
+        markRegistered();
       }
     } catch {
       // Permission denied / signature rejected / timeout — leave the prompt so
@@ -115,7 +123,7 @@ export function NativePushManager() {
     } finally {
       setBusy(false);
     }
-  }, [address, signMessageAsync]);
+  }, [address, signMessageAsync, markRegistered]);
 
   if (!mounted || !show) return null;
 
@@ -140,7 +148,9 @@ export function NativePushManager() {
               {busy ? 'Enabling…' : 'Enable'}
             </button>
             <button
-              onClick={() => setShow(false)}
+              onClick={() => {
+                if (address) setDeniedFor(address.toLowerCase());
+              }}
               className="rounded-full px-4 py-1.5 text-xs font-medium text-white/50"
             >
               Not now

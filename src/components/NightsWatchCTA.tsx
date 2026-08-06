@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useDismissible } from '@/hooks/useDismissible';
 
 // localStorage: once dismissed, the CTA stays gone across reloads and
 // future visits (same behaviour as the camp banner).
@@ -8,19 +8,9 @@ const STORAGE_KEY = 'lodestar:nights-watch-cta-dismissed';
 const INVITE_URL = 'https://discord.gg/484vgDETEZ';
 
 export function NightsWatchCTA() {
-  const [visible, setVisible] = useState(false);
+  const { dismissed, dismiss } = useDismissible(STORAGE_KEY);
 
-  useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY)) return;
-    setVisible(true);
-  }, []);
-
-  if (!visible) return null;
-
-  const dismiss = () => {
-    localStorage.setItem(STORAGE_KEY, '1');
-    setVisible(false);
-  };
+  if (dismissed) return null;
 
   return (
     <div className="px-3 pt-3">

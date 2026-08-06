@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useDismissible } from '@/hooks/useDismissible';
 
 // New key (not the retired camp one) so this shows to everyone, including
 // people who dismissed the previous banner.
@@ -13,19 +13,9 @@ const EMBER = '#ff7a45';
 const RED_DEEP = '#a60f33';
 
 export function RedstartBanner() {
-  const [visible, setVisible] = useState(false);
+  const { dismissed, dismiss } = useDismissible(STORAGE_KEY);
 
-  useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY)) return;
-    setVisible(true);
-  }, []);
-
-  if (!visible) return null;
-
-  const dismiss = () => {
-    localStorage.setItem(STORAGE_KEY, '1');
-    setVisible(false);
-  };
+  if (dismissed) return null;
 
   return (
     <div
