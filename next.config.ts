@@ -76,6 +76,12 @@ export default withSentryConfig(nextConfig, {
     disable: !process.env.SENTRY_AUTH_TOKEN,
   },
 
-  // Automatically tree-shake Sentry logger statements to reduce bundle size
-  disableLogger: true,
+  // Automatically tree-shake Sentry logger statements to reduce bundle size.
+  // Replaces the deprecated top-level `disableLogger`. Note this only applies to
+  // webpack builds; Turbopack (the Next 16 default) ignores it either way.
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 });
