@@ -4,14 +4,14 @@ date: "2026-05-13"
 author: "cargopete"
 tags: ["solana", "data-services", "horizon", "tap", "indexing", "jupiter", "rust", "yellowstone"]
 category: "Data Services"
-excerpt: "We built a Horizon data service that indexes Solana — specifically Jupiter v6 swaps, streamed in real time from a Yellowstone gRPC node and served with TAP receipts via PostgREST. Here is what we built, how it works, and how to run or query it."
+excerpt: "We built a Horizon data service that indexes Solana, specifically Jupiter v6 swaps, streamed in real time from a Yellowstone gRPC node and served with TAP receipts via PostgREST. Here is what we built, how it works, and how to run or query it."
 ---
 
 The Graph's Horizon framework is deliberately agnostic about what a data service serves. The Solidity interface says: provision stake, register, and collect fees. It doesn't say anything about Ethereum. It doesn't say anything about EVM at all.
 
 So we asked the obvious question. What happens if you point it at Solana?
 
-The result is **Seahorn** — a Horizon data service that streams, decodes, and serves Solana on-chain data, paid in GRT via TAP receipts, queryable through a standard REST API. The first dataset is Jupiter v6 swaps: every confirmed swap routed through Jupiter's aggregator on Solana Mainnet, indexed in real time.
+The result is **Seahorn**, a Horizon data service that streams, decodes, and serves Solana on-chain data, paid in GRT via TAP receipts, queryable through a standard REST API. The first dataset is Jupiter v6 swaps: every confirmed swap routed through Jupiter's aggregator on Solana Mainnet, indexed in real time.
 
 The contract is live on Arbitrum One. The indexer is running. The dashboard page is up. Here is how it all works.
 
@@ -23,13 +23,13 @@ Five steps, one data flow:
 
 **1. Stream**: The indexer subscribes to Solana Mainnet via Yellowstone gRPC (Dragon's Mouth). It receives every confirmed transaction matching the Jupiter v6 program ID in real time, as a continuous stream.
 
-**2. Decode**: For each transaction, it looks at the instruction data. The first 8 bytes are the discriminator — an Anchor convention, it's the first 8 bytes of `SHA256("global:instruction_name")`. That tells you which instruction it is (`shared_accounts_route`, `exact_out_route`, etc.). The rest of the bytes are Borsh-encoded arguments: amounts, slippage, hop count. Account indices in the instruction get resolved to actual public keys using the transaction's full account list — including Address Lookup Tables, which is where mint addresses typically live in Jupiter transactions.
+**2. Decode**: For each transaction, it looks at the instruction data. The first 8 bytes are the discriminator, an Anchor convention, it's the first 8 bytes of `SHA256("global:instruction_name")`. That tells you which instruction it is (`shared_accounts_route`, `exact_out_route`, etc.). The rest of the bytes are Borsh-encoded arguments: amounts, slippage, hop count. Account indices in the instruction get resolved to actual public keys using the transaction's full account list, including Address Lookup Tables, which is where mint addresses typically live in Jupiter transactions.
 
 **3. Write**: Each decoded swap becomes a row in `entity_changes` in Postgres, with a `fields` JSONB column containing all the decoded swap data. Rows start as `NEW`. A background sweeper polls the Solana RPC every 10 seconds for the current finalized slot and promotes eligible rows to `FINAL`.
 
-**4. Serve**: PostgREST sits in front of Postgres and exposes the table as a REST API with no custom code. Filtering, ordering, pagination — all just query parameters.
+**4. Serve**: PostgREST sits in front of Postgres and exposes the table as a REST API with no custom code. Filtering, ordering, pagination: all just query parameters.
 
-**5. Gate**: seahorn-gateway (Axum) sits in front of PostgREST. Every inbound request must carry a valid TAP receipt — an EIP-712 signed payment struct. Invalid or missing receipt: 402. Valid: proxied through to PostgREST and the receipt is stored for later aggregation and on-chain GRT collection.
+**5. Gate**: seahorn-gateway (Axum) sits in front of PostgREST. Every inbound request must carry a valid TAP receipt, an EIP-712 signed payment struct. Invalid or missing receipt: 402. Valid: proxied through to PostgREST and the receipt is stored for later aggregation and on-chain GRT collection.
 
 The whole thing reconnects automatically if the gRPC stream drops, resumes from the last persisted cursor slot so nothing is double-written, and the payment loop runs entirely in the background.
 
@@ -41,11 +41,11 @@ No free lunch, but the accounting depends on who's asking.
 
 **Dashboard visitors** pay nothing. Every time someone loads the Seahorn page, the Next.js API routes hit Lodestar's dispatch-gateway, which signs TAP receipts on behalf of the query. GRT is drawn from Lodestar's escrow on `PaymentsEscrow` on Arbitrum One.
 
-**Lodestar** absorbs that cost — but since Lodestar is also the provider, the GRT cycles straight back to the provider wallet via `collect()`. The net cost is only the protocol fee baked into `collect()` (a small percentage) plus gas for the on-chain settlement transactions. It's not zero, but it's close.
+**Lodestar** absorbs that cost, but since Lodestar is also the provider, the GRT cycles straight back to the provider wallet via `collect()`. The net cost is only the protocol fee baked into `collect()` (a small percentage) plus gas for the on-chain settlement transactions. It's not zero, but it's close.
 
 **External consumers** pay properly. They deposit GRT into `PaymentsEscrow`, their gateway signs a TAP receipt per query, and GRT flows from their escrow to whichever provider served the request. Pay per query, settled on-chain. The per-query cost is set by the provider and denominated in GRT wei per request.
 
-The dashboard is, in economic terms, a subsidised demo. Lodestar pays the protocol fee in exchange for proving the full payment loop works under real traffic — same logic as [pointing our own indexer at our own Dispatch network](/blog/dispatch-dogfooding). The circular payment is cheap. The production validation it provides is not.
+The dashboard is, in economic terms, a subsidised demo. Lodestar pays the protocol fee in exchange for proving the full payment loop works under real traffic, the same logic as [pointing our own indexer at our own Dispatch network](/blog/dispatch-dogfooding). The circular payment is cheap. The production validation it provides is not.
 
 ---
 
@@ -81,7 +81,7 @@ seahorn-indexer  ──────────────────▶  Post
 
 **dispatch-gateway** is Lodestar's existing RPC gateway. It signs TAP receipts on behalf of consumers and proxies queries to seahorn-gateway. From the consumer's perspective, you talk to one endpoint and payment is handled automatically.
 
-**The on-chain piece** is the `SolanaDataService` contract on Arbitrum One — a standard Horizon data service that handles provider registration, stake provisioning, and GRT collection via `GraphTallyCollector`.
+**The on-chain piece** is the `SolanaDataService` contract on Arbitrum One, a standard Horizon data service that handles provider registration, stake provisioning, and GRT collection via `GraphTallyCollector`.
 
 ---
 
@@ -118,7 +118,7 @@ When a provider calls `collect()` with a signed RAV, GRT flows from the consumer
 
 Currently: **Jupiter v6 swaps** on Solana Mainnet.
 
-Jupiter is the dominant swap aggregator on Solana — the vast majority of DEX volume flows through it. Jupiter v6 supports four instruction variants:
+Jupiter is the dominant swap aggregator on Solana; the vast majority of DEX volume flows through it. Jupiter v6 supports four instruction variants:
 
 - `shared_accounts_route`: most common; uses shared token accounts to reduce per-swap overhead
 - `route`: classic route variant
@@ -157,7 +157,7 @@ The indexer is built around three traits from `seahorn-core`:
 
 **`Substrate`**: a stream of raw blockchain events. The Yellowstone substrate connects to a Dragon's Mouth gRPC endpoint, subscribes to matching program IDs, and yields `SubstrateEvent` structs. Each event carries the slot, a 64-byte transaction signature, a commitment step, and the decoded instruction list.
 
-One non-obvious piece: Jupiter v6 (like most modern Solana DeFi programs) uses Address Lookup Tables to compress transaction size. The token mint addresses are rarely in the static account list — they live in `tx_info.meta.loaded_writable_addresses` and `tx_info.meta.loaded_readonly_addresses`. The substrate appends these to the static account keys before passing instructions downstream, which is what makes mint resolution work:
+One non-obvious piece: Jupiter v6 (like most modern Solana DeFi programs) uses Address Lookup Tables to compress transaction size. The token mint addresses are rarely in the static account list: they live in `tx_info.meta.loaded_writable_addresses` and `tx_info.meta.loaded_readonly_addresses`. The substrate appends these to the static account keys before passing instructions downstream, which is what makes mint resolution work:
 
 ```rust
 let account_keys: Vec<Vec<u8>> = {
@@ -174,7 +174,7 @@ Miss this step and every swap comes through with empty mint addresses. Ask us ho
 
 **`Handler`**: receives a `SubstrateEvent` and returns a `ChangeSet`. `JupiterV6Handler` matches instruction discriminators (Anchor-style SHA256 hashes of `"global:instruction_name"`) and decodes the binary instruction data into typed structs. Each matching instruction becomes one `EntityChange::Upsert` in the changeset.
 
-**`Sink`**: receives a `ChangeSet` and applies it. `PostgresSink` writes each entity change as a row in `entity_changes`, updates the cursor, and commits atomically. On reconnect after a crash, the substrate filters out any slots at or below the persisted cursor slot — so you resume exactly where you left off without double-writing.
+**`Sink`**: receives a `ChangeSet` and applies it. `PostgresSink` writes each entity change as a row in `entity_changes`, updates the cursor, and commits atomically. On reconnect after a crash, the substrate filters out any slots at or below the persisted cursor slot, so you resume exactly where you left off without double-writing.
 
 The runtime loop is about ten lines:
 
@@ -194,7 +194,7 @@ where S: Substrate, H: Handler, K: Sink
 }
 ```
 
-The Yellowstone substrate wraps this in an exponential backoff reconnect loop — gRPC streams drop occasionally; this is fine and expected.
+The Yellowstone substrate wraps this in an exponential backoff reconnect loop; gRPC streams drop occasionally; this is fine and expected.
 
 ---
 
@@ -238,7 +238,7 @@ Set `YELLOWSTONE_ENDPOINT` and `YELLOWSTONE_TOKEN` (if your provider requires on
 
 ### 3. Set up Postgres and PostgREST
 
-Run a standard Postgres 16 instance. The seahorn-sink-postgres crate handles migrations automatically on first run — it creates the `entity_changes` and `cursors` tables.
+Run a standard Postgres 16 instance. The seahorn-sink-postgres crate handles migrations automatically on first run, creating the `entity_changes` and `cursors` tables.
 
 PostgREST sits in front of Postgres. A minimal config:
 
@@ -262,7 +262,7 @@ SOLANA_RPC_URL=https://... \
 ./target/release/seahorn --postgres --jupiter
 ```
 
-The `--all` flag indexes Pump.fun, Raydium CLMM, and Jupiter v6 simultaneously. `--mock` uses synthetic test data — useful for verifying your stack before connecting to live data.
+The `--all` flag indexes Pump.fun, Raydium CLMM, and Jupiter v6 simultaneously. `--mock` uses synthetic test data, useful for verifying your stack before connecting to live data.
 
 ### 5. Run seahorn-gateway
 
@@ -338,7 +338,7 @@ The gateway signs the receipt, routes to seahorn-gateway, which validates and pr
 /entity_changes?entity_type=eq.JupiterSwap&fields->>'source_mint'=eq.MINT_ADDRESS&order=slot.desc
 ```
 
-The `fields` column is JSONB — PostgREST's `->>` operator lets you filter on any swap field directly.
+The `fields` column is JSONB, so PostgREST's `->>` operator lets you filter on any swap field directly.
 
 ---
 
@@ -352,7 +352,7 @@ The [Seahorn page on lodestar-dashboard.com](https://www.lodestar-dashboard.com/
 - Latest Solana slot seen
 - Unique wallets in the most recent 200 swaps
 
-**Live swap feed**: the 25 most recent confirmed swaps, refreshing every 5 seconds. Each row shows the wallet, the pair (with colour coding per token), the input amount, hop count, and a Solscan link to the transaction. New rows flash briefly on arrival. Rows where Jupiter's instruction variant doesn't encode mint addresses (the `route` and `exact_out_route` variants don't carry mints at fixed account positions) show dashes rather than question marks — the data isn't available at the instruction level for those variants.
+**Live swap feed**: the 25 most recent confirmed swaps, refreshing every 5 seconds. Each row shows the wallet, the pair (with colour coding per token), the input amount, hop count, and a Solscan link to the transaction. New rows flash briefly on arrival. Rows where Jupiter's instruction variant doesn't encode mint addresses (the `route` and `exact_out_route` variants don't carry mints at fixed account positions) show dashes rather than question marks: the data isn't available at the instruction level for those variants.
 
 **Top pairs**: bar chart of the most frequent token pair routes in the current 25-swap window.
 
@@ -368,7 +368,7 @@ Jupiter v6 is the first dataset but not the last. The indexer already has handle
 
 A few things on the roadmap:
 
-**Multi-provider.** Right now only Lodestar runs a Seahorn node. The on-chain contract is live and open — any indexer can provision stake and register. Multiple providers means routing, redundancy, and competitive pricing.
+**Multi-provider.** Right now only Lodestar runs a Seahorn node. The on-chain contract is live and open: any indexer can provision stake and register. Multiple providers means routing, redundancy, and competitive pricing.
 
 **More datasets.** Orca, Meteora, Drift protocol, and SPL token transfers are all plausible additions. The substrate and sink are program-agnostic; the work is in writing accurate decoders.
 
@@ -378,11 +378,11 @@ A few things on the roadmap:
 
 ## The broader point
 
-The graph's Horizon framework says: here are the payment rails and staking primitives — build your service on top. We took that literally and aimed it at a completely different chain. The contract is EVM (Arbitrum One, same as everything else on Horizon). The data is Solana. The payment flows in GRT.
+The graph's Horizon framework says: here are the payment rails and staking primitives, so build your service on top. We took that literally and aimed it at a completely different chain. The contract is EVM (Arbitrum One, same as everything else on Horizon). The data is Solana. The payment flows in GRT.
 
 It works.
 
-The pattern is generic: any chain with a decent RPC or gRPC streaming interface can be indexed this way. The crate structure — `seahorn-core` traits, per-program handler crates, the Yellowstone substrate, the Postgres sink — was designed to make adding new chains or programs cheap. Ethereum would be a different substrate implementation. Cosmos, Sui, Aptos — same.
+The pattern is generic: any chain with a decent RPC or gRPC streaming interface can be indexed this way. The crate structure (`seahorn-core` traits, per-program handler crates, the Yellowstone substrate, the Postgres sink) was designed to make adding new chains or programs cheap. Ethereum would be a different substrate implementation. Cosmos, Sui, Aptos: same.
 
 We don't think Solana data is special. We think the scaffolding for serving any indexed data through Graph Protocol's payment rails is now reasonably well understood. Seahorn is the proof of concept.
 
