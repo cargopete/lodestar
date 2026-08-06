@@ -6,7 +6,6 @@ import { FeedCard } from '@/components/feed/FeedCard';
 import { FilterBar } from '@/components/feed/FilterBar';
 import { cn } from '@/lib/utils';
 import { FEED_TYPE_CONFIG, timeAgo } from '@/lib/feed';
-import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import type { FeedItem, FeedItemType } from '@/lib/feed';
 
 export function IntelFeed() {
@@ -60,6 +59,12 @@ export function IntelFeed() {
                 const color = isEpoch
                   ? delta >= 0 ? 'var(--green)' : 'var(--red)'
                   : config.borderColor;
+                // Same split as FeedCard: the border can be any contrast, the
+                // 8px label cannot. Red and the brand purple need their tints.
+                const labelColor =
+                  { 'var(--red)': 'var(--red-text)', 'var(--accent)': 'var(--accent-text)', 'var(--star-base)': 'var(--accent-text)' }[
+                    color
+                  ] ?? color;
 
                 return (
                   <button
@@ -74,7 +79,7 @@ export function IntelFeed() {
                     >
                       <span
                         className="block text-[8px] font-bold uppercase tracking-wider leading-none mb-0.5"
-                        style={{ color }}
+                        style={{ color: labelColor }}
                       >
                         {config.label.slice(0, 3)}
                       </span>
@@ -190,7 +195,21 @@ function FeedContent({
   isLoading: boolean;
 }) {
   if (isLoading) {
-    return <ChartSkeleton height="300px" />;
+    // Placeholder cards at roughly the real card height, rather than a single
+    // 300px block. The rail is shared by every page, and swapping one short
+    // block for a column of cards was the largest remaining layout shift on the
+    // site (0.397 on /subgraphs, attributed to this aside).
+    return (
+      <div className="space-y-2" aria-hidden="true">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-lg bg-[var(--bg-elevated)] border-l-[3px] border-[var(--border)] p-3 animate-pulse"
+            style={{ height: 118 }}
+          />
+        ))}
+      </div>
+    );
   }
 
   if (items.length === 0) {
