@@ -22,7 +22,6 @@
     "@graphiql/toolkit": "^0.12.1",
     "@logtail/pino": "^0.5.8",
     "@pinax/graph-networks-registry": "^0.7.1",
-    "@pushprotocol/restapi": "^1.7.32",
     "@rainbow-me/rainbowkit": "^2.2.11",
     "@sentry/nextjs": "^10.69.0",
     "@tailwindcss/typography": "^0.5.20",
@@ -71,10 +70,5 @@
     "typescript": "^5.9.3",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
-  },
-  "pnpm": {
-    "overrides": {
-      "axios": "^1.13.6"
-    }
   }
 }

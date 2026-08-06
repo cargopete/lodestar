@@ -56,7 +56,6 @@ vi.mock('@/lib/ingest/delegations', () => ({ ingestDelegationEvents: vi.fn().moc
 vi.mock('@/lib/ingest/disputes', () => ({ ingestDisputes: vi.fn().mockResolvedValue({ ingested: 0, durationMs: 0 }) }));
 vi.mock('@/lib/ingest/network-snapshot', () => ({ writeNetworkSnapshot: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/refresh', () => ({ refreshIndexers: vi.fn().mockResolvedValue({ count: 0, durationMs: 0 }) }));
-vi.mock('@/lib/push', () => ({ sendPushNotification: vi.fn().mockResolvedValue(undefined) }));
 
 vi.mock('@/lib/cron-runs', () => ({
   withCronTracking: vi.fn((_db: unknown, _step: string, fn: () => Promise<unknown>) => fn()),
