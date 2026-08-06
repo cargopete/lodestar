@@ -31,9 +31,9 @@ The reference implementation is open source: [github.com/cargopete/dispatch](htt
 
 There are two ways to interact with the network as a consumer:
 
-**Via the gateway** — the managed path. A `dispatch-gateway` instance selects providers using QoS scoring (latency EMA, availability, block freshness), signs TAP receipts on your behalf, dispatches requests concurrently, and returns the first valid response. It handles quorum consensus for `eth_call` and `eth_getLogs`, geographic routing, and per-IP rate limiting. You point your app at a gateway URL and it works like any other RPC endpoint.
+**Via the gateway**: the managed path. A `dispatch-gateway` instance selects providers using QoS scoring (latency EMA, availability, block freshness), signs TAP receipts on your behalf, dispatches requests concurrently, and returns the first valid response. It handles quorum consensus for `eth_call` and `eth_getLogs`, geographic routing, and per-IP rate limiting. You point your app at a gateway URL and it works like any other RPC endpoint.
 
-**Via the consumer SDK** — the trustless path. `@graph-dispatch/consumer-sdk` discovers providers directly from the Subgraph, signs receipts locally with your own key, and manages QoS scoring in your application. No intermediary.
+**Via the consumer SDK**: the trustless path. `@graph-dispatch/consumer-sdk` discovers providers directly from the Subgraph, signs receipts locally with your own key, and manages QoS scoring in your application. No intermediary.
 
 Either way, the request flow is:
 
@@ -188,10 +188,10 @@ The SDK discovers providers from the Subgraph, selects by QoS, signs a TAP recei
 
 The network is live but early. What's needed to make it real:
 
-- **More providers** — a single-provider network isn't decentralised. If you're an existing Graph indexer, you already have the GRT stake. You need a node and `dispatch-service`.
-- **TAP aggregation** — the receipts are being signed; the aggregator that batches them into RAVs for on-chain collection needs wiring up
-- **Oracle** — the `dispatch-oracle` daemon feeds L1 state roots for Tier 1 slash verification; it needs the contract owner key to start submitting
-- **More chains** — the contract supports permissionless chain registration with a 100k GRT bond. Ethereum mainnet and other L2s are the obvious next additions
+- **More providers**: a single-provider network isn't decentralised. If you're an existing Graph indexer, you already have the GRT stake. You need a node and `dispatch-service`.
+- **TAP aggregation**: the receipts are being signed; the aggregator that batches them into RAVs for on-chain collection needs wiring up
+- **Oracle**: the `dispatch-oracle` daemon feeds L1 state roots for Tier 1 slash verification; it needs the contract owner key to start submitting
+- **More chains**: the contract supports permissionless chain registration with a 100k GRT bond. Ethereum mainnet and other L2s are the obvious next additions
 
 The code is all there. The contracts are deployed. The payment primitives are the same ones the Subgraph network has been using in production. The main thing needed is more providers — and more people poking at the edges to see where it breaks.
 

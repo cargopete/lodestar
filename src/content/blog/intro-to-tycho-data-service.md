@@ -19,11 +19,11 @@ Today, most of these players build their own proprietary indexing pipelines. Tha
 
 These aren't hobbyist developers. The target users are:
 
-- **Intent solvers** (CoW Protocol and others) — routing trades across fragmented liquidity
-- **DEX aggregator backends** (Matcha, Paraswap) — finding optimal swap paths
-- **Market makers** (Wintermute, Jump) — maintaining accurate pricing models
-- **MEV searchers** — running sub-block simulations to find arbitrage
-- **DEX protocol teams** — monitoring their own liquidity in real time
+- **Intent solvers** (CoW Protocol and others): routing trades across fragmented liquidity
+- **DEX aggregator backends** (Matcha, Paraswap): finding optimal swap paths
+- **Market makers** (Wintermute, Jump): maintaining accurate pricing models
+- **MEV searchers**: running sub-block simulations to find arbitrage
+- **DEX protocol teams**: monitoring their own liquidity in real time
 
 These are billion-dollar operations that pay real money for data infrastructure.
 
@@ -31,20 +31,20 @@ These are billion-dollar operations that pay real money for data infrastructure.
 
 Tycho has four layers:
 
-**Tycho Indexer** — the core engine. It consumes blockchain data and tracks the state of every supported DEX pool in real time. It materialises a unified view of all liquidity into a PostgreSQL database.
+**Tycho Indexer**: the core engine. It consumes blockchain data and tracks the state of every supported DEX pool in real time. It materialises a unified view of all liquidity into a PostgreSQL database.
 
-**Tycho SDK** — the developer toolkit. Applications subscribe to liquidity updates via WebSocket. You get real-time deltas — just the changes, block by block. No polling, no redundant data.
+**Tycho SDK**: the developer toolkit. Applications subscribe to liquidity updates via WebSocket. You get real-time deltas — just the changes, block by block. No polling, no redundant data.
 
-**Simulation layer** — lets you simulate swaps against current pool state without executing on-chain. Critical for solvers who need to evaluate thousands of routes per block.
+**Simulation layer**: lets you simulate swaps against current pool state without executing on-chain. Critical for solvers who need to evaluate thousands of routes per block.
 
-**Execution layer** — via the Tycho Router smart contracts, actually executes trades on-chain once a route is chosen.
+**Execution layer**: via the Tycho Router smart contracts, actually executes trades on-chain once a route is chosen.
 
 ### Two ways to solve
 
 Tycho supports both analytical and numerical solving:
 
-- **Native solving** — access raw state attributes to analytically solve (e.g. every Uniswap v3 tick). Maximum speed, full control.
-- **VM solving** — use any DEX through a unified interface without diving into protocol internals. Based on REVM, it handles both state and computation. This is how you integrate complex protocols like Curve without understanding their pool math.
+- **Native solving**: access raw state attributes to analytically solve (e.g. every Uniswap v3 tick). Maximum speed, full control.
+- **VM solving**: use any DEX through a unified interface without diving into protocol internals. Based on REVM, it handles both state and computation. This is how you integrate complex protocols like Curve without understanding their pool math.
 
 Tycho also comes with executor contracts and encoders to execute the resulting swaps.
 

@@ -90,9 +90,9 @@ That last point is the entire reason for this post.
 
 If you already run Firehose/Substreams infrastructure, you are most of the way there. A provider runs three things and does one on-chain onboarding:
 
-1. **A Substreams data plane** — `firecore` serving the data you want to sell. This is your actual product.
-2. **The provider gateway** — `sds provider gateway`, backed by Postgres, pointed at chain `42161`, the SubstreamsDataService proxy, the Horizon collector/escrow, and your data-plane endpoint. TLS by default, with an authenticated operator API.
-3. **The collection daemon** — `sds provider operator collect-daemon`, a separate process holding your settlement key, which polls for collectible RAVs and submits `collect()` automatically (with retry/backoff). The 1% burns on each collection.
+1. **A Substreams data plane**: `firecore` serving the data you want to sell. This is your actual product.
+2. **The provider gateway**: `sds provider gateway`, backed by Postgres, pointed at chain `42161`, the SubstreamsDataService proxy, the Horizon collector/escrow, and your data-plane endpoint. TLS by default, with an authenticated operator API.
+3. **The collection daemon**: `sds provider operator collect-daemon`, a separate process holding your settlement key, which polls for collectible RAVs and submits `collect()` automatically (with retry/backoff). The 1% burns on each collection.
 
 The on-chain onboarding is the standard Horizon move, with real GRT:
 

@@ -644,11 +644,11 @@ Every incoming request must include a valid TAP receipt. Validate in this order 
 1. **Deserialize** the JSON from the `TAP-Receipt` header
 2. **Check `data_service`** matches your contract address
 3. **Check `service_provider`** matches this provider's address
-4. **Check staleness** — reject receipts older than 30 seconds (prevents replay across restarts)
-5. **Check nonce uniqueness** — reject if this (signer, nonce) pair has been seen before. Nonces are single-use; the 30-second staleness window bounds the deduplication set. Track in a bounded in-memory LRU or a DB table keyed on `(signer_address, nonce)`.
+4. **Check staleness**: reject receipts older than 30 seconds (prevents replay across restarts)
+5. **Check nonce uniqueness**: reject if this (signer, nonce) pair has been seen before. Nonces are single-use; the 30-second staleness window bounds the deduplication set. Track in a bounded in-memory LRU or a DB table keyed on `(signer_address, nonce)`.
 6. **Recover signer** from EIP-712 signature
-7. **Check authorization** — signer must be in the `authorized_senders` list (the gateway's signing key)
-8. **Extract metadata** — consumer address (first 20 bytes), method name (bytes 20+) — Dispatch-specific; adapt to your receipt format
+7. **Check authorization**: signer must be in the `authorized_senders` list (the gateway's signing key)
+8. **Extract metadata**: consumer address (first 20 bytes), method name (bytes 20+) — Dispatch-specific; adapt to your receipt format
 
 Return **HTTP 402 Payment Required** for any failure. Do not serve the data — you'd be working for free.
 
@@ -907,9 +907,9 @@ A gateway can then poll a single GraphQL query to get all active providers for a
 
 We've built the **HTTP receipt model** (Dispatch) and studied the **sidecar/session model** (SubstreamsDataService). They suit different workloads.
 
-**HTTP receipt model** — one receipt per request, sent in an HTTP header. Near-zero latency overhead. Consumer complexity is zero if a gateway handles everything. Suited to request/response APIs (JSON-RPC, GraphQL).
+**HTTP receipt model**: one receipt per request, sent in an HTTP header. Near-zero latency overhead. Consumer complexity is zero if a gateway handles everything. Suited to request/response APIs (JSON-RPC, GraphQL).
 
-**Sidecar/session model** — consumer runs a local sidecar process that manages a persistent bidirectional gRPC payment session with the provider. Usage is measured in blocks or bytes processed, not per-call. Provider plugins integrate directly with Firehose/Substreams for auth, session management, and metering. Suited to long-lived streaming connections where per-call receipts would generate unnecessary overhead.
+**Sidecar/session model**: consumer runs a local sidecar process that manages a persistent bidirectional gRPC payment session with the provider. Usage is measured in blocks or bytes processed, not per-call. Provider plugins integrate directly with Firehose/Substreams for auth, session management, and metering. Suited to long-lived streaming connections where per-call receipts would generate unnecessary overhead.
 
 For a new data service, start with the HTTP receipt model unless your service is fundamentally streaming.
 
@@ -1038,8 +1038,8 @@ At this point you have a fully functional local Horizon environment with funded 
 
 Before deploying to Arbitrum Sepolia, you need testnet GRT:
 
-1. **Testnet ETH first** — get Arbitrum Sepolia ETH from the [Alchemy faucet](https://www.alchemy.com/faucets/arbitrum-sepolia). You'll need a small mainnet balance to qualify.
-2. **Testnet GRT** — The Graph's testnet GRT contract on Arbitrum Sepolia (`0x1A1af8B44fD59dd2bbEb456D1b7604c7bd340702`) has a public `mint()` function (unlike mainnet GRT). Call it directly:
+1. **Testnet ETH first**: get Arbitrum Sepolia ETH from the [Alchemy faucet](https://www.alchemy.com/faucets/arbitrum-sepolia). You'll need a small mainnet balance to qualify.
+2. **Testnet GRT**: The Graph's testnet GRT contract on Arbitrum Sepolia (`0x1A1af8B44fD59dd2bbEb456D1b7604c7bd340702`) has a public `mint()` function (unlike mainnet GRT). Call it directly:
 
 ```bash
 cast send 0x1A1af8B44fD59dd2bbEb456D1b7604c7bd340702 "mint(address,uint256)" \

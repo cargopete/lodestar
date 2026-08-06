@@ -190,10 +190,10 @@ Raw on-chain logs are only useful if you have a question the subgraph can't answ
 
 The Graph Network Subgraph gives you current protocol state — indexer stakes, delegation positions, provisions. It doesn't give you event history. With Amp:
 
-- **Delegation timelines** — every `TokensDelegated` and `TokensUndelegated` event for an address, with exact blocks and amounts
-- **Provision history** — full chronological log of `ProvisionCreated`, `ProvisionSlashed`, parameter changes
-- **Slashing audit trail** — every `ProvisionSlashed` and `DelegationSlashed` ever, queryable by address
-- **Stake flow charts** — net delegation in/out per indexer per week
+- **Delegation timelines**: every `TokensDelegated` and `TokensUndelegated` event for an address, with exact blocks and amounts
+- **Provision history**: full chronological log of `ProvisionCreated`, `ProvisionSlashed`, parameter changes
+- **Slashing audit trail**: every `ProvisionSlashed` and `DelegationSlashed` ever, queryable by address
+- **Stake flow charts**: net delegation in/out per indexer per week
 
 ### Integrating with a Next.js app
 

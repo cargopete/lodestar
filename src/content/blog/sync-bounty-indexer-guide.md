@@ -15,8 +15,8 @@ This post walks through the full process from an indexer's perspective.
 
 Before doing anything, understand the two on-chain conditions `BountyBoard.claim()` verifies:
 
-1. **Your allocation is open** — `SubgraphService.getAllocation(allocationId).closedAt == 0`
-2. **You presented a POI after the bounty was posted** — `lastPOIPresentedAt > bounty.postedAt`
+1. **Your allocation is open**: `SubgraphService.getAllocation(allocationId).closedAt == 0`
+2. **You presented a POI after the bounty was posted**: `lastPOIPresentedAt > bounty.postedAt`
 
 Both must be true at the moment you call `claim()`. That's it. The contract reads from `SubgraphService` directly — no oracle, no trust.
 
@@ -180,8 +180,8 @@ The agent will call `SubgraphService.collect()` on your behalf. Once confirmed o
 2. Find the bounty and click **Claim**
 3. Enter your allocation ID (the `0x...` address from Step 3)
 4. The status panel will show:
-   - **Allocation: Open** — your allocation is still active
-   - **POI verified on-chain: Yes** — your `presentPOI` was confirmed
+   - **Allocation: Open**: your allocation is still active
+   - **POI verified on-chain: Yes**: your `presentPOI` was confirmed
 5. Once both are green, click **Claim GRT** and sign the transaction with your indexer wallet
 
 The contract pays out immediately on confirmation. No waiting, no admin approval.
@@ -190,15 +190,15 @@ The contract pays out immediately on confirmation. No waiting, no admin approval
 
 ## Common issues
 
-**"Allocation: Closed"** — Your allocation was closed before you claimed. You need an *open* allocation at claim time. Don't close it before claiming.
+**"Allocation: Closed"**: Your allocation was closed before you claimed. You need an *open* allocation at claim time. Don't close it before claiming.
 
-**"POI verified on-chain: Not yet"** — Either the `presentPOI` transaction hasn't confirmed yet (wait a minute and the panel will update), or you haven't submitted a POI at all. Run the mutation in Step 5.
+**"POI verified on-chain: Not yet"**: Either the `presentPOI` transaction hasn't confirmed yet (wait a minute and the panel will update), or you haven't submitted a POI at all. Run the mutation in Step 5.
 
-**Transaction reverts** — The most likely cause is someone else claimed first (first valid claim wins). Check Arbiscan for a `BountyClaimed` event on the BountyBoard contract.
+**Transaction reverts**: The most likely cause is someone else claimed first (first valid claim wins). Check Arbiscan for a `BountyClaimed` event on the BountyBoard contract.
 
-**`presentPOI` action fails with "Invalid action input"** — This can happen on certain agent builds where the action validation doesn't recognise the `presentPOI` type. Patch it by editing `/opt/indexer/packages/indexer-common/dist/actions.js` inside your agent container — add `case ActionType.PRESENT_POI: hasActionParams = 'deploymentID' in variableToCheck && 'allocationID' in variableToCheck; break;` before the `RESIZE` case, then restart the agent. Note: most v0.25.6 builds handle `presentPOI` correctly without this patch — only apply it if you actually see the error.
+**`presentPOI` action fails with "Invalid action input"**: This can happen on certain agent builds where the action validation doesn't recognise the `presentPOI` type. Patch it by editing `/opt/indexer/packages/indexer-common/dist/actions.js` inside your agent container — add `case ActionType.PRESENT_POI: hasActionParams = 'deploymentID' in variableToCheck && 'allocationID' in variableToCheck; break;` before the `RESIZE` case, then restart the agent. Note: most v0.25.6 builds handle `presentPOI` correctly without this patch — only apply it if you actually see the error.
 
-**Can't find allocation ID** — Query `{ allocations(filter: {}) { id subgraphDeployment } }` against your management API, or search for your indexer address in the SubgraphService events on Arbiscan.
+**Can't find allocation ID**: Query `{ allocations(filter: {}) { id subgraphDeployment } }` against your management API, or search for your indexer address in the SubgraphService events on Arbiscan.
 
 ---
 

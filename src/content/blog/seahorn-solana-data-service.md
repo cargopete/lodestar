@@ -21,15 +21,15 @@ The contract is live on Arbitrum One. The indexer is running. The dashboard page
 
 Five steps, one data flow:
 
-**1. Stream** — The indexer subscribes to Solana Mainnet via Yellowstone gRPC (Dragon's Mouth). It receives every confirmed transaction matching the Jupiter v6 program ID in real time, as a continuous stream.
+**1. Stream**: The indexer subscribes to Solana Mainnet via Yellowstone gRPC (Dragon's Mouth). It receives every confirmed transaction matching the Jupiter v6 program ID in real time, as a continuous stream.
 
-**2. Decode** — For each transaction, it looks at the instruction data. The first 8 bytes are the discriminator — an Anchor convention, it's the first 8 bytes of `SHA256("global:instruction_name")`. That tells you which instruction it is (`shared_accounts_route`, `exact_out_route`, etc.). The rest of the bytes are Borsh-encoded arguments: amounts, slippage, hop count. Account indices in the instruction get resolved to actual public keys using the transaction's full account list — including Address Lookup Tables, which is where mint addresses typically live in Jupiter transactions.
+**2. Decode**: For each transaction, it looks at the instruction data. The first 8 bytes are the discriminator — an Anchor convention, it's the first 8 bytes of `SHA256("global:instruction_name")`. That tells you which instruction it is (`shared_accounts_route`, `exact_out_route`, etc.). The rest of the bytes are Borsh-encoded arguments: amounts, slippage, hop count. Account indices in the instruction get resolved to actual public keys using the transaction's full account list — including Address Lookup Tables, which is where mint addresses typically live in Jupiter transactions.
 
-**3. Write** — Each decoded swap becomes a row in `entity_changes` in Postgres, with a `fields` JSONB column containing all the decoded swap data. Rows start as `NEW`. A background sweeper polls the Solana RPC every 10 seconds for the current finalized slot and promotes eligible rows to `FINAL`.
+**3. Write**: Each decoded swap becomes a row in `entity_changes` in Postgres, with a `fields` JSONB column containing all the decoded swap data. Rows start as `NEW`. A background sweeper polls the Solana RPC every 10 seconds for the current finalized slot and promotes eligible rows to `FINAL`.
 
-**4. Serve** — PostgREST sits in front of Postgres and exposes the table as a REST API with no custom code. Filtering, ordering, pagination — all just query parameters.
+**4. Serve**: PostgREST sits in front of Postgres and exposes the table as a REST API with no custom code. Filtering, ordering, pagination — all just query parameters.
 
-**5. Gate** — seahorn-gateway (Axum) sits in front of PostgREST. Every inbound request must carry a valid TAP receipt — an EIP-712 signed payment struct. Invalid or missing receipt: 402. Valid: proxied through to PostgREST and the receipt is stored for later aggregation and on-chain GRT collection.
+**5. Gate**: seahorn-gateway (Axum) sits in front of PostgREST. Every inbound request must carry a valid TAP receipt — an EIP-712 signed payment struct. Invalid or missing receipt: 402. Valid: proxied through to PostgREST and the receipt is stored for later aggregation and on-chain GRT collection.
 
 The whole thing reconnects automatically if the gRPC stream drops, resumes from the last persisted cursor slot so nothing is double-written, and the payment loop runs entirely in the background.
 
@@ -120,10 +120,10 @@ Currently: **Jupiter v6 swaps** on Solana Mainnet.
 
 Jupiter is the dominant swap aggregator on Solana — the vast majority of DEX volume flows through it. Jupiter v6 supports four instruction variants:
 
-- `shared_accounts_route` — most common; uses shared token accounts to reduce per-swap overhead
-- `route` — classic route variant
-- `exact_out_route` — user specifies exact output amount
-- `shared_accounts_exact_out_route` — shared accounts + exact out
+- `shared_accounts_route`: most common; uses shared token accounts to reduce per-swap overhead
+- `route`: classic route variant
+- `exact_out_route`: user specifies exact output amount
+- `shared_accounts_exact_out_route`: shared accounts + exact out
 
 Each decoded swap produces one row in `entity_changes` with these fields:
 
@@ -155,7 +155,7 @@ Rows start as `NEW` (confirmed) and are promoted to `FINAL` by a background swee
 
 The indexer is built around three traits from `seahorn-core`:
 
-**`Substrate`** — a stream of raw blockchain events. The Yellowstone substrate connects to a Dragon's Mouth gRPC endpoint, subscribes to matching program IDs, and yields `SubstrateEvent` structs. Each event carries the slot, a 64-byte transaction signature, a commitment step, and the decoded instruction list.
+**`Substrate`**: a stream of raw blockchain events. The Yellowstone substrate connects to a Dragon's Mouth gRPC endpoint, subscribes to matching program IDs, and yields `SubstrateEvent` structs. Each event carries the slot, a 64-byte transaction signature, a commitment step, and the decoded instruction list.
 
 One non-obvious piece: Jupiter v6 (like most modern Solana DeFi programs) uses Address Lookup Tables to compress transaction size. The token mint addresses are rarely in the static account list — they live in `tx_info.meta.loaded_writable_addresses` and `tx_info.meta.loaded_readonly_addresses`. The substrate appends these to the static account keys before passing instructions downstream, which is what makes mint resolution work:
 
@@ -172,9 +172,9 @@ let account_keys: Vec<Vec<u8>> = {
 
 Miss this step and every swap comes through with empty mint addresses. Ask us how we found out.
 
-**`Handler`** — receives a `SubstrateEvent` and returns a `ChangeSet`. `JupiterV6Handler` matches instruction discriminators (Anchor-style SHA256 hashes of `"global:instruction_name"`) and decodes the binary instruction data into typed structs. Each matching instruction becomes one `EntityChange::Upsert` in the changeset.
+**`Handler`**: receives a `SubstrateEvent` and returns a `ChangeSet`. `JupiterV6Handler` matches instruction discriminators (Anchor-style SHA256 hashes of `"global:instruction_name"`) and decodes the binary instruction data into typed structs. Each matching instruction becomes one `EntityChange::Upsert` in the changeset.
 
-**`Sink`** — receives a `ChangeSet` and applies it. `PostgresSink` writes each entity change as a row in `entity_changes`, updates the cursor, and commits atomically. On reconnect after a crash, the substrate filters out any slots at or below the persisted cursor slot — so you resume exactly where you left off without double-writing.
+**`Sink`**: receives a `ChangeSet` and applies it. `PostgresSink` writes each entity change as a row in `entity_changes`, updates the cursor, and commits atomically. On reconnect after a crash, the substrate filters out any slots at or below the persisted cursor slot — so you resume exactly where you left off without double-writing.
 
 The runtime loop is about ten lines:
 
@@ -230,9 +230,9 @@ cast send 0xdDE3F913cb6D1332Bc018Eb63647020a87dD7B37 \
 
 You need a Dragon's Mouth gRPC endpoint with Solana Mainnet access. Options:
 
-- **Chainstack** — has a Yellowstone gRPC add-on on their Solana Mainnet plans
-- **Triton** — original Dragon's Mouth operators, specialist Solana infrastructure
-- **Helius** — also offers gRPC access
+- **Chainstack**: has a Yellowstone gRPC add-on on their Solana Mainnet plans
+- **Triton**: original Dragon's Mouth operators, specialist Solana infrastructure
+- **Helius**: also offers gRPC access
 
 Set `YELLOWSTONE_ENDPOINT` and `YELLOWSTONE_TOKEN` (if your provider requires one) in your environment.
 
@@ -352,11 +352,11 @@ The [Seahorn page on lodestar-dashboard.com](https://www.lodestar-dashboard.com/
 - Latest Solana slot seen
 - Unique wallets in the most recent 200 swaps
 
-**Live swap feed** — the 25 most recent confirmed swaps, refreshing every 5 seconds. Each row shows the wallet, the pair (with colour coding per token), the input amount, hop count, and a Solscan link to the transaction. New rows flash briefly on arrival. Rows where Jupiter's instruction variant doesn't encode mint addresses (the `route` and `exact_out_route` variants don't carry mints at fixed account positions) show dashes rather than question marks — the data isn't available at the instruction level for those variants.
+**Live swap feed**: the 25 most recent confirmed swaps, refreshing every 5 seconds. Each row shows the wallet, the pair (with colour coding per token), the input amount, hop count, and a Solscan link to the transaction. New rows flash briefly on arrival. Rows where Jupiter's instruction variant doesn't encode mint addresses (the `route` and `exact_out_route` variants don't carry mints at fixed account positions) show dashes rather than question marks — the data isn't available at the instruction level for those variants.
 
-**Top pairs** — bar chart of the most frequent token pair routes in the current 25-swap window.
+**Top pairs**: bar chart of the most frequent token pair routes in the current 25-swap window.
 
-**Provider info** — the on-chain contract address, provider address, indexed program, network, and payment rail, all in one table.
+**Provider info**: the on-chain contract address, provider address, indexed program, network, and payment rail, all in one table.
 
 The page connects through the `/api/seahorn/swaps` and `/api/seahorn/stats` Next.js API routes, which proxy to the dispatch-gateway server-side. The TAP receipt dance happens on the server and is invisible to the browser.
 

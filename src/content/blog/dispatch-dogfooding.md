@@ -104,9 +104,9 @@ The consumer address embedded in the URL is our operator wallet — the one that
 
 graph-node makes a lot of RPC calls. For a subgraph that's actively syncing on Base, the typical pattern is:
 
-- `eth_getLogs` (lots of these, historical ranges → Archive tier) — 20 CU each
-- `eth_getBlockByNumber` (latest and historical) — 5 CU each
-- `eth_call` (state reads, quorum dispatched to top-3 providers for determinism) — 10 CU each
+- `eth_getLogs` (lots of these, historical ranges → Archive tier): 20 CU each
+- `eth_getBlockByNumber` (latest and historical): 5 CU each
+- `eth_call` (state reads, quorum dispatched to top-3 providers for determinism): 10 CU each
 - `trace_block` or `trace_transaction` (traces-enabled subgraphs) → Debug tier — 10 CU default
 
 The dispatch-gateway detects the tier automatically from the method and parameters:

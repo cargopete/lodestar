@@ -54,8 +54,8 @@ We didn't want to write a think-piece about a problem we'd done nothing about, s
 
 We've deployed and dogfooded several new data services ourselves, precisely so that "is this even runnable?" stops being a question:
 
-- **[AMP](/blog/intro-to-amp)** — SQL analytics over chain data, [running on Arbitrum](/blog/camp-free-amp-api-arbitrum), self-hostable, with [a public node you can run locally](/blog/run-local-amp-node).
-- **[Dispatch](/blog/dispatch-json-rpc-horizon)** — decentralised JSON-RPC on Horizon, with a QoS-weighted gateway and GraphTally micropayments. It even [picked up a second provider](/blog/dispatch-second-provider-graphtronauts) — PaulieB from the Graphtronauts — which is the only reason its routing logic has anything to actually route.
+- **[AMP](/blog/intro-to-amp)**: SQL analytics over chain data, [running on Arbitrum](/blog/camp-free-amp-api-arbitrum), self-hostable, with [a public node you can run locally](/blog/run-local-amp-node).
+- **[Dispatch](/blog/dispatch-json-rpc-horizon)**: decentralised JSON-RPC on Horizon, with a QoS-weighted gateway and GraphTally micropayments. It even [picked up a second provider](/blog/dispatch-second-provider-graphtronauts) — PaulieB from the Graphtronauts — which is the only reason its routing logic has anything to actually route.
 - **[Seahorn](/blog/seahorn-solana-data-service)** (Solana) and others mapped on the catalogue.
 
 Every one of these went through the same path: read the contracts, stand up the infrastructure, provision the GRT, serve real traffic, pay real receipts. We've walked the road end to end so that nobody else can claim it's theoretical.

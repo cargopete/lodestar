@@ -56,7 +56,7 @@ command: [
 ]
 ```
 
-**OS-level tuning** — add `/etc/sysctl.d/99-indexer.conf`:
+**OS-level tuning**: add `/etc/sysctl.d/99-indexer.conf`:
 
 ```
 vm.swappiness=10
@@ -121,8 +121,8 @@ INDEXER_TAP_VERSION=ghcr.io/graphprotocol/indexer-tap-agent:1.12.3
 This is where the Horizon docs are incomplete and the actual ABI is your best friend.
 
 **Wallet architecture:**
-1. **Staking wallet** — holds your GRT, signs provision/stake transactions. Use a hardware wallet or Safe multisig. Cold.
-2. **Operator wallet** — a hot mnemonic that the indexer-agent uses for allocation and POI transactions. Fund with ~0.05 ETH on Arbitrum One. The agent logs `ETHBalance: 0` if this is empty and quietly refuses to submit any transactions.
+1. **Staking wallet**: holds your GRT, signs provision/stake transactions. Use a hardware wallet or Safe multisig. Cold.
+2. **Operator wallet**: a hot mnemonic that the indexer-agent uses for allocation and POI transactions. Fund with ~0.05 ETH on Arbitrum One. The agent logs `ETHBalance: 0` if this is empty and quietly refuses to submit any transactions.
 
 **The four transactions you need, in order:**
 

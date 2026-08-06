@@ -17,9 +17,9 @@ It's all shipped now. This post is the technical follow-through: how the EVM dec
 
 Everything that makes camp more than a log-dump endpoint rests on two UDFs that `ampd` exposes inside its DataFusion query engine.
 
-**`evm_topic(canonical_signature)`** — takes the canonical ABI event signature (no argument names, no `indexed` keywords, no spaces) and returns the topic0 keccak256 hash as a binary value. This is the `WHERE topic0 =` filter that makes event queries exact.
+**`evm_topic(canonical_signature)`**: takes the canonical ABI event signature (no argument names, no `indexed` keywords, no spaces) and returns the topic0 keccak256 hash as a binary value. This is the `WHERE topic0 =` filter that makes event queries exact.
 
-**`evm_decode_log(topic1, topic2, topic3, data, decode_signature)`** — takes the four log columns and the full event signature (with argument names and `indexed` keywords in place) and returns a DataFusion struct. Each field in the struct corresponds to one event argument, already typed: `address` arguments come back as binary, `uint256` and `int256` as numeric.
+**`evm_decode_log(topic1, topic2, topic3, data, decode_signature)`**: takes the four log columns and the full event signature (with argument names and `indexed` keywords in place) and returns a DataFusion struct. Each field in the struct corresponds to one event argument, already typed: `address` arguments come back as binary, `uint256` and `int256` as numeric.
 
 The two signatures look similar but serve different purposes:
 
@@ -133,13 +133,13 @@ GET /v1/horizon/{slug}     — paginated decoded events
 
 The 12 events cover four areas of the staking lifecycle:
 
-**Stake management** — `horizon-stake-deposited`, `horizon-stake-locked`, `horizon-stake-withdrawn`. A service provider's direct GRT position in the staking contract.
+**Stake management**: `horizon-stake-deposited`, `horizon-stake-locked`, `horizon-stake-withdrawn`. A service provider's direct GRT position in the staking contract.
 
-**Provisions** — `provision-created`, `provision-increased`, `provision-thawed`, `tokens-deprovisioned`. A provision is a ring-fenced slice of a service provider's stake allocated to a specific verifier. Creating a provision locks tokens under that verifier's slashing conditions.
+**Provisions**: `provision-created`, `provision-increased`, `provision-thawed`, `tokens-deprovisioned`. A provision is a ring-fenced slice of a service provider's stake allocated to a specific verifier. Creating a provision locks tokens under that verifier's slashing conditions.
 
-**Slashing** — `provision-slashed`, `delegation-slashed`. When a verifier slashes a service provider, these events record the tokens burned.
+**Slashing**: `provision-slashed`, `delegation-slashed`. When a verifier slashes a service provider, these events record the tokens burned.
 
-**Delegations** — `tokens-delegated`, `tokens-undelegated`, `delegated-tokens-withdrawn`. Third-party GRT delegated to a service provider under a specific verifier relationship.
+**Delegations**: `tokens-delegated`, `tokens-undelegated`, `delegated-tokens-withdrawn`. Third-party GRT delegated to a service provider under a specific verifier relationship.
 
 All token amounts are returned as decimal strings. The staking contract deals in GRT (18 decimals), so a deposit of 100,000 GRT arrives as `"100000000000000000000000"`.
 
@@ -265,11 +265,11 @@ The camp gateway itself (this repo) therefore requires no changes when ampd upgr
 
 Every API response sets `Cache-Control` based on where the queried block range sits relative to chain tip.
 
-**Finalized ranges** — requests whose `to_block` is more than 200 blocks behind the tip at query time get `public, s-maxage=3600, stale-while-revalidate=86400`. An hour of edge cache, a day of stale-while-revalidate. Historical data doesn't change; there's no point re-fetching it.
+**Finalized ranges**: requests whose `to_block` is more than 200 blocks behind the tip at query time get `public, s-maxage=3600, stale-while-revalidate=86400`. An hour of edge cache, a day of stale-while-revalidate. Historical data doesn't change; there's no point re-fetching it.
 
-**Near-tip ranges** — anything within 200 blocks of tip gets `public, s-maxage=5, stale-while-revalidate=30`. Five seconds at the edge, long enough for a dashboard refresh not to hammer the origin on every page load.
+**Near-tip ranges**: anything within 200 blocks of tip gets `public, s-maxage=5, stale-while-revalidate=30`. Five seconds at the edge, long enough for a dashboard refresh not to hammer the origin on every page load.
 
-**Raw SQL** — `POST /v1/sql` responses are `private, no-store`. The query is arbitrary; there's no reliable cache key short of hashing the full SQL body, and the Cloudflare edge won't cache POSTs anyway.
+**Raw SQL**: `POST /v1/sql` responses are `private, no-store`. The query is arbitrary; there's no reliable cache key short of hashing the full SQL body, and the Cloudflare edge won't cache POSTs anyway.
 
 The "is this finalized?" check uses the `to_block` parameter against `to_block + 200` as a proxy for tip — the actual tip isn't fetched on every request, which would add a round-trip. The heuristic is conservative: a range that was finalized an hour ago is definitely finalized now.
 
@@ -358,13 +358,13 @@ Rate limiting requires a Redis instance reachable from Vercel. The camp ops setu
 
 The main items in flight:
 
-**Anonymous tokens** — per-token sliding-window limits with a larger budget than the IP rate limit. The IP limit is calibrated to protect the node from anonymous abuse; a token lets you prove you're a real consumer without requiring an account.
+**Anonymous tokens**: per-token sliding-window limits with a larger budget than the IP rate limit. The IP limit is calibrated to protect the node from anonymous abuse; a token lets you prove you're a real consumer without requiring an account.
 
-**GMX V2** — the EventEmitter pattern GMX uses (a single contract emitting events for many protocol actions) needs a different decode approach than Uniswap V3's per-contract model. The mechanism is understood; it's a matter of shipping it.
+**GMX V2**: the EventEmitter pattern GMX uses (a single contract emitting events for many protocol actions) needs a different decode approach than Uniswap V3's per-contract model. The mechanism is understood; it's a matter of shipping it.
 
-**CSV and Arrow IPC response formats** — `Accept: text/csv` or `Accept: application/vnd.apache.arrow.stream` on any endpoint. Arrow IPC in particular is useful for piping directly into DuckDB or pandas without the JSON round-trip.
+**CSV and Arrow IPC response formats**: `Accept: text/csv` or `Accept: application/vnd.apache.arrow.stream` on any endpoint. Arrow IPC in particular is useful for piping directly into DuckDB or pandas without the JSON round-trip.
 
-**Webhooks** — POST to your URL when a matching event lands on-chain. Requires the CDC stream from the Flight shim first.
+**Webhooks**: POST to your URL when a matching event lands on-chain. Requires the CDC stream from the Flight shim first.
 
 ---
 

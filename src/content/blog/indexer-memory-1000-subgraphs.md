@@ -40,19 +40,19 @@ The indexer stack has four main components running on the VM (PostgreSQL lives s
 
 Graph-node's footprint is built from several distinct pools:
 
-**Entity cache** — The default is 10 MB per subgraph (`GRAPH_ENTITY_CACHE_SIZE=10000` KB). Multiply by 1,000 subgraphs and you're at **~10 GB before anything else loads**. This is the single biggest tunable lever at scale.
+**Entity cache**: The default is 10 MB per subgraph (`GRAPH_ENTITY_CACHE_SIZE=10000` KB). Multiply by 1,000 subgraphs and you're at **~10 GB before anything else loads**. This is the single biggest tunable lever at scale.
 
-**WASM runtimes** — Each subgraph instantiates a WASM runtime with a 512 KiB max stack, plus the module's linear memory. Call it **0.5–2 MB per subgraph**, or ~0.5–2 GB across 1,000.
+**WASM runtimes**: Each subgraph instantiates a WASM runtime with a 512 KiB max stack, plus the module's linear memory. Call it **0.5–2 MB per subgraph**, or ~0.5–2 GB across 1,000.
 
-**Write batch buffers** — Actively syncing subgraphs accumulate up to 10 MB of changes before flushing to the database. If 100 of your 1,000 subgraphs are catching up simultaneously, that's another ~1 GB.
+**Write batch buffers**: Actively syncing subgraphs accumulate up to 10 MB of changes before flushing to the database. If 100 of your 1,000 subgraphs are catching up simultaneously, that's another ~1 GB.
 
-**Query cache** — Shared across all subgraphs, defaulting to ~2 GB allocated (2× `GRAPH_QUERY_CACHE_MAX_MEM`). Production operators report actual consumption reaching **3× the configured value**. Set it to 2 GB, expect up to 6 GB in practice.
+**Query cache**: Shared across all subgraphs, defaulting to ~2 GB allocated (2× `GRAPH_QUERY_CACHE_MAX_MEM`). Production operators report actual consumption reaching **3× the configured value**. Set it to 2 GB, expect up to 6 GB in practice.
 
-**Block cache** — Recently processed blocks near chain head: ~1–2 GB shared.
+**Block cache**: Recently processed blocks near chain head: ~1–2 GB shared.
 
-**Connection pool** — Each database connection costs ~5–10 MB on both graph-node and PostgreSQL sides. Default is 10 connections; production setups commonly run 50–100+.
+**Connection pool**: Each database connection costs ~5–10 MB on both graph-node and PostgreSQL sides. Default is 10 connections; production setups commonly run 50–100+.
 
-**Base overhead** — Process baseline, internal data structures, and Rust allocator fragmentation in a long-running process: ~2–4 GB. The fragmentation piece is real — RSS can run 20–40% above theoretical allocation after extended uptime.
+**Base overhead**: Process baseline, internal data structures, and Rust allocator fragmentation in a long-running process: ~2–4 GB. The fragmentation piece is real — RSS can run 20–40% above theoretical allocation after extended uptime.
 
 Summed for 1,000 subgraphs under typical conditions:
 
@@ -93,21 +93,21 @@ The StakeSquid mainnet guide summarises the scaling reality plainly: *"More CPUs
 
 Graph-node exposes dozens of environment variables. For a 1,000-subgraph deployment, these have the highest impact:
 
-**`GRAPH_ENTITY_CACHE_SIZE`** — The single most impactful variable. Default is 10,000 KB (10 MB) per subgraph. Halving it to 5,000 KB saves ~5 GB across 1,000 subgraphs at the cost of slightly more frequent database writes. Worth tuning first.
+**`GRAPH_ENTITY_CACHE_SIZE`**: The single most impactful variable. Default is 10,000 KB (10 MB) per subgraph. Halving it to 5,000 KB saves ~5 GB across 1,000 subgraphs at the cost of slightly more frequent database writes. Worth tuning first.
 
 Production operators indexing heavy subgraphs commonly run `GRAPH_ENTITY_CACHE_SIZE=100000` (100 MB) — 10× the default. At that setting, entity caches alone account for ~170 GB at 1,700 subgraphs. Two independent real-world data points from active indexers confirm this: one operator reported 500 GB of index-node RAM for 1,700 subgraphs (~294 MB/subgraph); another reported 240 GB for 700 subgraphs (~343 MB/subgraph). Both are consistent with 100 MB entity caches plus runtime overhead. The estimates in this post assume default cache settings; if you're targeting performance on heavy subgraphs, budget ~300–350 MB per subgraph instead.
 
-**`GRAPH_QUERY_CACHE_MAX_MEM`** — Default 1,000 MB, but actual memory is 2× this by design and can reach 3× in practice. Set conservatively on index nodes (or disable entirely), more aggressively on dedicated query nodes.
+**`GRAPH_QUERY_CACHE_MAX_MEM`**: Default 1,000 MB, but actual memory is 2× this by design and can reach 3× in practice. Set conservatively on index nodes (or disable entirely), more aggressively on dedicated query nodes.
 
-**`GRAPH_GRAPHQL_ERROR_RESULT_SIZE`** — Not set by default, meaning a single badly-formed query can trigger an OOM. Set this. It costs nothing.
+**`GRAPH_GRAPHQL_ERROR_RESULT_SIZE`**: Not set by default, meaning a single badly-formed query can trigger an OOM. Set this. It costs nothing.
 
-**`GRAPH_MAX_IPFS_MAP_FILE_SIZE`** — Default 256 MB. Controls in-memory accumulation during `ipfs.map` calls. Lower this to reduce spike risk on IPFS-heavy subgraphs.
+**`GRAPH_MAX_IPFS_MAP_FILE_SIZE`**: Default 256 MB. Controls in-memory accumulation during `ipfs.map` calls. Lower this to reduce spike risk on IPFS-heavy subgraphs.
 
-**`STORE_CONNECTION_POOL_SIZE`** — Keep small (2–5) on index nodes, larger (50–100) on query nodes. Each connection costs memory on both sides of the wire.
+**`STORE_CONNECTION_POOL_SIZE`**: Keep small (2–5) on index nodes, larger (50–100) on query nodes. Each connection costs memory on both sides of the wire.
 
-**`GRAPH_ETHEREUM_TARGET_TRIGGERS_PER_BLOCK_RANGE`** — Default 100. Values too high cause "excessive memory usage" per the official documentation. Worth watching if you're indexing high-density chains.
+**`GRAPH_ETHEREUM_TARGET_TRIGGERS_PER_BLOCK_RANGE`**: Default 100. Values too high cause "excessive memory usage" per the official documentation. Worth watching if you're indexing high-density chains.
 
-**`GRAPH_CACHED_SUBGRAPH_IDS`** — Defaults to `*` (everything). On a 1,000-subgraph deployment, restricting this to high-traffic subgraphs prevents the query cache from wasting space on rarely-queried deployments.
+**`GRAPH_CACHED_SUBGRAPH_IDS`**: Defaults to `*` (everything). On a 1,000-subgraph deployment, restricting this to high-traffic subgraphs prevents the query cache from wasting space on rarely-queried deployments.
 
 ---
 

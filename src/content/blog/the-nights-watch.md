@@ -47,10 +47,10 @@ If you've read ["The Indexer Is the Farmer"](/blog/horizon-needs-indexers-to-run
 
 Like the order it's named for, the Watch has three ways to serve — pick whichever fits, or several:
 
-- **🛰️ Rangers** — build new data services, prototype, scout new sources and chains.
-- **🔨 Builders** — run the indexers, operate and maintain the infrastructure.
-- **📜 Stewards** — write the docs, support people, onboard newcomers, keep the comms running.
-- **🤝 Friends of the Watch** — delegators, curators, and anyone backing the mission without operating.
+- **🛰️ Rangers**: build new data services, prototype, scout new sources and chains.
+- **🔨 Builders**: run the indexers, operate and maintain the infrastructure.
+- **📜 Stewards**: write the docs, support people, onboard newcomers, keep the comms running.
+- **🤝 Friends of the Watch**: delegators, curators, and anyone backing the mission without operating.
 
 It's mission-first and **not a faction**. Everyone serious about an open Graph is welcome here, whatever other banner they fly. We hold the wall for the realm — not for any one house.
 

@@ -71,9 +71,9 @@ Each links to its full Lodestar disassembly and decode audit.
 
 Two stories in that table:
 
-**The `bytes128` cluster** — all seven are Circle CCTP deployments. `bytes128` is not a valid Solidity type; the ABI it came from should have used `bytes`. ethabi waved it through as a 128-byte fixed array; alloy correctly refuses. This is the exact #6683 case, now enumerated across every chain it was deployed to.
+**The `bytes128` cluster**: all seven are Circle CCTP deployments. `bytes128` is not a valid Solidity type; the ABI it came from should have used `bytes`. ethabi waved it through as a 128-byte fixed array; alloy correctly refuses. This is the exact #6683 case, now enumerated across every chain it was deployed to.
 
-**The `unit8` typo** — `solv-payable-factory-arbitrum`, carrying nearly 5,000 GRT of signal, decodes against `(address,address,uint256,unit8,…)`. That `unit8` is a typo for `uint8`. ethabi's fallback silently parsed it as `Uint(8)`, so the subgraph has been producing data all along — data that happened to be correct only because `Uint(8)` is what they meant anyway. On 0.42 the free pass ends. A latent typo, dormant for the life of the subgraph, detonated by a decoder upgrade.
+**The `unit8` typo**: `solv-payable-factory-arbitrum`, carrying nearly 5,000 GRT of signal, decodes against `(address,address,uint256,unit8,…)`. That `unit8` is a typo for `uint8`. ethabi's fallback silently parsed it as `Uint(8)`, so the subgraph has been producing data all along — data that happened to be correct only because `Uint(8)` is what they meant anyway. On 0.42 the free pass ends. A latent typo, dormant for the life of the subgraph, detonated by a decoder upgrade.
 
 ## An honest note on rigour
 

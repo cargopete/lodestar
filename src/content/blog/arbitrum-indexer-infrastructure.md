@@ -25,8 +25,8 @@ The old archive approach used LevelDB with a hash-based state scheme (HashDB). N
 
 The new approach uses two things together:
 
-- **PebbleDB** — a newer key-value store (developed by CockroachDB) replacing LevelDB. Faster write performance, better compaction. Default for all new Nitro databases since v3.1.0.
-- **PathDB** — a path-based state trie scheme replacing HashDB. The key property: continuous online pruning with no offline maintenance windows.
+- **PebbleDB**: a newer key-value store (developed by CockroachDB) replacing LevelDB. Faster write performance, better compaction. Default for all new Nitro databases since v3.1.0.
+- **PathDB**: a path-based state trie scheme replacing HashDB. The key property: continuous online pruning with no offline maintenance windows.
 
 Combined (archive-path mode), the disk footprint for Arbitrum One archive sits at approximately **4TB** — and stays there, rather than growing indefinitely.
 
@@ -153,11 +153,11 @@ Sensible values by chain:
 
 If your lag is 10–30 blocks and threshold changes do nothing, the problem is that block-walk itself is too slow to keep pace. Things to investigate:
 
-**`eth_call`s in mappings** — every `eth_call` in a subgraph handler is a synchronous RPC call made during indexing. On BSC with 3s blocks, a handful of slow `eth_call`s per block will guarantee lag. Check whether the subgraphs you're running make heavy use of `eth_call` in their handlers. This is the most common culprit.
+**`eth_call`s in mappings**: every `eth_call` in a subgraph handler is a synchronous RPC call made during indexing. On BSC with 3s blocks, a handful of slow `eth_call`s per block will guarantee lag. Check whether the subgraphs you're running make heavy use of `eth_call` in their handlers. This is the most common culprit.
 
-**RPC provider latency** — `eth_call` performance is entirely dependent on your RPC node's response time. A slow or overloaded provider adds directly to per-block processing time. If you're on a shared public endpoint, this is likely the issue.
+**RPC provider latency**: `eth_call` performance is entirely dependent on your RPC node's response time. A slow or overloaded provider adds directly to per-block processing time. If you're on a shared public endpoint, this is likely the issue.
 
-**eth_call cache** — graph-node has a built-in `eth_call` cache. Verify it's enabled and sized appropriately:
+**eth_call cache**: graph-node has a built-in `eth_call` cache. Verify it's enabled and sized appropriately:
 ```toml
 [store.primary]
 # ... your DB config
@@ -170,18 +170,18 @@ query_store_connection_pool_size = 10
 ```
 The relevant env var is `GRAPH_ETHEREUM_CALL_CACHE_FULL_TRIES`. Check the graph-node docs for current defaults.
 
-**Firehose** — the proper long-term solution for fast chains. Firehose streams pre-decoded block data via gRPC, eliminating the polling loop and JSON-RPC overhead entirely. Providers: Pinax, StreamingFast. If you're running high-value subgraphs on BSC at scale, Firehose is worth the setup cost.
+**Firehose**: the proper long-term solution for fast chains. Firehose streams pre-decoded block data via gRPC, eliminating the polling loop and JSON-RPC overhead entirely. Providers: Pinax, StreamingFast. If you're running high-value subgraphs on BSC at scale, Firehose is worth the setup cost.
 
-**Profiling graph-node** — Tehn noted that graph-node's profiling tooling is hard to activate in practice. The most useful observable signal is the `subgraph_query_execution_time` and indexing metrics in Prometheus if you have it configured. Failing that, debug-level logs will show per-block timing.
+**Profiling graph-node**: Tehn noted that graph-node's profiling tooling is hard to activate in practice. The most useful observable signal is the `subgraph_query_execution_time` and indexing metrics in Prometheus if you have it configured. Failing that, debug-level logs will show per-block timing.
 
 ### Debugging checklist
 
-1. **Is your lag > reorg_threshold?** — If yes, lower the threshold. If no (lag < threshold), skip to step 3.
-2. **Check polling_interval** — halve it, observe whether lag closes.
-3. **Check your ingestor node** — confirm exactly one node ingests the chain. See [Rule 1 in the stack architecture post](/blog/graph-node-stack-architecture).
-4. **Count eth_calls in your subgraph handlers** — open the subgraph manifest and look for `eth_call`s in mappings. Each one is a synchronous RPC roundtrip per occurrence per block.
-5. **Benchmark your RPC** — a simple `eth_call` latency test against your provider. If you're getting > 200ms responses, that's your lag multiplied by every block.
-6. **Consider Firehose** — if the subgraphs are long-running and mission-critical, the polling approach has a ceiling on fast chains.
+1. **Is your lag > reorg_threshold?** If yes, lower the threshold. If no (lag < threshold), skip to step 3.
+2. **Check polling_interval**: halve it, observe whether lag closes.
+3. **Check your ingestor node**: confirm exactly one node ingests the chain. See [Rule 1 in the stack architecture post](/blog/graph-node-stack-architecture).
+4. **Count eth_calls in your subgraph handlers**: open the subgraph manifest and look for `eth_call`s in mappings. Each one is a synchronous RPC roundtrip per occurrence per block.
+5. **Benchmark your RPC**: a simple `eth_call` latency test against your provider. If you're getting > 200ms responses, that's your lag multiplied by every block.
+6. **Consider Firehose**: if the subgraphs are long-running and mission-critical, the polling approach has a ceiling on fast chains.
 
 ### Why the defaults don't fit
 

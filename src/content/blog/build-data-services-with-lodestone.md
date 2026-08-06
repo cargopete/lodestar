@@ -26,8 +26,8 @@ The contract differs only in its tier enum and economics. The gateway, thanks to
 
 Lodestone asks which shape you're building:
 
-- **`proxy`** — you front an existing upstream over HTTP (an RPC node, a REST API, a file server, a graph-node). The gateway is `horizon_core::run()` verbatim; you write no Rust at all.
-- **`pipeline`** — *your service is the indexer*: a `Substrate` streams chain events, pure `Handler`s transform them into a `ChangeSet`, and a `Sink` writes them to Postgres. A `horizon-core` gateway sits in front of the query layer to take payment.
+- **`proxy`**: you front an existing upstream over HTTP (an RPC node, a REST API, a file server, a graph-node). The gateway is `horizon_core::run()` verbatim; you write no Rust at all.
+- **`pipeline`**: *your service is the indexer*: a `Substrate` streams chain events, pure `Handler`s transform them into a `ChangeSet`, and a `Sink` writes them to Postgres. A `horizon-core` gateway sits in front of the query layer to take payment.
 
 ## The whole journey, six steps
 

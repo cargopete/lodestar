@@ -25,9 +25,9 @@ Amp ships in two distinct flavours.
 
 The core is written in **Rust** (81% of the codebase) with TypeScript for developer tooling. The data stack:
 
-- **Apache DataFusion** — verifiable query transformations
-- **Apache Arrow** — in-memory columnar data processing
-- **Parquet** — storage format optimised for analytical workloads
+- **Apache DataFusion**: verifiable query transformations
+- **Apache Arrow**: in-memory columnar data processing
+- **Parquet**: storage format optimised for analytical workloads
 
 The main daemon (`ampd`) exposes two interfaces: a **JSON Lines over HTTP server** (port 1603) for simple SQL queries via curl, and an **Arrow Flight (gRPC) server** for high-performance columnar streaming. Metadata lives in PostgreSQL. Configuration is TOML-based.
 
@@ -75,12 +75,12 @@ Enterprise integrations target **Power BI, Snowflake, Datadog, Splunk, and Grafa
 
 Under the **Horizon** upgrade (GIP-0066), The Graph transformed from a subgraph-centric protocol into a modular platform for multiple data services. Six services now operate within the protocol:
 
-- **Subgraphs** — custom indexing APIs (the original)
-- **Substreams** — high-performance data streaming
-- **Token API** — pre-indexed token data
-- **Tycho** — real-time DEX liquidity tracking
-- **Amp** — enterprise blockchain-native database
-- **JSON-RPC Data Service** — core read/write functionality
+- **Subgraphs**: custom indexing APIs (the original)
+- **Substreams**: high-performance data streaming
+- **Token API**: pre-indexed token data
+- **Tycho**: real-time DEX liquidity tracking
+- **Amp**: enterprise blockchain-native database
+- **JSON-RPC Data Service**: core read/write functionality
 
 Amp is complementary to subgraphs, not a replacement. Subgraphs serve dapp developers through GraphQL. Amp targets data analysts, enterprise teams, and regulated institutions who work in SQL.
 

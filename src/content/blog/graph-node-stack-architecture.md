@@ -17,10 +17,10 @@ These rules are well-known among experienced indexers (credit to Marc-André Dum
 
 A graph-node deployment has four components:
 
-- **graph-node** — the Rust binary that ingests blocks, runs WASM subgraph mappings, stores entity data, and serves GraphQL queries
-- **PostgreSQL** — the main store for all subgraph entity data, block caches, deployment metadata, and assignment tables
-- **IPFS** — stores subgraph manifests, schemas, and WASM bytecode (network indexers typically use `https://ipfs.thegraph.com`)
-- **Chain RPC / Firehose** — blockchain data sources, either JSON-RPC endpoints or gRPC Firehose streams
+- **graph-node**: the Rust binary that ingests blocks, runs WASM subgraph mappings, stores entity data, and serves GraphQL queries
+- **PostgreSQL**: the main store for all subgraph entity data, block caches, deployment metadata, and assignment tables
+- **IPFS**: stores subgraph manifests, schemas, and WASM bytecode (network indexers typically use `https://ipfs.thegraph.com`)
+- **Chain RPC / Firehose**: blockchain data sources, either JSON-RPC endpoints or gRPC Firehose streams
 
 graph-node sits in the centre: it pulls blocks from chain providers, fetches manifests from IPFS, processes triggers through WASM handlers, writes entities to Postgres, and serves queries back out.
 
@@ -233,9 +233,9 @@ graphman --config config.toml config pools $all_node_ids
 
 Two approaches:
 
-**Single shared config** — all nodes read the same `config.toml`. Role differentiation happens via the `[general] query` regex and `[chains] ingestor` directive. Simpler to manage.
+**Single shared config**: all nodes read the same `config.toml`. Role differentiation happens via the `[general] query` regex and `[chains] ingestor` directive. Simpler to manage.
 
-**Per-node configs** — each instance gets its own TOML, loaded via `GRAPH_NODE_CONFIG=`. More flexible, but more files to keep in sync.
+**Per-node configs**: each instance gets its own TOML, loaded via `GRAPH_NODE_CONFIG=`. More flexible, but more files to keep in sync.
 
 The pitfall with shared config: if `[deployment]` placement rules aren't precise, a new deployment can land on the wrong node. Simulate first:
 

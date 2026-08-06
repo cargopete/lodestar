@@ -65,7 +65,7 @@ Substreams was the standout revenue story heading into 2026. Per Messari's State
 
 The broader product suite advanced on multiple fronts in H1 2026:
 
-- **Token API** — pre-indexed token balances, transfers, prices, and NFT metadata — was targeted for production-grade latency across 10+ chains in Q1 2026 (it had launched on TRON in November 2025).
+- **Token API**: pre-indexed token balances, transfers, prices, and NFT metadata — was targeted for production-grade latency across 10+ chains in Q1 2026 (it had launched on TRON in November 2025).
 - **Tycho**, a Substreams-built service for real-time DEX liquidity and pricing aimed at trading systems and solvers, was slated for a private MVP in Q1 and a public beta in Q2 2026.
 - **Amp**, Edge & Node's verifiable, SQL-native blockchain database for regulated/enterprise workloads, remained in developer preview through H1, with its full SQL platform targeted for Q4 2026. graph-node v0.42.0 shipped Amp-powered subgraphs and an experimental SQL query interface within GraphQL.
 
@@ -102,7 +102,7 @@ For analysts, builders, and token-holders tracking The Graph through the back ha
 ## Caveats
 
 - **No Messari (or equivalent audited) State of The Graph report exists for Q1 2026 or Q2 2026.** Every precise quarterly figure cited here for queries, demand-side fees, active subgraphs, Substreams revenue, and indexing rewards belongs to **Q4 2025 or earlier**. H1 2026 quantitative gaps are flagged in-text and should not be inferred.
-- **Live Explorer figures (86 indexers, ~676.8M GRT indexer stake, ~1.3B GRT delegated, ~167,823 delegators, ~317.3M GRT annual issuance) are current-state snapshots as of June 17, 2026** — they reflect a post-Q1/into-Q2 2026 state, not a clean quarter-end value, and are not directly comparable to Messari's quarter-end methodology.
+- **Live Explorer figures (86 indexers, ~676.8M GRT indexer stake, ~1.3B GRT delegated, ~167,823 delegators, ~317.3M GRT annual issuance) are current-state snapshots as of June 17, 2026**: they reflect a post-Q1/into-Q2 2026 state, not a clean quarter-end value, and are not directly comparable to Messari's quarter-end methodology.
 - **Q2 2026 is preliminary.** The quarter only just closed; protocol milestones (e.g., DIPs/REO mainnet activation, Tycho public beta) were "imminent" or "in testing" per the latest core-team updates rather than confirmed complete.
 - **Price and market-cap figures vary by source** due to different exchange-aggregation methods; ranges are given where trackers disagree (e.g., the Feb 2026 ATL near $0.0228 vs. a late-March print near $0.0231).
 - **Roadmap items are targets, not realized results.** Several "Q1 2026" deliverables (Horizon-based Subgraph Service mainnet, Token API production latency, Tycho MVP) are scheduled milestones; this report distinguishes confirmed shipments (REO contract deployment, DIPs GIP approvals, x402 gateway support, graph-node releases) from planned items.

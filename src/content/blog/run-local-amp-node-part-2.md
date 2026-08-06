@@ -153,10 +153,10 @@ New ones I hit in the first week that weren't in Part 1:
 
 Even with just 24 hours of chain history, the queries from Part 1's HorizonStaking framing are already useful:
 
-- **Live provision dashboard** — every `ProvisionCreated`/`ProvisionIncreased`/`ProvisionThawed` in the last day, refreshed on each page load
-- **Delegation flow** — net `TokensDelegated` minus `TokensUndelegated` per indexer per hour
-- **Slashing watch** — poll `ProvisionSlashed` + `DelegationSlashed` on a cron and alert
-- **Event replay** — any transaction hash → its full log trail, without calling the RPC
+- **Live provision dashboard**: every `ProvisionCreated`/`ProvisionIncreased`/`ProvisionThawed` in the last day, refreshed on each page load
+- **Delegation flow**: net `TokensDelegated` minus `TokensUndelegated` per indexer per hour
+- **Slashing watch**: poll `ProvisionSlashed` + `DelegationSlashed` on a cron and alert
+- **Event replay**: any transaction hash → its full log trail, without calling the RPC
 
 The subgraph will still tell you the current state more cheaply. What Amp gives you is the shape of the state change — not "this indexer has X stake" but "this indexer got X stake from these addresses across these blocks." That's the whole pitch for running one of these.
 

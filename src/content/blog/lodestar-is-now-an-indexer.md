@@ -17,9 +17,9 @@ No subgraphs are being indexed. No allocations are open. The status badge in our
 
 ## What we registered on
 
-**SubgraphService** — the original Graph data service, running under Horizon. Indexers provision GRT, open allocations against specific subgraph deployments, serve queries, and earn rewards proportional to their stake and the quality of their work. We have **147,720 GRT provisioned** and nothing allocated yet. That changes once graph-node is running and we've chosen which subgraphs to index.
+**SubgraphService**: the original Graph data service, running under Horizon. Indexers provision GRT, open allocations against specific subgraph deployments, serve queries, and earn rewards proportional to their stake and the quality of their work. We have **147,720 GRT provisioned** and nothing allocated yet. That changes once graph-node is running and we've chosen which subgraphs to index.
 
-**Dispatch** — our own experimental JSON-RPC data service, [described here](/blog/dispatch-json-rpc-horizon), serving Arbitrum One. We've been operating the infrastructure since launch. The registration today formalises it properly under HorizonStaking — same 147.72K GRT provision, two data services.
+**Dispatch**: our own experimental JSON-RPC data service, [described here](/blog/dispatch-json-rpc-horizon), serving Arbitrum One. We've been operating the infrastructure since launch. The registration today formalises it properly under HorizonStaking — same 147.72K GRT provision, two data services.
 
 One way to read this: we have skin in the game on both fronts now. If Dispatch has reliability problems, we feel them as a provider rather than just as observers. If SubgraphService reward mechanics shift, we're in the same position as every other indexer watching that in the dashboard.
 

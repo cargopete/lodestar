@@ -122,11 +122,11 @@ It's not trying to replace Dune. Dune has community queries, visualisations, a d
 
 camp is actively developed. A few things in progress:
 
-**Decoded protocol data (Phase A)** — Amp's `evm_decode_log` and `evm_topic` UDFs enable typed responses for specific protocol events. The goal is endpoints for Uniswap V3 (pool liquidity, swaps, fees), GMX, and other major Arbitrum protocols — decoded, strongly typed, not just raw logs.
+**Decoded protocol data (Phase A)**: Amp's `evm_decode_log` and `evm_topic` UDFs enable typed responses for specific protocol events. The goal is endpoints for Uniswap V3 (pool liquidity, swaps, fees), GMX, and other major Arbitrum protocols — decoded, strongly typed, not just raw logs.
 
-**Explore UI (Phase B)** — Server-rendered dashboard pages that demonstrate what the data looks like: live gas charts, whale activity feeds, slashing history. The data is already there; it just needs a frontend.
+**Explore UI (Phase B)**: Server-rendered dashboard pages that demonstrate what the data looks like: live gas charts, whale activity feeds, slashing history. The data is already there; it just needs a frontend.
 
-**Raw SQL (Phase C)** — `POST /v1/sql` for arbitrary SELECT queries against the Amp tables. Already implemented in camp-data-service (see below). Rate-limited and read-only.
+**Raw SQL (Phase C)**: `POST /v1/sql` for arbitrary SELECT queries against the Amp tables. Already implemented in camp-data-service (see below). Rate-limited and read-only.
 
 ---
 
