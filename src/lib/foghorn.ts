@@ -287,6 +287,33 @@ export interface FoghornQosSource {
   note: string;
 }
 
+/**
+ * Realised query fees, settled on Arbitrum.
+ *
+ * The one economic figure on this page nobody self-reports. Deliberately a separate type from the
+ * QoS feed's per-bucket fee fields, which stay null — see the note on the fee row in FIELD_MAPPING.
+ */
+export interface FoghornQosFees {
+  source: string;
+  measured_from: string;
+  window_days: number;
+  means: string;
+  total_settlements_indexed: number;
+  newest_settlement: string | null;
+  indexers: {
+    indexer_address: string;
+    settlements: number;
+    deployments: number;
+    payers: number;
+    grt_collected: number;
+    grt_to_curators: number;
+    latest_settlement: string | null;
+  }[];
+}
+
+export const fetchQosFees = (days = 30, limit = 200) =>
+  foghornGet<FoghornQosFees>(`qos/fees?days=${days}&limit=${limit}`);
+
 export interface FoghornQosStatus {
   checked_at: string;
   sources: FoghornQosSource[];

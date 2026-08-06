@@ -40,7 +40,8 @@ import {
   useFoghornIndexers,
 } from '@/hooks/useFoghorn';
 import type { BadgeVariant } from '@/components/ui/Badge';
-import type { FoghornQosSource } from '@/lib/foghorn';
+import type { FoghornQosSource, FoghornQosFees } from '@/lib/foghorn';
+import { fetchQosFees } from '@/lib/foghorn';
 import { shortenAddress, cn } from '@/lib/utils';
 import { gradeVariant } from '@/lib/foghorn';
 import { useQuery } from '@tanstack/react-query';
@@ -245,7 +246,7 @@ const FIELD_MAPPING: { field: string; meaning: string }[] = [
   },
   {
     field: 'avg_query_fee / total_query_fees',
-    meaning: 'Always null. Paid probes now carry a TAP receipt with a real value, but the rollup does not record what we spent, so this stays unmeasured rather than reporting a zero we did not verify.',
+    meaning: 'Always null, and staying that way. This field means fee-per-query within a bucket, and our buckets count probes rather than demand — so any number here would describe our own spending, not what an indexer earned. Realised earnings are served separately, from Arbitrum settlement, in the section above.',
   },
   {
     field: 'correctness_rate',
@@ -280,6 +281,12 @@ export default function QosPage() {
       return r.json();
     },
     staleTime: 15 * 60_000,
+    retry: 0,
+  });
+  const { data: fees } = useQuery<FoghornQosFees>({
+    queryKey: ['qos', 'fees'],
+    queryFn: () => fetchQosFees(30, 50),
+    staleTime: 10 * 60_000,
     retry: 0,
   });
   const conc = capture?.data.concentration;
@@ -628,6 +635,90 @@ export default function QosPage() {
               and every grade on this page rather than counted as failures. They are shown here
               because a reader deserves to know how much of this oracle&apos;s coverage is currently
               direct. Today, most of it is not.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Realised earnings, from settlement rather than self-report ── */}
+      {fees && fees.indexers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <CardTitle>Realised query fees, from Arbitrum</CardTitle>
+              <span className="text-[11px] text-[var(--text-faint)]">
+                {fees.total_settlements_indexed.toLocaleString()} settlements indexed · last{' '}
+                {fees.window_days}d
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-[var(--text-muted)]">
+              GRT indexers actually collected for queries they served, read from{' '}
+              <code>QueryFeesCollected</code> on the SubgraphService by a nuthatch nest we run
+              ourselves. Nobody self-reports this and no gateway sits in the path — it is settlement,
+              on a public chain.
+            </p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-[var(--text-muted)] border-b border-[var(--border)]">
+                    <th className="py-2 pr-4">Indexer</th>
+                    <th className="py-2 pr-4 text-right">GRT collected</th>
+                    <th className="py-2 pr-4 text-right">To curators</th>
+                    <th className="py-2 pr-4 text-right">Settlements</th>
+                    <th className="py-2 pr-4 text-right">Deployments</th>
+                    <th className="py-2 pr-4 text-right">Payers</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fees.indexers.slice(0, 15).map((ix) => (
+                    <tr
+                      key={ix.indexer_address}
+                      className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-elevated)]"
+                    >
+                      <td className="py-2 pr-4">
+                        <Link
+                          href={`/indexers/${ix.indexer_address}`}
+                          className="text-[var(--accent)] hover:underline text-xs"
+                          title={ix.indexer_address}
+                        >
+                          {indexerNames.get(ix.indexer_address.toLowerCase()) ??
+                            shortenAddress(ix.indexer_address)}
+                        </Link>
+                      </td>
+                      <td className="py-2 pr-4 text-right font-mono">
+                        {ix.grt_collected.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </td>
+                      <td className="py-2 pr-4 text-right font-mono text-[var(--text-muted)]">
+                        {ix.grt_to_curators.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </td>
+                      <td className="py-2 pr-4 text-right text-[var(--text-muted)]">
+                        {ix.settlements.toLocaleString()}
+                      </td>
+                      <td className="py-2 pr-4 text-right text-[var(--text-muted)]">
+                        {ix.deployments.toLocaleString()}
+                      </td>
+                      <td className="py-2 pr-4 text-right text-[var(--text-muted)]">{ix.payers}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="text-xs text-[var(--text-muted)]">
+              <span className="text-[var(--amber)]">This is not a per-query rate.</span> Settlement is
+              periodic and one event covers many queries, so there is no denominator to divide by. It
+              is also not our probe spending: these are fees earned from real users across every
+              payer, which is exactly the half of quality-of-service that probing cannot produce and
+              a gateway&apos;s telemetry cannot prove.
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              Kept separate from the feed above on purpose. The oracle schema&apos;s{' '}
+              <code>avg_query_fee</code> means fee-per-query within a bucket, and our buckets count
+              probes — merging these in would credit our synthetic traffic with money an indexer
+              earned from somebody else.
             </p>
           </CardContent>
         </Card>
