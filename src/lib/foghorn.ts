@@ -413,44 +413,6 @@ export interface CanonicalPoint {
   deployment_user_queries: number | null;
 }
 
-export interface CanonicalQos {
-  source: string;
-  served_by: string;
-  what: string;
-  /**
-   * Age of the newest data the oracle has actually PUBLISHED — not our sync time, and not the
-   * publisher's liveness. These are three different questions, and answering only the other two is
-   * how a 34-day hole stayed invisible: publisher posting, subgraph at chain tip, no data.
-   */
-  data?: {
-    newest_day_start: number | null;
-    age_seconds: number | null;
-    rows: number;
-    note: string;
-  };
-  /** Whether the subgraph is ACCEPTING the publisher's messages. It can be synced and reject all. */
-  subgraph?: {
-    indexed_block: number | null;
-    has_indexing_errors: boolean | null;
-    newest_message_at: string | null;
-    newest_message_accepted: boolean | null;
-    rejection_reason: string | null;
-    note: string;
-  } | null;
-  publisher: {
-    last_post: string | null;
-    age_seconds: number | null;
-    publish_lag_seconds: number | null;
-    measured_from: string;
-    note: string;
-  };
-  window_days: number;
-  count: number;
-  allocationDailyDataPoints: CanonicalPoint[];
-}
-
-export const fetchQosCanonical = (days = 1, limit = 1000) =>
-  foghornGet<CanonicalQos>(`qos/canonical?days=${days}&limit=${limit}`);
 
 // ── Presentation helpers ──────────────────────────────────────────────────────
 
