@@ -235,7 +235,7 @@ const FIELD_MAPPING: { field: string; meaning: string }[] = [
   },
   {
     field: 'avg_query_fee / total_query_fees',
-    meaning: 'Null until probes are TAP-paid. Null means not measured; zero would mean free.',
+    meaning: 'Always null. Paid probes now carry a TAP receipt with a real value, but the rollup does not record what we spent, so this stays unmeasured rather than reporting a zero we did not verify.',
   },
   {
     field: 'correctness_rate',
@@ -571,6 +571,51 @@ export default function QosPage() {
           </button>
         ))}
       </div>
+
+      {/* ── Paid direct probing: a fact about us, not about them ── */}
+      {status?.paid_dispatch && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Direct paid probing</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-[var(--text-muted)]">
+              Most quality feeds for The Graph, including ours until recently, reach indexers through
+              a gateway. That gateway picks who answers, and it picks indexers it already believes
+              are healthy, so the failures it avoids are invisible and any success rate built on it
+              is a ceiling. Paying indexers directly with TAP receipts removes that: we choose who
+              answers, so an indexer that would fail is observed failing.
+            </p>
+            <StatGrid>
+              <StatCard
+                label="Served"
+                value={status.paid_dispatch.served.toLocaleString()}
+                subtitle={`paid probes answered · last ${status.paid_dispatch.window_hours}h`}
+                tag={status.paid_dispatch.served > 0 ? 'live' : undefined}
+              />
+              <StatCard
+                label="Refused — no escrow seen"
+                value={status.paid_dispatch.refused_denylisted.toLocaleString()}
+                subtitle="their agent has not observed our deposit"
+              />
+              <StatCard
+                label="Refused — unfunded"
+                value={status.paid_dispatch.refused_unfunded.toLocaleString()}
+                subtitle="we hold no escrow with them"
+              />
+            </StatGrid>
+            <p className="text-xs text-[var(--text-muted)]">
+              <span className="text-[var(--amber)]">Refusals are our problem, not theirs.</span>{' '}
+              An indexer refuses because its tap-agent has not yet seen our escrow deposit on-chain,
+              which is a propagation delay on their side of a payment we made on ours. It says
+              nothing about how well they serve queries, so refusals are excluded from every number
+              and every grade on this page rather than counted as failures. They are shown here
+              because a reader deserves to know how much of this oracle&apos;s coverage is currently
+              direct — today, most of it is not.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Indexer quality, on our own numbers ── */}
       <Card>
@@ -1102,16 +1147,25 @@ export default function QosPage() {
                 fresh data right now&quot;.
               </li>
               <li>
-                <span className="text-[var(--amber)]">Our success rate is an upper bound, not a
-                measurement.</span>{' '}
-                Probes are dispatched through Edge &amp; Node&apos;s gateway, which routes to
-                indexers it believes are healthy, so failures it already avoids are invisible to
-                us. The comparison above shows it plainly: across every overlapping allocation our
-                success rate came out higher than theirs, never lower. That is selection bias in our
-                method, not an error in theirs. Removing it needs direct-to-indexer dispatch, and
-                every indexer tested answers an unpaid query with{' '}
-                <code>402 No Tap receipt was found in the request</code>, so it needs TAP payment
-                and a funded escrow first.
+                <span className="text-[var(--amber)]">How to read our success rate.</span>{' '}
+                {/* Straight from the API, which computes it from the actual dispatch mix. This was
+                    hand-written prose asserting that every probe went through Edge & Node's
+                    gateway; that stopped being true the moment paid direct probing was switched on,
+                    and nothing would have flagged it, because a caveat that is too harsh generates
+                    no complaints. */}
+                {buckets?.success_rate_bias ??
+                  'Unknown until the feed reports its dispatch mix — treat the success rate as an upper bound.'}
+                {buckets?.dispatch && (
+                  <>
+                    {' '}
+                    Over the last {buckets.window_hours}h:{' '}
+                    <strong>{buckets.dispatch.paid_direct.toLocaleString()}</strong> observations
+                    paid for directly,{' '}
+                    <strong>{buckets.dispatch.via_gateway.toLocaleString()}</strong> via the gateway.
+                  </>
+                )}{' '}
+                Where the two feeds overlap our success rate has come out higher than Edge &amp;
+                Node&apos;s, never lower, which is what selection bias looks like from the inside.
               </li>
               <li>
                 <strong>Which fields are unaffected.</strong> Correctness is the genuinely

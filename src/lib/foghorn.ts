@@ -290,6 +290,21 @@ export interface FoghornQosSource {
 export interface FoghornQosStatus {
   checked_at: string;
   sources: FoghornQosSource[];
+  /**
+   * Paid direct-to-indexer probing, reported as a fact about US.
+   *
+   * Refusals mean an indexer's tap-agent has not yet observed our escrow deposit. They are excluded
+   * from every measurement and grade — they describe our funding, not the operator — but they are
+   * shown here, because "we measure 40 indexers directly" and "we tried and 38 turned our money
+   * away" are very different claims about how good this oracle is.
+   */
+  paid_dispatch?: {
+    window_hours: number;
+    served: number;
+    refused_denylisted: number;
+    refused_unfunded: number;
+    note: string;
+  } | null;
 }
 
 /** One 5-minute measurement window for one (indexer, deployment). */
@@ -326,6 +341,21 @@ export interface FoghornQosBuckets {
   query_count_means: string;
   independent_of: string;
   window_hours: number;
+  /**
+   * How to read the success rate, computed by the API from the actual dispatch mix.
+   *
+   * Deliberately a string from the server rather than prose in this file. It was prose here, and it
+   * said every probe was routed through Edge & Node's gateway — true until direct paid probing was
+   * switched on, and silently false afterwards. A caveat that cannot go stale is worth more than a
+   * better-worded one that can.
+   */
+  success_rate_bias?: string;
+  /** Split of the window's observations by how they were obtained. Absent on older deployments. */
+  dispatch?: {
+    paid_direct: number;
+    via_gateway: number;
+    note: string;
+  } | null;
   buckets: FoghornQosBucket[];
 }
 
