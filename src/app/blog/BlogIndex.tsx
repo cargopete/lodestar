@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import type { PostMeta } from '@/lib/blog';
@@ -86,6 +86,22 @@ function PostGrid({ posts }: { posts: PostMeta[] }) {
 export default function BlogIndex({ posts }: { posts: PostMeta[] }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string>('All');
+  // Post bodies, fetched the first time someone actually searches. Until then
+  // matching runs on metadata alone, which is already in the page.
+  const [bodies, setBodies] = useState<Record<string, string> | null>(null);
+
+  const loadBodies = useCallback(() => {
+    setBodies((current) => {
+      if (current) return current;
+      fetch('/api/blog/search-index')
+        .then((r) => (r.ok ? r.json() : null))
+        // A failed fetch is not worth surfacing: search keeps working on
+        // titles, excerpts and tags, it just doesn't reach into post bodies.
+        .then((data) => data && setBodies(data))
+        .catch(() => {});
+      return current;
+    });
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -93,14 +109,11 @@ export default function BlogIndex({ posts }: { posts: PostMeta[] }) {
       const matchesCategory = category === 'All' || p.category === category;
       if (!matchesCategory) return false;
       if (!q) return true;
-      return (
-        p.title.toLowerCase().includes(q) ||
-        p.excerpt.toLowerCase().includes(q) ||
-        p.rawContent.toLowerCase().includes(q) ||
-        p.tags.some((t) => t.toLowerCase().includes(q))
-      );
+      // Both haystacks are lowercased server-side, so a keystroke costs one
+      // substring scan per post rather than re-folding the whole corpus.
+      return p.searchText.includes(q) || (bodies?.[p.slug]?.includes(q) ?? false);
     });
-  }, [posts, query, category]);
+  }, [posts, query, category, bodies]);
 
   const isFiltering = query.trim() !== '' || category !== 'All';
 
@@ -118,6 +131,10 @@ export default function BlogIndex({ posts }: { posts: PostMeta[] }) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            // Focus is the earliest reliable signal that someone means to
+            // search, so the bodies are usually in hand before the first
+            // keystroke lands.
+            onFocus={loadBodies}
             placeholder="Search posts…"
             className="w-full pl-9 pr-4 py-2 text-[13px] bg-[var(--bg-surface)] border border-[var(--border)] rounded-[var(--radius-button)] text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
           />
