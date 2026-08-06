@@ -61,7 +61,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const targetToken = agentToken ?? INDEXER_AGENT_TOKEN;
+  // INDEXER_AGENT_TOKEN belongs to INDEXER_AGENT_URL and travels only there.
+  // Falling back to it for a caller-supplied agentUrl would hand this server's
+  // management credentials to whatever public host the caller nominated, which
+  // the SSRF check cannot catch: it rejects private addresses, not attacker
+  // ones. A caller pointing at their own agent must bring their own token.
+  const targetToken = agentUrl ? agentToken : (agentToken ?? INDEXER_AGENT_TOKEN);
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (targetToken) {
     headers['Authorization'] = `Basic ${Buffer.from(targetToken).toString('base64')}`;
