@@ -1,12 +1,19 @@
 'use client';
 
 /**
- * The Free QoS — Foghorn's own quality-of-service feed.
+ * The Lodestar Oracle — Lodestar's own quality-of-service feed for The Graph.
  *
- * The headline is deliberately *freshness*, not any individual metric. On 2026-07-29 the
- * canonical oracle stopped publishing for 35 hours and no consumer could tell, because a stale
- * subgraph answers queries exactly like a fresh one. Putting both sources' ages at the top of
- * the page makes that failure visible the moment it happens, without anyone having to trust us.
+ * There is no canonical QoS oracle, and this page no longer pretends otherwise. Two independent
+ * oracles publish QoS for this network: Edge & Node's, built on what their gateway routed, and this
+ * one, built on active probing. They measure different populations by different means and neither
+ * is authoritative over the other. Lodestar used to also mirror and serve their data; it does not
+ * any more, because republishing someone else's numbers under our name bought a dependency on their
+ * pipeline and nothing we could not measure ourselves.
+ *
+ * The headline is deliberately *freshness*, not any individual metric. On 2026-07-29 Edge & Node's
+ * publisher stopped for 35 hours and no consumer could tell, because a stale subgraph answers
+ * queries exactly like a fresh one. Putting both oracles' ages at the top makes that failure
+ * visible the moment it happens — ours included, which is the point.
  */
 
 import { useMemo, useState } from 'react';
@@ -31,12 +38,13 @@ import {
   useQosCompare,
   useDeploymentNames,
   useFoghornIndexers,
-  useQosCanonical,
 } from '@/hooks/useFoghorn';
 import type { BadgeVariant } from '@/components/ui/Badge';
 import type { FoghornQosSource } from '@/lib/foghorn';
 import { shortenAddress, cn } from '@/lib/utils';
 import { gradeVariant } from '@/lib/foghorn';
+import { useQuery } from '@tanstack/react-query';
+import type { Concentration, TierCapture } from '@/lib/concentration';
 
 /** A code line with a copy button. Local because it is used only here. */
 function CopyRow({ text }: { text: string }) {
@@ -91,7 +99,8 @@ function staleness(source: FoghornQosSource): { variant: BadgeVariant; label: st
   // Relative to the source's own cadence, never a hardcoded number. A fixed 15-minute threshold
   // labelled our own feed "lagging" for ~45 minutes out of every hour, because the box probes
   // hourly — the page was crying wolf about itself. Two missed intervals is late; four is broken.
-  const interval = source.expected_interval_seconds ?? (source.source === 'foghorn' ? 3600 : 300);
+  const ours = source.source === 'lodestar-oracle' || source.source === 'foghorn';
+  const interval = source.expected_interval_seconds ?? (ours ? 3600 : 300);
   const warn = interval * 2;
   const bad = interval * 4;
   if (age >= bad) return { variant: 'error', label: 'stalled' };
@@ -124,6 +133,39 @@ const TOOLTIP_STYLE = {
   itemStyle: { color: 'var(--text-muted)' },
 };
 
+const TIER_COLOR: Record<TierCapture['tier'], string> = {
+  zero: 'var(--red)',
+  low: 'var(--amber)',
+  unscored: 'var(--text-faint)',
+  fair: 'var(--accent)',
+  good: 'var(--green)',
+};
+
+const fmtGrt = (g: number) =>
+  g >= 1e6 ? `${(g / 1e6).toFixed(1)}M` : g >= 1e3 ? `${(g / 1e3).toFixed(0)}K` : g.toFixed(0);
+
+function ConcStat({
+  label,
+  value,
+  sub,
+  bad,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  bad?: boolean;
+}) {
+  return (
+    <div className="rounded-lg bg-[var(--bg-elevated)] px-3 py-2.5">
+      <p className="text-[10px] text-[var(--text-faint)] mb-0.5">{label}</p>
+      <p className={cn('text-lg font-semibold font-mono', bad ? 'text-[var(--red)]' : 'text-[var(--text)]')}>
+        {value}
+      </p>
+      {sub && <p className="text-[10px] text-[var(--text-faint)] mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
 const PAGE_SIZE = 25;
 
 /**
@@ -145,7 +187,7 @@ const GRAPHQL_EXAMPLE = `# Your existing QoS oracle query, unchanged.
       proportion_indexer_200_responses
       avg_indexer_latency_ms
       avg_indexer_blocks_behind
-      correctness_rate   # Foghorn addition: was the data RIGHT?
+      correctness_rate   # Lodestar addition: was the data RIGHT?
     }
   }
 }`;
@@ -161,7 +203,7 @@ const REST_ENDPOINTS: { path: string; what: string }[] = [
   },
   {
     path: 'GET /api/foghorn/qos/compare?days=3',
-    what: 'Per-allocation agreement with the canonical oracle, plus its blind spots.',
+    what: "Per-allocation agreement with Edge & Node's oracle, plus its blind spots.",
   },
   {
     path: 'GET /api/foghorn/indexer/0x…/allocations-qos',
@@ -169,14 +211,14 @@ const REST_ENDPOINTS: { path: string; what: string }[] = [
   },
 ];
 
-// These describe the MEASURED feed (gateway_id: lodestar) only. The same field names on the
-// canonical feed carry the oracle's original meanings — `query_count` there is real routed traffic,
-// not probes — so the table says which feed it is talking about.
+// These describe the Lodestar Oracle (gateway_id: lodestar). Edge & Node's feed uses the same field
+// names with different meanings — `query_count` there is real routed traffic, not probes — so each
+// row says which oracle it is talking about.
 const FIELD_MAPPING: { field: string; meaning: string }[] = [
   {
     field: 'query_count',
     meaning:
-      'Measured feed: probes Foghorn dispatched, never a measure of demand. Canonical feed: real queries the gateway routed.',
+      'Lodestar Oracle: probes we dispatched, never a measure of demand. Edge & Node: real queries their gateway routed.',
   },
   {
     field: 'proportion_indexer_200_responses',
@@ -198,7 +240,7 @@ const FIELD_MAPPING: { field: string; meaning: string }[] = [
   {
     field: 'correctness_rate',
     meaning:
-      'Foghorn addition. Share of comparable responses matching the stake-weighted majority. Null when nothing was comparable — never read null as 100%.',
+      'Lodestar addition — no traffic census can produce it. Share of comparable responses matching the stake-weighted majority. Null when nothing was comparable; never read null as 100%.',
   },
   {
     field: 'gateway_id',
@@ -209,18 +251,29 @@ const FIELD_MAPPING: { field: string; meaning: string }[] = [
 export default function QosPage() {
   const [hours, setHours] = useState<6 | 24 | 168>(24);
   const [page, setPage] = useState(0);
-  const [canonDays, setCanonDays] = useState<1 | 3 | 7>(1);
-  const [canonPage, setCanonPage] = useState(0);
   const [scorePage, setScorePage] = useState(0);
   const { data: status, isLoading: statusLoading, isError: statusError } = useQosStatus();
   const { data: buckets, isLoading: bucketsLoading } = useQosBuckets(hours);
   const { data: compare, isLoading: compareLoading } = useQosCompare();
-  const { data: canonical, isLoading: canonicalLoading } = useQosCanonical(canonDays);
 
   // Name enrichment. Raw hex addresses and Qm… hashes are unreadable, and both lookups already
   // exist: `/v1/indexers` returns ens_name in batch (same queryKey as the rest of the site, so this
   // is usually a cache hit), and useDeploymentNames batch-resolves subgraph names.
   const { data: roster } = useFoghornIndexers();
+  const { data: capture } = useQuery<{
+    data: { concentration: Concentration; coverage: { allocated_indexers: number; measured_indexers: number } };
+  }>({
+    queryKey: ['qos', 'capture'],
+    queryFn: async () => {
+      const r = await fetch('/api/qos/capture');
+      if (!r.ok) throw new Error('capture unavailable');
+      return r.json();
+    },
+    staleTime: 15 * 60_000,
+    retry: 0,
+  });
+  const conc = capture?.data.concentration;
+  const captureCoverage = capture?.data.coverage;
   const indexerNames = useMemo(() => {
     const m = new Map<string, string>();
     for (const ix of roster?.indexers ?? []) {
@@ -239,8 +292,12 @@ export default function QosPage() {
   const nameOf = (addr: string) => indexerNames.get(addr.toLowerCase()) ?? shortenAddress(addr);
   const deploymentLabel = (hash: string) => deploymentNames?.[hash] ?? `${hash.slice(0, 10)}…`;
 
-  const oracle = status?.sources.find((s) => s.source !== 'foghorn');
-  const measured = status?.sources.find((s) => s.source === 'foghorn');
+  // Ours is `lodestar-oracle`; it answered to `foghorn` before the rename, and a deploy skew of a
+  // few minutes should not blank the headline card.
+  const isOurs = (s: FoghornQosSource) =>
+    s.source === 'lodestar-oracle' || s.source === 'foghorn';
+  const oracle = status?.sources.find((s) => !isOurs(s));
+  const measured = status?.sources.find(isOurs);
 
   /**
    * Roll buckets up per (indexer, deployment) for display.
@@ -372,46 +429,13 @@ export default function QosPage() {
     return [head, ...body].join('\n');
   };
 
-  const canonRows = useMemo(() => {
-    const pts = canonical?.allocationDailyDataPoints ?? [];
-    // Sorted by real query volume: with a traffic census the interesting rows are the ones actually
-    // serving load, unlike the probe feed where worst-first is the useful ordering.
-    return [...pts].sort((a, b) => (b.query_count ?? 0) - (a.query_count ?? 0));
-  }, [canonical]);
-  const canonPageRows = canonRows.slice(canonPage * PAGE_SIZE, (canonPage + 1) * PAGE_SIZE);
-
-  const canonCsv = () => {
-    const head = [
-      'indexer', 'ens_name', 'deployment', 'day_number', 'query_count',
-      'success_rate', 'avg_latency_ms', 'blocks_behind', 'served_share',
-      'avg_query_fee', 'total_query_fees',
-    ].join(',');
-    const body = canonRows.map((r) =>
-      [
-        r.indexer_wallet,
-        indexerNames.get(r.indexer_wallet.toLowerCase()) ?? '',
-        r.subgraph_deployment_ipfs_hash,
-        r.dayNumber,
-        r.query_count ?? '',
-        r.proportion_indexer_200_responses ?? '',
-        r.avg_indexer_latency_ms === null ? '' : Math.round(r.avg_indexer_latency_ms),
-        r.avg_indexer_blocks_behind === null ? '' : Math.round(r.avg_indexer_blocks_behind),
-        r.served_share ?? '',
-        r.avg_query_fee ?? '',
-        r.total_query_fees ?? '',
-      ].join(',')
-    );
-    return [head, ...body].join('\n');
-  };
-
   /**
    * Indexer quality, scored on Lodestar's own measurements.
    *
-   * This is what /indexer-qos used to show, except its score came from the canonical QoS oracle
-   * subgraph, whose data has been frozen at 2026-07-01 since its allowlist stopped recognising the
-   * publisher's signer. Ranking operators on month-old numbers while stamping today's date on them
-   * is the failure this page exists to expose, so the score now runs on correctness, availability,
-   * freshness and coverage — all measured here, by us.
+   * This is what /indexer-qos used to show, except its score came from Edge & Node's oracle. Ours
+   * now runs on correctness, availability, freshness and coverage — all measured here. Not because
+   * their numbers are bad, but because a score should be able to say where it came from, and one
+   * blended from two instruments measuring different populations cannot.
    */
   const scoredIndexers = useMemo(() => {
     const list = (roster?.indexers ?? []).filter((ix) => ix.rated);
@@ -439,32 +463,36 @@ export default function QosPage() {
     <div className="space-y-6">
       <header className="space-y-2">
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-semibold">The Free QoS</h1>
+          <h1 className="text-2xl font-semibold">The Lodestar Oracle</h1>
           <Badge variant="accent">gateway_id: lodestar</Badge>
           <Badge variant="default">no API key</Badge>
         </div>
         <p className="text-sm text-[var(--text-muted)] max-w-3xl">
-          Two feeds, kept deliberately distinct. <strong>The canonical QoS oracle&apos;s own data</strong>,
-          mirrored here so it stays queryable without an API key or Edge &amp; Node&apos;s gateway in
-          the read path — real traffic, real fees, real success rates. And{' '}
-          <strong>Lodestar&apos;s own measurements</strong>, produced by active probing, which keep
-          running when their publisher stalls. Both are served in the oracle&apos;s own schema:{' '}
-          <code>gateway_id</code> is on every data point because the format was built for several
-          gateways, so this is a second one rather than a fork.
+          An independent QoS oracle for The Graph, built on active probing rather than gateway
+          telemetry. Every number below was measured here. It is served in the QoS oracle&apos;s own
+          schema — <code>gateway_id</code> is on every data point because the format was built for
+          several gateways — so an existing consumer query works against it unchanged, with no API
+          key and nobody&apos;s gateway in the read path.
+        </p>
+        <p className="text-sm text-[var(--text-muted)] max-w-3xl">
+          There is no canonical QoS oracle. There is this one and there is Edge &amp; Node&apos;s,
+          and they are not the same instrument: theirs counts what their gateway actually routed —
+          real traffic, real fees, real demand — while this one probes deliberately and can tell you
+          whether a response was <em>correct</em>, which no traffic census can. Lodestar mirrored and
+          served their feed until 2026-08-05 and has stopped. Their numbers are still read here for
+          one purpose: comparing ours against a second opinion, below.
         </p>
         <p className="text-xs text-[var(--text-muted)] max-w-3xl">
-          When the publisher stops, this mirror stops with it, because it is fed by the same
-          subgraph. That is a limit of how it is built today rather than a law: the CIDs are on
-          Gnosis and the payloads are fetchable from IPFS, so a gap can be reconstructed from source.
-          Nothing here has been backfilled that way yet, and where data is missing the page says so
-          instead of quietly ending the series.
+          What this oracle cannot produce: query volume, fees, or any measure of demand. Probes are
+          not traffic. Where a figure is unmeasured this page says so rather than showing a
+          comfortable zero.
         </p>
       </header>
 
       {/* The headline: how old is each feed. */}
       <StatGrid>
         <StatCard
-          label="Canonical oracle"
+          label="Edge & Node oracle"
           value={formatAge(oracle?.age_seconds)}
           subtitle={oracle ? 'since last publish' : 'not ingested'}
           tag={oracle ? staleness(oracle).label : undefined}
@@ -472,7 +500,7 @@ export default function QosPage() {
           loading={statusLoading}
         />
         <StatCard
-          label="Foghorn QoS"
+          label="Lodestar Oracle"
           value={formatAge(measured?.age_seconds)}
           subtitle={
             measured?.expected_interval_seconds
@@ -509,7 +537,7 @@ export default function QosPage() {
       {statusError && (
         <Card>
           <CardContent className="text-sm text-[var(--text-muted)]">
-            Foghorn API unreachable. The feed may be fine — this page is not.
+            The oracle's API is unreachable. The feed may be fine — this page is not.
           </CardContent>
         </Card>
       )}
@@ -520,7 +548,7 @@ export default function QosPage() {
           <CardContent className="text-xs text-[var(--text-muted)] space-y-1">
             <div>
               <span className="text-[var(--amber)]">Read this before comparing volumes:</span>{' '}
-              {buckets.query_count_means}. It reflects Foghorn&apos;s probe cadence, not demand.
+              {buckets.query_count_means}. It reflects our probe cadence, not demand.
             </div>
             <div>Method: {buckets.method}.</div>
           </CardContent>
@@ -544,182 +572,6 @@ export default function QosPage() {
         ))}
       </div>
 
-      {/* ── The canonical oracle's own data, from our mirror. Lead with this. ── */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <CardTitle>Canonical QoS oracle data — mirrored</CardTitle>
-            <div className="flex items-center gap-2">
-              {([1, 3, 7] as const).map((d) => (
-                <button
-                  key={d}
-                  onClick={() => { setCanonDays(d); setCanonPage(0); }}
-                  className={cn(
-                    'px-3 py-1 text-xs rounded border transition-colors',
-                    canonDays === d
-                      ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-dim)]'
-                      : 'border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]'
-                  )}
-                >
-                  {d}d
-                </button>
-              ))}
-              <ExportButton
-                onExport={canonCsv}
-                filename={`canonical-qos-${canonDays}d.csv`}
-                label="Export CSV"
-                disabled={canonRows.length === 0}
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-[var(--text-muted)]">
-            Edge &amp; Node&apos;s own published numbers, held by Lodestar and served without an API
-            key or their gateway in the read path. Real traffic: genuine query counts, fees, and
-            success rates over queries users actually sent.
-          </p>
-
-          {canonical && (
-            <div className="space-y-2">
-              {/* The number that actually matters: how old is the DATA. A live publisher and a
-                  synced subgraph can both be true while this is a month stale. */}
-              <div
-                className={cn(
-                  'text-xs rounded p-3',
-                  (canonical.data?.age_seconds ?? 0) > 2 * 86400
-                    ? 'bg-[var(--red-dim)] text-[var(--red)]'
-                    : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
-                )}
-              >
-                Newest canonical data is{' '}
-                <strong>{formatAge(canonical.data?.age_seconds)} old</strong>
-                {(canonical.data?.age_seconds ?? 0) > 2 * 86400 && (
-                  <>
-                    {' '}— the oracle has published nothing newer, so every consumer of it (this
-                    table included) is showing data from then.
-                  </>
-                )}
-              </div>
-
-              {/* Root cause, when there is one. A rejection reason names the offending address, which
-                  is the difference between "something is wrong" and "here is what to fix". */}
-              {canonical.subgraph?.newest_message_accepted === false && (
-                <div className="text-xs rounded p-3 bg-[var(--red-dim)] text-[var(--red)]">
-                  <strong>The oracle&apos;s subgraph is rejecting the publisher&apos;s messages.</strong>{' '}
-                  It is synced to block{' '}
-                  {canonical.subgraph.indexed_block?.toLocaleString() ?? '—'} with{' '}
-                  {canonical.subgraph.has_indexing_errors ? 'indexing errors' : 'no indexing errors'},
-                  and is discarding every post:{' '}
-                  <code className="break-all">{canonical.subgraph.rejection_reason}</code>. Messages
-                  keep arriving on-chain; none become data. That is why the figures above are stale
-                  while the publisher looks alive.
-                </div>
-              )}
-
-              <div className="text-xs rounded p-3 bg-[var(--bg-elevated)] text-[var(--text-muted)]">
-                Publisher last posted{' '}
-                <strong>{formatAge(canonical.publisher.age_seconds)} ago</strong>
-                {canonical.publisher.publish_lag_seconds !== null && (
-                  <> (publish lag {Math.round(canonical.publisher.publish_lag_seconds / 60)}m)</>
-                )}
-                . {canonical.publisher.note}
-              </div>
-            </div>
-          )}
-
-          {canonicalLoading ? (
-            <div className="text-sm text-[var(--text-muted)]">Loading…</div>
-          ) : canonRows.length === 0 ? (
-            <div className="text-sm text-[var(--text-muted)]">
-              Mirror has no rows for this window yet.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-[var(--text-muted)] border-b border-[var(--border)]">
-                    <th className="py-2 pr-4">Indexer</th>
-                    <th className="py-2 pr-4">Deployment</th>
-                    <th className="py-2 pr-4 text-right">Queries</th>
-                    <th className="py-2 pr-4 text-right">Share</th>
-                    <th className="py-2 pr-4 text-right">Success</th>
-                    <th className="py-2 pr-4 text-right">Latency</th>
-                    <th className="py-2 pr-4 text-right">Behind</th>
-                    <th className="py-2 pr-4 text-right">Fees</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {canonPageRows.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-elevated)]"
-                    >
-                      <td className="py-2 pr-4">
-                        <Link
-                          href={`/indexers/${r.indexer_wallet}`}
-                          className="text-[var(--accent)] hover:underline text-xs"
-                          title={r.indexer_wallet}
-                        >
-                          {nameOf(r.indexer_wallet)}
-                        </Link>
-                      </td>
-                      <td
-                        className="py-2 pr-4 text-xs text-[var(--text-muted)] max-w-[16rem] truncate"
-                        title={r.subgraph_deployment_ipfs_hash}
-                      >
-                        <Link
-                          href={`/subgraphs/${r.subgraph_deployment_ipfs_hash}`}
-                          className="hover:underline"
-                        >
-                          {deploymentLabel(r.subgraph_deployment_ipfs_hash)}
-                        </Link>
-                      </td>
-                      <td className="py-2 pr-4 text-right">
-                        {r.query_count === null ? '—' : Math.round(r.query_count).toLocaleString()}
-                      </td>
-                      <td className="py-2 pr-4 text-right text-[var(--text-muted)]">
-                        {pct(r.served_share)}
-                      </td>
-                      <td className="py-2 pr-4 text-right">
-                        <span
-                          className={cn(
-                            (r.proportion_indexer_200_responses ?? 1) < 0.9 && 'text-[var(--red)]',
-                            (r.proportion_indexer_200_responses ?? 0) >= 0.99 && 'text-[var(--green)]'
-                          )}
-                        >
-                          {pct(r.proportion_indexer_200_responses)}
-                        </span>
-                      </td>
-                      <td className="py-2 pr-4 text-right">{ms(r.avg_indexer_latency_ms)}</td>
-                      <td className="py-2 pr-4 text-right">
-                        {r.avg_indexer_blocks_behind === null
-                          ? '—'
-                          : Math.round(r.avg_indexer_blocks_behind)}
-                      </td>
-                      <td className="py-2 pr-4 text-right text-[var(--text-muted)]">
-                        {r.total_query_fees === null ? '—' : r.total_query_fees.toFixed(4)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <Pagination
-                page={canonPage}
-                pageSize={PAGE_SIZE}
-                totalItems={canonRows.length}
-                onPageChange={setCanonPage}
-              />
-            </div>
-          )}
-          <p className="text-xs text-[var(--text-muted)]">
-            <strong>Share</strong> is this indexer&apos;s portion of all indexer attempts on that
-            deployment — it needs every indexer&apos;s real traffic, so no probe-based feed can
-            compute it. <strong>Fees</strong> are GRT actually collected.
-          </p>
-        </CardContent>
-      </Card>
-
       {/* ── Indexer quality, on our own numbers ── */}
       <Card>
         <CardHeader>
@@ -728,8 +580,8 @@ export default function QosPage() {
         <CardContent className="space-y-3">
           <p className="text-sm text-[var(--text-muted)]">
             Composite of four things we measure ourselves: correctness (0.40), availability (0.30),
-            freshness (0.20) and coverage (0.10). No sub-score, verdict or alert reads the canonical
-            oracle any more, so a stall upstream leaves every number here untouched.
+            freshness (0.20) and coverage (0.10). No sub-score, verdict or alert reads anyone else's
+            feed, so a stall upstream leaves every number here untouched.
           </p>
           <p className="text-xs text-[var(--text-muted)]">
             Only indexers Lodestar has actually probed appear. That is the whole list — roughly a
@@ -832,6 +684,94 @@ export default function QosPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ── Where the rewards actually sit, against measured quality ── */}
+      {conc && conc.totalAllocatedGrt > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <CardTitle>Allocated stake by measured quality</CardTitle>
+              <span className="text-[11px] text-[var(--text-faint)]">
+                {fmtGrt(conc.totalAllocatedGrt)} GRT allocated · {conc.indexerCount} indexers
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-[var(--text-muted)]">
+              Allocated stake earns indexing rewards. This is how it splits across the quality bands
+              the Lodestar Oracle measured — which is a different question from how much stake exists,
+              and the one that says whether rewards are reaching indexers who serve.
+            </p>
+
+            <div className="flex w-full h-8 rounded-lg overflow-hidden border border-[var(--border)]">
+              {conc.tiers.map((tier) => (
+                <div
+                  key={tier.tier}
+                  style={{ width: `${tier.alloc_share * 100}%`, backgroundColor: TIER_COLOR[tier.tier] }}
+                  className="h-full"
+                  title={`${tier.label}: ${(tier.alloc_share * 100).toFixed(1)}% · ${tier.indexers} indexers · ${fmtGrt(tier.alloc_grt)} GRT`}
+                />
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {conc.tiers.map((tier) => (
+                <div key={tier.tier} className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: TIER_COLOR[tier.tier] }} />
+                  <span className="text-[11px] text-[var(--text-muted)]">{tier.label}</span>
+                  <span className="text-[11px] font-mono text-[var(--text)]">
+                    {(tier.alloc_share * 100).toFixed(0)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <ConcStat
+                label="Measured low-value"
+                value={`${(conc.lowValueShare * 100).toFixed(0)}%`}
+                sub={`${fmtGrt(conc.lowValueGrt)} GRT scored under 30`}
+                bad={conc.lowValueShare > 0.2}
+              />
+              <ConcStat
+                label="Not measured"
+                value={`${(conc.unmeasuredShare * 100).toFixed(0)}%`}
+                sub={`${fmtGrt(conc.unmeasuredGrt)} GRT we have not probed`}
+              />
+              <ConcStat
+                label={`Top ${conc.topN} share`}
+                value={`${(conc.topNShare * 100).toFixed(0)}%`}
+                sub="stake concentration"
+                bad={conc.topNShare > 0.5}
+              />
+              <ConcStat
+                label="Gini / Nakamoto"
+                value={`${conc.gini.toFixed(2)} / ${conc.nakamoto}`}
+                sub="inequality · entities >50%"
+              />
+            </div>
+
+            <p className="text-xs text-[var(--text-muted)]">
+              <span className="text-[var(--amber)]">Read the grey band carefully.</span> &quot;Not
+              measured&quot; is stake behind indexers this oracle has not probed
+              {captureCoverage && (
+                <>
+                  {' '}
+                  — {captureCoverage.measured_indexers} of {captureCoverage.allocated_indexers}{' '}
+                  allocated indexers have been
+                </>
+              )}
+              . It is a gap in our coverage, not a finding about them, and it is deliberately kept out
+              of the low-value figure. An earlier version of this chart counted unscored stake as
+              crowding-out, which quietly turned &quot;we did not look&quot; into an accusation.
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              Concentration figures (Gini, Nakamoto, top-{conc.topN}) are computed over allocated
+              stake alone and involve no quality measurement at all, so they cover the whole network
+              regardless of what we probed.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {series.length > 1 && (
         <Card>
@@ -991,10 +931,10 @@ export default function QosPage() {
         </CardContent>
       </Card>
 
-      {/* ── Do we agree with the canonical oracle? ── */}
+      {/* ── Do we agree with the other oracle? ── */}
       <Card>
         <CardHeader>
-          <CardTitle>Agreement with the canonical oracle</CardTitle>
+          <CardTitle>Agreement with Edge &amp; Node&apos;s oracle</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--text-muted)]">
@@ -1045,7 +985,7 @@ export default function QosPage() {
               <p className="text-xs text-[var(--text-muted)]">
                 <span className="text-[var(--amber)]">Disagreement is not automatically our
                 error.</span>{' '}
-                The oracle sees real user traffic through one gateway; Foghorn sees synthetic
+                Their oracle sees real user traffic through one gateway; ours sees synthetic
                 block-pinned probes from one location. Different query mixes, different geography,
                 very different sample sizes. And {compare.not_compared.query_count}.
               </p>
@@ -1053,7 +993,7 @@ export default function QosPage() {
               {compare.pairs.filter((p) => p.oracle_blind_spot).length > 0 && (
                 <div className="space-y-2">
                   <div className="text-xs font-medium">
-                    Allocations the oracle scores well but Foghorn caught serving wrong data
+                    Allocations their oracle scores well but ours caught serving wrong data
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
@@ -1121,7 +1061,7 @@ export default function QosPage() {
             <h3 className="font-medium">How the numbers are made</h3>
             <ul className="list-disc pl-5 space-y-1 text-[var(--text-muted)]">
               <li>
-                Foghorn sends GraphQL probes pinned to a specific block hash at chainhead − 12,
+                We send GraphQL probes pinned to a specific block hash at chainhead − 12,
                 so every indexer is asked the identical question about identical state.
               </li>
               <li>
@@ -1149,7 +1089,7 @@ export default function QosPage() {
           </section>
 
           <section className="space-y-1">
-            <h3 className="font-medium">Where this differs from the canonical oracle</h3>
+            <h3 className="font-medium">Where this differs from Edge &amp; Node&apos;s oracle</h3>
             <ul className="list-disc pl-5 space-y-1 text-[var(--text-muted)]">
               <li>
                 <strong>Probes, not traffic.</strong> Our <code>query_count</code> is how often we
@@ -1223,14 +1163,14 @@ export default function QosPage() {
           <section className="space-y-1">
             <h3 className="font-medium">Why this exists</h3>
             <p className="text-[var(--text-muted)]">
-              On 2026-07-29 the canonical oracle stopped publishing for over 35 hours. The relayer
+              On 2026-07-29 Edge &amp; Node&apos;s oracle stopped publishing for over 35 hours. The relayer
               was fine — funded, no failed transactions, no stuck nonce — so nothing on-chain
               revealed it, and every consumer kept serving stale numbers that looked current, this
               dashboard included.
             </p>
             <p className="text-[var(--text-muted)]">
               Watching for that turned up something larger. Since 2026-07-01 the oracle&apos;s
-              canonical subgraph (<code>Dtr9r…</code>) has rejected every message the publisher
+              main subgraph deployment (<code>Dtr9r…</code>) has rejected every message the publisher
               sends, with <code>&quot;… is not a valid submitter&quot;</code> — the publisher moved
               to a signer its allowlist does not carry — while sitting at chain tip reporting no
               indexing errors. The posts keep arriving and none become data. Anyone querying that
@@ -1255,6 +1195,12 @@ export default function QosPage() {
               Hence the ages on the front of this page, and hence the parts below that say
               &quot;not measured&quot; rather than showing a comfortable zero.
             </p>
+            <p className="text-[var(--text-muted)]">
+              And hence, since 2026-08-05, no mirror. Lodestar held a copy of Edge &amp; Node&apos;s
+              published history and served it, which sounded like resilience and was really a second
+              way to hand people stale numbers with our name on them. Two oracles measuring the
+              network independently is worth more than one oracle and a photocopy.
+            </p>
           </section>
         </CardContent>
       </Card>
@@ -1268,7 +1214,7 @@ export default function QosPage() {
           <section className="space-y-2">
             <h3 className="font-medium">GraphQL — drop-in for the oracle subgraph</h3>
             <p className="text-[var(--text-muted)]">
-              The endpoint mirrors the oracle&apos;s entities and field names, including{' '}
+              The endpoint reuses the QoS oracle&apos;s entities and field names, including{' '}
               <code>allocationDailyDataPoints</code>, <code>indexer(id:)</code>,{' '}
               <code>subgraphDeployment(id:)</code> and <code>queryDailyDataPoints</code>, with the
               same <code>where</code> filters (<code>dayNumber</code>,{' '}
@@ -1302,9 +1248,10 @@ export default function QosPage() {
           <section className="space-y-2">
             <h3 className="font-medium">Field mapping</h3>
             <p className="text-xs text-[var(--text-muted)]">
-              What each field means on <strong>Lodestar&apos;s measured feed</strong>. On the
-              canonical mirror the same names keep the oracle&apos;s original meanings, which are not
-              the same thing — most importantly <code>query_count</code>.
+              What each field means on <strong>the Lodestar Oracle</strong>. Edge &amp; Node&apos;s
+              feed uses the same names for different things — most importantly{' '}
+              <code>query_count</code> — so a consumer switching between the two must reread this
+              table, not assume it.
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">

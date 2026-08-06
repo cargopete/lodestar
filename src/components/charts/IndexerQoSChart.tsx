@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import Link from 'next/link';
 import { useIndexerQoS } from '@/hooks/useNetworkStats';
 import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import { formatGRTFull } from '@/lib/utils';
@@ -140,7 +141,19 @@ export function IndexerQoSChart({ indexer }: { indexer: string }) {
   return (
     <Card className="min-w-0 overflow-hidden">
       <CardHeader>
-        <CardTitle>Query Performance</CardTitle>
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <CardTitle>Query Performance</CardTitle>
+          {/* Provenance, stated. These are Edge & Node's oracle figures — real routed traffic, real
+              fees, which the Lodestar Oracle cannot produce because probes are not demand. Two
+              oracles now report on this network and an unlabelled chart makes the reader guess. */}
+          <Link
+            href="/qos"
+            className="text-[11px] text-[var(--text-faint)] hover:text-[var(--accent)]"
+            title="These figures come from Edge & Node's QoS oracle, which counts queries their gateway actually routed. The Lodestar Oracle measures by probing and reports different things — see /qos."
+          >
+            source: Edge &amp; Node QoS oracle
+          </Link>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (

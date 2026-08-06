@@ -47,11 +47,11 @@ describe('computeConcentration', () => {
 
   it('computes the crowded-out (low-value) share + counterfactual uplift', () => {
     const c = computeConcentration(rows);
-    // zero(50) + low(30) + unscored(20) = 100 of 200
-    expect(c.lowValueGrt).toBe(100);
-    expect(c.lowValueShare).toBeCloseTo(0.5, 9);
-    // removing 50% → productive rewards scale by 1/(1-0.5) = 2×
-    expect(c.productiveUpliftFactor).toBeCloseTo(2, 9);
+    // zero(50) + low(30) = 80 of 200. The unscored 20 is NOT crowding — see below.
+    expect(c.lowValueGrt).toBe(80);
+    expect(c.lowValueShare).toBeCloseTo(0.4, 9);
+    // removing 40% → productive rewards scale by 1/(1-0.4) ≈ 1.667×
+    expect(c.productiveUpliftFactor).toBeCloseTo(1 / 0.6, 9);
   });
 
   it('computes top-N share', () => {
@@ -61,11 +61,22 @@ describe('computeConcentration', () => {
     expect(c.topNShare).toBeCloseTo(0.75, 9);
   });
 
-  it('treats unscored (never-routed) indexers as low-value crowding', () => {
+  /**
+   * Unmeasured allocation is a gap in coverage, never evidence of low value.
+   *
+   * It used to count as crowding, back when "unscored" meant the gateway had never routed to them.
+   * Under the Lodestar Oracle it means "we have not probed them", and most of the network is in
+   * that state — so counting it would assert that two thirds of the network's stake is worthless
+   * on the strength of us not having looked.
+   */
+  it('does not count unmeasured allocation as crowding', () => {
     const c = computeConcentration([
       { allocated_grt: 1000, q_score: null },
       { allocated_grt: 1000, q_score: 90 },
     ]);
-    expect(c.lowValueShare).toBeCloseTo(0.5, 9);
+    expect(c.lowValueShare).toBe(0);
+    expect(c.unmeasuredShare).toBeCloseTo(0.5, 9);
+    // No measured low-value allocation means no counterfactual uplift to claim.
+    expect(c.productiveUpliftFactor).toBeCloseTo(1, 9);
   });
 });

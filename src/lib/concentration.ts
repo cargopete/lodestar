@@ -12,7 +12,7 @@
 export interface IndexerAllocation {
   /** GRT allocated (the reward-bearing weight). */
   allocated_grt: number;
-  /** QoS quality 0–100, or null if the gateway never routed traffic (no QoS data). */
+  /** Quality 0–100, or null when this indexer has not been measured. */
   q_score: number | null;
 }
 
@@ -34,11 +34,22 @@ export interface Concentration {
   topNShare: number; // share held by the top N (default 6)
   topN: number;
   tiers: TierCapture[];
-  /** Allocation held by zero+low-value (and unscored) indexers — the crowded-out slice. */
+  /**
+   * Allocation held by indexers MEASURED to be low- or zero-value — the crowded-out slice.
+   *
+   * Unscored allocation is deliberately excluded. It used to be counted here, back when "unscored"
+   * meant "the gateway never routed to them", which is itself weak evidence of low value. It now
+   * means "we have not probed them", and folding that into a crowding-out claim would assert that
+   * every indexer outside our sample is worthless — turning a gap in our coverage into an
+   * accusation against two thirds of the network. It is reported separately, as a gap.
+   */
   lowValueGrt: number;
   lowValueShare: number;
   /** If low-value allocations were redistributed, productive indexers' rewards scale by this factor. */
   productiveUpliftFactor: number;
+  /** Allocation we hold no quality measurement for. Not a verdict — a coverage figure. */
+  unmeasuredGrt: number;
+  unmeasuredShare: number;
 }
 
 const TIER_LABELS: Record<QualityTier, string> = {
@@ -46,7 +57,7 @@ const TIER_LABELS: Record<QualityTier, string> = {
   low: 'Very low / narrow (Q 15–30)',
   fair: 'Fair (Q 30–60)',
   good: 'Good (Q≥60)',
-  unscored: 'Unscored (no routed traffic)',
+  unscored: 'Not measured',
 };
 
 function tierOf(q: number | null): QualityTier {
@@ -89,6 +100,7 @@ export function computeConcentration(rows: IndexerAllocation[], topN = 6): Conce
   // Tier capture.
   const tierAgg = new Map<QualityTier, { indexers: number; alloc: number }>();
   let lowValueGrt = 0;
+  let unmeasuredGrt = 0;
   for (const r of rows) {
     if (r.allocated_grt <= 0) continue;
     const t = tierOf(r.q_score);
@@ -96,7 +108,9 @@ export function computeConcentration(rows: IndexerAllocation[], topN = 6): Conce
     a.indexers += 1;
     a.alloc += r.allocated_grt;
     tierAgg.set(t, a);
-    if (t === 'zero' || t === 'low' || t === 'unscored') lowValueGrt += r.allocated_grt;
+    // Measured-and-poor is a finding. Unmeasured is a gap. They are counted apart.
+    if (t === 'zero' || t === 'low') lowValueGrt += r.allocated_grt;
+    if (t === 'unscored') unmeasuredGrt += r.allocated_grt;
   }
 
   const order: QualityTier[] = ['zero', 'low', 'unscored', 'fair', 'good'];
@@ -119,6 +133,7 @@ export function computeConcentration(rows: IndexerAllocation[], topN = 6): Conce
     : 0;
 
   const lowValueShare = totalAllocatedGrt > 0 ? lowValueGrt / totalAllocatedGrt : 0;
+  const unmeasuredShare = totalAllocatedGrt > 0 ? unmeasuredGrt / totalAllocatedGrt : 0;
   const productiveUpliftFactor = lowValueShare < 1 ? 1 / (1 - lowValueShare) : Infinity;
 
   return {
@@ -132,5 +147,7 @@ export function computeConcentration(rows: IndexerAllocation[], topN = 6): Conce
     lowValueGrt,
     lowValueShare,
     productiveUpliftFactor,
+    unmeasuredGrt,
+    unmeasuredShare,
   };
 }

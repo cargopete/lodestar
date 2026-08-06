@@ -56,8 +56,12 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      // Page renamed to Indexer QoS (v4.10.0); preserve old bookmarks/links.
-      { source: '/network-health', destination: '/indexer-qos', permanent: true },
+      // Indexer QoS was folded into /qos on 2026-08-06. It ranked indexers off Edge & Node's
+      // gateway telemetry while /qos ranked them off our own measurements — two pages disagreeing
+      // about the same operators, with nothing on either saying which instrument it used. One
+      // oracle, one ranking, one page. /network-health was this page's name before that.
+      { source: '/network-health', destination: '/qos', permanent: true },
+      { source: '/indexer-qos', destination: '/qos', permanent: true },
     ];
   },
 };
