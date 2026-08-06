@@ -11,6 +11,9 @@ const GENERATOR_URL = 'https://redstart-lang.com/generator?utm_source=lodestar&u
 const RED = '#ff3355';
 const EMBER = '#ff7a45';
 const RED_DEEP = '#a60f33';
+// RED as type on this banner's tinted background is 3.83:1. This is the same
+// hue lifted just far enough to clear 4.5:1, used only for the wordmark text.
+const RED_TEXT = '#ff5c77';
 
 export function RedstartBanner() {
   const { dismissed, dismiss } = useDismissible(STORAGE_KEY);
@@ -36,7 +39,7 @@ export function RedstartBanner() {
       </span>
 
       <p className="flex-1 min-w-0 text-[12px] md:text-[13px] text-[var(--text)]">
-        <span className="font-semibold" style={{ color: RED }}>
+        <span className="font-semibold" style={{ color: RED_TEXT }}>
           Redstart
         </span>{' '}
         is the typed language for The Graph subgraphs. Paste any contract into{' '}

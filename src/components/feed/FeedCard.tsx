@@ -20,6 +20,15 @@ export function FeedCard({ item }: FeedCardProps) {
       : 'var(--red)'
     : config.borderColor;
 
+  // The same value tints the 3px left border and the badge label. A border can
+  // be any contrast; the label is 10px type and has to clear 4.5:1. Red and the
+  // brand purple only manage that in their lighter tints, so swap for those two.
+  // Green, amber and cyan already pass and are left alone.
+  const labelColor =
+    { 'var(--red)': 'var(--red-text)', 'var(--accent)': 'var(--accent-text)', 'var(--star-base)': 'var(--accent-text)' }[
+      borderColor
+    ] ?? borderColor;
+
   return (
     <>
       <div
@@ -34,7 +43,7 @@ export function FeedCard({ item }: FeedCardProps) {
         <div className="flex items-center justify-between mb-1.5">
           <span
             className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded"
-            style={{ color: borderColor, backgroundColor: config.bgColor }}
+            style={{ color: labelColor, backgroundColor: config.bgColor }}
           >
             {config.label}
           </span>
@@ -122,7 +131,7 @@ export function FeedCard({ item }: FeedCardProps) {
               <div className="flex items-center gap-2">
                 <span
                   className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded"
-                  style={{ color: borderColor, backgroundColor: config.bgColor }}
+                  style={{ color: labelColor, backgroundColor: config.bgColor }}
                 >
                   {config.label}
                 </span>
