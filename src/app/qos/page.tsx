@@ -40,8 +40,8 @@ import {
   useFoghornIndexers,
 } from '@/hooks/useFoghorn';
 import type { BadgeVariant } from '@/components/ui/Badge';
-import type { FoghornQosSource, FoghornQosFees } from '@/lib/foghorn';
-import { fetchQosFees } from '@/lib/foghorn';
+import type { FoghornQosSource, FoghornQosFees, FoghornQosConflicts } from '@/lib/foghorn';
+import { fetchQosFees, fetchQosConflicts } from '@/lib/foghorn';
 import { shortenAddress, cn } from '@/lib/utils';
 import { gradeVariant } from '@/lib/foghorn';
 import { useQuery } from '@tanstack/react-query';
@@ -287,6 +287,12 @@ export default function QosPage() {
     queryKey: ['qos', 'fees'],
     queryFn: () => fetchQosFees(30, 50),
     staleTime: 10 * 60_000,
+    retry: 0,
+  });
+  const { data: conflicts } = useQuery<FoghornQosConflicts>({
+    queryKey: ['qos', 'conflicts'],
+    queryFn: () => fetchQosConflicts(7, 50),
+    staleTime: 5 * 60_000,
     retry: 0,
   });
   const conc = capture?.data.concentration;
@@ -652,6 +658,90 @@ export default function QosPage() {
               is that an indexer&apos;s <code>tap-agent</code> needs our payer address mapped to a
               reachable aggregator in its own config, which is not something we can set for them. If
               you operate an indexer and know which it is, we would genuinely like to hear.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Disagreements that carry signatures ── */}
+      {conflicts && conflicts.count > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <CardTitle>Signed contradictions</CardTitle>
+              <span className="text-[11px] text-[var(--text-faint)]">
+                last {conflicts.window_days}d
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-[var(--text-muted)]">
+              Two indexers asked the <em>identical</em> question about the identical block, who then
+              signed <em>different</em> answers with their allocation keys. Everything else on this
+              page is our measurement of somebody&apos;s data. This is their own signature on it.
+            </p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-[var(--text-muted)] border-b border-[var(--border)]">
+                    <th className="py-2 pr-4">Deployment</th>
+                    <th className="py-2 pr-4">Block</th>
+                    <th className="py-2 pr-4">Indexer</th>
+                    <th className="py-2 pr-4">signed responseCID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {conflicts.conflicts.slice(0, 10).flatMap((c) =>
+                    ([c.a, c.b] as const).map((side, i) => (
+                      <tr
+                        key={`${c.probe_id}-${i}`}
+                        className={cn(
+                          'border-[var(--border)] hover:bg-[var(--bg-elevated)]',
+                          i === 1 ? 'border-b' : ''
+                        )}
+                      >
+                        <td className="py-2 pr-4 text-xs">
+                          {i === 0 ? deploymentLabel(c.deployment_id) : ''}
+                        </td>
+                        <td className="py-2 pr-4 text-xs text-[var(--text-muted)]">
+                          {i === 0 ? c.block_number?.toLocaleString() ?? '—' : ''}
+                        </td>
+                        <td className="py-2 pr-4">
+                          {side.indexer ? (
+                            <Link
+                              href={`/indexers/${side.indexer}`}
+                              className="text-[var(--accent)] hover:underline text-xs"
+                              title={side.indexer}
+                            >
+                              {indexerNames.get(side.indexer.toLowerCase()) ??
+                                shortenAddress(side.indexer)}
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-[var(--text-faint)]">unresolved</span>
+                          )}
+                        </td>
+                        <td className="py-2 pr-4 font-mono text-[11px] text-[var(--text-muted)]">
+                          {(side.response_cid ?? '').slice(0, 22)}…
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="text-xs text-[var(--text-muted)]">
+              <span className="text-[var(--amber)]">This is not an accusation, and it does not say
+              who is wrong.</span>{' '}
+              {conflicts.not_a_verdict} Both indexers appear here because both signed, and exactly
+              one of them is serving data that does not match its peer. Deciding which is an
+              arbitrator&apos;s job under <code>DisputeManager</code>, and we are not it.
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              Why it is worth showing anyway: {conflicts.how_to_check} A traffic census counting
+              HTTP 200s cannot produce this, and neither can our own hashing on its own. It is the
+              one thing here you can check without trusting us at all.
             </p>
           </CardContent>
         </Card>

@@ -311,6 +311,33 @@ export interface FoghornQosFees {
   }[];
 }
 
+/**
+ * Divergences carrying signatures on both sides.
+ *
+ * Distinct from the correctness signal elsewhere on the page, which clusters on a hash we compute.
+ * These are the hashes the indexers themselves SIGNED, which is what makes the disagreement
+ * checkable by someone who does not trust Lodestar.
+ */
+export interface FoghornQosConflicts {
+  window_days: number;
+  count: number;
+  means: string;
+  not_a_verdict: string;
+  how_to_check: string;
+  conflicts: {
+    probe_id: string;
+    deployment_id: string;
+    block_number: number | null;
+    observed_at: string;
+    request_cid: string | null;
+    a: { indexer: string | null; response_cid: string | null; attestation: unknown };
+    b: { indexer: string | null; response_cid: string | null; attestation: unknown };
+  }[];
+}
+
+export const fetchQosConflicts = (days = 7, limit = 50) =>
+  foghornGet<FoghornQosConflicts>(`qos/conflicts?days=${days}&limit=${limit}`);
+
 export const fetchQosFees = (days = 30, limit = 200) =>
   foghornGet<FoghornQosFees>(`qos/fees?days=${days}&limit=${limit}`);
 
