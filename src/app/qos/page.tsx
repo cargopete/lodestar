@@ -617,9 +617,9 @@ export default function QosPage() {
                 tag={status.paid_dispatch.served > 0 ? 'live' : undefined}
               />
               <StatCard
-                label="Refused: no escrow seen"
+                label="Refused: denylisted sender"
                 value={status.paid_dispatch.refused_denylisted.toLocaleString()}
-                subtitle="their agent has not observed our deposit"
+                subtitle="cause not established, see below"
               />
               <StatCard
                 label="Refused: unfunded"
@@ -629,12 +629,29 @@ export default function QosPage() {
             </StatGrid>
             <p className="text-xs text-[var(--text-muted)]">
               <span className="text-[var(--amber)]">Refusals are our problem, not theirs.</span>{' '}
-              An indexer refuses because its tap-agent has not yet seen our escrow deposit on-chain,
-              which is a propagation delay on their side of a payment we made on ours. It says
-              nothing about how well they serve queries, so refusals are excluded from every number
-              and every grade on this page rather than counted as failures. They are shown here
-              because a reader deserves to know how much of this oracle&apos;s coverage is currently
-              direct. Today, most of it is not.
+              They say nothing about how well an indexer serves queries, so they are excluded from
+              every number and every grade on this page rather than counted as failures. They are
+              shown because a reader deserves to know how much of this oracle&apos;s coverage is
+              actually direct. Today, most of it is not.
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              {/* This paragraph replaced a confident wrong answer. It previously said refusals were
+                  a propagation delay that would resolve on its own. The data says otherwise, and
+                  publishing a tidy explanation we had not checked is the same failure this page was
+                  built to complain about, committed by us. */}
+              <strong>Why they refuse is not established, and we would rather say so.</strong> We
+              first published that their agent simply had not seen our deposit yet, and that it would
+              clear. It has not. Of 19 indexers we hold escrow with, two have ever answered a paid
+              probe, both did so on the very first attempt, and none have joined in the day since. A
+              propagation delay would have them trickling in; this looks like configuration.
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              What we have ruled out: the escrow itself. It is funded and readable on-chain, 10 GRT
+              per indexer against a 0.1 GRT dust floor, verified against{' '}
+              <code>PaymentsEscrow</code> rather than taken on trust. The likeliest remaining cause
+              is that an indexer&apos;s <code>tap-agent</code> needs our payer address mapped to a
+              reachable aggregator in its own config, which is not something we can set for them. If
+              you operate an indexer and know which it is, we would genuinely like to hear.
             </p>
           </CardContent>
         </Card>
