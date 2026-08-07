@@ -335,6 +335,8 @@ export interface FoghornQosConflicts {
     signers: {
       indexer: string | null;
       resolved: boolean;
+      /** The allocation key that signed. One operator can hold several, so a name can repeat. */
+      signing_key: string;
       response_cid: string | null;
       attestation: unknown;
     }[];

@@ -720,7 +720,10 @@ export default function QosPage() {
                               ) : (
                                 <span className="text-xs text-[var(--text-faint)]">unresolved</span>
                               )}
-                              <span className="font-mono text-[11px] text-[var(--text-muted)]">
+                              <span
+                                className="font-mono text-[11px] text-[var(--text-muted)]"
+                                title={`signed by allocation ${s.signing_key}`}
+                              >
                                 {(s.response_cid ?? '').slice(0, 18)}…
                               </span>
                             </div>
@@ -740,6 +743,13 @@ export default function QosPage() {
                   slashable is the last place to be casual about it. */}
               <span className="text-[var(--amber)]">This is not an accusation.</span>{' '}
               {conflicts.not_a_verdict}
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              A name can appear twice in one row, and that is not a rendering fault. An operator may
+              hold several allocations on a deployment, each with its own signing key, and each can
+              answer. When the same operator signs two different answers to one block-pinned probe it
+              is contradicting itself, which is a stronger finding than two operators disagreeing,
+              not a weaker one. Hover a hash to see which allocation signed it.
             </p>
             <p className="text-xs text-[var(--text-muted)]">
               Why it is worth showing anyway: {conflicts.how_to_check} A traffic census counting
