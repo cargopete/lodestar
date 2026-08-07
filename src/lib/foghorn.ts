@@ -330,8 +330,14 @@ export interface FoghornQosConflicts {
     block_number: number | null;
     observed_at: string;
     request_cid: string | null;
-    a: { indexer: string | null; response_cid: string | null; attestation: unknown };
-    b: { indexer: string | null; response_cid: string | null; attestation: unknown };
+    /** How many different answers were signed. Three signers with two answers means two agreed. */
+    distinct_answers: number;
+    signers: {
+      indexer: string | null;
+      resolved: boolean;
+      response_cid: string | null;
+      attestation: unknown;
+    }[];
   }[];
 }
 

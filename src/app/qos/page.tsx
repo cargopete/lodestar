@@ -676,7 +676,7 @@ export default function QosPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-[var(--text-muted)]">
-              Two indexers asked the <em>identical</em> question about the identical block, who then
+              Indexers asked the <em>identical</em> question about the identical block, who then
               signed <em>different</em> answers with their allocation keys. Everything else on this
               page is our measurement of somebody&apos;s data. This is their own signature on it.
             </p>
@@ -686,62 +686,67 @@ export default function QosPage() {
                 <thead>
                   <tr className="text-left text-xs text-[var(--text-muted)] border-b border-[var(--border)]">
                     <th className="py-2 pr-4">Deployment</th>
-                    <th className="py-2 pr-4">Block</th>
-                    <th className="py-2 pr-4">Indexer</th>
-                    <th className="py-2 pr-4">signed responseCID</th>
+                    <th className="py-2 pr-4 text-right">Block</th>
+                    <th className="py-2 pr-4 text-right">Signers</th>
+                    <th className="py-2 pr-4">Answers signed</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {conflicts.conflicts.slice(0, 10).flatMap((c) =>
-                    ([c.a, c.b] as const).map((side, i) => (
-                      <tr
-                        key={`${c.probe_id}-${i}`}
-                        className={cn(
-                          'border-[var(--border)] hover:bg-[var(--bg-elevated)]',
-                          i === 1 ? 'border-b' : ''
-                        )}
-                      >
-                        <td className="py-2 pr-4 text-xs">
-                          {i === 0 ? deploymentLabel(c.deployment_id) : ''}
-                        </td>
-                        <td className="py-2 pr-4 text-xs text-[var(--text-muted)]">
-                          {i === 0 ? c.block_number?.toLocaleString() ?? '—' : ''}
-                        </td>
-                        <td className="py-2 pr-4">
-                          {side.indexer ? (
-                            <Link
-                              href={`/indexers/${side.indexer}`}
-                              className="text-[var(--accent)] hover:underline text-xs"
-                              title={side.indexer}
-                            >
-                              {indexerNames.get(side.indexer.toLowerCase()) ??
-                                shortenAddress(side.indexer)}
-                            </Link>
-                          ) : (
-                            <span className="text-xs text-[var(--text-faint)]">unresolved</span>
-                          )}
-                        </td>
-                        <td className="py-2 pr-4 font-mono text-[11px] text-[var(--text-muted)]">
-                          {(side.response_cid ?? '').slice(0, 22)}…
-                        </td>
-                      </tr>
-                    ))
-                  )}
+                  {conflicts.conflicts.slice(0, 12).map((c) => (
+                    <tr
+                      key={c.probe_id}
+                      className="border-b border-[var(--border)] last:border-0 align-top hover:bg-[var(--bg-elevated)]"
+                    >
+                      <td className="py-2 pr-4 text-xs">{deploymentLabel(c.deployment_id)}</td>
+                      <td className="py-2 pr-4 text-right text-xs text-[var(--text-muted)]">
+                        {c.block_number?.toLocaleString() ?? '—'}
+                      </td>
+                      <td className="py-2 pr-4 text-right text-xs text-[var(--text-muted)]">
+                        {c.signers.length} · {c.distinct_answers} answers
+                      </td>
+                      <td className="py-2 pr-4">
+                        <div className="space-y-0.5">
+                          {c.signers.map((s, i) => (
+                            <div key={i} className="flex items-baseline gap-2">
+                              {s.indexer ? (
+                                <Link
+                                  href={`/indexers/${s.indexer}`}
+                                  className="text-[var(--accent)] hover:underline text-xs whitespace-nowrap"
+                                  title={s.indexer}
+                                >
+                                  {indexerNames.get(s.indexer.toLowerCase()) ??
+                                    shortenAddress(s.indexer)}
+                                </Link>
+                              ) : (
+                                <span className="text-xs text-[var(--text-faint)]">unresolved</span>
+                              )}
+                              <span className="font-mono text-[11px] text-[var(--text-muted)]">
+                                {(s.response_cid ?? '').slice(0, 18)}…
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
 
             <p className="text-xs text-[var(--text-muted)]">
-              <span className="text-[var(--amber)]">This is not an accusation, and it does not say
-              who is wrong.</span>{' '}
-              {conflicts.not_a_verdict} Both indexers appear here because both signed, and exactly
-              one of them is serving data that does not match its peer. Deciding which is an
-              arbitrator&apos;s job under <code>DisputeManager</code>, and we are not it.
+              {/* This paragraph previously said "exactly one of them is serving data that does not
+                  match its peer", which is false: they can all be wrong, and a non-deterministic
+                  subgraph makes honest indexers disagree forever. Naming operators next to the word
+                  slashable is the last place to be casual about it. */}
+              <span className="text-[var(--amber)]">This is not an accusation.</span>{' '}
+              {conflicts.not_a_verdict}
             </p>
             <p className="text-xs text-[var(--text-muted)]">
               Why it is worth showing anyway: {conflicts.how_to_check} A traffic census counting
-              HTTP 200s cannot produce this, and neither can our own hashing on its own. It is the
-              one thing here you can check without trusting us at all.
+              HTTP 200s cannot produce this, and neither can our own hashing on its own. Under{' '}
+              <code>DisputeManager</code> any two of these signatures form a conflicting-attestation
+              dispute, which is filable with no deposit. It is the one thing on this page you can
+              check without trusting us at all.
             </p>
           </CardContent>
         </Card>
