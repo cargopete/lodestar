@@ -664,7 +664,7 @@ export default function QosPage() {
       )}
 
       {/* ── Disagreements that carry signatures ── */}
-      {conflicts && conflicts.count > 0 && (
+      {conflicts && conflicts.conflicts.some((c) => c.data_differs) && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -677,8 +677,22 @@ export default function QosPage() {
           <CardContent className="space-y-3">
             <p className="text-sm text-[var(--text-muted)]">
               Indexers asked the <em>identical</em> question about the identical block, who then
-              signed <em>different</em> answers with their allocation keys. Everything else on this
-              page is our measurement of somebody&apos;s data. This is their own signature on it.
+              signed <em>different data</em> with their allocation keys. Everything else on this page
+              is our measurement of somebody&apos;s data. This is their own signature on it.
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              {/* This filter is the whole point. The first version of this section listed every
+                  differing responseCID, and 29 of the first 32 were indexers returning THE SAME
+                  DATA with different byte serialisation - published next to named operators and the
+                  word slashable. A hash that differs is not the same claim as an answer that
+                  differs, and only one of them is anybody's fault. */}
+              Only rows where the <em>data</em> actually disagrees appear here. Differing byte
+              serialisation of identical data does not, even though{' '}
+              <code>DisputeManager</code> compares bytes and would accept it: in the last
+              {' '}{conflicts.window_days} days{' '}
+              {conflicts.conflicts.filter((c) => !c.data_differs).length} of{' '}
+              {conflicts.conflicts.length} differing-hash cases were exactly that, and nobody in them
+              served anything wrong.
             </p>
 
             <div className="overflow-x-auto">
@@ -692,7 +706,7 @@ export default function QosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {conflicts.conflicts.slice(0, 12).map((c) => (
+                  {conflicts.conflicts.filter((c) => c.data_differs).slice(0, 12).map((c) => (
                     <tr
                       key={c.probe_id}
                       className="border-b border-[var(--border)] last:border-0 align-top hover:bg-[var(--bg-elevated)]"

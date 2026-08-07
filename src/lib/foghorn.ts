@@ -332,6 +332,9 @@ export interface FoghornQosConflicts {
     request_cid: string | null;
     /** How many different answers were signed. Three signers with two answers means two agreed. */
     distinct_answers: number;
+    distinct_payloads: number;
+    /** True only when the DATA disagrees, not merely how it was serialised. */
+    data_differs: boolean;
     signers: {
       indexer: string | null;
       resolved: boolean;
