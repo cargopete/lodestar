@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { cn, weiToGRT, formatGRT, shortenAddress } from '@/lib/utils';
 import type { ChainLagData } from '@/app/api/cron/refresh-chain-health/route';
+import { formatStallDuration, type ChainLiveness } from '@/lib/chain-liveness';
 
 // ---------------------------------------------------------------------------
 // Types for subgraph name search
@@ -110,8 +111,13 @@ function ChainHealthPanel() {
     );
   }
 
-  // Sort chains: most-lagging first, then by indexer count
+  // Sort chains: dead heads first, then most-lagging, then by indexer count.
+  // A chain that has stopped outranks any amount of lag, because lag is only
+  // meaningful when the thing you are lagging behind is still moving.
+  const livenessRank = (l: ChainLiveness) => (l === 'halted' ? 0 : l === 'stalled' ? 1 : 2);
   const sorted = Object.entries(data.chains).sort((a, b) => {
+    const liveDiff = livenessRank(a[1].liveness) - livenessRank(b[1].liveness);
+    if (liveDiff !== 0) return liveDiff;
     const lagDiff = b[1].medianBlocksBehind - a[1].medianBlocksBehind;
     if (lagDiff !== 0) return lagDiff;
     return b[1].sampledIndexers - a[1].sampledIndexers;
@@ -132,12 +138,18 @@ function ChainHealthPanel() {
       <CardContent>
         <p className="text-xs text-[var(--text-muted)] mb-4">
           Median blocks behind across active indexers per chain. Red chains may indicate a node-side infrastructure issue.
+          A chain whose head has stopped advancing is shown as frozen rather than caught up: every indexer sits exactly at a
+          head that no longer moves, so blocks-behind reads zero and means nothing.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {sorted.map(([network, stats]) => {
             const lag = Math.round(stats.medianBlocksBehind);
-            const isRed = lag > 50;
-            const isAmber = !isRed && lag > 5;
+            // A frozen head outranks lag entirely: "0 blocks behind" on a dead
+            // chain is the failure this whole panel used to render as a tick.
+            const halted = stats.liveness === 'halted';
+            const stalled = stats.liveness === 'stalled';
+            const isRed = halted || lag > 50;
+            const isAmber = !isRed && (stalled || lag > 5);
             const laggingPct = stats.sampledIndexers > 0
               ? Math.round((stats.laggingCount / stats.sampledIndexers) * 100)
               : 0;
@@ -153,6 +165,11 @@ function ChainHealthPanel() {
                     ? 'border-amber-500/30 bg-amber-500/5'
                     : 'border-[var(--border)] bg-[var(--bg-elevated)]',
                 )}
+                title={
+                  halted || stalled
+                    ? `Head stuck at block ${stats.observedHead?.toLocaleString() ?? '?'} for ${formatStallDuration(stats.headStalledForMs)}. Either the chain has stopped or every indexer we sample has.`
+                    : undefined
+                }
               >
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-xs font-medium text-[var(--text)] truncate">
@@ -164,18 +181,26 @@ function ChainHealthPanel() {
                       isRed ? 'text-red-400' : isAmber ? 'text-amber-400' : 'text-emerald-400',
                     )}
                   >
-                    {lag === 0 ? '✓' : `${lag.toLocaleString()}b`}
+                    {halted || stalled
+                      ? `frozen ${formatStallDuration(stats.headStalledForMs)}`
+                      : lag === 0
+                      ? '✓'
+                      : `${lag.toLocaleString()}b`}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-[var(--text-faint)]">
                     {stats.sampledIndexers} indexers
                   </span>
-                  {stats.laggingCount > 0 && (
+                  {halted || stalled ? (
+                    <span className="text-[10px] text-[var(--text-faint)]">
+                      head {stats.observedHead?.toLocaleString() ?? '?'}
+                    </span>
+                  ) : stats.laggingCount > 0 ? (
                     <span className="text-[10px] text-[var(--text-faint)]">
                       {laggingPct}% lagging
                     </span>
-                  )}
+                  ) : null}
                 </div>
               </div>
             );

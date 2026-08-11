@@ -2,6 +2,40 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.23.0] — 2026-08-11
+
+Every staleness signal in the stack is measured against chain head, so when a chain stops
+producing blocks the distance to head goes to zero and everything reports perfect health.
+Lodestar did this too. Moonbeam halted around 10 August and every subgraph on it kept
+rendering green; two Celo subgraphs sat behind an indexer reporting itself 99.98% synced
+against a head that had not moved in 85 hours. This release adds the one signal that
+survives a frozen head, which is wall-clock time.
+
+### Added
+- **Chain liveness** — the chain-health cron now remembers the highest block it has ever
+  seen per chain and when that head last advanced, so a chain that has stopped producing
+  blocks is detectable at all. Classified `live`, `stalled` (90 minutes without an advance),
+  `halted` (6 hours) or `unknown`. Head history is persisted for 30 days so a chain that has
+  been dead for days cannot reset to healthy when a cache expires.
+- **Frozen-chain banner on the deployment page** — a subgraph on a halted chain is *frozen,
+  not broken*. The banner names the block it will keep answering with indefinitely and says
+  plainly that historical queries remain correct, which is the part people get wrong when
+  they see stale data and assume the subgraph has failed.
+
+### Fixed
+- **A halted chain no longer scores a green tick.** Chain Sync Health awarded `✓` to any
+  chain with zero median blocks-behind, which is exactly what a dead chain looks like.
+  Frozen chains now sort above every lagging chain and show how long the head has been stuck
+  along with the block it is stuck at.
+
+### Notes
+- Liveness never claims *why* a head stopped. A halted chain and a chain where every sampled
+  indexer has stalled are indistinguishable from here, so the wording says so rather than
+  guessing.
+- Stall is measured across the window actually observed, not against the current time. If the
+  cron itself stops, the verdict is `unknown` rather than `stalled` — the whole point is to
+  stop treating absent information as a healthy reading.
+
 ## [4.22.1] — 2026-06-25
 
 ### Changed

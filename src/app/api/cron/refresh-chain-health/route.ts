@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { log } from '@/lib/logger';
 import type { EnrichedIndexer } from '@/lib/enriched';
+import {
+  advanceChainHead,
+  classifyLiveness,
+  type ChainHeadRecord,
+  type ChainLiveness,
+} from '@/lib/chain-liveness';
 
 // ---------------------------------------------------------------------------
 // Exported types (consumed by /api/chain-lag and /api/dropped-chains)
@@ -11,7 +17,28 @@ export interface ChainStats {
   medianBlocksBehind: number;
   sampledIndexers: number;
   laggingCount: number;
+  /**
+   * Whether the chain is still producing blocks. `medianBlocksBehind` measures
+   * distance to head and therefore reports zero for a chain that has stopped —
+   * every indexer is exactly at a head that no longer moves. This is the
+   * absolute signal that survives that. See lib/chain-liveness.
+   */
+  liveness: ChainLiveness;
+  /** Highest block observed for this chain across sampled indexers. */
+  observedHead: number | null;
+  /** How long we watched the head fail to advance. Zero for a live chain. */
+  headStalledForMs: number;
 }
+
+/** Per-chain head history, persisted across cron runs. Keyed by network name. */
+export type ChainHeadRecords = Record<string, ChainHeadRecord>;
+
+/**
+ * Head history must outlive the 2h chain-lag TTL by a wide margin: if it expires
+ * the stall clock resets and a chain that has been dead for days reads as live
+ * again on the next run.
+ */
+const HEAD_RECORD_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 export interface ChainLagData {
   chains: Record<string, ChainStats>;
@@ -66,6 +93,11 @@ interface DeploymentStatus {
   blocksBehind: number | null; // null = uncapped noise or unknown
   synced: boolean;
   failed: boolean;
+  /**
+   * The tip this node reports for the chain, independent of how far this
+   * particular deployment has indexed. Feeds liveness tracking.
+   */
+  chainHead: number | null;
 }
 
 async function fetchIndexerDeployments(indexerUrl: string): Promise<DeploymentStatus[]> {
@@ -118,11 +150,16 @@ async function fetchIndexerDeployments(indexerUrl: string): Promise<DeploymentSt
           const behind = Math.max(chainHead - latest, 0);
           blocksBehind = behind <= 10_000 ? behind : null; // cap stale/cross-chain noise
         }
+        // Take the higher of the two: a node whose chain tracking has stalled can
+        // report chainHeadBlock below a latestBlock it already indexed.
+        const observed = Math.max(chainHead ?? 0, latest ?? 0);
+
         return {
           network,
           blocksBehind,
           synced: s.synced && s.health !== 'failed',
           failed: s.health === 'failed',
+          chainHead: observed > 0 ? observed : null,
         };
       }),
     );
@@ -193,6 +230,8 @@ export async function GET(request: NextRequest) {
     // Per-chain accumulators
     const chainSampled: Record<string, Set<string>> = {};
     const chainBehind: Record<string, number[]> = {};
+    /** Highest tip anyone reported for each chain this run. Feeds liveness. */
+    const chainObservedHead: Record<string, number> = {};
 
     // Per-indexer dropped chains (addr → dropped chain names)
     const droppedChainsMap: Record<string, string[]> = {};
@@ -222,7 +261,19 @@ export async function GET(request: NextRequest) {
 
       // Aggregate per-chain lag stats
       for (const dep of deployments) {
-        if (dep.failed || !dep.network || dep.network === 'unknown') continue;
+        if (!dep.network || dep.network === 'unknown') continue;
+
+        // The chain tip belongs to the node, not to any one deployment, so a
+        // FAILED subgraph still supplies a usable head observation. Collect it
+        // before the failed-deployment skip below.
+        if (dep.chainHead !== null) {
+          chainObservedHead[dep.network] = Math.max(
+            chainObservedHead[dep.network] ?? 0,
+            dep.chainHead,
+          );
+        }
+
+        if (dep.failed) continue;
 
         if (!chainSampled[dep.network]) {
           chainSampled[dep.network] = new Set();
@@ -236,18 +287,43 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Chain liveness — fold this run's tips into the persisted head history,
+    // then classify. This is the one signal that does not collapse to "healthy"
+    // when a chain stops: everything else is measured relative to a head that
+    // has itself frozen. See lib/chain-liveness and graph-support#15.
+    const now = Date.now();
+    const priorHeads = (await cacheGet<ChainHeadRecords>('lodestar:chain-heads')) ?? {};
+    const headRecords: ChainHeadRecords = { ...priorHeads };
+    for (const [network, observed] of Object.entries(chainObservedHead)) {
+      headRecords[network] = advanceChainHead(priorHeads[network], observed, now);
+    }
+    await cacheSet('lodestar:chain-heads', headRecords, HEAD_RECORD_TTL_SECONDS);
+
     // Build ChainLagData
     const chains: Record<string, ChainStats> = {};
+    const notLive: string[] = [];
     for (const network of Object.keys(chainSampled)) {
       const behinds = chainBehind[network] ?? [];
+      const verdict = classifyLiveness(headRecords[network], now);
+      if (verdict.liveness === 'stalled' || verdict.liveness === 'halted') notLive.push(network);
       chains[network] = {
         medianBlocksBehind: median(behinds),
         sampledIndexers: chainSampled[network].size,
         laggingCount: behinds.length,
+        liveness: verdict.liveness,
+        observedHead: verdict.head,
+        headStalledForMs: verdict.stalledForMs,
       };
     }
 
-    const lagData: ChainLagData = { chains, computedAt: Date.now() };
+    if (notLive.length) {
+      log.cron.warn(
+        { step: 'refresh-chain-health', chains: notLive },
+        'Chains whose head is not advancing',
+      );
+    }
+
+    const lagData: ChainLagData = { chains, computedAt: now };
     await cacheSet('lodestar:chain-lag', lagData, 2 * 60 * 60);
     await cacheSet('lodestar:dropped-chains', droppedChainsMap, 2 * 60 * 60);
 

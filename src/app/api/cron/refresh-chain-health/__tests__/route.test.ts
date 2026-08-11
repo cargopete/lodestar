@@ -248,3 +248,155 @@ describe('error handling', () => {
     expect((await res.json()).error).toMatch(/failed/i);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Chain liveness (graph-support#15)
+//
+// Every other stat in this cron is measured against chain head, so all of them
+// read healthy when the head itself stops. These cover the absolute signal.
+// ---------------------------------------------------------------------------
+
+describe('chain liveness', () => {
+  const NOW = 1_770_000_000_000;
+  const HOUR = 3_600_000;
+
+  function withIndexers(urls: string[]) {
+    cacheGet.mockImplementation(async (key: string) =>
+      key === 'lodestar:indexers-enriched'
+        ? urls.map((u, i) => ({ id: `0x${String(i).repeat(3)}`, url: u }))
+        : null,
+    );
+  }
+
+  function heads() {
+    const call = cacheSet.mock.calls.find((c) => c[0] === 'lodestar:chain-heads');
+    return call?.[1] as Record<string, { head: number; headFirstSeenAt: number; lastCheckedAt: number }> | undefined;
+  }
+
+  function lagChains() {
+    const call = cacheSet.mock.calls.find((c) => c[0] === 'lodestar:chain-lag');
+    return (call?.[1] as { chains: Record<string, { liveness: string; observedHead: number | null; headStalledForMs: number }> }).chains;
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ now: NOW });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('records the highest head observed across indexers', async () => {
+    withIndexers(['https://a.example.com', 'https://b.example.com']);
+    mockFetch.mockImplementation(async (url: string) =>
+      url.startsWith('https://a.example.com')
+        ? statusBody([{ network: 'mainnet', synced: true, head: 900, latest: 900 }])
+        : statusBody([{ network: 'mainnet', synced: true, head: 1000, latest: 1000 }]),
+    );
+
+    const GET = await load();
+    await GET(req(`Bearer ${SECRET}`));
+
+    expect(heads()!.mainnet).toEqual({ head: 1000, headFirstSeenAt: NOW, lastCheckedAt: NOW });
+  });
+
+  it('a first sighting is live, not stalled', async () => {
+    withIndexers(['https://a.example.com']);
+    mockFetch.mockResolvedValue(statusBody([{ network: 'mainnet', synced: true, head: 1000, latest: 1000 }]));
+
+    const GET = await load();
+    await GET(req(`Bearer ${SECRET}`));
+
+    expect(lagChains().mainnet.liveness).toBe('live');
+    expect(lagChains().mainnet.headStalledForMs).toBe(0);
+  });
+
+  it('an advancing head restarts the stall clock', async () => {
+    cacheGet.mockImplementation(async (key: string) => {
+      if (key === 'lodestar:indexers-enriched') return [{ id: '0xAAA', url: 'https://a.example.com' }];
+      if (key === 'lodestar:chain-heads') {
+        // Frozen for 20h according to the prior record...
+        return { mainnet: { head: 1000, headFirstSeenAt: NOW - 20 * HOUR, lastCheckedAt: NOW - HOUR } };
+      }
+      return null;
+    });
+    // ...but this run sees a new block.
+    mockFetch.mockResolvedValue(statusBody([{ network: 'mainnet', synced: true, head: 1001, latest: 1001 }]));
+
+    const GET = await load();
+    await GET(req(`Bearer ${SECRET}`));
+
+    expect(heads()!.mainnet.headFirstSeenAt).toBe(NOW);
+    expect(lagChains().mainnet.liveness).toBe('live');
+  });
+
+  it('reports halted when the head has not moved for hours: the Moonbeam case', async () => {
+    cacheGet.mockImplementation(async (key: string) => {
+      if (key === 'lodestar:indexers-enriched') return [{ id: '0xAAA', url: 'https://a.example.com' }];
+      if (key === 'lodestar:chain-heads') {
+        return { moonbeam: { head: 1000, headFirstSeenAt: NOW - 22 * HOUR, lastCheckedAt: NOW - 30 * 60_000 } };
+      }
+      return null;
+    });
+    // Every indexer is exactly AT the frozen head, so it reports itself synced.
+    mockFetch.mockResolvedValue(statusBody([{ network: 'moonbeam', synced: true, head: 1000, latest: 1000 }]));
+
+    const GET = await load();
+    await GET(req(`Bearer ${SECRET}`));
+
+    const c = lagChains().moonbeam;
+    expect(c.liveness).toBe('halted');
+    expect(c.observedHead).toBe(1000);
+    expect(c.headStalledForMs).toBeGreaterThanOrEqual(22 * HOUR);
+    // The point of the whole exercise: the relative stats say everything is fine.
+    expect(c).toMatchObject({ liveness: 'halted' });
+    const lag = cacheSet.mock.calls.find((cc) => cc[0] === 'lodestar:chain-lag')![1] as {
+      chains: Record<string, { medianBlocksBehind: number; laggingCount: number }>;
+    };
+    expect(lag.chains.moonbeam.medianBlocksBehind).toBe(0);
+    expect(lag.chains.moonbeam.laggingCount).toBe(0);
+  });
+
+  it('a failed deployment still supplies a head observation', async () => {
+    withIndexers(['https://a.example.com']);
+    // Only deployment on this node is failed; the node still knows the chain tip.
+    mockFetch.mockResolvedValue(
+      statusBody([{ network: 'celo', synced: false, health: 'failed', head: 777, latest: 700 }]),
+    );
+
+    const GET = await load();
+    await GET(req(`Bearer ${SECRET}`));
+
+    expect(heads()!.celo.head).toBe(777);
+  });
+
+  it('does not let a lagging indexer drag the recorded head backwards', async () => {
+    cacheGet.mockImplementation(async (key: string) => {
+      if (key === 'lodestar:indexers-enriched') return [{ id: '0xAAA', url: 'https://a.example.com' }];
+      if (key === 'lodestar:chain-heads') {
+        return { mainnet: { head: 5000, headFirstSeenAt: NOW - HOUR, lastCheckedAt: NOW - HOUR } };
+      }
+      return null;
+    });
+    mockFetch.mockResolvedValue(statusBody([{ network: 'mainnet', synced: false, head: 4000, latest: 3900 }]));
+
+    const GET = await load();
+    await GET(req(`Bearer ${SECRET}`));
+
+    expect(heads()!.mainnet.head).toBe(5000);
+    expect(heads()!.mainnet.headFirstSeenAt).toBe(NOW - HOUR);
+  });
+
+  it('persists head history with a TTL far longer than the chain-lag TTL', async () => {
+    withIndexers(['https://a.example.com']);
+    mockFetch.mockResolvedValue(statusBody([{ network: 'mainnet', synced: true, head: 1000, latest: 1000 }]));
+
+    const GET = await load();
+    await GET(req(`Bearer ${SECRET}`));
+
+    const headCall = cacheSet.mock.calls.find((c) => c[0] === 'lodestar:chain-heads');
+    const lagCall = cacheSet.mock.calls.find((c) => c[0] === 'lodestar:chain-lag');
+    expect(headCall![2]).toBeGreaterThan(lagCall![2] as number);
+    expect(headCall![2]).toBe(30 * 24 * 60 * 60);
+  });
+});

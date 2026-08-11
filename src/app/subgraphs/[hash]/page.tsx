@@ -14,6 +14,7 @@ import {
   useSubgraphVersions,
   useENSName,
   useSubgraphSchema,
+  useChainLag,
 } from '@/hooks/useNetworkStats';
 import { useDeploymentQos } from '@/hooks/useFoghorn';
 import { FoghornAlertBanner } from '@/components/foghorn/FoghornAlertBanner';
@@ -28,6 +29,7 @@ import { cn, formatNumber, formatGRT, weiToGRT, shortenAddress } from '@/lib/uti
 import { VersionsTable } from '@/components/subgraph/VersionsTable';
 import { ActivitySection } from '@/components/subgraph/ActivitySection';
 import { SYNC_TOLERANCE_BLOCKS } from '@/lib/indexing-status';
+import { formatStallDuration } from '@/lib/chain-liveness';
 import type { IndexerStatusResult } from '@/lib/indexing-status';
 import type { ComplexityCategory, DataSourceSignal, TemplateSignal } from '@/lib/manifest';
 import type { NetworkInfo } from '@/app/api/networks/route';
@@ -1140,6 +1142,17 @@ function DeploymentPageInner({ hash }: { hash: string }) {
   const { data: statusData } = useIndexingStatus(hash);
   const { data: manifestData } = useManifestAnalysis(hash);
   const { data: registryData } = useNetworksRegistry();
+  const { data: chainLagData } = useChainLag();
+
+  // Which chain this deployment indexes. The manifest is authoritative; fall
+  // back to whatever the indexers report so the banner still works for
+  // deployments whose manifest we could not fetch.
+  const deploymentNetwork =
+    manifestData?.network ?? statusData?.indexers?.find((i) => i.network)?.network ?? null;
+  const chainVerdict = deploymentNetwork
+    ? chainLagData?.data?.chains?.[deploymentNetwork] ?? null
+    : null;
+  const chainNotLive = chainVerdict?.liveness === 'halted' || chainVerdict?.liveness === 'stalled';
 
   let networkInfo: NetworkInfo | null = null;
   if (manifestData?.network && registryData?.networks) {
@@ -1218,6 +1231,39 @@ function DeploymentPageInner({ hash }: { hash: string }) {
           Back to Subgraphs
         </button>
       </div>
+
+      {/* Chain liveness banner.
+          Everything below this point measures health relative to chain head, so
+          when the head itself stops, every panel on this page turns green and
+          stays green. This is the only warning a user gets that the data they
+          are looking at will never change again. See graph-support#15. */}
+      {chainNotLive && chainVerdict && (
+        <div
+          className={cn(
+            'rounded-lg border px-4 py-3',
+            chainVerdict.liveness === 'halted'
+              ? 'border-red-500/30 bg-red-500/5'
+              : 'border-amber-500/30 bg-amber-500/5',
+          )}
+        >
+          <p
+            className={cn(
+              'text-sm font-medium mb-1',
+              chainVerdict.liveness === 'halted' ? 'text-red-400' : 'text-amber-400',
+            )}
+          >
+            {networkLabel ?? deploymentNetwork} has not produced a block in{' '}
+            {formatStallDuration(chainVerdict.headStalledForMs)}
+          </p>
+          <p className="text-xs text-[var(--text-muted)]">
+            This subgraph is <strong>frozen, not broken</strong>. It is at chain head, has no indexing
+            errors and will keep answering queries with data from block{' '}
+            {chainVerdict.observedHead?.toLocaleString() ?? '?'} indefinitely. Historical queries
+            remain correct. Anything expecting fresh data needs to move. Either the chain has stopped
+            or every indexer we sample has, and from here those look identical.
+          </p>
+        </div>
+      )}
 
       {/* Tab nav */}
       <div className="flex items-center gap-1 border-b border-[var(--border)] overflow-x-auto">

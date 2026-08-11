@@ -282,6 +282,18 @@ export async function fetchNetworksRegistry(): Promise<{
 }
 
 /**
+ * Fetch per-chain sync health, including whether each chain's head is still
+ * advancing at all. See lib/chain-liveness.
+ */
+export async function fetchChainLag(): Promise<{
+  data: import('@/app/api/cron/refresh-chain-health/route').ChainLagData | null;
+}> {
+  const response = await fetch('/api/chain-lag');
+  if (!response.ok) throw new Error('Failed to fetch chain lag');
+  return response.json();
+}
+
+/**
  * Fetch community votes for a period
  */
 export async function fetchVotes(period?: string, voter?: string): Promise<VotesResponse> {

@@ -19,6 +19,7 @@ import {
   fetchGatewayProbe,
   fetchIndexerStatus,
   fetchNetworksRegistry,
+  fetchChainLag,
   fetchDelegatorPortfolio,
   fetchCuratorPortfolio,
   fetchRewardsHistory,
@@ -218,6 +219,20 @@ export function useNetworksRegistry() {
     queryFn: fetchNetworksRegistry,
     staleTime: ONE_HOUR,
     refetchInterval: ONE_HOUR,
+  });
+}
+
+/**
+ * Hook for per-chain sync health, including chain liveness — whether the head
+ * is still advancing. Every other staleness signal is relative to chain head and
+ * therefore reports perfect health when the chain itself stops.
+ */
+export function useChainLag() {
+  return useQuery({
+    queryKey: ['chainLag'],
+    queryFn: fetchChainLag,
+    staleTime: FIVE_MINUTES,
+    refetchInterval: FIVE_MINUTES,
   });
 }
 
