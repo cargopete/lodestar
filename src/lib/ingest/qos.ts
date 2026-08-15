@@ -31,7 +31,8 @@ interface AllocDaily {
   indexer_wallet: string;
   subgraph_deployment_ipfs_hash: string;
   query_count: string;
-  proportion_indexer_200_responses: string;
+  num_indexer_200_responses: string | null;
+  proportion_indexer_200_responses: string | null;
   avg_indexer_latency_ms: string;
   avg_indexer_blocks_behind: string;
   total_query_fees: string;
@@ -47,6 +48,29 @@ interface QueryDaily {
   gateway_query_success_rate: string;
   gateway_id: string;
   chain_id: string;
+}
+
+/**
+ * Successful responses for one data point, or null when the oracle published no figure.
+ *
+ * `Number(null)` is 0, so the old `prop * n` silently turned "the oracle said nothing about
+ * this day" into "every query on this day failed", and the scorer has no way to tell those
+ * apart afterwards. The live feed does emit a genuine "0" for indexers that really are serving
+ * no 200s, and that must keep scoring as a zero; only an ABSENT figure becomes null.
+ *
+ * Prefers the published count over proportion×query_count: the count is what the gateway
+ * observed, the product is that number round-tripped through a division.
+ */
+function successCount(p: AllocDaily, queryCount: number): number | null {
+  const raw = p.num_indexer_200_responses;
+  if (raw !== null && raw !== undefined && raw !== '') {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+  const prop = p.proportion_indexer_200_responses;
+  if (prop === null || prop === undefined || prop === '') return null;
+  const parsed = Number(prop);
+  return Number.isFinite(parsed) ? parsed * queryCount : null;
 }
 
 function dayToDate(dayNumber: number): string {
@@ -97,6 +121,7 @@ async function ingestAllocDaily(sql: DbClient, sinceDay: number): Promise<number
         indexer_wallet
         subgraph_deployment_ipfs_hash
         query_count
+        num_indexer_200_responses
         proportion_indexer_200_responses
         avg_indexer_latency_ms
         avg_indexer_blocks_behind
@@ -112,14 +137,13 @@ async function ingestAllocDaily(sql: DbClient, sinceDay: number): Promise<number
     const rows = batch.map((p) => {
       const day = Number(p.dayNumber);
       const n = Number(p.query_count);
-      const prop = Number(p.proportion_indexer_200_responses);
       return {
         indexer_address: p.indexer_wallet.toLowerCase(),
         deployment_id: p.subgraph_deployment_ipfs_hash,
         day_number: day,
         day: dayToDate(day),
         query_count: Math.round(n),
-        success_count: prop * n,
+        success_count: successCount(p, n),
         avg_latency_ms: Number(p.avg_indexer_latency_ms),
         stdev_latency_ms: null, // not exposed at daily grain in V1
         blocks_behind: Number(p.avg_indexer_blocks_behind),

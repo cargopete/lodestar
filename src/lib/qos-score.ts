@@ -8,8 +8,15 @@
  *  - Latency utility = exponential decay, normalised per-deployment (τ = cohort median latency).
  *  - Freshness utility = exponential decay on seconds-behind-chain-head.
  *  - Combine as a WEIGHTED PRODUCT per deployment (a near-zero on any axis tanks that
- *    deployment), aggregate across deployments weighted by served-query share, then apply
+ *    deployment), aggregate across deployments weighted by QUERIES SERVED, then apply
  *    a gentle coverage factor (breadth of deployments served with credible volume).
+ *
+ * The blend weight was served SHARE (this indexer's slice of a deployment's traffic) until
+ * 2026-08-15. That let a deployment where an indexer answered 3 of 3 queries carry weight 1.0
+ * while the deployment carrying 4,731 of its queries carried 0.084, so a handful of backwaters
+ * outvoted the real workload and the Wilson bound's small-sample penalty then dominated the
+ * score. Share measures fairness of routing, not amount of service; it stays on the metrics for
+ * reporting and drives ServedGap in qos-aggregate, but it is no longer what the blend weighs.
  *
  * V1 oracle has no p90/p99 or stdev at daily grain, so latency uses avg; when a tail estimate
  * is available (avg + k·stdev) the caller passes it in as `avgLatencyMs`.
@@ -21,7 +28,12 @@ export const DEFAULTS = {
   a: 1, // reliability exponent
   b: 1, // latency exponent
   c: 0.5, // freshness exponent
-  tauFreshSec: 600, // freshness decay constant (10 min behind ≈ 1/e utility)
+  // Freshness decay constant (30 min behind ≈ 1/e utility). Was 600s, which is defensible for
+  // a 12-second chain and punishing everywhere else: an Arbitrum deployment 5,000 blocks behind
+  // is 21 minutes stale and scored 0.12 for it, and the oracle's blocks_behind is a daily mean,
+  // so a single bad hour drags the whole day. 1800s keeps a genuinely stuck indexer near zero
+  // (2h behind ≈ 0.02) without grading normal L2 jitter as an outage.
+  tauFreshSec: 1800,
   halfLifeDays: 10, // EWMA half-life for day weighting
   minCredibleN: 100, // queries/deployment to count toward coverage
   coverageK: 3, // coverage saturation constant
@@ -33,27 +45,55 @@ export const DEFAULTS = {
   scale: 0.65,
 } as const;
 
-// Approximate block times (seconds) by the oracle's chain_id string. Default 12s.
+// Approximate block times (seconds) by the oracle's chain_id string. Chains the oracle actually
+// emits, surveyed against a day of live data on 2026-08-15; roughly 8% of rows were landing on
+// names absent from this table, `xdai` (plain alias of gnosis) among them.
 const BLOCK_TIME_SEC: Record<string, number> = {
   'mainnet': 12,
+  sepolia: 12,
   'arbitrum-one': 0.25,
   arbitrum: 0.25,
+  'arbitrum-sepolia': 0.25,
   base: 2,
+  'base-sepolia': 2,
   optimism: 2,
+  'optimism-sepolia': 2,
   'matic': 2,
   polygon: 2,
+  'polygon-zkevm': 2,
   bsc: 3,
+  chapel: 3, // BSC testnet
   gnosis: 5,
+  xdai: 5,
   avalanche: 2,
   celo: 5,
   fantom: 1,
+  sonic: 0.5,
   scroll: 3,
   linea: 2,
+  unichain: 1,
+  'zksync-era': 1,
+  'xlayer-mainnet': 3,
+  'blast-mainnet': 2,
+  monad: 1,
+  moonbeam: 12,
+  boba: 2,
+  fuse: 5,
+  chiliz: 3,
+  'chiliz-testnet': 3,
 };
 
-export function blockTimeSec(chainId: string | null | undefined): number {
-  if (!chainId) return 12;
-  return BLOCK_TIME_SEC[chainId.toLowerCase()] ?? 12;
+/**
+ * Seconds per block for the oracle's chain_id, or null when we do not know the chain.
+ *
+ * Null rather than a 12-second guess. The guess was silently wrong in the expensive direction:
+ * a fast-chain deployment a few thousand blocks behind became "hours stale", and exp(-t/tau)
+ * turns hours into a flat zero on an axis of the score. Not knowing how to convert blocks to
+ * time is not evidence that an indexer is behind, and the caller treats it as absent.
+ */
+export function blockTimeSec(chainId: string | null | undefined): number | null {
+  if (!chainId) return null;
+  return BLOCK_TIME_SEC[chainId.toLowerCase()] ?? null;
 }
 
 /** Map a 0–100 Q-score to a letter grade + UI badge variant. */
@@ -114,17 +154,23 @@ export function median(xs: number[]): number {
 
 export interface DeploymentMetrics {
   deployment: string;
-  /** EWMA-weighted query count over the window. */
+  /** EWMA-weighted query count over the window. THE BLEND WEIGHT. */
   n: number;
-  /** EWMA-weighted success count (≤ n). */
-  successes: number;
+  /**
+   * EWMA-weighted success count (≤ n), or null when the oracle published no success figure
+   * for this deployment in the window. Null is excluded from the blend; it is not a zero.
+   */
+  successes: number | null;
   /** Representative latency (avg, or avg+k·stdev tail when available), ms. */
   avgLatencyMs: number;
   /** Per-deployment cohort latency normaliser (median of peers serving this deployment), ms. */
   latencyTauMs: number;
-  /** Seconds behind chain head (blocks_behind × chain block time). */
-  timeBehindSec: number;
-  /** This indexer's share of the deployment's served queries (0..1). Used as the blend weight. */
+  /** Seconds behind chain head (blocks_behind × chain block time), or null on an unknown chain. */
+  timeBehindSec: number | null;
+  /**
+   * This indexer's share of the deployment's served queries (0..1). Reported and used for
+   * ServedGap; deliberately NOT the blend weight — see the note at the top of this file.
+   */
   servedShare: number;
 }
 
@@ -141,20 +187,27 @@ export interface QualityOpts {
 
 export interface QualityResult {
   qScore: number; // 0..100
-  reliability: number; // 0..1, served-share-weighted
+  reliability: number; // 0..1, volume-weighted
   latUtil: number; // 0..1
-  freshUtil: number; // 0..1
+  /** Null when no deployment in the window had a usable freshness reading. */
+  freshUtil: number | null;
   coverage: number; // 0..1
   credibleDeployments: number;
+  /** Deployments with volume but no published success figure — excluded from the blend. */
+  unmeasuredDeployments: number;
 }
 
 /**
  * Combine per-deployment QoS into a single quality score.
  *
  * Per deployment: q_d = R^a · U_lat^b · U_fresh^c  (weighted product — any near-zero axis tanks it).
- * Aggregate: served-share-weighted mean of q_d across deployments.
+ * Aggregate: QUERY-VOLUME-weighted mean of q_d across deployments.
  * Coverage: gentle [0.5,1] factor rewarding breadth of credibly-served deployments.
  * qScore = 100 · aggregate · coverage.
+ *
+ * Deployments with no success figure are dropped from the blend, and the freshness factor is
+ * omitted (rather than scored zero) where the chain is unknown, so a missing measurement costs
+ * an indexer that component instead of convicting it on one.
  */
 export function computeQuality(rows: DeploymentMetrics[], opts: QualityOpts = {}): QualityResult {
   const a = opts.a ?? DEFAULTS.a;
@@ -166,13 +219,19 @@ export function computeQuality(rows: DeploymentMetrics[], opts: QualityOpts = {}
   const z = opts.z ?? DEFAULTS.z;
   const scale = opts.scale ?? DEFAULTS.scale;
 
+  let unmeasuredDeployments = 0;
+  for (const row of rows) {
+    if (row.successes === null || row.n <= 0) unmeasuredDeployments += 1;
+  }
+
   const empty: QualityResult = {
     qScore: 0,
     reliability: 0,
     latUtil: 0,
-    freshUtil: 0,
+    freshUtil: null,
     coverage: 0,
     credibleDeployments: 0,
+    unmeasuredDeployments,
   };
   if (rows.length === 0) return empty;
 
@@ -181,22 +240,32 @@ export function computeQuality(rows: DeploymentMetrics[], opts: QualityOpts = {}
   let rBlend = 0;
   let latBlend = 0;
   let freshBlend = 0;
+  let freshWSum = 0;
   let credibleDeployments = 0;
 
   for (const row of rows) {
+    // No published success figure, or no volume, means nothing was measured here. Scoring it
+    // as a zero would read "served everything badly" off a row that says nothing at all.
+    if (row.successes === null || row.n <= 0) continue;
+
     const R = wilsonLowerBound(row.successes, row.n, z);
     const Ulat = latencyUtil(row.avgLatencyMs, row.latencyTauMs);
-    const Ufresh = freshnessUtil(row.timeBehindSec, tauFreshSec);
-    const q = Math.pow(R, a) * Math.pow(Ulat, b) * Math.pow(Ufresh, c);
+    // Unknown chain → no freshness reading → the factor is omitted from the product entirely
+    // (exponent applied to 1), not defaulted to a guess.
+    const Ufresh = row.timeBehindSec === null ? null : freshnessUtil(row.timeBehindSec, tauFreshSec);
+    const q = Math.pow(R, a) * Math.pow(Ulat, b) * (Ufresh === null ? 1 : Math.pow(Ufresh, c));
 
-    // Weight by served share, with a tiny floor so a row with 0 recorded share
-    // (but real volume) still contributes.
-    const w = Math.max(row.servedShare, 0) + 1e-9;
+    // Weight by queries served. See the header note: served share is a fairness measure and
+    // weighing by it let three queries outvote a hundred thousand.
+    const w = row.n;
     wSum += w;
     qBlend += w * q;
     rBlend += w * R;
     latBlend += w * Ulat;
-    freshBlend += w * Ufresh;
+    if (Ufresh !== null) {
+      freshBlend += w * Ufresh;
+      freshWSum += w;
+    }
 
     if (row.n >= minCredibleN) credibleDeployments += 1;
   }
@@ -212,8 +281,9 @@ export function computeQuality(rows: DeploymentMetrics[], opts: QualityOpts = {}
     qScore: Math.min(100, (100 * aggregate * coverage) / scale),
     reliability: rBlend / wSum,
     latUtil: latBlend / wSum,
-    freshUtil: freshBlend / wSum,
+    freshUtil: freshWSum > 0 ? freshBlend / freshWSum : null,
     coverage,
     credibleDeployments,
+    unmeasuredDeployments,
   };
 }

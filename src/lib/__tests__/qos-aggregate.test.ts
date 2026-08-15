@@ -54,6 +54,42 @@ describe('aggregateIndexerMetrics', () => {
     }
   });
 
+  it('a day with no published success figure is left out of the Wilson denominator', () => {
+    const rows: QosDailyRow[] = [
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: 100, query_count: 1000, success_count: 990 }),
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: 100, query_count: 500, success_count: null }),
+    ];
+    const a = aggregateIndexerMetrics(rows, [], { todayDayNumber: today }).get('0xa')![0];
+    // Only the 1,000 queries whose outcome the oracle actually published are scored.
+    expect(a.n).toBeCloseTo(1000, 6);
+    expect(a.successes).toBeCloseTo(990, 6);
+  });
+
+  it('a deployment with no success figure at all comes back unmeasured, not failed', () => {
+    const rows: QosDailyRow[] = [
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: 100, query_count: 800, success_count: null }),
+    ];
+    const a = aggregateIndexerMetrics(rows, [], { todayDayNumber: today }).get('0xa')![0];
+    expect(a.successes).toBeNull();
+    expect(a.n).toBeCloseTo(800, 6); // volume survives so the deployment can be reported as unmeasured
+  });
+
+  it('an unknown chain yields no freshness reading rather than a 12-second guess', () => {
+    const rows: QosDailyRow[] = [
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: 100, query_count: 1000, success_count: 1000, blocks_behind: 5000, chain_id: 'some-new-rollup' }),
+    ];
+    const a = aggregateIndexerMetrics(rows, [], { todayDayNumber: today }).get('0xa')![0];
+    expect(a.timeBehindSec).toBeNull();
+  });
+
+  it('xdai is gnosis: an aliased chain still converts', () => {
+    const rows: QosDailyRow[] = [
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: 100, query_count: 10, success_count: 10, blocks_behind: 4, chain_id: 'xdai' }),
+    ];
+    const a = aggregateIndexerMetrics(rows, [], { todayDayNumber: today }).get('0xa')![0];
+    expect(a.timeBehindSec).toBeCloseTo(20, 6); // 4 blocks × 5s
+  });
+
   it('servedShare is 0 when the deployment total is unknown', () => {
     const rows = [row({ indexer_address: '0xa', deployment_id: 'Z', day_number: 100, query_count: 500, success_count: 500 })];
     const metrics = aggregateIndexerMetrics(rows, [], { todayDayNumber: today });
