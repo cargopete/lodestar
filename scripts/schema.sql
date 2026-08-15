@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS qos_daily (
   day_number           INTEGER     NOT NULL,
   day                  DATE,
   query_count          BIGINT      NOT NULL DEFAULT 0,
-  success_count        NUMERIC     NOT NULL DEFAULT 0,
+  success_count        NUMERIC,     -- NULL = the oracle published no success figure that day
   avg_latency_ms       NUMERIC,
   stdev_latency_ms     NUMERIC,
   blocks_behind        NUMERIC,

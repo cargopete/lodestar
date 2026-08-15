@@ -34,10 +34,35 @@ export async function GET(
       next: { revalidate: 0 },
     });
 
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    return await passThrough(response);
   } catch {
     return NextResponse.json({ error: 'Foghorn API unreachable' }, { status: 502 });
+  }
+}
+
+/**
+ * Forward the upstream response, keeping its status even when the body is not JSON.
+ *
+ * `await response.json()` used to sit inside the try, so an unknown path — which Foghorn
+ * answers with a bodyless 404 — threw on the parse and fell into the catch, and the operator
+ * was told the pipeline was unreachable. An indexer chased that as an outage on our side on
+ * 2026-08-15. A 404 is an answer; only a failure to reach the service is a 502.
+ */
+async function passThrough(response: Response): Promise<NextResponse> {
+  const body = await response.text();
+  if (!body) {
+    return NextResponse.json(
+      { error: response.ok ? 'Foghorn returned an empty response' : `Foghorn returned ${response.status}` },
+      { status: response.status },
+    );
+  }
+  try {
+    return NextResponse.json(JSON.parse(body), { status: response.status });
+  } catch {
+    return NextResponse.json(
+      { error: `Foghorn returned a non-JSON ${response.status} response` },
+      { status: response.status },
+    );
   }
 }
 
@@ -73,8 +98,7 @@ export async function POST(
       next: { revalidate: 0 },
     });
 
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    return await passThrough(response);
   } catch {
     return NextResponse.json({ error: 'Foghorn API unreachable' }, { status: 502 });
   }

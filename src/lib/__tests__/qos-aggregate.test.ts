@@ -54,6 +54,69 @@ describe('aggregateIndexerMetrics', () => {
     }
   });
 
+  it('a day with no published success figure is left out of the Wilson denominator', () => {
+    const rows: QosDailyRow[] = [
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: 100, query_count: 1000, success_count: 990 }),
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: 100, query_count: 500, success_count: null }),
+    ];
+    const a = aggregateIndexerMetrics(rows, [], { todayDayNumber: today }).get('0xa')![0];
+    // Only the 1,000 queries whose outcome the oracle actually published are scored.
+    expect(a.n).toBeCloseTo(1000, 6);
+    expect(a.successes).toBeCloseTo(990, 6);
+  });
+
+  it('a deployment with no success figure at all comes back unmeasured, not failed', () => {
+    const rows: QosDailyRow[] = [
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: 100, query_count: 800, success_count: null }),
+    ];
+    const a = aggregateIndexerMetrics(rows, [], { todayDayNumber: today }).get('0xa')![0];
+    expect(a.successes).toBeNull();
+    expect(a.n).toBeCloseTo(800, 6); // volume survives so the deployment can be reported as unmeasured
+  });
+
+  it('an unknown chain yields no freshness reading rather than a 12-second guess', () => {
+    const rows: QosDailyRow[] = [
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: 100, query_count: 1000, success_count: 1000, blocks_behind: 5000, chain_id: 'some-new-rollup' }),
+    ];
+    const a = aggregateIndexerMetrics(rows, [], { todayDayNumber: today }).get('0xa')![0];
+    expect(a.timeBehindSec).toBeNull();
+  });
+
+  it('xdai is gnosis: an aliased chain still converts', () => {
+    const rows: QosDailyRow[] = [
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: 100, query_count: 10, success_count: 10, blocks_behind: 4, chain_id: 'xdai' }),
+    ];
+    const a = aggregateIndexerMetrics(rows, [], { todayDayNumber: today }).get('0xa')![0];
+    expect(a.timeBehindSec).toBeCloseTo(20, 6); // 4 blocks × 5s
+  });
+
+  it('reads the cohort best and lag floor off peers with credible volume', () => {
+    // Four indexers on one deployment. All of them fail most queries and all sit at the same
+    // lag — the signature of a subgraph that has fallen over, not four bad operators.
+    const peers: QosDailyRow[] = ['0xa', '0xb', '0xc', '0xd'].map((ix, i) =>
+      row({ indexer_address: ix, deployment_id: 'X', day_number: today,
+            query_count: 5000, success_count: [50, 3000, 2500, 1000][i],
+            blocks_behind: 20_000, chain_id: 'arbitrum-one' }),
+    );
+    const a = aggregateIndexerMetrics(peers, [], { todayDayNumber: today }).get('0xa')![0];
+    // Best peer is 3000/5000; the floor is the shared 20,000 blocks × 0.25s.
+    expect(a.cohortBestReliability).toBeGreaterThan(0.58);
+    expect(a.cohortBestReliability).toBeLessThan(0.6);
+    expect(a.cohortFloorTimeBehindSec).toBeCloseTo(5000, 6);
+  });
+
+  it('withholds cohort figures when too few peers have credible volume', () => {
+    const rows: QosDailyRow[] = [
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: today, query_count: 5000, success_count: 50 }),
+      row({ indexer_address: '0xb', deployment_id: 'X', day_number: today, query_count: 5000, success_count: 4000 }),
+      // below minCredibleN, so it cannot vouch for what is achievable here
+      row({ indexer_address: '0xc', deployment_id: 'X', day_number: today, query_count: 20, success_count: 20 }),
+    ];
+    const a = aggregateIndexerMetrics(rows, [], { todayDayNumber: today }).get('0xa')![0];
+    expect(a.cohortBestReliability).toBeNull();
+    expect(a.cohortFloorTimeBehindSec).toBeNull();
+  });
+
   it('servedShare is 0 when the deployment total is unknown', () => {
     const rows = [row({ indexer_address: '0xa', deployment_id: 'Z', day_number: 100, query_count: 500, success_count: 500 })];
     const metrics = aggregateIndexerMetrics(rows, [], { todayDayNumber: today });

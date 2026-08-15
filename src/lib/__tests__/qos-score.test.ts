@@ -88,12 +88,21 @@ describe('median & blockTimeSec', () => {
     expect(median([1, 2, 3, 4])).toBe(2.5);
     expect(median([])).toBe(0);
   });
-  it('blockTimeSec known chains + default', () => {
+  it('blockTimeSec known chains + aliases', () => {
     expect(blockTimeSec('arbitrum-one')).toBe(0.25);
     expect(blockTimeSec('mainnet')).toBe(12);
     expect(blockTimeSec('BSC')).toBe(3); // case-insensitive
-    expect(blockTimeSec('unknown-chain')).toBe(12);
-    expect(blockTimeSec(null)).toBe(12);
+    expect(blockTimeSec('xdai')).toBe(5); // alias of gnosis
+    expect(blockTimeSec('sonic')).toBe(0.5);
+  });
+
+  it('blockTimeSec returns null for a chain we do not know', () => {
+    // Guessing 12s here turned a fast-chain deployment a few thousand blocks behind into
+    // "seventeen hours stale", and exp(-t/tau) rendered that as a flat zero. An unknown
+    // chain means we cannot convert blocks to time, which is not the same as being stale.
+    expect(blockTimeSec('some-new-rollup')).toBeNull();
+    expect(blockTimeSec(null)).toBeNull();
+    expect(blockTimeSec('')).toBeNull();
   });
 });
 
@@ -155,14 +164,133 @@ describe('computeQuality', () => {
     expect(r.coverage).toBeCloseTo(0.5, 9); // 0.5 + 0.5*(0/3)
   });
 
-  it('sub-metrics are served-share-weighted means', () => {
+  it('sub-metrics are volume-weighted means', () => {
     const r = computeQuality([
-      { deployment: 'a', n: 1000, successes: 1000, avgLatencyMs: 0, latencyTauMs: 100, timeBehindSec: 0, servedShare: 3 },
+      { deployment: 'a', n: 3000, successes: 3000, avgLatencyMs: 0, latencyTauMs: 100, timeBehindSec: 0, servedShare: 0.1 },
       { deployment: 'b', n: 1000, successes: 0, avgLatencyMs: 0, latencyTauMs: 100, timeBehindSec: 0, servedShare: 1 },
     ]);
-    // a has reliability≈1 (weight 3), b has reliability 0 (weight 1) → weighted ≈ 0.75
+    // a is 3000 of the 4000 queries and reliable; b is 1000 and fails → weighted ≈ 0.75.
+    // Note b carries ten times a's served SHARE and must not dominate on that basis.
     expect(r.reliability).toBeGreaterThan(0.7);
     expect(r.reliability).toBeLessThan(0.8);
     expect(r.latUtil).toBeCloseTo(1, 6); // both latency 0
+  });
+
+  /**
+   * The bug this file exists to prevent recurring.
+   *
+   * Deployments were blended by SERVED SHARE — the indexer's slice of that deployment's
+   * traffic — so answering 3 of 3 queries on a backwater scored weight 1.0 while answering
+   * 4,731 of 56,289 on the deployment that carries the actual traffic scored 0.084. Twenty
+   * sole-served trickles then outvoted the real workload twelve to one, and because the
+   * Wilson bound reads a perfect 3-of-3 as 0.438, an indexer with a flawless record on small
+   * deployments came out at half reliability. Weight is volume served. Share is a fairness
+   * measure and belongs in ServedGap, where it already lives.
+   */
+  it('THE regression: a sole-served trickle cannot outweigh the firehose', () => {
+    const firehose: DeploymentMetrics = {
+      deployment: 'busy', n: 100_000, successes: 100_000,
+      avgLatencyMs: 50, latencyTauMs: 250, timeBehindSec: 5, servedShare: 0.08,
+    };
+    // Twenty deployments of three perfect queries each, where this indexer is the only server.
+    const trickles: DeploymentMetrics[] = Array.from({ length: 20 }, (_, i) => ({
+      deployment: `t${i}`, n: 3, successes: 3,
+      avgLatencyMs: 50, latencyTauMs: 250, timeBehindSec: 5, servedShare: 1,
+    }));
+
+    const alone = computeQuality([firehose]);
+    const withTrickles = computeQuality([firehose, ...trickles]);
+
+    // 60 perfect queries spread over 20 deployments must not halve a 100,000-query record.
+    expect(withTrickles.reliability).toBeGreaterThan(0.98);
+    expect(alone.reliability - withTrickles.reliability).toBeLessThan(0.02);
+  });
+
+  it('a deployment the oracle published no success figure for is excluded, not scored zero', () => {
+    // Absent is not a verdict. Scoring an unpublished success rate as total failure is the
+    // same error as reading missing data as healthy, just pointing the other way.
+    const measured: DeploymentMetrics = {
+      deployment: 'known', n: 1000, successes: 1000,
+      avgLatencyMs: 50, latencyTauMs: 250, timeBehindSec: 0, servedShare: 0.5,
+    };
+    const unmeasured: DeploymentMetrics = {
+      deployment: 'silent', n: 5000, successes: null,
+      avgLatencyMs: 50, latencyTauMs: 250, timeBehindSec: 0, servedShare: 0.5,
+    };
+    const r = computeQuality([measured, unmeasured]);
+    expect(r.reliability).toBeGreaterThan(0.98);
+    expect(r.unmeasuredDeployments).toBe(1);
+    expect(r.credibleDeployments).toBe(1); // an unmeasured deployment is not credibly served
+  });
+
+  it('all-unmeasured input scores nothing rather than zero', () => {
+    const r = computeQuality([
+      { deployment: 'a', n: 500, successes: null, avgLatencyMs: 10, latencyTauMs: 100, timeBehindSec: 0, servedShare: 1 },
+    ]);
+    expect(r.qScore).toBe(0);
+    expect(r.unmeasuredDeployments).toBe(1);
+  });
+
+  it('an unknown chain omits freshness instead of scoring it zero', () => {
+    const known: DeploymentMetrics = {
+      deployment: 'a', n: 1000, successes: 1000,
+      avgLatencyMs: 0, latencyTauMs: 100, timeBehindSec: 0, servedShare: 1,
+    };
+    const unknownChain: DeploymentMetrics = { ...known, deployment: 'b', timeBehindSec: null };
+    const r = computeQuality([unknownChain]);
+    // Same score as a deployment measured at the chain head: we withhold the factor rather
+    // than guess a block time and manufacture staleness out of the guess.
+    expect(r.qScore).toBeCloseTo(computeQuality([known]).qScore, 6);
+    expect(r.freshUtil).toBeNull();
+  });
+
+  describe('cohort adjustment', () => {
+    // The cohort figure is a Wilson bound, like the value it is compared against — the
+    // aggregate computes it the same way for peers as for the indexer being scored.
+    const bestPeer = wilsonLowerBound(5000 * 0.7555, 5000);
+    const onBrokenDeployment = (successRate: number): DeploymentMetrics => ({
+      deployment: 'notional-exponent-shaped', n: 5000, successes: 5000 * successRate,
+      avgLatencyMs: 250, latencyTauMs: 625, timeBehindSec: 1128, servedShare: 0.08,
+      cohortBestReliability: bestPeer, // the best any peer manages on a subgraph that fatals
+    });
+
+    it('an indexer doing as well as anyone can on a broken subgraph is not marked down for it', () => {
+      const r = computeQuality([onBrokenDeployment(0.7555)]);
+      expect(r.reliability).toBeCloseTo(1, 2);
+    });
+
+    it('but the worst of a bad bunch still scores badly', () => {
+      // The real case: 0.95% success where the best peer manages 75.55%.
+      const r = computeQuality([onBrokenDeployment(0.0095)]);
+      expect(r.reliability).toBeLessThan(0.05);
+    });
+
+    it('no mercy where the cohort is healthy — a lone failure is the indexer, not the subgraph', () => {
+      const r = computeQuality([
+        { deployment: 'd', n: 5000, successes: 2500, avgLatencyMs: 0, latencyTauMs: 100,
+          timeBehindSec: 0, servedShare: 0.5, cohortBestReliability: 0.99 },
+      ]);
+      expect(r.reliability).toBeLessThan(0.52); // ~0.5, ungraded on any curve
+    });
+
+    it('a halted subgraph drags everyone equally, so the shared lag is subtracted', () => {
+      const stuck: DeploymentMetrics = {
+        deployment: 'halted', n: 5000, successes: 5000, avgLatencyMs: 0, latencyTauMs: 100,
+        timeBehindSec: 21_600, servedShare: 0.2, cohortFloorTimeBehindSec: 21_600,
+      };
+      const r = computeQuality([stuck]);
+      expect(r.freshUtil).toBeCloseTo(1, 6);
+      // …but an indexer lagging BEYOND the cohort floor still wears the difference.
+      const worse = computeQuality([{ ...stuck, timeBehindSec: 21_600 + 7200 }]);
+      expect(worse.freshUtil!).toBeLessThan(0.02);
+    });
+  });
+
+  it('freshness still bites when we DO know the chain', () => {
+    const r = computeQuality([
+      { deployment: 'a', n: 1000, successes: 1000, avgLatencyMs: 0, latencyTauMs: 100, timeBehindSec: 36_000, servedShare: 1 },
+    ]);
+    expect(r.freshUtil).toBeLessThan(0.001);
+    expect(r.qScore).toBeLessThan(5);
   });
 });
