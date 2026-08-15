@@ -2,6 +2,67 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.24.0] — 2026-08-15
+
+An indexer wrote in asking why Lodestar showed him a failing QoS score when his own metrics
+read 99.9% successful. He was right and we were wrong, in four separate places. The score
+weighted each deployment by the indexer's *share* of that deployment's traffic rather than by
+how many queries he actually answered, so a backwater where he served three of three queries
+outvoted the deployment carrying his real load. A subgraph that fatals identically for every
+indexer serving it was scored as his failure. Chains missing from a hardcoded table were
+assumed to have twelve-second blocks, which turned a fast-chain deployment a few thousand
+blocks behind into "hours stale". And the endpoint he checked answered 404s as 502s, so his
+first conclusion was that our pipeline was down.
+
+### Added
+- **Cohort-relative grading** — reliability is graded against the best any credible peer
+  achieves on that deployment, but only where the cohort is demonstrably degraded (best peer
+  below 0.9, at least three peers with credible volume). A subgraph broken for everyone stops
+  reading as one operator's fault, while an indexer that is the worst of a bad bunch still
+  scores badly. Shared chainhead lag is subtracted the same way, which is the chain-liveness
+  principle from 4.23.0 applied per deployment.
+- **`GET /api/indexer/[address]/qos-deployments`** — the working behind a score: every
+  deployment in the window with its volume, blend weight, Wilson bound, cohort best, lag net
+  of the cohort floor, and how much of the composite it is holding down.
+- **Deployment breakdown on the QoS panel** — the five deployments dragging a score, each
+  naming the axis actually costing it (`~69 min behind`, `slow vs peers`, `serving errors`)
+  and coloured by that axis, so a deployment answering perfectly never renders as an error.
+  Deployments failing for their whole cohort are marked.
+- **`scripts/recompute-qos.ts`** — re-scores history from `qos_daily` day by day, each with
+  the window that day actually had, and a `--dry` mode that sweeps calibration constants and
+  writes nothing.
+
+### Fixed
+- **Deployments are weighted by queries served, not by share of them.** The old weight let
+  three queries outvote a hundred thousand. This was the main cause of the report.
+- **An absent success figure is no longer read as total failure.** `Number(null)` is 0, so
+  "the oracle published nothing for this day" and "every query failed" landed in the database
+  as the same value. Ingest now reads the published `num_indexer_200_responses` and yields
+  null only when the field is genuinely missing; unmeasured deployments are excluded from the
+  blend and counted separately. Needs `migrations/015_qos_success_nullable.sql`.
+- **Unknown chains no longer default to twelve-second blocks.** The block-time table now
+  covers every chain the oracle actually emits (`xdai` was a plain alias miss for gnosis), and
+  a chain we do not know omits the freshness factor rather than guessing at it.
+- **The Foghorn proxy returns the upstream status.** An unknown path answered with a bodyless
+  404 threw on JSON parse and fell into the catch labelled "Foghorn API unreachable", telling
+  operators our pipeline was down when it was a wrong URL.
+
+### Changed
+- **Freshness decay constant 600s → 1800s.** Ten minutes is defensible on a twelve-second
+  chain and punishing everywhere else.
+- **Display divisor 0.65 → 1.** It existed to compensate for the weighting bug. With the cause
+  removed it inflated the whole field: 35 of 51 indexers at an A, 19 pinned at exactly 100.
+  Re-derived against the live distribution — at 1.0 the median sits on the B/C line, the top
+  decile reads A, and nothing clips.
+
+### Notes
+- Ninety days of `indexer_qos_score` were recomputed, so sparklines step where the arithmetic
+  changed rather than where anyone's service did.
+- Freshness is now the axis most in need of the same scepticism: the oracle publishes
+  blocks-behind figures that are not measurements (one deployment reported 22.5 million blocks
+  behind on Base, more than that chain has ever produced). An implausible lag should read as
+  unmeasured rather than as maximal staleness. Not yet fixed.
+
 ## [4.23.0] — 2026-08-11
 
 Every staleness signal in the stack is measured against chain head, so when a chain stops
