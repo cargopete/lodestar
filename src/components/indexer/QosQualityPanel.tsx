@@ -33,6 +33,86 @@ interface QosScoreResponse {
   };
 }
 
+interface DeploymentRow {
+  deployment_id: string;
+  queries: number;
+  weight: number;
+  reliability: number | null;
+  reliability_used: number | null;
+  cohort_best_reliability: number | null;
+  time_behind_own_sec: number | null;
+  q: number | null;
+  measured: boolean;
+  drag: number;
+}
+
+/**
+ * Which deployments are holding the score down, heaviest first.
+ *
+ * The panel used to show four bars and a grade, which is enough to tell an operator they have a
+ * problem and nothing whatever about where it is. The one who prompted this had a single subgraph
+ * carrying 78% of his traffic and failing on a mapping fault; every other deployment he served was
+ * at 99-100%. None of that was visible here.
+ */
+function DeploymentDrag({ addr }: { addr: string }) {
+  const { data } = useQuery<{ data: { deployments: DeploymentRow[] } }>({
+    queryKey: ['indexerQosDeployments', addr],
+    queryFn: async () => {
+      const r = await fetch(`/api/indexer/${addr}/qos-deployments`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    },
+    staleTime: 30 * 60 * 1000,
+    retry: 1,
+  });
+
+  const rows = (data?.data.deployments ?? []).filter((d) => d.measured && d.drag > 0.005).slice(0, 5);
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="mb-4">
+      <p className="text-xs font-medium text-[var(--text)] mb-1.5">What is holding the score down</p>
+      <div className="space-y-1.5">
+        {rows.map((d) => {
+          const cohortBroken =
+            d.cohort_best_reliability != null && d.cohort_best_reliability < 0.9;
+          return (
+            <div key={d.deployment_id} className="flex items-center gap-2 text-[11px]">
+              <code className="text-[var(--text-muted)] truncate max-w-[9rem]" title={d.deployment_id}>
+                {d.deployment_id.slice(0, 10)}…
+              </code>
+              <div className="flex-1 h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${Math.min(100, d.drag * 100)}%`, backgroundColor: 'var(--red)' }}
+                />
+              </div>
+              <span className="font-mono text-[var(--text-muted)] tabular-nums">
+                {(d.weight * 100).toFixed(0)}% of traffic
+              </span>
+              <span className="font-mono text-[var(--text-faint)] tabular-nums w-12 text-right">
+                {d.reliability != null ? `${(d.reliability * 100).toFixed(0)}%` : '—'}
+              </span>
+              {cohortBroken && (
+                <span
+                  className="text-[10px] text-[var(--text-faint)]"
+                  title="Every indexer measured on this deployment is struggling, so it is graded against what the cohort achieves rather than against perfection."
+                >
+                  cohort
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-[var(--text-faint)] mt-1.5 leading-relaxed">
+        Share of served queries, then success rate. A deployment marked “cohort” is failing for
+        every indexer serving it, which is usually the subgraph rather than the operator.
+      </p>
+    </div>
+  );
+}
+
 function Bar({ label, value, hint }: { label: string; value: number | null; hint?: string }) {
   const pct = Math.round((value ?? 0) * 100);
   const color = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
@@ -140,6 +220,8 @@ export function QosQualityPanel({ indexer }: { indexer: string }) {
               );
             })()}
 
+            <DeploymentDrag addr={addr} />
+
             {series.length > 1 ? (
               <div className="h-[140px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -167,7 +249,7 @@ export function QosQualityPanel({ indexer }: { indexer: string }) {
 
             <p className="text-[10px] text-[var(--text-faint)] mt-3 leading-relaxed">
               Wilson-reliability × latency-decay × freshness (weighted product), EWMA-decayed over 30 days
-              and normalised per-deployment, then weighted by served-query share. QoS Oracle V1 data;
+              and normalised per-deployment, then weighted by queries served. QoS Oracle V1 data;
               latency uses averages (p90/p99 pending V2). Absence of data ≠ absence of problems: a low
               score can mean the gateway routes around this indexer.
             </p>

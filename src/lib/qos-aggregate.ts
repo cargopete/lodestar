@@ -11,6 +11,8 @@ import {
   blockTimeSec,
   ewmaWeight,
   median,
+  wilsonLowerBound,
+  COHORT_MIN_PEERS,
   type DeploymentMetrics,
   type QualityResult,
   DEFAULTS,
@@ -37,6 +39,8 @@ export interface AggregateOpts {
   todayDayNumber: number;
   halfLifeDays?: number;
   latencyTauMult?: number;
+  /** Volume a peer needs before it counts toward a deployment's cohort figures. */
+  minCredibleN?: number;
 }
 
 // Latency τ = latencyTauMult × per-deployment cohort median. Using the bare median makes
@@ -111,6 +115,31 @@ export function aggregateIndexerMetrics(
     tauByDeployment.set(dep, m > 0 ? m * tauMult : 1); // leniency multiplier; avoid τ=0
   }
 
+  // 2b. Per-deployment cohort context: the best reliability anyone achieved, and the freshest
+  // lag anyone achieved, over peers with credible volume. This is what separates "this indexer
+  // is failing" from "this subgraph is failing", and only the second deserves mercy.
+  const minCredibleN = opts.minCredibleN ?? DEFAULTS.minCredibleN;
+  const cohortR = new Map<string, number[]>();
+  const cohortLag = new Map<string, number[]>();
+  for (const p of pairs.values()) {
+    if (p.wQueryMeasured < minCredibleN) continue;
+    const R = wilsonLowerBound(p.wSuccess, p.wQueryMeasured);
+    (cohortR.get(p.deployment) ?? cohortR.set(p.deployment, []).get(p.deployment)!).push(R);
+    const blockSec = blockTimeSec(p.chainId);
+    if (blockSec !== null && p.wQuery > 0) {
+      const lag = (p.wBlocksNumer / p.wQuery) * blockSec;
+      (cohortLag.get(p.deployment) ?? cohortLag.set(p.deployment, []).get(p.deployment)!).push(lag);
+    }
+  }
+  const cohortBestR = new Map<string, number>();
+  for (const [dep, rs] of cohortR) {
+    if (rs.length >= COHORT_MIN_PEERS) cohortBestR.set(dep, Math.max(...rs));
+  }
+  const cohortFloorLag = new Map<string, number>();
+  for (const [dep, lags] of cohortLag) {
+    if (lags.length >= COHORT_MIN_PEERS) cohortFloorLag.set(dep, Math.min(...lags));
+  }
+
   // 3. Deployment totals (served-share denominator).
   const totalByDeployment = new Map<string, number>();
   for (const d of deploymentTotals) totalByDeployment.set(d.deployment_id, d.total_query_count);
@@ -138,6 +167,8 @@ export function aggregateIndexerMetrics(
       latencyTauMs: tauByDeployment.get(p.deployment) ?? avgLat,
       timeBehindSec: blockSec === null ? null : avgBlocks * blockSec,
       servedShare,
+      cohortBestReliability: cohortBestR.get(p.deployment) ?? null,
+      cohortFloorTimeBehindSec: cohortFloorLag.get(p.deployment) ?? null,
     };
     (out.get(p.indexer) ?? out.set(p.indexer, []).get(p.indexer)!).push(metric);
   }
@@ -251,11 +282,13 @@ export function scoreIndexers(
  */
 export async function computeAndStoreQosScores(
   sql: DbClient,
-  opts: { windowDays?: number } = {},
+  opts: { windowDays?: number; dayNumber?: number } = {},
 ): Promise<{ scored: number; dayNumber: number }> {
   const windowDays = opts.windowDays ?? 30;
   const GRAPH_EPOCH_DAYS = 18613;
-  const todayDayNumber = Math.floor(Date.now() / 86400000) - GRAPH_EPOCH_DAYS;
+  // `dayNumber` lets the recompute script re-score a past day with the window that day actually
+  // had, rather than back-dating a row computed from data that did not exist yet.
+  const todayDayNumber = opts.dayNumber ?? Math.floor(Date.now() / 86400000) - GRAPH_EPOCH_DAYS;
   const sinceDay = todayDayNumber - windowDays;
   const day = new Date((todayDayNumber + GRAPH_EPOCH_DAYS) * 86400000).toISOString().slice(0, 10);
 
@@ -269,12 +302,12 @@ export async function computeAndStoreQosScores(
            blocks_behind::float8  AS blocks_behind,
            chain_id
     FROM qos_daily
-    WHERE day_number >= ${sinceDay}
+    WHERE day_number >= ${sinceDay} AND day_number <= ${todayDayNumber}
   `;
   const deploymentTotals = await sql<DeploymentTotalRow[]>`
     SELECT deployment_id, SUM(total_query_count)::float8 AS total_query_count
     FROM deployment_daily
-    WHERE day_number >= ${sinceDay}
+    WHERE day_number >= ${sinceDay} AND day_number <= ${todayDayNumber}
     GROUP BY deployment_id
   `;
 

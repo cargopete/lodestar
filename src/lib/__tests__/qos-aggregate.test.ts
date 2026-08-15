@@ -90,6 +90,33 @@ describe('aggregateIndexerMetrics', () => {
     expect(a.timeBehindSec).toBeCloseTo(20, 6); // 4 blocks × 5s
   });
 
+  it('reads the cohort best and lag floor off peers with credible volume', () => {
+    // Four indexers on one deployment. All of them fail most queries and all sit at the same
+    // lag — the signature of a subgraph that has fallen over, not four bad operators.
+    const peers: QosDailyRow[] = ['0xa', '0xb', '0xc', '0xd'].map((ix, i) =>
+      row({ indexer_address: ix, deployment_id: 'X', day_number: today,
+            query_count: 5000, success_count: [50, 3000, 2500, 1000][i],
+            blocks_behind: 20_000, chain_id: 'arbitrum-one' }),
+    );
+    const a = aggregateIndexerMetrics(peers, [], { todayDayNumber: today }).get('0xa')![0];
+    // Best peer is 3000/5000; the floor is the shared 20,000 blocks × 0.25s.
+    expect(a.cohortBestReliability).toBeGreaterThan(0.58);
+    expect(a.cohortBestReliability).toBeLessThan(0.6);
+    expect(a.cohortFloorTimeBehindSec).toBeCloseTo(5000, 6);
+  });
+
+  it('withholds cohort figures when too few peers have credible volume', () => {
+    const rows: QosDailyRow[] = [
+      row({ indexer_address: '0xa', deployment_id: 'X', day_number: today, query_count: 5000, success_count: 50 }),
+      row({ indexer_address: '0xb', deployment_id: 'X', day_number: today, query_count: 5000, success_count: 4000 }),
+      // below minCredibleN, so it cannot vouch for what is achievable here
+      row({ indexer_address: '0xc', deployment_id: 'X', day_number: today, query_count: 20, success_count: 20 }),
+    ];
+    const a = aggregateIndexerMetrics(rows, [], { todayDayNumber: today }).get('0xa')![0];
+    expect(a.cohortBestReliability).toBeNull();
+    expect(a.cohortFloorTimeBehindSec).toBeNull();
+  });
+
   it('servedShare is 0 when the deployment total is unknown', () => {
     const rows = [row({ indexer_address: '0xa', deployment_id: 'Z', day_number: 100, query_count: 500, success_count: 500 })];
     const metrics = aggregateIndexerMetrics(rows, [], { todayDayNumber: today });

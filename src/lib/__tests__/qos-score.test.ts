@@ -244,6 +244,48 @@ describe('computeQuality', () => {
     expect(r.freshUtil).toBeNull();
   });
 
+  describe('cohort adjustment', () => {
+    // The cohort figure is a Wilson bound, like the value it is compared against — the
+    // aggregate computes it the same way for peers as for the indexer being scored.
+    const bestPeer = wilsonLowerBound(5000 * 0.7555, 5000);
+    const onBrokenDeployment = (successRate: number): DeploymentMetrics => ({
+      deployment: 'notional-exponent-shaped', n: 5000, successes: 5000 * successRate,
+      avgLatencyMs: 250, latencyTauMs: 625, timeBehindSec: 1128, servedShare: 0.08,
+      cohortBestReliability: bestPeer, // the best any peer manages on a subgraph that fatals
+    });
+
+    it('an indexer doing as well as anyone can on a broken subgraph is not marked down for it', () => {
+      const r = computeQuality([onBrokenDeployment(0.7555)]);
+      expect(r.reliability).toBeCloseTo(1, 2);
+    });
+
+    it('but the worst of a bad bunch still scores badly', () => {
+      // The real case: 0.95% success where the best peer manages 75.55%.
+      const r = computeQuality([onBrokenDeployment(0.0095)]);
+      expect(r.reliability).toBeLessThan(0.05);
+    });
+
+    it('no mercy where the cohort is healthy — a lone failure is the indexer, not the subgraph', () => {
+      const r = computeQuality([
+        { deployment: 'd', n: 5000, successes: 2500, avgLatencyMs: 0, latencyTauMs: 100,
+          timeBehindSec: 0, servedShare: 0.5, cohortBestReliability: 0.99 },
+      ]);
+      expect(r.reliability).toBeLessThan(0.52); // ~0.5, ungraded on any curve
+    });
+
+    it('a halted subgraph drags everyone equally, so the shared lag is subtracted', () => {
+      const stuck: DeploymentMetrics = {
+        deployment: 'halted', n: 5000, successes: 5000, avgLatencyMs: 0, latencyTauMs: 100,
+        timeBehindSec: 21_600, servedShare: 0.2, cohortFloorTimeBehindSec: 21_600,
+      };
+      const r = computeQuality([stuck]);
+      expect(r.freshUtil).toBeCloseTo(1, 6);
+      // …but an indexer lagging BEYOND the cohort floor still wears the difference.
+      const worse = computeQuality([{ ...stuck, timeBehindSec: 21_600 + 7200 }]);
+      expect(worse.freshUtil!).toBeLessThan(0.02);
+    });
+  });
+
   it('freshness still bites when we DO know the chain', () => {
     const r = computeQuality([
       { deployment: 'a', n: 1000, successes: 1000, avgLatencyMs: 0, latencyTauMs: 100, timeBehindSec: 36_000, servedShare: 1 },
