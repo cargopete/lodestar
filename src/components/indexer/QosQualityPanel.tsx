@@ -40,10 +40,51 @@ interface DeploymentRow {
   reliability: number | null;
   reliability_used: number | null;
   cohort_best_reliability: number | null;
+  lat_util: number;
+  fresh_util: number | null;
   time_behind_own_sec: number | null;
   q: number | null;
   measured: boolean;
   drag: number;
+}
+
+/** "~69 min behind", "~3 h behind", "~2 d behind". */
+function formatBehind(seconds: number): string {
+  if (seconds < 90) return `~${Math.round(seconds)}s behind`;
+  const min = seconds / 60;
+  if (min < 90) return `~${Math.round(min)} min behind`;
+  const hours = min / 60;
+  if (hours < 48) return `~${Math.round(hours)} h behind`;
+  return `~${Math.round(hours / 24)} d behind`;
+}
+
+/**
+ * Which of the three axes is actually costing this deployment its score, and by how much.
+ *
+ * Without this the panel showed a deployment at 100% success wearing the longest red bar on the
+ * page, which reads as a contradiction and tells an operator nothing. The score is a product,
+ * `R · U_lat · U_fresh^0.5`, so the axis to name is whichever factor is furthest below 1 once the
+ * freshness exponent is applied.
+ */
+function dominantDeficit(d: DeploymentRow): { label: string; color: string; loss: number } | null {
+  const candidates = [
+    { key: 'reliability', loss: 1 - (d.reliability_used ?? 1), color: 'var(--red)' },
+    { key: 'latency', loss: 1 - d.lat_util, color: 'var(--accent)' },
+    // Freshness enters the product at exponent 0.5, so its effective drag is 1 - sqrt(U_fresh).
+    { key: 'freshness', loss: d.fresh_util === null ? 0 : 1 - Math.sqrt(d.fresh_util), color: 'var(--amber)' },
+  ];
+  const worst = candidates.reduce((a, b) => (b.loss > a.loss ? b : a));
+  if (worst.loss < 0.02) return null;
+
+  if (worst.key === 'freshness') {
+    return {
+      label: d.time_behind_own_sec != null ? formatBehind(d.time_behind_own_sec) : 'behind chain head',
+      color: worst.color,
+      loss: worst.loss,
+    };
+  }
+  if (worst.key === 'latency') return { label: 'slow vs peers', color: worst.color, loss: worst.loss };
+  return { label: 'serving errors', color: worst.color, loss: worst.loss };
 }
 
 /**
@@ -71,31 +112,50 @@ function DeploymentDrag({ addr }: { addr: string }) {
 
   return (
     <div className="mb-4">
-      <p className="text-xs font-medium text-[var(--text)] mb-1.5">What is holding the score down</p>
+      <div className="flex items-baseline justify-between mb-1.5">
+        <p className="text-xs font-medium text-[var(--text)]">What is holding the score down</p>
+        <p className="text-[10px] text-[var(--text-faint)]">bar = share of the score lost here</p>
+      </div>
       <div className="space-y-1.5">
         {rows.map((d) => {
           const cohortBroken =
             d.cohort_best_reliability != null && d.cohort_best_reliability < 0.9;
+          const deficit = dominantDeficit(d);
           return (
             <div key={d.deployment_id} className="flex items-center gap-2 text-[11px]">
-              <code className="text-[var(--text-muted)] truncate max-w-[9rem]" title={d.deployment_id}>
+              <code className="text-[var(--text-muted)] truncate max-w-[8rem]" title={d.deployment_id}>
                 {d.deployment_id.slice(0, 10)}…
               </code>
               <div className="flex-1 h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+                {/* Coloured by the axis actually failing, so a deployment serving perfectly but
+                    lagging never reads as an error. */}
                 <div
                   className="h-full rounded-full"
-                  style={{ width: `${Math.min(100, d.drag * 100)}%`, backgroundColor: 'var(--red)' }}
+                  style={{
+                    width: `${Math.min(100, d.drag * 100)}%`,
+                    backgroundColor: deficit?.color ?? 'var(--text-faint)',
+                  }}
                 />
               </div>
-              <span className="font-mono text-[var(--text-muted)] tabular-nums">
+              <span className="font-mono text-[var(--text-muted)] tabular-nums shrink-0">
                 {(d.weight * 100).toFixed(0)}% of traffic
               </span>
-              <span className="font-mono text-[var(--text-faint)] tabular-nums w-12 text-right">
+              <span
+                className="font-mono text-[var(--text-faint)] tabular-nums w-10 text-right shrink-0"
+                title="Success rate over the window"
+              >
                 {d.reliability != null ? `${(d.reliability * 100).toFixed(0)}%` : '—'}
+              </span>
+              <span
+                className="tabular-nums w-[6.5rem] text-right shrink-0"
+                style={{ color: deficit?.color ?? 'var(--text-faint)' }}
+                title={deficit ? `The largest single factor costing this deployment score` : undefined}
+              >
+                {deficit?.label ?? 'healthy'}
               </span>
               {cohortBroken && (
                 <span
-                  className="text-[10px] text-[var(--text-faint)]"
+                  className="text-[10px] text-[var(--text-faint)] shrink-0"
                   title="Every indexer measured on this deployment is struggling, so it is graded against what the cohort achieves rather than against perfection."
                 >
                   cohort
@@ -106,8 +166,10 @@ function DeploymentDrag({ addr }: { addr: string }) {
         })}
       </div>
       <p className="text-[10px] text-[var(--text-faint)] mt-1.5 leading-relaxed">
-        Share of served queries, then success rate. A deployment marked “cohort” is failing for
-        every indexer serving it, which is usually the subgraph rather than the operator.
+        Share of served queries, success rate, then the biggest single reason that deployment is
+        costing you score — a subgraph can be answered perfectly and still drag the grade by lagging
+        chain head. A deployment marked “cohort” is failing for every indexer serving it, which is
+        usually the subgraph rather than the operator.
       </p>
     </div>
   );
