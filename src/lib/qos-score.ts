@@ -37,12 +37,20 @@ export const DEFAULTS = {
   halfLifeDays: 10, // EWMA half-life for day weighting
   minCredibleN: 100, // queries/deployment to count toward coverage
   coverageK: 3, // coverage saturation constant
-  // Display calibration: the weighted product of sub-1 utilities caps a strong indexer's raw
-  // composite well below 1. Dividing by this "excellent reference" stretches the score to the
-  // full 0–100 range so the network's best read as A/B (ranking is unchanged — monotonic scale).
-  // ≈ the composite an excellent indexer achieves; calibrated so the top decile reads A and the
-  // median lands around B/C (keeps A selective rather than inflating the whole field).
-  scale: 0.65,
+  // Display calibration divisor. 1 = none, which is where it belongs.
+  //
+  // It was 0.65, set when the blend weighted deployments by served share. That weighting let a
+  // three-query backwater outvote the deployment carrying an indexer's real load, which dragged
+  // every composite down, and the divisor was the compensation. Weighting by queries served
+  // removed the cause, and the divisor then did what an uncalibrated stretch always does: on
+  // 2026-08-15 it put 35 of 51 indexers at an A and pinned 19 of them at exactly 100, discarding
+  // the ranking it exists to spread.
+  //
+  // Re-derived against the live distribution (recompute-qos.ts --dry sweeps candidates). At 1.0:
+  // median 60.0, p90 77.6, max 85.6, nothing at the cap — the top decile reads A, the median sits
+  // on the B/C line, and there is headroom above the best indexer. That is the calibration the
+  // old comment described and the old constant no longer delivered.
+  scale: 1,
 } as const;
 
 // Approximate block times (seconds) by the oracle's chain_id string. Chains the oracle actually

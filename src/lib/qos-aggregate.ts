@@ -41,6 +41,12 @@ export interface AggregateOpts {
   latencyTauMult?: number;
   /** Volume a peer needs before it counts toward a deployment's cohort figures. */
   minCredibleN?: number;
+  /**
+   * Display calibration divisor (see DEFAULTS.scale). Overridable so the constant can be
+   * re-derived against a live distribution instead of guessed: run with scale=1 to see the
+   * uncalibrated spread, then pick the divisor that puts the top decile at an A.
+   */
+  scale?: number;
 }
 
 // Latency τ = latencyTauMult × per-deployment cohort median. Using the bare median makes
@@ -271,7 +277,7 @@ export function scoreIndexers(
   const metrics = aggregateIndexerMetrics(qosRows, deploymentTotals, opts);
   const results: IndexerQuality[] = [];
   for (const [indexer, rows] of metrics) {
-    results.push({ indexer, ...computeQuality(rows) });
+    results.push({ indexer, ...computeQuality(rows, { scale: opts.scale }) });
   }
   return results;
 }
@@ -282,8 +288,8 @@ export function scoreIndexers(
  */
 export async function computeAndStoreQosScores(
   sql: DbClient,
-  opts: { windowDays?: number; dayNumber?: number } = {},
-): Promise<{ scored: number; dayNumber: number }> {
+  opts: { windowDays?: number; dayNumber?: number; scale?: number; dryRun?: boolean } = {},
+): Promise<{ scored: number; dayNumber: number; qScores: number[] }> {
   const windowDays = opts.windowDays ?? 30;
   const GRAPH_EPOCH_DAYS = 18613;
   // `dayNumber` lets the recompute script re-score a past day with the window that day actually
@@ -311,8 +317,9 @@ export async function computeAndStoreQosScores(
     GROUP BY deployment_id
   `;
 
-  const scores = scoreIndexers(qosRows, deploymentTotals, { todayDayNumber });
-  if (scores.length === 0) return { scored: 0, dayNumber: todayDayNumber };
+  const scores = scoreIndexers(qosRows, deploymentTotals, { todayDayNumber, scale: opts.scale });
+  const qScores = scores.map((s) => s.qScore);
+  if (scores.length === 0) return { scored: 0, dayNumber: todayDayNumber, qScores };
 
   // Phase 2: ServedGap + efficiency from active allocations.
   const allocations = await sql<AllocationRow[]>`
@@ -339,6 +346,10 @@ export async function computeAndStoreQosScores(
     };
   });
 
+  // Calibration runs compute the whole thing and write nothing — the point is to look at the
+  // distribution a candidate `scale` produces before it reaches a public grade.
+  if (opts.dryRun) return { scored: scores.length, dayNumber: todayDayNumber, qScores };
+
   const CHUNK = 200;
   for (let i = 0; i < rows.length; i += CHUNK) {
     await sql`
@@ -355,5 +366,5 @@ export async function computeAndStoreQosScores(
     `;
   }
 
-  return { scored: scores.length, dayNumber: todayDayNumber };
+  return { scored: scores.length, dayNumber: todayDayNumber, qScores };
 }
