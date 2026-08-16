@@ -102,7 +102,9 @@ export async function GET() {
   // v2: payload gained the `partial` flag + complete-week-only headline figures.
   // v3: payload gained a `source` field (nuthatch vs subgraph) — new key so we don't serve a v2
   // entry cached before the nuthatch migration (which has no source and the old subgraph totals).
-  const cacheKey = `lodestar:developer-activity:v3:${windowMonths}m`;
+  // v4: force a fresh generation when the production GNS Nuthatch panel is enabled, rather than
+  // serving the previous subgraph-backed hourly entry through the staged cutover.
+  const cacheKey = `lodestar:developer-activity:v4:${windowMonths}m`;
 
   try {
     const data = await cached<DeveloperActivityResponse>(cacheKey, 3600, async () => {

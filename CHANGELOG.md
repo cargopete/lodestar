@@ -2,6 +2,21 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.25.0] - 2026-08-16
+
+### Changed
+
+- **Delegation Activity now reads from the self-hosted Nuthatch Staking nest in production.** The
+  panel remains independently flag-gated and falls back to The Graph on any Nuthatch failure.
+- **Developer Activity is enabled for the self-hosted L2GNS nest.** Its cache generation advances to
+  v4 so a previously cached subgraph response cannot conceal the staged cutover for an hour.
+
+### Notes
+
+- The two Nuthatch panels are the first step in Lodestar's long-term zero-hosted-subgraph plan.
+  They remain staged until independent source comparisons and ongoing production observation are
+  complete.
+
 ## [4.24.0] — 2026-08-15
 
 An indexer wrote in asking why Lodestar showed him a failing QoS score when his own metrics
