@@ -32,7 +32,7 @@ export const TIERS: TierMeta[] = [
     blurb: 'Live on Arbitrum One and in active paid use.',
   },
   {
-    tier: 2,
+    tier: 1,
     label: 'Mainnet-deployed, unexercised',
     blurb: 'Contract live on Arbitrum One, but no completed paid-query loop yet.',
   },
@@ -457,12 +457,12 @@ substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +2
     description:
       'A Horizon proxy service for self-hosted Nuthatch nests. A provider advertises a specific (NID, QueryMode, endpoint) offering on-chain, then a narrow Rust gateway validates TAP receipts before forwarding to Nuthatch. The normal product is author-sanctioned named queries; arbitrary SQL is an explicit, separately advertised mode.',
     tier: 2,
-    statusLabel: 'Mainnet deployed · awaiting provider',
-    statusVariant: 'warning',
-    stage: 'UUPS proxy deployed on Arbitrum One; contract and gateway lifecycle tested locally. No registered provider or public endpoint yet.',
-    providerStatus: 'none',
+    statusLabel: 'Mainnet self-run beta',
+    statusVariant: 'accent',
+    stage: 'A registered provider serves the Horizon nest through a hardened public TAP gateway. One mainnet TAP receipt and signed RAV have completed the collect() settlement path; consumer signing is currently allowlisted for the beta.',
+    providerStatus: 'single-self-run',
     providerNote:
-      'No provider is registered and no paid query has been settled on mainnet. The deployed proxy currently has a 555 GRT provision floor; a zero-floor upgrade is prepared but has not yet been executed. This is a deployment, not a live paid service.',
+      'Provider 0x02526499Ae2879A94090267017C3816f733825Bb serves the Horizon nest in NAMED mode at https://nuthatchds.89.167.109.4.sslip.io. Discovery is public; paid requests presently require an allowlisted, GraphTally-authorized signer. The service provision floor is 0 GRT; Horizon Staking itself still requires every provision to be non-zero.',
     chain: {
       payment: 'arbitrum-one',
       paymentLabel: 'Arbitrum One',
@@ -487,16 +487,16 @@ substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +2
         network: 'arbitrum-one',
       },
     ],
-    minProvision: '555 GRT on deployed proxy; 0 GRT upgrade prepared',
+    minProvision: '0 GRT service floor; Horizon Staking requires a non-zero provider provision',
     becomeProvider: [
-      'Until the prepared upgrade executes, provision ≥555 GRT in HorizonStaking to the NuthatchDataService proxy (14-day thawing minimum).',
+      'Provision any non-zero amount in HorizonStaking to the NuthatchDataService proxy (14-day thawing minimum).',
       'register(provider, abi.encode(endpoint, geoHash, paymentsDestination)), then startService(provider, abi.encode(nid, QueryMode.NAMED, endpoint)).',
       'Run Nuthatch privately with the nest query allowlist mounted, Postgres for receipt persistence, and nuthatch-gateway pointed at that Nuthatch runtime.',
     ],
     consume: [
       'Discover one offered NID through free GET /v1/nests/:nid/schema and /queries routes.',
       'Use GET /v1/nests/:nid/q/:query with a signed EIP-712 TAP-Receipt. Named queries cost 1 CU; tables cost 2 CU; SQL costs 20 CU and is available only from an SQL offering.',
-      'There is no public provider endpoint yet, so these are integration instructions rather than a runnable public API.',
+      'The first self-run beta offering is https://nuthatchds.89.167.109.4.sslip.io for NID 36d3c71446a56cdb5b90536d3f5f77351b1d92efcca94bc2fd41b1c368e69410. Contact the provider to arrange an authorised signer.',
     ],
     fees: '1% burned + 1% retained by the data service on collection.',
     notable:
