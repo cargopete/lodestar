@@ -10,7 +10,7 @@
  * most decision-relevant field is `providerStatus` — surface it prominently.
  */
 
-export const DATA_SERVICES_LAST_REVIEWED = '2026-06-24';
+export const DATA_SERVICES_LAST_REVIEWED = '2026-08-17';
 
 /** Whether a real, paid-query-serving provider set exists. The headline signal. */
 export type ProviderStatus = 'active' | 'single-self-run' | 'none';
@@ -447,6 +447,60 @@ substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +2
     fees: 'Fixed 1% data-service cut, burned (0% retained), matching SDSCE under Community Edition policy.',
     notable:
       'First consumer of horizon-core (nightswatchhq\'s reusable Horizon payment plumbing: TAP v2 validation, RAV aggregation, on-chain collection, persistence, generic TAP-gated proxy). Experimental and community-led; not affiliated with the Graph Foundation, Edge & Node, or GraphOps. Unaudited. Distinct from the upstream graphops File Hosting Service.',
+  },
+  {
+    slug: 'nuthatch-data-service',
+    name: 'Nuthatch Data Service',
+    builtBy: 'nightswatchhq',
+    homeTeam: true,
+    tagline: 'Reproducible Nuthatch indexed datasets, identified and sold by NID rather than a vague promise of SQL.',
+    description:
+      'A Horizon proxy service for self-hosted Nuthatch nests. A provider advertises a specific (NID, QueryMode, endpoint) offering on-chain, then a narrow Rust gateway validates TAP receipts before forwarding to Nuthatch. The normal product is author-sanctioned named queries; arbitrary SQL is an explicit, separately advertised mode.',
+    tier: 2,
+    statusLabel: 'Mainnet deployed · awaiting provider',
+    statusVariant: 'warning',
+    stage: 'UUPS proxy deployed on Arbitrum One; contract and gateway lifecycle tested locally. No registered provider or public endpoint yet.',
+    providerStatus: 'none',
+    providerNote:
+      'No provider is registered and no paid query has been settled on mainnet. The deployed proxy currently has a 555 GRT provision floor; a zero-floor upgrade is prepared but has not yet been executed. This is a deployment, not a live paid service.',
+    chain: {
+      payment: 'arbitrum-one',
+      paymentLabel: 'Arbitrum One',
+      dataLabel: 'Nuthatch nests, initially Horizon activity',
+      isMainnet: true,
+    },
+    stack: ['Rust', 'Solidity', 'DuckDB', 'Postgres'],
+    links: [
+      { label: 'Repo', url: 'https://github.com/nightswatchhq/nuthatch-ds' },
+      { label: 'First nest: horizon-nest', url: 'https://github.com/nightswatchhq/horizon-nest' },
+      { label: 'Nuthatch', url: 'https://github.com/nightswatchhq/nuthatch' },
+    ],
+    contracts: [
+      {
+        label: 'NuthatchDataService (proxy)',
+        address: '0x647D1Fd14AF2DE3947522B74F1de5B99d317c10A',
+        network: 'arbitrum-one',
+      },
+      {
+        label: 'GraphTallyCollector',
+        address: '0x8f69F5C07477Ac46FBc491B1E6D91E2bb0111A9e',
+        network: 'arbitrum-one',
+      },
+    ],
+    minProvision: '555 GRT on deployed proxy; 0 GRT upgrade prepared',
+    becomeProvider: [
+      'Until the prepared upgrade executes, provision ≥555 GRT in HorizonStaking to the NuthatchDataService proxy (14-day thawing minimum).',
+      'register(provider, abi.encode(endpoint, geoHash, paymentsDestination)), then startService(provider, abi.encode(nid, QueryMode.NAMED, endpoint)).',
+      'Run Nuthatch privately with the nest query allowlist mounted, Postgres for receipt persistence, and nuthatch-gateway pointed at that Nuthatch runtime.',
+    ],
+    consume: [
+      'Discover one offered NID through free GET /v1/nests/:nid/schema and /queries routes.',
+      'Use GET /v1/nests/:nid/q/:query with a signed EIP-712 TAP-Receipt. Named queries cost 1 CU; tables cost 2 CU; SQL costs 20 CU and is available only from an SQL offering.',
+      'There is no public provider endpoint yet, so these are integration instructions rather than a runnable public API.',
+    ],
+    fees: '1% burned + 1% retained by the data service on collection.',
+    notable:
+      'The NID is the discovery primitive: two indexers offering the same NID claim to serve the same reproducible authored dataset. Gateway tests cover NID routing, the named-query default, SQL rejection, receipt gating, and unsafe upstream-path rejection. Slashing deliberately reverts because there is no on-chain dispute mechanism yet.',
   },
   {
     slug: 'mainline-firehose',
