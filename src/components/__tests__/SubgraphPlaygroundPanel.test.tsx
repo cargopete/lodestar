@@ -59,6 +59,17 @@ describe('SubgraphPlaygroundPanel', () => {
     );
   });
 
+  it('labels the keyless option experimental', () => {
+    render(<SubgraphPlaygroundPanel hash={HASH} />);
+    expect(screen.getByRole('radio', { name: /No API key/ })).toHaveTextContent(/experimental/i);
+  });
+
+  it('warns that the paid path is unproven once keyless is chosen', () => {
+    render(<SubgraphPlaygroundPanel hash={HASH} />);
+    fireEvent.click(screen.getByRole('radio', { name: /No API key/ }));
+    expect(screen.getByRole('note')).toHaveTextContent(/No payment has been confirmed end to end/);
+  });
+
   it('prompts for nothing until keyless mode is chosen', () => {
     // The toggle itself names the option, but no wallet prompt or price should
     // appear while the default keyed mode is active.
@@ -66,6 +77,7 @@ describe('SubgraphPlaygroundPanel', () => {
     expect(screen.queryByText(/Connect a wallet/)).toBeNull();
     expect(screen.queryByText(/Pays the gateway directly/)).toBeNull();
     expect(screen.queryByText(/No gas/)).toBeNull();
+    expect(screen.queryByRole('note')).toBeNull();
   });
 
   it('asks for a wallet when keyless is chosen and none is connected', () => {

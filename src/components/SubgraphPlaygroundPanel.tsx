@@ -26,6 +26,14 @@ type Mode = 'key' | 'keyless';
  *
  * Keyless does not conjure indexers. A subgraph published moments ago has no
  * allocation yet and will answer `no indexers found` however you pay for it.
+ *
+ * EXPERIMENTAL. Every step up to the wallet signature is verified against the
+ * live gateway, but no payment has been confirmed end to end, so the paid path
+ * is exercised only against mocks. Failure is bounded: an EIP-3009
+ * authorisation only moves USDC once the facilitator settles it, and the
+ * facilitator only settles once the gateway accepts the payment, so a rejected
+ * header costs a wasted signature rather than money. Remove the flag below once
+ * a real payment has gone through.
  */
 export default function SubgraphPlaygroundPanel({ hash }: { hash: string }) {
   const [mode, setMode] = useState<Mode>('key');
@@ -98,6 +106,9 @@ export default function SubgraphPlaygroundPanel({ hash }: { hash: string }) {
             className={`px-3 py-1.5 ${mode === 'keyless' ? 'bg-[var(--border)]' : ''}`}
           >
             No API key (pay per query)
+            <span className="ml-1.5 text-[10px] uppercase tracking-wide opacity-60">
+              experimental
+            </span>
           </button>
         </div>
 
@@ -108,6 +119,15 @@ export default function SubgraphPlaygroundPanel({ hash }: { hash: string }) {
           </span>
         )}
       </div>
+
+      {mode === 'keyless' && (
+        <p role="note" className="text-sm opacity-70">
+          <strong>Experimental.</strong> No payment has been confirmed end to end yet. Your wallet
+          will ask you to sign a USDC transfer for every query; check the amount and recipient
+          before you approve. If the gateway rejects the payment nothing is transferred, but treat
+          this as untested and start with a query you do not mind failing.
+        </p>
+      )}
 
       {mode === 'keyless' && !isConnected && (
         <p className="text-sm">
