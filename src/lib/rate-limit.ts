@@ -25,6 +25,9 @@ const LIMITS: Array<[RegExp, number]> = [
   // throttle. The SSE stream is long-lived (one request), so this mainly bounds
   // POST/GET history calls.
   [/^\/api\/scuttlebutt\//, 60],
+  // Keyless x402 relay: each call costs the caller real USDC, so abuse is
+  // self-limiting, but the route makes an outbound gateway request per hit.
+  [/^\/api\/x402\//, 30],
   [/^\/api\//, 200],
 ];
 

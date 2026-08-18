@@ -1071,7 +1071,7 @@ function ManifestSection({ hash }: { hash: string }) {
 // Playground tab — full GraphiQL IDE (schema browser, autocomplete, highlighting)
 // ---------------------------------------------------------------------------
 
-const GraphiQLIDE = dynamic(() => import('@/components/SubgraphGraphiQL'), {
+const GraphiQLIDE = dynamic(() => import('@/components/SubgraphPlaygroundPanel'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-[640px] rounded-[var(--radius-card)] border border-[var(--border)]">
