@@ -1,73 +1,61 @@
-# yatr task runner — wraps the npm scripts so there's one front door.
-# package.json stays the source of truth; tasks just call `npm run …`.
+# yatr - https://github.com/cargopete/yatr
+#
+# These tasks are what .github/workflows/ci.yml runs, command for command, so
+# `yatr ci` locally is the same gate. The workflow calls these tasks by name:
+# change a command here and CI changes with it.
+#
+# This project is pnpm, not npm: pnpm-lock.yaml is the lockfile and CI pins
+# pnpm 10. Running these through npm would resolve a different tree.
+#
+# The aggregate is `ci`, not `check`: `yatr check` is a builtin that validates
+# this file and shadows any task of that name without warning.
 
 [settings]
 cache = true
-watch_debounce_ms = 300
 
-# ─────────────────────────────────────────────────────────────
-# Dev
-# ─────────────────────────────────────────────────────────────
+[tasks.install]
+desc = "Install from the lockfile, exactly as CI does"
+run = ["pnpm install --frozen-lockfile"]
+sources = ["package.json", "pnpm-lock.yaml"]
 
 [tasks.dev]
-desc = "Start the Next.js dev server"
+desc = "Run the Next.js dev server"
+run = ["pnpm dev"]
+foreground = true
 no_cache = true
-run = ["npm run dev"]
-
-# ─────────────────────────────────────────────────────────────
-# Quality checks (cached on src + config changes)
-# ─────────────────────────────────────────────────────────────
 
 [tasks.lint]
-desc = "ESLint"
-run = ["npm run lint"]
+desc = "ESLint (CI: lint)"
+run = ["pnpm lint"]
 sources = ["src/**/*", "eslint.config.mjs", "package.json"]
 
 [tasks.type-check]
-desc = "TypeScript type-check (tsc --noEmit)"
-run = ["npm run type-check"]
-sources = ["src/**/*", "tsconfig.json", "package.json"]
+desc = "tsc --noEmit (CI: type-check)"
+run = ["pnpm type-check"]
+sources = ["src/**/*", "tsconfig.json"]
 
 [tasks.test]
-desc = "Run the Vitest suite once"
-run = ["npm run test"]
-sources = ["src/**/*", "vitest.config.ts", "package.json"]
+desc = "Vitest run"
+run = ["pnpm test"]
+sources = ["src/**/*", "package.json"]
 watch = ["src/**/*"]
 
 [tasks.test-coverage]
-desc = "Vitest with coverage"
-no_cache = true
-run = ["npm run test:coverage"]
-
-# ─────────────────────────────────────────────────────────────
-# Build — deliberately uncached (Next owns its own .next/cache;
-# layering yatr caching here risks resurrecting stale chunks)
-# ─────────────────────────────────────────────────────────────
+desc = "Vitest with coverage (CI: test)"
+run = ["pnpm test:coverage"]
+sources = ["src/**/*", "package.json"]
 
 [tasks.build]
-desc = "Production build"
-no_cache = true
-run = ["npm run build"]
-
-# ─────────────────────────────────────────────────────────────
-# Aggregate — the full CI gate
-# ─────────────────────────────────────────────────────────────
-
-[tasks.check]
-desc = "Full check: lint + type-check + test"
-depends = ["lint", "type-check", "test"]
-run = []
-
-[tasks.ci]
-desc = "Full CI gate: checks then build"
-depends = ["check", "build"]
-run = []
-
-# ─────────────────────────────────────────────────────────────
-# Utilities
-# ─────────────────────────────────────────────────────────────
+desc = "Next.js production build (CI: build)"
+run = ["pnpm build"]
+sources = ["src/**/*", "public/**/*", "next.config.ts", "pnpm-lock.yaml"]
 
 [tasks.db-backfill]
-desc = "Run the DB backfill script"
+desc = "Backfill the database"
+run = ["pnpm db:backfill"]
 no_cache = true
-run = ["npm run db:backfill"]
+
+[tasks.ci]
+desc = "What CI runs: lint, type-check, test-coverage, build"
+depends = ["lint", "type-check", "test-coverage", "build"]
+run = []
