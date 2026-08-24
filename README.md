@@ -170,17 +170,19 @@ single-binary indexer we run ourselves. It indexes the relevant Graph Protocol c
 directly and exposes the data over SQL — no third-party data API in the path. These routes are
 Nuthatch-only: an unavailable nest is reported as an error rather than silently changing the source.
 
-Lodestar currently queries exactly two Nuthatch nests in production. Both show an
+Lodestar currently queries exactly three Nuthatch data sources in production. Each shows an
 **"⚡ Indexed by nuthatch"** badge in the UI when live:
 
 | Panel | Route | Nest | Source contract(s) |
 |---|---|---|---|
 | **Delegation Activity** feed | `/api/delegation-events` | `graph-staking-nest` | HorizonStaking delegation events |
 | **Developer Activity** chart (subgraphs published/week) | `/api/developer-activity` | `graph-gns-nest` | L2GNS `SubgraphPublished` |
+| **Delegation Flows** chart | `/api/delegation-flows` | `graph-staking-legacy-history` + `graph-staking-nest` | Legacy `StakeDelegated`/`StakeDelegatedLocked`, then HorizonStaking delegation events |
 
-Lodestar does **not** currently query `horizon-nest`, `graph-staking-history`, or the completed
-`graph-staking-legacy-history` parity dataset. The remaining Graph-backed panels are being ported one
-contract and query at a time; they are not yet covered by the two live nests above. The checked-in
+Lodestar does **not** currently query `horizon-nest` or `graph-staking-history`. The remaining
+Graph-backed panels are being ported one contract and query at a time; they are not yet covered by the
+three live Nuthatch sources above. The historical Delegation Flows dataset is served read-only and does
+not poll an RPC. The checked-in
 [Nuthatch migration checklist](docs/nuthatch-migration.md) records live cutovers, parity work,
 blockers and every remaining Graph route. Nuthatch connection configuration lives in `.env` (see
 [`.env.example`](.env.example)).

@@ -30,10 +30,10 @@ Before changing a route to **Live**, record all of the following in the migratio
 | `graph-gns-nest` | L2GNS `SubgraphPublished` | Live | Serves Developer Activity. |
 | `horizon-nest` | Horizon lifecycle events | Available | Data is retained and will be wired route by route. |
 | `graph-staking-history` | Full HorizonStaking history | Complete, stopped | Historical shadow retained on disk and disabled after the legacy parity run, to avoid archive-RPC follow-mode polling. |
-| `graph-staking-legacy-history` | Legacy and Horizon delegation-flow events | Read-only | Sealed 504,702 events from block 42,449,585 to 497,849,211 on 24 August 2026. It is served read-only for Delegation Flows, with no RPC configuration or cursor. The live staking nest supplies the post-backfill tail. |
+| `graph-staking-legacy-history` | Legacy and Horizon delegation-flow events | Live, read-only | Sealed 504,702 events from block 42,449,585 to 497,849,211 on 24 August 2026. It serves Delegation Flows with no RPC configuration or cursor. The live staking nest supplies the post-backfill tail. |
 
-All three public Lodestar nests run Nuthatch 2.7.1. The history nest is deliberately not exposed to
-Lodestar yet.
+Every Nuthatch service Lodestar queries runs Nuthatch 2.7.1. The legacy history service is deliberately
+read-only; `horizon-nest` and `graph-staking-history` are not yet wired into Lodestar.
 
 ## Migrated to production
 
@@ -41,12 +41,13 @@ Lodestar yet.
 |---|---|---|---|---|
 | Delegation Activity | `/api/delegation-events` | HorizonStaking delegation events | **Live** | Production reports `source: "nuthatch"`; no Graph code path remains. |
 | Developer Activity | `/api/developer-activity` | L2GNS `SubgraphPublished` | **Live** | Production reports `source: "nuthatch"`; no Graph code path remains. |
+| Delegation Flows | `/api/delegation-flows` | Read-only legacy history plus live HorizonStaking tail | **Live** | Production reports `source: "nuthatch"`; 30-day freshness verified and no DB or Graph code path remains. |
 
 ## Active parity work
 
 | Surface | Lodestar route | State | What is known | Required before cutover |
 |---|---|---|---|---|
-| Delegation flows | `/api/delegation-flows` | **Cutover verification** | The read-only legacy nest plus the live staking tail match 729 of 730 daily buckets. The lone difference is the oldest partial cache day, caused by the incumbent payload having been generated minutes earlier. | Deploy the Nuthatch-only route and verify public provenance and freshness. No further backfill is needed. |
+| None | — | — | Delegation Flows passed its cutover verification. The 730-day comparison has one expected oldest partial cache-day difference, caused by the incumbent payload having been generated minutes earlier. | — |
 
 The current HorizonStaking contract began late in 2025. Treating it as the whole of Arbitrum staking
 history would make the chart appear healthy while silently dropping older activity, which is a
@@ -110,7 +111,7 @@ verified, but each line remains a separate cutover.
 - [x] Add the legacy Arbitrum staking ABI and event topics to an isolated history nest.
 - [x] Finish the legacy backfill, catch it up to tip, and stop it before follow-mode polling.
 - [x] Apply the exact timestamp cutoff in Delegation Flows' Nuthatch query and serve the completed history read-only.
-- [ ] Verify the deployed Delegation Flows route and mark it Live.
+- [x] Verify the deployed Delegation Flows route and mark it Live.
 - [ ] Define a versioned Nuthatch query contract for every migrated route, including cursor and
       ordering semantics.
 - [ ] Keep fixed-block parity fixtures for each route in CI before its production switch.
