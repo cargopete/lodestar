@@ -165,12 +165,10 @@ Code: [`src/app/delegate/`](src/app/delegate/) · API: [`src/app/api/delegate/re
 
 ## Data from nuthatch
 
-Some panels are served by [**nuthatch**](https://www.nuthatch-indexer.com), a self-hosted, single-binary
-indexer we run ourselves, instead of The Graph gateway. It indexes the relevant Graph Protocol
-contracts on Arbitrum One directly and exposes the data over SQL — no third-party data API in the path.
-This is an incremental migration (the [RFC-0011 pilot](https://github.com/nightswatchhq/nuthatch)):
-each panel is behind its own flag and falls back to The Graph on any error, so nothing depends on
-nuthatch being up.
+The migrated panels are served by [**nuthatch**](https://www.nuthatch-indexer.com), a self-hosted,
+single-binary indexer we run ourselves. It indexes the relevant Graph Protocol contracts on Arbitrum One
+directly and exposes the data over SQL — no third-party data API in the path. These routes are
+Nuthatch-only: an unavailable nest is reported as an error rather than silently changing the source.
 
 Currently nuthatch-backed (both show an **"⚡ Indexed by nuthatch"** badge in the UI when live):
 
@@ -179,8 +177,10 @@ Currently nuthatch-backed (both show an **"⚡ Indexed by nuthatch"** badge in t
 | **Delegation Activity** feed | `/api/delegation-events` | HorizonStaking delegation events |
 | **Developer Activity** chart (subgraphs published/week) | `/api/developer-activity` | L2GNS `SubgraphPublished` |
 
-Everything else still reads The Graph Network subgraph. Configuration lives in `.env` under the
-`NUTHATCH_*` keys (see [`.env.example`](.env.example)).
+The remaining Graph-backed panels are being ported one contract and query at a time; they are not yet
+covered by the two nests above. The checked-in [Nuthatch migration checklist](docs/nuthatch-migration.md)
+records live cutovers, parity work, blockers and every remaining Graph route. Nuthatch connection
+configuration lives in `.env` (see [`.env.example`](.env.example)).
 
 ## Getting Started
 

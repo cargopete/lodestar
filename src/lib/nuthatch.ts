@@ -17,13 +17,9 @@ export function hasNuthatch(): boolean {
 }
 
 /**
- * Per-panel opt-in flag. A migrated route serves from nuthatch only when its flag is `"true"` AND a
- * nuthatch URL is configured — so flipping a panel back to The Graph is a one-line env change.
+ * A migrated route needs a configured Nuthatch origin. There is deliberately no alternate Graph
+ * source here: callers either receive data with Nuthatch provenance or a visible failure.
  */
-export function nuthatchEnabled(flag: string): boolean {
-  return hasNuthatch() && process.env[flag] === 'true';
-}
-
 /**
  * Run one SQL query against a nest's `/sql` surface and return its rows. `basePath` selects which nest
  * behind the shared host (empty = the default `graph-staking-nest` on `/sql`; `"/gns"` = the

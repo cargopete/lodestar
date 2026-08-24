@@ -52,23 +52,16 @@ This one needed a year of history, which on Arbitrum's ~4-blocks-per-second cade
 
 Parity here is looser by nature, since it's a weekly time series rather than individual rows, so we held it to "documented divergence within tolerance." We reconstructed the same weekly buckets from `SubgraphPublished` timestamps and compared them week by week against the subgraph. Short windows matched exactly; over the full year the totals landed within about one percent, and as of writing they've converged to **3,375 vs 3,376**: a single subgraph apart, well inside the noise. We wrote the reason down rather than papering over it: a handful of L1-origin subgraphs enter the network subgraph's entity count via a transfer path that never emits a native-L2 `SubgraphPublished`. The *trend*, the thing the chart actually communicates, is identical.
 
-## The integration is one file with a fallback
+## The integration is one file
 
-On the Lodestar side, the whole thing is a small adapter (`src/lib/nuthatch.ts`) that does an authenticated `GET /sql`, plus two route handlers that call it. Both are **flag-gated and fall back to The Graph on any error**:
+On the Lodestar side, the whole thing is a small adapter (`src/lib/nuthatch.ts`) that does an authenticated `GET /sql`, plus two route handlers that call it. Both are **Nuthatch-only**: a failed nest is returned as an error, never silently replaced with data from The Graph:
 
 ```ts
-if (nuthatchEnabled('NUTHATCH_DELEGATION_EVENTS')) {
-  try {
-    rows = await nuthatchSql(delegationSql());
-    source = 'nuthatch';
-  } catch (err) {
-    log.error({ err }, 'nuthatch failed — falling back to subgraph');
-    rows = await subgraphRows();   // The Graph, unchanged
-  }
-}
+rows = await nuthatchSql(delegationSql());
+source = 'nuthatch';
 ```
 
-So nuthatch being up is never a hard dependency. If the box hiccups, the panel silently reverts to the gateway and nobody notices. Each panel also renders a small **"⚡ Indexed by nuthatch"** badge, but only when the response's `source` is actually `nuthatch`, never on the fallback, so the badge can't lie about where a number came from.
+Nuthatch is the dependency for these two panels. If the box hiccups, the panel reports that failure rather than silently changing the provenance of a number. Each panel renders a small **"⚡ Indexed by nuthatch"** badge when its response is Nuthatch-backed.
 
 Both nests run as two services on a single VPS behind one Caddy vhost with TLS and basic-auth, path-routed so Lodestar talks to a single URL. Total resident memory for both: **86 MB.** The 2 GB footprint budget is not, it turns out, in any danger.
 
@@ -106,7 +99,7 @@ curl -s https://www.lodestar-dashboard.com/api/developer-activity | jq .data.sou
 
 ## What this proves, and what it doesn't
 
-It proves the wedge works: a real product with real users can take a panel off a third-party data API and serve it from an indexer you run yourself, one panel at a time, gated on parity, with an automatic fallback so nothing is bet on the switch. Two panels down, on 86 MB of RAM and one small box.
+It proves the wedge works: a real product with real users can take a panel off a third-party data API and serve it from an indexer it runs itself, one panel at a time, gated on parity. Two panels down, on 86 MB of RAM and one small box.
 
 What it doesn't prove: everything. The QoS-oracle data still lives on The Graph's free tier (it needs calldata and IPFS ingestion nuthatch doesn't have yet). The developer-activity divergence is real, if tiny, and documented rather than hidden. And "the whole dashboard" is a long road of panels (indexers, allocations, epochs, payments) each with its own aggregation quirks to reproduce faithfully.
 

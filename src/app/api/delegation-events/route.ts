@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { delegationEventsQuery, hasSubgraphAccess } from '@/lib/subgraph';
-import { nuthatchEnabled, nuthatchSql } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSql } from '@/lib/nuthatch';
 import { log } from '@/lib/logger';
 
 interface DelegationEvent {
@@ -12,10 +11,6 @@ interface DelegationEvent {
   tokens: string;
   timestamp: string;
   txHash: string;
-}
-
-interface DelegationEventsResponse {
-  delegationEvents: DelegationEvent[];
 }
 
 const ETH_ADDRESS_RE = /^0x[0-9a-f]{40}$/;
@@ -49,8 +44,8 @@ function delegationEventsSql(indexer: string | null, first: number, since: numbe
 }
 
 export async function GET(request: NextRequest) {
-  if (!hasSubgraphAccess()) {
-    return NextResponse.json({ data: { delegationEvents: [] } });
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
 
   const indexerRaw = request.nextUrl.searchParams.get('indexer')?.toLowerCase();
@@ -63,48 +58,10 @@ export async function GET(request: NextRequest) {
       ? `lodestar:delegation-events:${indexer}`
       : 'lodestar:delegation-events:all';
 
-    // RFC-0011 pilot: when the flag is on, serve this feed from our own nuthatch nest instead of the
-    // community subgraph. Falls back to the gateway on any error, so the panel never goes dark.
-    if (nuthatchEnabled('NUTHATCH_DELEGATION_EVENTS')) {
-      try {
-        const data = await cached(`${cacheKey}:nuthatch:v2`, 300, async () => {
-          const rows = await nuthatchSql<DelegationEvent>(
-            delegationEventsSql(indexer, first, sevenDaysAgo)
-          );
-          // `source` lives inside `data` (not as a sibling) to match /api/developer-activity's shape.
-          return { delegationEvents: rows, source: 'nuthatch' as const };
-        });
-        return NextResponse.json(
-          { data },
-          { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }
-        );
-      } catch (err) {
-        log.api.error({ err }, 'nuthatch delegation events failed, falling back to subgraph');
-      }
-    }
-
-    const whereClause = indexer
-      ? `where: { indexer: "${indexer}", timestamp_gt: "${sevenDaysAgo}" }`
-      : `where: { timestamp_gt: "${sevenDaysAgo}" }`;
-
-    const data = await cached(cacheKey, 300, () =>
-      delegationEventsQuery<DelegationEventsResponse>(`{
-        delegationEvents(
-          first: ${first},
-          orderBy: timestamp,
-          orderDirection: desc,
-          ${whereClause}
-        ) {
-          id
-          eventType
-          indexer
-          delegator
-          tokens
-          timestamp
-          txHash
-        }
-      }`)
-    );
+    const data = await cached(`${cacheKey}:nuthatch:v3`, 300, async () => {
+      const rows = await nuthatchSql<DelegationEvent>(delegationEventsSql(indexer, first, sevenDaysAgo));
+      return { delegationEvents: rows, source: 'nuthatch' as const };
+    });
 
     return NextResponse.json({ data }, {
       headers: {
@@ -112,7 +69,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    log.api.error({ err: error }, 'Delegation events error');
-    return NextResponse.json({ data: { delegationEvents: [] } });
+    log.api.error({ err: error }, 'Nuthatch delegation events error');
+    return NextResponse.json({ error: 'Failed to load delegation events from Nuthatch' }, { status: 503 });
   }
 }
