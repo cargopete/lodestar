@@ -29,7 +29,7 @@ Before changing a route to **Live**, record all of the following in the migratio
 | `graph-staking-nest` | HorizonStaking delegation events | Live | Serves Delegation Activity. |
 | `graph-gns-nest` | L2GNS `SubgraphPublished` | Live | Serves Developer Activity. |
 | `horizon-nest` | Horizon lifecycle events | Available | Data is retained and will be wired route by route. |
-| `graph-staking-history` | Full HorizonStaking history | Shadow | Caught up to tip. It is isolated from the live nest while parity work continues. |
+| `graph-staking-history` | Full HorizonStaking history | Complete, stopped | Historical shadow retained on disk and disabled after the legacy parity run, to avoid archive-RPC follow-mode polling. |
 | `graph-staking-legacy-history` | Legacy and Horizon delegation-flow events | Complete, stopped | Isolated two-ABI parity nest. Sealed 504,702 events from block 42,449,585 to 497,849,211 on 24 August 2026, caught up to tip, then was disabled to avoid further archive-RPC use. |
 
 All three public Lodestar nests run Nuthatch 2.7.1. The history nest is deliberately not exposed to
