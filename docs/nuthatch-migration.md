@@ -30,6 +30,7 @@ Before changing a route to **Live**, record all of the following in the migratio
 | `graph-gns-nest` | L2GNS `SubgraphPublished` | Live | Serves Developer Activity. |
 | `horizon-nest` | Horizon lifecycle events | Available | Data is retained and will be wired route by route. |
 | `graph-staking-history` | Full HorizonStaking history | Shadow | Caught up to tip. It is isolated from the live nest while parity work continues. |
+| `graph-staking-legacy-history` | Legacy and Horizon delegation-flow events | Backfilling | Isolated two-ABI parity nest on port 8103. Started from block 42,449,585 on 24 August 2026. |
 
 All three public Lodestar nests run Nuthatch 2.7.1. The history nest is deliberately not exposed to
 Lodestar yet.
@@ -45,7 +46,7 @@ Lodestar yet.
 
 | Surface | Lodestar route | State | What is known | Required before cutover |
 |---|---|---|---|---|
-| Delegation flows | `/api/delegation-flows` | **Blocked** | The full-history shadow matches the incumbent source for the last 90 days, 91 of 91 daily buckets. It cannot reproduce 473 of 730 older daily buckets. | Index the pre-Horizon Arbitrum staking contracts and map their legacy delegation events into the route's common flow shape, then repeat the full 730-day comparison. |
+| Delegation flows | `/api/delegation-flows` | **Shadow** | The first shadow matched the incumbent source for the last 90 days, 91 of 91 daily buckets, but could not reproduce 473 of 730 older daily buckets. The legacy-aware shadow is now backfilling. | When it reaches tip, map `StakeDelegated` and `StakeDelegatedLocked` with the Horizon event pair and repeat the full 730-day comparison. |
 
 The current HorizonStaking contract began late in 2025. Treating it as the whole of Arbitrum staking
 history would make the chart appear healthy while silently dropping older activity, which is a
@@ -106,8 +107,8 @@ verified, but each line remains a separate cutover.
 
 ## Supporting work
 
-- [ ] Add legacy Arbitrum staking deployments and ABIs to the history nest, then close the Delegation
-      Flows parity gap.
+- [x] Add the legacy Arbitrum staking ABI and event topics to an isolated history nest.
+- [ ] Finish that backfill and close the Delegation Flows parity gap.
 - [ ] Define a versioned Nuthatch query contract for every migrated route, including cursor and
       ordering semantics.
 - [ ] Keep fixed-block parity fixtures for each route in CI before its production switch.
