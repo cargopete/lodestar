@@ -170,17 +170,20 @@ single-binary indexer we run ourselves. It indexes the relevant Graph Protocol c
 directly and exposes the data over SQL — no third-party data API in the path. These routes are
 Nuthatch-only: an unavailable nest is reported as an error rather than silently changing the source.
 
-Currently nuthatch-backed (both show an **"⚡ Indexed by nuthatch"** badge in the UI when live):
+Lodestar currently queries exactly two Nuthatch nests in production. Both show an
+**"⚡ Indexed by nuthatch"** badge in the UI when live:
 
-| Panel | Route | Source contract(s) |
-|---|---|---|
-| **Delegation Activity** feed | `/api/delegation-events` | HorizonStaking delegation events |
-| **Developer Activity** chart (subgraphs published/week) | `/api/developer-activity` | L2GNS `SubgraphPublished` |
+| Panel | Route | Nest | Source contract(s) |
+|---|---|---|---|
+| **Delegation Activity** feed | `/api/delegation-events` | `graph-staking-nest` | HorizonStaking delegation events |
+| **Developer Activity** chart (subgraphs published/week) | `/api/developer-activity` | `graph-gns-nest` | L2GNS `SubgraphPublished` |
 
-The remaining Graph-backed panels are being ported one contract and query at a time; they are not yet
-covered by the two nests above. The checked-in [Nuthatch migration checklist](docs/nuthatch-migration.md)
-records live cutovers, parity work, blockers and every remaining Graph route. Nuthatch connection
-configuration lives in `.env` (see [`.env.example`](.env.example)).
+Lodestar does **not** currently query `horizon-nest`, `graph-staking-history`, or the completed
+`graph-staking-legacy-history` parity dataset. The remaining Graph-backed panels are being ported one
+contract and query at a time; they are not yet covered by the two live nests above. The checked-in
+[Nuthatch migration checklist](docs/nuthatch-migration.md) records live cutovers, parity work,
+blockers and every remaining Graph route. Nuthatch connection configuration lives in `.env` (see
+[`.env.example`](.env.example)).
 
 ## Getting Started
 
