@@ -12,6 +12,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { HorizonParameters } from '@/components/ui/HorizonParameters';
 import { HorizonActivity } from '@/components/ui/HorizonActivity';
+import { CatalystCoverage } from '@/components/ui/CatalystCoverage';
 import dynamic from 'next/dynamic';
 
 const StakingTrendChart = dynamic(() => import('@/components/charts/StakingTrendChart').then(m => ({ default: m.StakingTrendChart })), { ssr: false });
@@ -117,6 +118,11 @@ export default function ProtocolOverview() {
           loading={networkLoading}
         />
       </StatGrid>
+
+      {/* Project Catalyst coverage — editorial, not live data. Sits high because the
+          roadmap is the live argument in the ecosystem right now; move it down the
+          page once it stops being. */}
+      <CatalystCoverage />
 
       {/* Epoch progress */}
       <Card>

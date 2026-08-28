@@ -7,7 +7,7 @@ interface ProgressBarProps {
   max?: number;
   label?: string;
   showValue?: boolean;
-  variant?: 'accent' | 'teal' | 'orange';
+  variant?: 'accent' | 'teal' | 'orange' | 'neutral';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -16,6 +16,9 @@ const variantColors: Record<string, string> = {
   accent: 'bg-gradient-to-r from-[var(--blue)] to-[var(--accent)]',
   teal: 'bg-gradient-to-r from-[var(--green)] to-[#6ee7b7]',
   orange: 'bg-gradient-to-r from-[var(--amber)] to-[#fbbf24]',
+  // For values that are low on purpose rather than by failure — a grey bar says
+  // "not our work" where amber or red would read as an alarm.
+  neutral: 'bg-gradient-to-r from-[var(--text-faint)] to-[var(--text-muted)]',
 };
 
 const sizeStyles: Record<string, string> = {
