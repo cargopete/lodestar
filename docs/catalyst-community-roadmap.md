@@ -346,7 +346,12 @@ parity replacing the upgrade indexer. Fallback routing.
         emitted `TargetAllocationUpdated` and a confident zero would be a lie.
   - [ ] Agreement lifecycle view: offer → acceptance → POI presentation → collection → cancellation.
   - [ ] Per-indexer agreement portfolio: active agreements, revenue, compliance.
-  - [ ] Alert on the split changing. It is the starting gun for the rest of this workstream.
+  - [x] Alert on the split changing. It is the starting gun for the rest of this workstream.
+        `/api/cron/check-dips` every 10 minutes, reading the nest directly so the API route's
+        5-minute cache cannot mask the event. Two triggers: `dips_live` (allocation above zero,
+        fires once ever) and `dips_config` (a new configuration step past the watermark). **The
+        first run seeds silently** — the timeline already holds six steps from 23 July and 25
+        August, and announcing those as news would be a false alarm about history.
   - [ ] Watch for `InnovationAllocation` appearing in the mainnet address book (GIP-0089, due
         2026-08-31); it is on Sepolia only today.
 - [ ] **Dipper client in the gateway.** Extend gib to speak the GIP-0081 agreement flow.
