@@ -116,9 +116,10 @@ export function RegistryVsReality() {
 
       {s.lying > 0 && (
         <p className="text-[11px] text-[var(--amber)] mt-2.5">
-          {s.lying === 1 ? 'One provider is' : `${s.lying} providers are`} registered on-chain while
-          advertising {s.lying === 1 ? 'an endpoint' : 'endpoints'} that does not answer. Consumers
-          following the registry will fail.
+          {s.lying === 1
+            ? 'One provider is registered on-chain while advertising an endpoint that does not answer.'
+            : `${s.lying} providers are registered on-chain while advertising endpoints that do not answer.`}{' '}
+          Consumers following the registry will fail.
         </p>
       )}
     </div>
