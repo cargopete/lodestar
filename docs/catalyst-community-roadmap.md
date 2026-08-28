@@ -187,8 +187,12 @@ provider is a contract address, not a market.
 
 - [ ] Set an explicit **quarterly gate**: any service that has not gained a second *independent*
       provider by quarter end stops feature work and spends the next quarter on recruitment.
-- [ ] Publish a live provider count per service on Lodestar so the number is embarrassing in public
-      rather than privately known.
+- [x] Publish a live provider count per service on Lodestar so the number is embarrassing in public
+      rather than privately known. **Done 2026-08-28** for Dispatch: `/api/provider-liveness` reads
+      the registry from chain, calls every endpoint it advertises, and the data-services page shows
+      "registry vs reality" beside the hand-written catalogue text. Currently reads **0/2
+      answering**. A cron every 15 minutes alerts on transitions only, seeding silently on first
+      run so a 39-day-old outage is not announced as news. Extend to the other services next.
 - [ ] Target list of candidate providers per service, maintained, with who has been asked and when.
 
 Current independent-provider count:
