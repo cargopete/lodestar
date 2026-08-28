@@ -66,13 +66,42 @@ allocator has real targets and a live distribution state.
 
 ## Build plan
 
-### Phase 1: DIPS observability — BUILDABLE AND UNBLOCKED (in progress)
+### The configuration timeline, indexed
+
+`dips-nest` backfilled all three contracts from deployment: 35 events across 12.3M blocks. Six of
+them are the configuration history, and it says the stack was armed three days ago.
+
+| Block | When (UTC) | Step | Subject |
+|---|---|---|---|
+| 486,933,823 | 2026-07-23 16:38 | issuance rate set | 0 → **120.73 GRT/block** |
+| 486,933,993 | 2026-07-23 16:39 | agreement manager wired to allocator | `0xb64f29b2…` |
+| 498,298,501 | **2026-08-25** 16:56 | collector pause guardian set | `0xb0ad33a2…` |
+| 498,298,632 | **2026-08-25** 16:56 | provider-eligibility oracle set | `0x02753bae…` (REO A) |
+| 498,298,724 | **2026-08-25** 16:56 | default target set | `0x28cd50e9…` (DefaultAllocation) |
+| 498,298,724 | **2026-08-25** 16:56 | target allocation set | RewardsManager ← **120.73 GRT/block** |
+
+On 23 July the allocator was switched on. On 25 August, in one burst, somebody set the collector's
+pause guardian, pointed the agreement manager at the Rewards Eligibility Oracle, registered
+DefaultAllocation as the default target, and gave the Rewards Manager the whole 120.73 per block.
+
+That is every step of arming DIPS except the last. The remaining move is one number.
+
+GIP-0089's Innovation Allocation is due on 2026-08-31 and `InnovationAllocation` is still absent
+from the mainnet address book while present on Sepolia. The 25 August wiring lands three days ahead
+of that date. Worth watching, not worth concluding from.
+
+### Phase 1: DIPS observability — IN PROGRESS
 
 A `dips-nest` (nuthatch) indexing the three contracts on Arbitrum One, feeding a Lodestar panel.
 No dependency on gib's payment loop, no dependency on the Foundation. See CAT-1 in the Catalyst
 tracker.
 
-- [ ] `dips-nest`: index IssuanceAllocator, RecurringAgreementManager, RecurringCollector
+- [x] `dips-nest`: index IssuanceAllocator, RecurringAgreementManager, RecurringCollector.
+      56 tables, `dips_timeline` and `dips_current_allocation` views, backfills in ~2 minutes.
+      **Note:** the published `@graphprotocol/issuance@1.0.0` agreement-manager ABI does **not**
+      match the deployed bytecode (21/38 selectors). The deployed contract is the `dips` dist-tag
+      of `@graphprotocol/interfaces` (`0.7.1-dips.0`). Indexing the wrong one gives permanently
+      empty tables that look healthy.
 - [ ] Allocation-split panel: current split, targets, the moment it moves off zero
 - [ ] Agreement lifecycle: offer → acceptance → POI presentation → collection → cancellation
 - [ ] Per-indexer agreement portfolio: active agreements, revenue, compliance

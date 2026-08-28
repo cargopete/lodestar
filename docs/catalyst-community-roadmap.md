@@ -306,6 +306,13 @@ returning `[DefaultAllocation, RewardsManager]`, and it is distributing. But
 So GIP-0088's 5% split is a governance parameter change, not a deployment. Full state in
 [`../plans/on-chain-indexing-agreements.md`](../plans/on-chain-indexing-agreements.md).
 
+**And it was armed three days ago.** `dips-nest` indexed all three contracts from deployment and
+found the configuration history: on 2026-07-23 the allocator's issuance rate went from 0 to 120.73
+GRT/block and the agreement manager was wired to it; then on **2026-08-25**, in a single burst, the
+collector's pause guardian was set, the agreement manager was pointed at Rewards Eligibility Oracle
+A, DefaultAllocation was registered as the default target, and the Rewards Manager was allocated the
+entire 120.73 per block. That is every step of arming DIPS except the last one.
+
 The consequence for this workstream: **everything observable is buildable today.** Whoever is
 already indexing these contracts sees the split move the moment it moves. That is the moat the
 parked tracker predicted, and it is still unclaimed.
@@ -326,8 +333,10 @@ parity replacing the upgrade indexer. Fallback routing.
       mainnet and the allocation is zero. See above.
 - [ ] **DIPS observability (`dips-nest` + Lodestar panel).** 🔑 *In progress. Unblocked, ours end to
       end, no payment loop required.*
-  - [ ] `dips-nest`: index `IssuanceAllocator`, `RecurringAgreementManager` and
-        `RecurringCollector` on Arbitrum One.
+  - [x] `dips-nest`: index `IssuanceAllocator`, `RecurringAgreementManager` and
+        `RecurringCollector` on Arbitrum One. 56 tables plus `dips_timeline` and
+        `dips_current_allocation` views; 35 events over 12.3M blocks, backfills in ~2 minutes.
+  - [ ] Deploy `dips-nest` to Helsinki behind `/dips/sql` and wire `NUTHATCH_DIPS`.
   - [ ] Allocation-split panel: current targets and rates, and the moment DefaultAllocation moves
         off zero.
   - [ ] Agreement lifecycle view: offer → acceptance → POI presentation → collection → cancellation.
