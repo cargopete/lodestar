@@ -779,9 +779,25 @@ Foundation adopts it rather than rebuilds it**, funded against the GIP-0089 Inno
 
 ### Tasks
 
-- [ ] **Metering spec + contract.** `ChainIntegrationDataService.sol` from the compass
-      template: accept per-chain integration payments, split protocol / indexer / DIPS, reuse
-      GraphTallyCollector.
+- [x] **Metering spec + contract.** Done 2026-08-28:
+      [nightswatchhq/chain-integration-ds](https://github.com/nightswatchhq/chain-integration-ds).
+      **The design changed on contact with the protocol.** Not the compass template and not
+      GraphTallyCollector: supporting a chain is a commitment held over time, not a request, so it
+      settles through **`RecurringCollector`** (`0xff0dc731…`, live on Arbitrum One, built for
+      DIPS). Its Recurring Collection Agreement already carries `maxInitialTokens` (the integration
+      fee), `maxOngoingTokensPerSecond` (the support retainer) and a term. We did not design that
+      shape, we noticed it. 16 tests.
+  - [x] CAIP-2 (GIP-0047) denormalised out of agreement metadata and emitted on every collection,
+        so per-chain revenue is a query over events rather than a reconciliation against a registry
+        somebody has to remember to update.
+  - [x] The cut is a **governance parameter with a placeholder default**, not a constant. Hard-coding
+        it would be making Council policy in Solidity.
+  - [x] Two upstream limitations surfaced rather than papered over: `PaymentTypes` has no
+        integration-fee variant (so `IndexingFee` is borrowed, and revenue bucketed by payment type
+        will misfile), and there is still no verification primitive, so `slash()` reverts.
+  - [x] Fed two build gotchas back to `horizon-skills`: the documented dependency pin predates
+        `RecurringCollector`, and the newer ref drops `onlyAuthorizedForProvision` and
+        `IDataService.deregister`.
 - [ ] **Attribution gateway.** gib extension tagging usage by CAIP-2 chain id; export to the
       revenue dashboard.
 - [ ] **Revenue dashboard.** Lodestar panel: per-chain integration revenue, protocol capture
