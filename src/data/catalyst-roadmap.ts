@@ -9,8 +9,14 @@
  * attached, and see `CATALYST_LAST_SCORED` for when it was last argued.
  *
  * The reasoning behind every number is in the post linked from
- * `CATALYST_SOURCE_POST`. If you disagree with a score, that post is the thing
- * to disagree with.
+ * `CATALYST_SOURCE_POST`; the working is in the delivery tracker at
+ * `CATALYST_TRACKER_URL`. If you disagree with a score, those are the things to
+ * disagree with.
+ *
+ * Rescored 2026-08-28 after a day of building against the roadmap. Several
+ * numbers moved because work landed. Two moved because we went and checked
+ * something and it was worse than assumed, which is the more useful kind of
+ * movement and the reason this is dated rather than evergreen.
  */
 
 export const CATALYST_LAST_SCORED = '2026-08-28';
@@ -49,68 +55,74 @@ export const CATALYST_ITEMS: CatalystItem[] = [
   {
     slug: 'gateway-operators',
     label: 'Onboard new gateway operators',
-    coverage: 65,
+    coverage: 64,
     rationale:
-      'Highest score because gib solves the genuinely hard technical part: a working TAP v2 / Horizon gateway used to be a multi-week ordeal and is now a compose file with a smoke test. The remaining 35% is whitelist coordination and money actually flowing, which was always going to be the Foundation’s job, so this is close to done as a community deliverable.',
+      'gib solves the genuinely hard technical part: a working TAP v2 / Horizon gateway used to be a multi-week ordeal and is now a compose file with a smoke test. Added since: `gib onboard`, which withholds the block an indexer must paste until your own side would actually work — the whitelist handshake is slow because every failure in it is discovered by the indexer, hours later, as receipts that bounce. The remaining third is money actually flowing and a second operator choosing to run it, and we have decided not to be that operator.',
     projects: [{ name: 'gib', url: 'https://github.com/nightswatchhq/gib' }],
   },
   {
-    slug: 'rpc-service',
-    label: 'The RPC data service',
-    coverage: 60,
+    slug: 'memory-for-ai',
+    label: 'Memory for AI',
+    coverage: 64,
     rationale:
-      'Dispatch exists as a live GRC-005 data service with real indexer provisioning. Docked because "the Foundation’s RPC service" implies official-track status, audits, gateway integration and go-to-market, none of which have happened. But they said they are still planning, and the plan is sitting on GitHub.',
-    projects: [{ name: 'Dispatch (GRC-005)', url: 'https://github.com/nightswatchhq/dispatch' }],
+      'The biggest move of 28 Aug, from 25%. nutcracker implements it: contract, client crypto, provider store, local MCP shim. The design names a contradiction in the brief nobody had — end-to-end encryption and semantic recall do not compose, and the usual casualty is the encryption, via plaintext embeddings stored beside the ciphertext. It picks a keyed blind index instead and publishes measured recall rather than adjectives. Two places where the obvious build would have been actively harmful are documented and tested against.',
+    projects: [
+      { name: 'nutcracker', url: 'https://github.com/nightswatchhq/nutcracker' },
+      { name: 'compass', url: 'https://github.com/nightswatchhq/compass' },
+      { name: 'AI/MCP directory', url: '/ai' },
+    ],
   },
   {
     slug: 'substreams',
     label: 'Finish the Substreams data service',
-    coverage: 55,
+    coverage: 58,
     rationale:
-      'Live contract, settlement daemon, runbooks and a rehearsed end-to-end path: that is most of the engineering. The missing 45% is heavy though — external audit, multisig ownership, a hosted gateway/oracle, providers actually onboarded, and the official StreamingFast-blessed deployment. Code is the smaller half of shipping a data service people trust with funds.',
+      'Live contract on Arbitrum One, settlement daemon, runbooks and a rehearsed end-to-end path: that is most of the engineering, and none of it moved on 28 Aug. The missing 42% is heavy — external audit, multisig ownership, a hosted gateway and oracle, and a provider actually onboarding. Code is the smaller half of shipping a data service people trust with funds.',
     projects: [{ name: 'SDSCE', url: 'https://github.com/nightswatchhq/SDSCE' }],
+  },
+  {
+    slug: 'rpc-service',
+    label: 'The RPC data service',
+    coverage: 50,
+    rationale:
+      'Marked DOWN from 60%, and it is the honest direction. Three real improvements landed on 28 Aug: the April audit was re-scoped against the current contract and its one surviving High was disproved by a proof-of-concept rather than by argument, a live filter-routing bug was fixed, and a liveness probe now exists. All of it is outweighed by discovering that Dispatch had not answered a request in 39 days. 60% described a codebase; 50% describes a codebase whose operation is at zero. The contract is live, the code is maintained, and it is open to any operator.',
+    projects: [{ name: 'Dispatch (GRC-005)', url: 'https://github.com/nightswatchhq/dispatch' }],
   },
   {
     slug: 'multi-product-studio',
     label: 'A multi-product Studio experience',
     coverage: 45,
     rationale:
-      'Lodestar proves the concept and covers a lot of surface, but "the Foundation’s multi-product Studio" means thegraph.com, hosted syncs integration, subscription billing, and pulling the transitioned E&N stack into one experience. Lodestar is a strong reference implementation, not a drop-in.',
+      'Lodestar proves the concept and covers a lot of surface, but "the Foundation\'s multi-product Studio" means thegraph.com, hosted syncs, subscription billing and the transitioned E&N stack in one experience. Lodestar is a strong reference implementation, not a drop-in. The binding constraint here is legal rather than technical: taking payment needs an entity.',
     projects: [{ name: 'Lodestar', url: '/' }],
   },
   {
     slug: 'studio-dips',
     label: 'Make Subgraph Studio fully network-powered',
-    coverage: 40,
+    coverage: 45,
     rationale:
-      'The frontend half is largely done — the Dock covers on-chain subgraph lifecycle, deploy keys, a playground and a metered gateway. The DIPS payments half, upgrade-indexer migration and indexers earning for syncs, is untouched protocol and ops work, and it is the half Pedro was actually talking about.',
-    projects: [{ name: 'The Dock', url: '/dock' }],
-  },
-  {
-    slug: 'memory-for-ai',
-    label: 'Memory for AI',
-    coverage: 25,
-    rationale:
-      'Scored on honesty: compass is the adjacent access and payment rail, not the memory service itself. The 25% credits that any agent-facing launch will need exactly what compass provides, plus Lodestar’s MCP directory as distribution.',
+      'The frontend half is largely done via the Dock. The news of 28 Aug is the protocol half: every DIPS contract is live on Arbitrum One and was fully wired on 25 August — issuance allocator, agreement manager, recurring collector, eligibility oracle — with the indexing-agreement allocation still set to zero. GIP-0088 is a governance parameter change away, not a deployment away. dips-nest indexes it and the dashboard shows it, so the moment that number moves is observable rather than announced.',
     projects: [
-      { name: 'compass', url: 'https://github.com/nightswatchhq/compass' },
-      { name: 'AI/MCP directory', url: '/ai' },
+      { name: 'dips-nest', url: 'https://github.com/nightswatchhq/dips-nest' },
+      { name: 'The Dock', url: '/dock' },
     ],
   },
   {
     slug: 'chain-integrations',
     label: 'Chain integrations data service',
-    coverage: 5,
+    coverage: 35,
     rationale:
-      'Nobody has built this. The 5% is only because the settlement patterns — TAP, Horizon data service contracts — are proven community territory now. The actual service, and crucially the business migration of existing chain deals onto it, is entirely Foundation work.',
-    projects: [],
+      'Was 5% because nobody had built it. chain-integration-ds now has the contract, the metering design, an integrator runbook and a deploy script. The design changed on contact with the protocol: supporting a chain is a commitment held over time, not a request, so it settles through RecurringCollector rather than per-query receipts — the Recurring Collection Agreement already has fields for an integration fee and an ongoing retainer. It does not go higher because nothing is deployed, and because the value-capture policy, which is most of what this item is, remains Council\'s.',
+    projects: [
+      { name: 'chain-integration-ds', url: 'https://github.com/nightswatchhq/chain-integration-ds' },
+    ],
   },
   {
     slug: 'institutional-audit',
     label: 'Institutional audit layer',
-    coverage: 0,
+    coverage: 5,
     rationale:
-      'Pure business development and positioning. No repo can pre-build relationships with auditors and financial institutions, and Pedro himself conceded the SLA and SOC 2 gap.',
+      'Almost entirely business development and positioning. No repo pre-builds relationships with auditors and financial institutions, and the SLA and SOC 2 gap is conceded. The 5% credits the deterministic-pipeline and signed-attestation patterns that exist in Seahorn and Dispatch as a genuine seed. It needs a legal entity that can hold a certification and sign an SLA, which is not an engineering problem.',
     projects: [],
   },
 ];
@@ -130,8 +142,8 @@ export interface CatalystSummary {
  *
  * Deliberately an unweighted mean: weighting the eight items by "how much work
  * each really is" would be a second layer of guesswork stacked on the first, and
- * the honest answer is that nobody knows the denominators. Equal weights land at
- * ~37%, which is the "roughly a third to 40%" claim in the post.
+ * the honest answer is that nobody knows the denominators. Equal weights landed
+ * at ~37% when this was first argued and at ~46% after 28 Aug.
  */
 export function catalystSummary(): CatalystSummary {
   const total = CATALYST_ITEMS.length;

@@ -31,9 +31,26 @@ describe('CATALYST_ITEMS', () => {
 });
 
 describe('catalystSummary', () => {
-  it('reproduces the ~37% headline claimed in the post', () => {
+  it('reproduces the headline the card renders', () => {
     const { overall } = catalystSummary();
-    expect(overall).toBeCloseTo(36.875, 3);
+    expect(overall).toBeCloseTo(45.75, 3);
+  });
+
+  /// The card is public and the tracker is internal, and they drifted badly once already —
+  /// the card said 37% and Dispatch 60% for hours after the tracker knew better. This pins
+  /// the eight numbers so a change to one has to be a change to both.
+  it('matches the delivery tracker, which is the thing that drifts', () => {
+    const byslug = Object.fromEntries(CATALYST_ITEMS.map((i) => [i.slug, i.coverage]));
+    expect(byslug).toEqual({
+      'gateway-operators': 64,
+      'memory-for-ai': 64,
+      substreams: 58,
+      'rpc-service': 50,
+      'multi-product-studio': 45,
+      'studio-dips': 45,
+      'chain-integrations': 35,
+      'institutional-audit': 5,
+    });
   });
 
   it('counts items with and without community work', () => {

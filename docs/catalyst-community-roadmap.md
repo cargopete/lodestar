@@ -961,28 +961,16 @@ caps institutional confidence regardless of what we build.
 
 ## Score reconciliation
 
-`src/data/catalyst-roadmap.ts` powers the public homepage card and currently disagrees with this
-file. That is fine as long as it is deliberate: the TS file is an *editorial* score of "how much of
-the Foundation's item has the community covered", this file is an *internal* delivery tracker.
+**Reconciled 2026-08-28.** `src/data/catalyst-roadmap.ts` (the public homepage card) and this file
+now carry the **same eight numbers**, and a test in `src/data/__tests__/catalyst-roadmap.test.ts`
+pins them so a change to one has to be a change to both.
 
-| Item | `catalyst-roadmap.ts` | This file | Why they differ |
-|---|---|---|---|
-| Gateway operators | 65 | 60 | No payment has ever flowed; the report docked it for that. |
-| RPC service | 60 | 62 | Live contract, real TAP loop; further along than 60. |
-| Substreams | 55 | 58 | Contract live on mainnet with a fork-proven loop. |
-| Multi-product Studio | 45 | 45 | Agree. |
-| Studio via DIPS | 40 | 40 | Agree. |
-| Memory for AI | 25 | 22 | compass is read-only, so the memory core is greenfield. |
-| Chain integrations | 5 | 6 | Settlement patterns are proven territory. |
-| Institutional audit | 0 | 5 | Seahorn determinism plus Dispatch attestations are a real seed. |
+They drifted badly once already: for most of 28 August the card told the public 37% and Dispatch
+60% while this file knew better, which is the same class of failure as a catalogue saying
+"Live · Production" about a service that stopped answering in July. A number nobody has checked
+against reality is not evidence, it is decoration, and that applies to our own numbers first.
 
-- [ ] Decide whether to reconcile the two, or document the split explicitly in
-      `catalyst-roadmap.ts`'s header comment. Do not let them drift silently.
-- [ ] Whichever way it goes, **Seahorn's live deployment should raise the institutional-audit and
-      memory scores slightly**, since the write/store substrate is now on mainnet rather than
-      hypothetical.
-
----
+The card's *rationales* are still editorial and argued in prose. The numbers are not.
 
 ## Open questions
 
