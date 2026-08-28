@@ -798,12 +798,24 @@ Foundation adopts it rather than rebuilds it**, funded against the GIP-0089 Inno
   - [x] Fed two build gotchas back to `horizon-skills`: the documented dependency pin predates
         `RecurringCollector`, and the newer ref drops `onlyAuthorizedForProvision` and
         `IDataService.deregister`.
-- [ ] **Attribution gateway.** gib extension tagging usage by CAIP-2 chain id; export to the
-      revenue dashboard.
-- [ ] **Revenue dashboard.** Lodestar panel: per-chain integration revenue, protocol capture
-      rate, indexer flow.
-- [ ] **Reference integrator flow.** A runbook for a chain to route its RPC / subgraph /
-      Substreams demand through the protocol.
+- [x] ~~**Attribution gateway.** gib extension tagging usage by CAIP-2 chain id.~~ **Obsoleted by
+      the design, 2026-08-28.** This task assumed per-query metering through gib. Settling through
+      `RecurringCollector` means there is no per-query gateway involvement at all — a chain
+      integration is subscribed to, not queried — and attribution happens on-chain at collection,
+      where `IntegrationFeesCollected` already carries the CAIP-2 id. Building a gateway to tag
+      traffic that does not exist would have been busywork. Removed rather than done.
+- [ ] **Revenue dashboard.** Lodestar panel: per-chain integration revenue, protocol capture rate,
+      indexer flow. Blocked only by there being no deployment to index; the design makes this
+      cheap, because `IntegrationFeesCollected` carries the CAIP-2 id so the panel is a query over
+      one event rather than a join against a registry.
+- [x] **Reference integrator flow.** Done:
+      [`docs/integrator-runbook.md`](https://github.com/nightswatchhq/chain-integration-ds/blob/main/docs/integrator-runbook.md).
+      End to end for both parties, with the failure table. Plus `Deploy.s.sol` (atomic initialise;
+      an uninitialised proxy is front-runnable) carrying the canonical `RecurringCollector`
+      addresses for both networks.
+- [ ] **Deploy to Arbitrum Sepolia.** Needs a funded deployer key and testnet gas. Until then the
+      contract is a reference implementation with no live instance, and the revenue dashboard below
+      has nothing to render.
 - [ ] **Adoption.** Sign one chain foundation to route integration revenue through the protocol.
 - [ ] 🔒 Value-capture policy, CIP ownership, issuance/DIPS routing rules.
 
