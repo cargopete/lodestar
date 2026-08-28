@@ -288,8 +288,8 @@ calendar, not the effort, is the constraint.
 
 ## CAT-1: Studio continuity via DIPS
 
-**40% → 90% (100% 🔒).** The *participating* half depends on CAT-2's payment loop. The *observing*
-half does not, and is unblocked as of 2026-08-28. **Started here.**
+**40% → 45% → 90% (100% 🔒).** The *participating* half depends on CAT-2's payment loop. The
+*observing* half does not, and shipped on 2026-08-28: `dips-nest` and a live homepage panel.
 
 Make Subgraph Studio fully network-powered so the Edge & Node upgrade indexer's role is replaced by
 real indexers earning through Direct Indexer Payments. We can build the gateway and the developer
@@ -336,9 +336,14 @@ parity replacing the upgrade indexer. Fallback routing.
   - [x] `dips-nest`: index `IssuanceAllocator`, `RecurringAgreementManager` and
         `RecurringCollector` on Arbitrum One. 56 tables plus `dips_timeline` and
         `dips_current_allocation` views; 35 events over 12.3M blocks, backfills in ~2 minutes.
-  - [ ] Deploy `dips-nest` to Helsinki behind `/dips/sql` and wire `NUTHATCH_DIPS`.
-  - [ ] Allocation-split panel: current targets and rates, and the moment DefaultAllocation moves
-        off zero.
+  - [x] Deploy `dips-nest` to Helsinki behind `/dips/sql` and wire `NUTHATCH_DIPS`.
+        `nuthatch-dips.service` on `127.0.0.1:8104`, Caddy `handle_path /dips/*`, backfills in 5s
+        with `--window 50000 --seal-direct --concurrency 4`. Repo:
+        [nightswatchhq/dips-nest](https://github.com/nightswatchhq/dips-nest).
+  - [x] Allocation-split panel: current targets and rates, and the moment DefaultAllocation moves
+        off zero. Live on the homepage. `DefaultAllocation`'s zero is labelled *"no allocation
+        event; zero by absence"* rather than rendered as a measured figure, because it has never
+        emitted `TargetAllocationUpdated` and a confident zero would be a lie.
   - [ ] Agreement lifecycle view: offer → acceptance → POI presentation → collection → cancellation.
   - [ ] Per-indexer agreement portfolio: active agreements, revenue, compliance.
   - [ ] Alert on the split changing. It is the starting gun for the rest of this workstream.
@@ -771,6 +776,8 @@ the Foundation's item has the community covered", this file is an *internal* del
 
 ## Changelog
 
+- **2026-08-28**: CAT-1 observability shipped. `dips-nest` live on Helsinki, DIPS panel live on
+  the homepage.
 - **2026-08-28**: CAT-1 started. Found the whole DIPS contract stack live on Arbitrum One with the
   agreement allocation set to zero, which unparks `plans/on-chain-indexing-agreements.md` (its
   trigger had fired five months earlier, unnoticed) and unblocks the observable half of CAT-1.
