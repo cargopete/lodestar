@@ -422,8 +422,15 @@ is a wire-format spec read off live payloads, not a runbook, and no publisher sh
         so this is deliberately not half-built.
   - [ ] Wire into Lodestar's scoring.
   - [ ] Align with GRC-009 "The Lodestar Oracle" so gib and REO consume the same signal.
-- [ ] **Onboarding automation.**
-  - [ ] `gib onboard`: automate the sender-whitelist handshake and per-indexer escrow funding.
+- [ ] **Onboarding automation.** *In progress.*
+  - [x] `gib onboard`: a pre-flight that produces the indexer's paste block **only if it would
+        work**, and refuses otherwise. Catches the failures that are invisible to the operator and
+        expensive for the indexer: a loopback, private-range or Compose-service aggregator URL that
+        resolves for you and nobody else; an aggregator advertising a different EIP-712 domain than
+        the gateway that signs (a reverse proxy on the wrong port passes every other check and
+        fails every receipt); and collector/subgraph-service drift from `config/addresses.env`.
+        Plain `http` warns rather than blocks. 9 tests, `--profile onboard` in compose.
+  - [ ] Per-indexer escrow funding automation (needs funds).
   - [ ] A hosted sender directory so indexers whitelist once rather than per-gateway.
   - [ ] Remove the read-only Studio key requirement for topology bootstrap, or document a sovereign
         source as the default.
