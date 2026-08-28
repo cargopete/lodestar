@@ -260,12 +260,18 @@ npm i @lodestar-dispatch/consumer-sdk`,
     description:
       'Indexes Solana program activity (Pump.fun, Raydium CLMM, Jupiter v6) into typed, fork-correct, queryable entities served over a PostgREST REST API, gating access via TAP v2 micropayments.',
     tier: 1,
-    statusLabel: 'Live · Production',
-    statusVariant: 'success',
-    stage: 'Live: Yellowstone → Postgres → TAP-gated gateway, serving real Solana',
+    // Corrected 2026-08-28, in the sweep that followed the Dispatch outage.
+    // seahorn.89.167.109.4.sslip.io does not answer: the hostname resolves to the Helsinki box,
+    // which has no vhost for it and no seahorn process, container, unit or directory. It is absent
+    // from the other host too. SolanaDataService (0xdDE3F913…) still holds code on Arbitrum One,
+    // so the contract is live and the serving endpoint is gone — a different sentence, and the
+    // honest one.
+    statusLabel: 'Contract live · endpoint down',
+    statusVariant: 'warning',
+    stage: 'Deployed on Arbitrum One; serving endpoint not currently up',
     providerStatus: 'single-self-run',
     providerNote:
-      'Live: a self-run provider indexes real Solana (Pump.fun/Raydium/Jupiter) via Alchemy Yellowstone and serves it over HTTPS, TAP-gated (try it in the playground below). Single self-run provider; unaudited.',
+      'SolanaDataService is deployed on Arbitrum One, but as of 2026-08-28 the advertised endpoint (seahorn.89.167.109.4.sslip.io) does not answer, and no seahorn service is running on either host. Single self-run provider; unaudited. Restoring a serving endpoint is the open item.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Solana mainnet data', isMainnet: true },
     stack: ['Rust', 'Solidity'],
     links: [
@@ -662,11 +668,13 @@ wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
     description:
       'Puts a TAP/GraphTally payment layer in front of camp (a free REST API for decoded Arbitrum One data backed by an Amp node). "The ThinkPad running ampd becomes an indexer on Horizon, and anyone who wants decoded Arbitrum One data pays in GRT to query it."',
     tier: 1,
-    statusLabel: 'Live · Production',
-    statusVariant: 'success',
-    stage: 'Live on Arbitrum One via a self-hosted engine.camp node',
+    // Corrected 2026-08-28. camp.89.167.109.4.sslip.io does not answer, and no camp service
+    // exists on either host. CampDataService (0x8ED61266…) still holds code on Arbitrum One.
+    statusLabel: 'Contract live · endpoint down',
+    statusVariant: 'warning',
+    stage: 'Deployed on Arbitrum One; serving endpoint not currently up',
     providerStatus: 'single-self-run',
-    providerNote: 'Live: CampDataService deployed to Arbitrum One; a self-run provider proxies a self-hosted Amp-backed camp node (engine.camp) over HTTPS, TAP-gated (try it in the playground below). Single self-run provider; unaudited.',
+    providerNote: 'CampDataService is deployed on Arbitrum One, but as of 2026-08-28 the advertised endpoint (camp.89.167.109.4.sslip.io) does not answer, and no camp service is running on either host. Single self-run provider; unaudited. Restoring a serving endpoint is the open item.',
     chain: {
       payment: 'arbitrum-one',
       paymentLabel: 'Arbitrum One',
