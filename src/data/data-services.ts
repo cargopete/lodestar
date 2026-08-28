@@ -190,12 +190,19 @@ export const DATA_SERVICES: DataService[] = [
     description:
       'A decentralized JSON-RPC data service. Indexers stake GRT, register to serve specific chains, and get paid per request via GraphTally. The canonical reference for Lodestar\'s "How to Build a Horizon Data Service" guide.',
     tier: 1,
-    statusLabel: 'Live · Production',
-    statusVariant: 'success',
-    stage: 'Production-ready / deployed',
+    // Corrected 2026-08-28. Every endpoint advertised on-chain was tested and none answer:
+    // rpc.cargopete.com fails the TLS handshake (its reverse-proxy entry was removed from the
+    // Caddyfile on 2026-07-20 and no gateway process runs on that box at all), and both of the
+    // second provider's Railway endpoints return "Application not found". The contract is still
+    // live and both providers are still registered on-chain — which is exactly the problem, since
+    // the registry advertises endpoints that do not answer. Saying "Live · Production" here while
+    // inviting people to try a dead endpoint is the one thing this catalogue must never do.
+    statusLabel: 'Contract live · endpoints down',
+    statusVariant: 'warning',
+    stage: 'Deployed, not currently serving',
     providerStatus: 'single-self-run',
     providerNote:
-      'Live: a self-run provider serves Arbitrum One + Base JSON-RPC at rpc.cargopete.com via the Lodestar gateway (try it in the playground below). On-chain collect proven historically (18.44 GRT settled). Open to more providers.',
+      'The RPCDataService contract is live on Arbitrum One and two providers are registered, but as of 2026-08-28 no advertised endpoint answers: rpc.cargopete.com fails its TLS handshake and both Railway endpoints return "Application not found". On-chain collect was proven historically (18.44 GRT settled). Restoring a serving endpoint is the open item.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: '10 chains supported', isMainnet: true },
     stack: ['TypeScript', 'Rust', 'Solidity'],
     links: [
