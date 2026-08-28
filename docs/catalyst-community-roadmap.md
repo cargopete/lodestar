@@ -176,6 +176,17 @@ the things most likely to sink the programme.
 
 ### G-1: The one-provider problem 🔴 **top programme risk**
 
+**2026-08-28 second amendment: three of our services are down, not one.** The sweep that followed
+the Dispatch outage found **Seahorn** and **Camp** in the same state: contract live on Arbitrum
+One, advertised endpoint not answering, no process/container/unit/directory on either host. All
+three carried green "Live · Production" badges. The control is `nuthatchds`, on the same box, which
+answers a healthy `402 TAP-Receipt header required` — so the host and its proxy are fine and this
+is per-service rot, not an infrastructure failure. **SDSCE** and **WSaaS** also claim
+"Live · Production" but advertise no endpoint at all, so nobody can check them; SDSCE's own README
+says it is "not usable end-to-end until at least one provider self-onboards", which contradicts
+the catalogue. Write-up:
+[`dispatch/docs/outage-2026-08-28.md`](https://github.com/nightswatchhq/dispatch/blob/main/docs/outage-2026-08-28.md).
+
 **2026-08-28 amendment: the risk is worse than one provider.** Dispatch had two registered
 providers and zero serving ones for 39 days without anyone noticing, because everything we monitor
 is on-chain state and on-chain state stayed green throughout. `isRegistered()` returning true says
