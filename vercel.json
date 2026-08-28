@@ -67,6 +67,10 @@
     {
       "path": "/api/cron/dispatch-notifications",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/check-dips",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
