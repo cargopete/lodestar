@@ -559,18 +559,28 @@ issuance. No trusted state roots. UUPS, `OwnableUpgradeable`, pause guardian, `w
 
 ### Tasks
 
-- [ ] **Audit re-scope.** 🔴 *Do before spending a penny on an audit.* Free, and it shrinks what
-      the paid round has to cover.
-  - [ ] Re-run the finding list against the current 365-line contract; the 2026-04-15 audit targeted
-        a larger, since-deleted contract (see [ground truth](#the-dispatch-audit-is-stale-and-that-changes-cat-5s-plan)).
-  - [ ] Confirm H-1 (`collect()` L272 → `_lockStake` L312) is or is not still exploitable in the
-        current control flow. This is the one High that plausibly survives.
-  - [ ] Confirm M-2 pause-guardian semantics.
-  - [ ] Fix L-1 unbounded `_providerChains` O(n) growth.
-  - [ ] Write the finding-by-finding disposition into the repo so the next reader does not repeat
-        this analysis.
-- [ ] **External audit** (G-2). Cheaper than the source report assumed, because the surface shrank
-      from the audited contract to 365 lines.
+- [x] **Audit re-scope.** ✅ Done 2026-08-28. Full disposition at
+      [`dispatch/docs/audit-disposition.md`](https://github.com/nightswatchhq/dispatch/blob/main/docs/audit-disposition.md).
+      **No finding from the April assessment describes a live vulnerability in the current
+      contract.**
+  - [x] Re-ran all seven findings against the current 365-line contract.
+  - [x] **H-1 disproved by PoC**, not by argument. `contracts/test/H1CollectOrdering.t.sol` runs the
+        experiment the audit's own triager asked for, to its stated success criterion: a mock
+        collector really moves GRT and returns a fee, stake is set one wei short so `_lockStake`
+        reverts, and the destination balance is **0**. A control test proves the mock does pay when
+        locking succeeds, so the negative is not the test passing for the wrong reason. Reduces to
+        a CEI style wart; retained as a regression test.
+  - [x] H-2, H-3, M-1, L-2 remediated by deletion — no rewards pool, no trusted state roots, no
+        issuance in the current contract.
+  - [x] M-2 pause guardian: inherited from Graph's own separately-audited
+        `DataServicePausableUpgradeable`, bounded by the owner's ability to revoke a guardian.
+        Accepted, not fixed.
+  - [x] L-1 was **already fixed**: `startService` reactivates a stopped entry rather than pushing,
+        so the array is bounded by distinct (chain, tier) pairs rather than start/stop churn.
+  - [x] Disposition written into the repo so nobody repeats this analysis.
+- [ ] **External audit** (G-2). Now scoped as a **fresh review, not remediation**: there is
+      nothing outstanding to re-check, so the money buys new coverage of 365 lines. Cheaper than
+      the source report assumed on both counts.
 - [ ] **Document dead-code paths in the deployed bytecode.** The proxy has been upgraded; make the
       implementation history explicit and kill the `0xA983…` reference everywhere it appears.
 - [ ] **Sticky sessions + drop-in compat.**
