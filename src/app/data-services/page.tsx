@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { cn } from '@/lib/utils';
 import { Playground } from '@/components/data-services/Playground';
+import { RegistryVsReality } from '@/components/data-services/RegistryVsReality';
 
 // ── Provider traffic light — the single most decision-relevant signal ──────────
 const PROVIDER_META: Record<
@@ -258,6 +259,10 @@ const DetailPanel = ({
       {/* lower band — status, contracts, fees, notable */}
       <div className="mt-6 pt-5 border-t border-[var(--border)] grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
         <DetailBlock label="Provider status" value={service.providerNote} />
+
+        {/* The catalogue text above is hand-written and went stale for 39 days. This probes the
+            endpoints the registry actually advertises, so the page cannot confidently lie again. */}
+        {service.slug === 'dispatch' && <RegistryVsReality />}
 
         {service.contracts && service.contracts.length > 0 && (
           <div>

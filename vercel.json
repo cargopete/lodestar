@@ -71,6 +71,10 @@
     {
       "path": "/api/cron/check-dips",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/check-provider-liveness",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
