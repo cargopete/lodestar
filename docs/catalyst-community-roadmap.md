@@ -176,6 +176,12 @@ the things most likely to sink the programme.
 
 ### G-1: The one-provider problem 🔴 **top programme risk**
 
+**2026-08-28 amendment: the risk is worse than one provider.** Dispatch had two registered
+providers and zero serving ones for 39 days without anyone noticing, because everything we monitor
+is on-chain state and on-chain state stayed green throughout. `isRegistered()` returning true says
+nothing about whether an endpoint answers. **Add liveness to this gate:** a provider that does not
+respond to a real request is not a provider, however healthy the registry looks.
+
 Every data service in this stack has a provider list that reads "us". A data service with one
 provider is a contract address, not a market.
 
@@ -542,6 +548,17 @@ reference implementation is now, not later.
 ---
 
 ## CAT-5: RPC service
+
+🔴 **NOT SERVING as of 2026-08-28.** Two providers are registered and active on-chain and **not one
+advertised endpoint answers**: `rpc.cargopete.com` fails its TLS handshake, and the second
+provider's two Railway endpoints return "Application not found". The gateway host has no dispatch
+process, container, unit or directory on it at all; its reverse-proxy entry was dropped from the
+Caddyfile on **2026-07-20**, so this has been down for 39 days. Full write-up:
+[`dispatch/docs/outage-2026-08-28.md`](https://github.com/nightswatchhq/dispatch/blob/main/docs/outage-2026-08-28.md).
+
+Score held at 62% pending a decision, not lowered: the contract, the registrations and the code are
+all intact and the settlement path was proven historically. But **62% describes a service that is
+not currently serving**, and no feature work in this section is worth anything until it is.
 
 **62% → 95%.** The most mature item, and ahead of the official plan (which only slots
 "Experimental JSON-RPC Data Service research" in Q3 2026).
