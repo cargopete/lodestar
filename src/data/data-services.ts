@@ -197,12 +197,12 @@ export const DATA_SERVICES: DataService[] = [
     // live and both providers are still registered on-chain — which is exactly the problem, since
     // the registry advertises endpoints that do not answer. Saying "Live · Production" here while
     // inviting people to try a dead endpoint is the one thing this catalogue must never do.
-    statusLabel: 'Contract live · endpoints down',
-    statusVariant: 'warning',
-    stage: 'Deployed, not currently serving',
+    statusLabel: 'Reference impl · needs an operator',
+    statusVariant: 'default',
+    stage: 'Contract live on Arbitrum One; no operator currently serving',
     providerStatus: 'single-self-run',
     providerNote:
-      'The RPCDataService contract is live on Arbitrum One and two providers are registered, but as of 2026-08-28 no advertised endpoint answers: rpc.cargopete.com fails its TLS handshake and both Railway endpoints return "Application not found". On-chain collect was proven historically (18.44 GRT settled). Restoring a serving endpoint is the open item.',
+      'The RPCDataService contract is live on Arbitrum One and the code is maintained, but no operator is currently serving: as of 2026-08-28 no advertised endpoint answers. The self-run gateway was retired by decision, not by failure — The Night\'s Watch builds these services and does not run them. On-chain collect was proven historically (18.44 GRT settled). Open to any operator; `gib onboard` exists so a new one\'s first hour is not wasted.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: '10 chains supported', isMainnet: true },
     stack: ['TypeScript', 'Rust', 'Solidity'],
     links: [
