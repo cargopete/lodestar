@@ -99,7 +99,7 @@ it ourselves.
 |---|---|---|---|---|---|---|---|
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **45%** | 90% 🔒 | ~65% | The Dock, gib |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
-| CAT-3 | Memory for AI | RFC-003 | 22% | **38%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
+| CAT-3 | Memory for AI | RFC-003 | 22% | **48%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | 45% | 90% | 90% | Lodestar |
@@ -607,8 +607,21 @@ reusable write/store primitive.
       write time and voids the E2E claim for that namespace.
   - [x] Key hierarchy settled: user root → namespace key → per-item content key. Three layers
         because revocation must not mean re-encrypting everything, or nobody ever revokes.
-- [ ] **Encrypted store + sink.** Reuse seahorn's PostgresSink; envelope encryption; the blind
-      index; per-user namespacing, retention and GC.
+- [x] **Client crypto: envelope encryption + the keyed blind index.** `crates/nutcracker-crypto`,
+      17 tests, standard RustCrypto primitives only (XChaCha20-Poly1305, HKDF-SHA256, HMAC-SHA256)
+      — nothing invents a construction, and it is marked unreviewed.
+  - [x] Three-layer envelope. Rotation rewraps content keys and **leaves ciphertext untouched**,
+        with a test asserting exactly that; a two-layer scheme means re-encrypting everything on
+        revocation, which means nobody revokes.
+  - [x] Item id bound as AEAD associated data on both layers, so a provider cannot answer "give me
+        item X" with a relabelled item Y.
+  - [x] Keyed SimHash + banding. The privacy property has a test: **the same vector in two
+        namespaces produces zero shared tokens**, so a provider cannot correlate users.
+  - [x] **Measured, not asserted.** `--example leakage` prints recall against distance: 100% at
+        0.2 perturbation, 94% at 0.5, 73% at 0.8, 48% at 1.2, with ~3% false candidates at the
+        default. Near-duplicate recall is easy and is not semantic search; the honest number is the
+        bottom of that table.
+- [ ] **Server-side store.** Seahorn's PostgresSink shape, bucket-token index, retention and GC.
 - [ ] **MCP memory tools.** `memory.write` / `read` / `search` / `forget` over compass's MCP
       Streamable HTTP; TAP and x402 rails inherited.
 - [ ] **Client SDK + harness integration.** A drop-in memory provider for one agent framework.
