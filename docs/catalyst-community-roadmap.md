@@ -99,7 +99,7 @@ it ourselves.
 |---|---|---|---|---|---|---|---|
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **45%** | 90% 🔒 | ~65% | The Dock, gib |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
-| CAT-3 | Memory for AI | RFC-003 | 22% | **56%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
+| CAT-3 | Memory for AI | RFC-003 | 22% | **64%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | 45% | 90% | 90% | Lodestar |
@@ -635,8 +635,24 @@ reusable write/store primitive.
   - [x] Capacity, expiry/GC, and `is_e2e()`: one plaintext-vector item voids the end-to-end claim
         for the whole namespace, and removing it restores it. A claim that cannot become false is
         not a claim.
-- [ ] **MCP memory tools.** `memory.write` / `read` / `search` / `forget` over compass's Streamable
-      HTTP surface; TAP + x402 rails inherited.
+- [x] **MCP memory tools.** `crates/nutcracker-agent`, 9 tests. **The plan said "over compass's
+      Streamable HTTP surface", i.e. hosted at the provider. That cannot be end-to-end encrypted.**
+      If the agent speaks MCP straight to the provider, either it sends plaintext and the provider
+      has it, or the *agent* holds the root key — and "the agent" means Claude, or Cursor, or
+      whatever the user runs next month. So the MCP server is **local**: the agent gets
+      `memory.write("we chose postgres")` over localhost, the provider gets sealed bytes and bucket
+      tokens over HTTP.
+  - [x] `the_provider_never_receives_the_plaintext` checks every byte that crossed the boundary for
+        any 6-byte fragment of the secret, and was **mutation-tested**: sabotaging the shim to send
+        plaintext makes it fail, restoring it makes it pass. A first draft of that test did not
+        assert what its name claimed and was rewritten.
+  - [x] Search without a local embedder **refuses** rather than quietly shipping the query
+        somewhere to be embedded.
+  - [x] Candidates that will not decrypt (wrong key generation) are skipped rather than surfaced as
+        rubbish.
+- [ ] **Client SDK + harness integration.** A drop-in memory provider for one agent framework.
+- [ ] **HTTP transport + a runnable provider binary.** The `ProviderTransport` trait is implemented
+      in-process for tests; the real HTTP one and a servable provider are outstanding.
 - [ ] **MCP memory tools.** `memory.write` / `read` / `search` / `forget` over compass's MCP
       Streamable HTTP; TAP and x402 rails inherited.
 - [ ] **Client SDK + harness integration.** A drop-in memory provider for one agent framework.
