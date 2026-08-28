@@ -8,6 +8,7 @@ import {
   CATALYST_ITEMS,
   CATALYST_LAST_SCORED,
   CATALYST_SOURCE_POST,
+  CATALYST_TRACKER_URL,
   catalystSummary,
   coverageBand,
   type CatalystItem,
@@ -206,6 +207,21 @@ export function CatalystCoverage() {
               <span className="text-[11px] text-[var(--text-faint)]">{BAND_META[band].label}</span>
             </span>
           ))}
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-[var(--border)]">
+          <a
+            href={CATALYST_TRACKER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-[var(--accent-text)] hover:underline"
+          >
+            The plan to close every gap, workstream by workstream ↗
+          </a>
+          <p className="text-[11px] text-[var(--text-faint)] mt-1">
+            No budget, no headcount, no funding. A live checklist of what is verified on-chain and
+            what is left.
+          </p>
         </div>
       </CardContent>
     </Card>

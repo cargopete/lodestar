@@ -17,6 +17,16 @@ export const CATALYST_LAST_SCORED = '2026-08-28';
 
 export const CATALYST_SOURCE_POST = '/blog/we-read-the-foundations-new-roadmap';
 
+/**
+ * The delivery tracker behind these numbers: every workstream, what is verified
+ * on-chain today, and the checklist to close each gap. Lives in the repo rather
+ * than on the site because it is a working document that changes as tasks are
+ * ticked, and because the audit trail of who changed a claim, and when, matters
+ * more here than presentation.
+ */
+export const CATALYST_TRACKER_URL =
+  'https://github.com/nightswatchhq/lodestar/blob/main/docs/catalyst-community-roadmap.md';
+
 export interface CatalystProject {
   name: string;
   url: string;
