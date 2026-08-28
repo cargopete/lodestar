@@ -49,19 +49,47 @@ audits: it needs money and a legal entity, which is why it sits at an 80% ceilin
 
 ## Scoreboard
 
-| WS | Item | Source ref | Now | Community ceiling | Primary asset |
-|---|---|---|---|---|---|
-| CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | 90% 🔒 | The Dock, gib |
-| CAT-2 | New gateway operators | RFC-002 | 60% | 95% | gib |
-| CAT-3 | Memory for AI | RFC-003 | 22% | 90% 🔒 | compass, seahorn |
-| CAT-4 | Substreams data service | RFC-004 | 58% | 95% | SDSCE |
-| CAT-5 | RPC service | RFC-005 | 62% | 95% | Dispatch |
-| CAT-6 | Multi-product Studio | RFC-006 | 45% | 90% | Lodestar |
-| CAT-7 | Chain integrations DS | RFC-007 | 6% | 85% 🔒 | (greenfield) |
-| CAT-8 | Institutional audit layer | RFC-008 | 5% | 80% 🔒 | (greenfield) |
+| WS | Item | Source ref | 08-28 open | 08-28 close | Community ceiling | Primary asset |
+|---|---|---|---|---|---|---|
+| CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **45%** | 90% 🔒 | The Dock, gib |
+| CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | gib |
+| CAT-3 | Memory for AI | RFC-003 | 22% | 22% | 90% 🔒 | compass, seahorn |
+| CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | SDSCE |
+| CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | Dispatch |
+| CAT-6 | Multi-product Studio | RFC-006 | 45% | 45% | 90% | Lodestar |
+| CAT-7 | Chain integrations DS | RFC-007 | 6% | 6% | 85% 🔒 | (greenfield) |
+| CAT-8 | Institutional audit layer | RFC-008 | 5% | 5% | 80% 🔒 | (greenfield) |
 
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
+
+### Why the needles barely moved, and why one went backwards
+
+A day of real shipping moved the mean by roughly **nothing** (37.2% → 36.9%). That is the correct
+result and worth reading rather than explaining away.
+
+- **CAT-1 +5.** `dips-nest` is live on Helsinki, the DIPS panel is on the homepage, and an alert
+  fires when the allocation moves. Real work, but none of it is in the 90% definition of done,
+  which is about *funding* agreements, not watching them. Observability buys position, not
+  progress.
+- **CAT-2 +4.** The QoS publisher's aggregation half is built and tested; `gib onboard` ships. But
+  the three things the DoD names — settle a paid query, publish QoS, one external operator — are
+  all still at zero. The remaining halves of both tasks need a funded key.
+- **CAT-5 −12.** 🔻 The only honest direction. Three genuine improvements landed (audit re-scoped
+  with H-1 disproved by PoC, sticky sessions fixed, liveness probe shipped) and they are outweighed
+  by discovering the service **has not served a request in 39 days**. 62% described a codebase;
+  50% describes a codebase whose operation is at zero. A reasonable person could argue lower.
+- **CAT-3, 4, 6, 7, 8 unchanged.** Nothing was done on them, so nothing moved.
+
+**What actually changed today was the quality of the numbers, not the numbers.** This morning the
+scoreboard was a research report's estimates. Tonight several rest on evidence, and three of those
+turned out worse than assumed: the Dispatch audit was stale, three services have live contracts and
+dead endpoints, and Arbitrum One Standard has two providers so its three-way quorum cannot form.
+One turned out better: the DIPS rails are armed and one governance transaction from live.
+
+The uncomfortable reading is that **percentage against a definition of done is the wrong instrument
+for a stack whose failure mode is silent decay.** Nothing in these eight numbers would have moved
+when Dispatch went dark on 20 July. That is what G-1's liveness gate is now for.
 
 ---
 
