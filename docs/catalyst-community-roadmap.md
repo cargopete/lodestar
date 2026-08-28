@@ -47,6 +47,52 @@ audits: it needs money and a legal entity, which is why it sits at an 80% ceilin
 
 ---
 
+## Operating model: we develop, we do not operate
+
+**Decided 2026-08-28.** The Night's Watch builds these services. It does not run them.
+
+Running a data service means a box, a domain, a bill and an on-call rota, indefinitely, per
+service. That is a different business from writing the software, and it is the one we are not in.
+The 20 July outage is the evidence: three services quietly stopped serving and nobody was watching,
+because nobody's job was watching.
+
+**The single exception is a nuthatch data service**, because we already run nests on the VPS and
+the marginal cost is close to zero. Everything else ships as a **reference implementation that any
+willing provider or indexer can run**.
+
+### What this changes
+
+Several definitions of done assume we operate. They do not stop being the right definitions, but
+the last stretch of each now belongs to a third party rather than to us:
+
+| Workstream | Needs an operator we are not going to be | Our reachable ceiling |
+|---|---|---|
+| CAT-2 | "settles a paid query", "one external operator runs it" | build + document, not demonstrate |
+| CAT-4 | "≥1 live provider serving a real Substreams package" | audited contract + provider kit |
+| CAT-5 | "≥10 providers across ≥3 regions" | re-audited contract + client compat + tooling |
+| CAT-7 | "one chain routing real revenue through the protocol" | contract + metering + dashboard + runbook |
+| CAT-8 | SOC 2, SLAs, an institutional design partner | ground-truth + attestation service |
+
+This is not a retreat, and it should not be written up as one. A reference implementation somebody
+else runs is the *stated goal* of four of these eight items, which exist to be adopted rather than
+operated by us. What changes is the honesty of the scoring: **we should stop counting adoption we
+have decided not to pursue as work outstanding on our side.**
+
+### Parked, deliberately
+
+- **Restoring Dispatch, Seahorn and Camp as running services.** Their contracts stay live on
+  Arbitrum One and the code stays maintained. The endpoints stay down until a provider wants them.
+  The catalogue says so plainly.
+- **Funding escrow for the gib payment loop.** No further GRT is going in. The loop stays built and
+  unproven until an operator with funds runs it. `gib onboard` exists precisely so that operator's
+  first hour is not wasted.
+
+Both are open to **any willing provider or indexer**, which is the actual ask, and a better one
+than it looks: it is the same ask as G-1, and it now has no competing story in which we quietly do
+it ourselves.
+
+---
+
 ## Scoreboard
 
 | WS | Item | Source ref | 08-28 open | 08-28 close | Community ceiling | Primary asset |
