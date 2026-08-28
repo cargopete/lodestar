@@ -99,7 +99,7 @@ it ourselves.
 |---|---|---|---|---|---|---|---|
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **45%** | 90% 🔒 | ~65% | The Dock, gib |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
-| CAT-3 | Memory for AI | RFC-003 | 22% | **48%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
+| CAT-3 | Memory for AI | RFC-003 | 22% | **56%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | 45% | 90% | 90% | Lodestar |
@@ -621,7 +621,22 @@ reusable write/store primitive.
         0.2 perturbation, 94% at 0.5, 73% at 0.8, 48% at 1.2, with ~3% false candidates at the
         default. Near-duplicate recall is easy and is not semantic search; the honest number is the
         bottom of that table.
-- [ ] **Server-side store.** Seahorn's PostgresSink shape, bucket-token index, retention and GC.
+- [x] **Server-side store.** `crates/nutcracker-store`, 15 tests. Opaque ciphertext grouped by an
+      opaque namespace handle, searched by bucket token, ranked by shared bands with a
+      deterministic tie-break. Postgres DDL + the search query in `schema.rs`.
+  - [x] **The type signatures are the enforcement:** there is no way to hand this store a plaintext
+        even by accident, because no function accepts one.
+  - [x] A schema test asserts no column can hold a user, a namespace name, a plaintext or an
+        embedding — and it caught its own first draft, which flagged the legitimate
+        `'plaintext_vectors'` enum value and had to be rewritten to check columns rather than
+        substrings.
+  - [x] Namespace handle derived from the root key and the name, **stable across key rotations** —
+        a rotating handle would orphan every stored item on revocation.
+  - [x] Capacity, expiry/GC, and `is_e2e()`: one plaintext-vector item voids the end-to-end claim
+        for the whole namespace, and removing it restores it. A claim that cannot become false is
+        not a claim.
+- [ ] **MCP memory tools.** `memory.write` / `read` / `search` / `forget` over compass's Streamable
+      HTTP surface; TAP + x402 rails inherited.
 - [ ] **MCP memory tools.** `memory.write` / `read` / `search` / `forget` over compass's MCP
       Streamable HTTP; TAP and x402 rails inherited.
 - [ ] **Client SDK + harness integration.** A drop-in memory provider for one agent framework.
