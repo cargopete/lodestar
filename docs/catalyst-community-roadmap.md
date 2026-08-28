@@ -153,11 +153,12 @@ deepest moat". Those two positions are incompatible and someone needs to pick on
 
 ### Still ❓ (verify before relying on it)
 
-- [ ] ❓ **Dispatch provider count.** The report says two providers (ours + PaulieB/Graphtronauts).
-      `docs/src/deployed-addresses.md` lists **one** active provider (`0xb43B…`, `rpc.cargopete.com`,
-      chain 42161, Standard + Archive). Query the `rpc-network` v0.3.0 subgraph for the real count
-      and update the doc. This matters: it is the flagship counter-example to the one-provider
-      problem and it is currently undocumented.
+- [x] ~~❓ **Dispatch provider count.**~~ Resolved 2026-08-28 from chain, not from the subgraph:
+      **two independent providers, both registered and both serving.** `0xb43b2ccc…`
+      (`rpc.cargopete.com`) with 5 active chain registrations, `0x575267ee…` with 2. Repo docs
+      corrected. **But note:** both serve Arbitrum One Standard and nobody else does, so the
+      busiest lane has two providers and a three-way quorum cannot form there. Any claim about
+      quorum-verified responses on Arbitrum One is currently false.
 - [ ] ❓ **REO snapshot.** "49 of 97 indexers eligible at activation" comes from the report. Confirm
       against `qos-reo-nest` / the REO oracle and date the figure.
 - [x] ~~❓ **GIP-0087 / GIP-0088 status.**~~ Resolved 2026-08-28. The contracts are deployed and
@@ -584,8 +585,14 @@ issuance. No trusted state roots. UUPS, `OwnableUpgradeable`, pause guardian, `w
 - [ ] **Document dead-code paths in the deployed bytecode.** The proxy has been upgraded; make the
       implementation history explicit and kill the `0xA983…` reference everywhere it appears.
 - [ ] **Sticky sessions + drop-in compat.**
-  - [ ] Provider affinity for `eth_newFilter` / `getFilterChanges` / `getFilterLogs`: 3-way quorum
-        breaks filter IDs today.
+  - [x] Provider affinity for `eth_newFilter` / `getFilterChanges` / `getFilterLogs` /
+        `uninstallFilter`. **Correction:** it was not the 3-way quorum. Filter methods are not in
+        `requires_quorum`, so they take the *concurrent* path, which picks whichever provider
+        currently ranks best on QoS. Since scores move continuously, a filter created on one node
+        is read from another, which answers "filter not found" while behaving perfectly. Fixed in
+        `dispatch-gateway/src/affinity.rs`: a TTL'd, capped `(chain, filter_id) -> provider` map,
+        pinned with no failover (a second opinion on a filter id is meaningless, and failing over
+        turns a clear error into an intermittent one). 16 tests.
   - [ ] Transparent receipt issuance so anonymous ethers / viem / web3.py clients work with no SDK.
   - [ ] Publish a Feature / Client Support Matrix.
 - [ ] **Dashboard + status.** Per-key analytics (CU, RPS, p50/p95/p99, error rates), public
