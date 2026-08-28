@@ -95,24 +95,39 @@ it ourselves.
 
 ## Scoreboard
 
-| WS | Item | Source ref | 08-28 open | 08-28 close | Community ceiling | Primary asset |
-|---|---|---|---|---|---|---|
-| CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **45%** | 90% 🔒 | The Dock, gib |
-| CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | gib |
-| CAT-3 | Memory for AI | RFC-003 | 22% | 22% | 90% 🔒 | compass, seahorn |
-| CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | SDSCE |
-| CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | Dispatch |
-| CAT-6 | Multi-product Studio | RFC-006 | 45% | 45% | 90% | Lodestar |
-| CAT-7 | Chain integrations DS | RFC-007 | 6% | 6% | 85% 🔒 | (greenfield) |
-| CAT-8 | Institutional audit layer | RFC-008 | 5% | 5% | 80% 🔒 | (greenfield) |
+| WS | Item | Source ref | 08-28 open | 08-28 close | Community ceiling | **Our ceiling** | Primary asset |
+|---|---|---|---|---|---|---|---|
+| CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **45%** | 90% 🔒 | ~65% | The Dock, gib |
+| CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
+| CAT-3 | Memory for AI | RFC-003 | 22% | 22% | 90% 🔒 | ~75% | compass, seahorn |
+| CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
+| CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
+| CAT-6 | Multi-product Studio | RFC-006 | 45% | 45% | 90% | 90% | Lodestar |
+| CAT-7 | Chain integrations DS | RFC-007 | 6% | **35%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
+| CAT-8 | Institutional audit layer | RFC-008 | 5% | 5% | 80% 🔒 | ~45% | (greenfield) |
+
+**"Our ceiling"** applies the operating-model decision above: the highest score reachable without
+running a service or signing a commercial deal. These are judgement calls to one significant
+figure, not measurements — their job is to stop us recording adoption we have decided not to pursue
+as work outstanding on our side. CAT-6 is unchanged at 90% because Lodestar is the one thing we do
+run.
+
+**CAT-7: 6% → 35%.** The engineering that was at zero this morning is largely done —
+[chain-integration-ds](https://github.com/nightswatchhq/chain-integration-ds) has the contract,
+16 tests, the design note, the integrator runbook and a deploy script. It does not move further
+because **nothing is deployed and nothing has ever collected**, and because this item's own risk
+note says it "is more a business-model/governance problem than an engineering one": the
+value-capture policy, which is most of what CAT-7 *is*, remains Council's and untouched. Finishing
+the code does not move this as far as finishing code usually does.
 
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
 
 ### Why the needles barely moved, and why one went backwards
 
-A day of real shipping moved the mean by roughly **nothing** (37.2% → 36.9%). That is the correct
-result and worth reading rather than explaining away.
+The mean closed at **40.5%**, from 37.2% at the start of the day. Almost all of that is CAT-7, and
+the rest of the day was flat or negative. That is the correct result and worth reading rather than
+explaining away.
 
 - **CAT-1 +5.** `dips-nest` is live on Helsinki, the DIPS panel is on the homepage, and an alert
   fires when the allocation moves. Real work, but none of it is in the 90% definition of done,
@@ -125,7 +140,11 @@ result and worth reading rather than explaining away.
   with H-1 disproved by PoC, sticky sessions fixed, liveness probe shipped) and they are outweighed
   by discovering the service **has not served a request in 39 days**. 62% described a codebase;
   50% describes a codebase whose operation is at zero. A reasonable person could argue lower.
-- **CAT-3, 4, 6, 7, 8 unchanged.** Nothing was done on them, so nothing moved.
+- **CAT-7 +29.** The one real jump, and it came from a workstream that was at 6% because nobody
+  had started it. A day's work on genuinely greenfield engineering moves the number far more than a
+  day's work on something already 60% done — which is an argument about where to spend tomorrow,
+  not a claim that today was 29 points of value.
+- **CAT-3, 4, 6, 8 unchanged.** Nothing was done on them, so nothing moved.
 
 **What actually changed today was the quality of the numbers, not the numbers.** This morning the
 scoreboard was a research report's estimates. Tonight several rest on evidence, and three of those
