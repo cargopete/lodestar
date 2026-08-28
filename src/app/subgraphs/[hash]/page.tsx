@@ -1220,8 +1220,12 @@ function DeploymentPageInner({ hash }: { hash: string }) {
             </button>
           </div>
         </div>
-        <button
-          onClick={() => router.back()}
+        {/* A Link, not router.back(). The label names a destination, so it must go there: these
+            pages are shared as URLs, and on a deep link `back()` returns to wherever the visitor
+            came from, or nowhere at all. A real href also restores middle-click, open-in-new-tab
+            and copy-link-address, which a button doing navigation silently takes away. */}
+        <Link
+          href="/subgraphs"
           className={cn(
             'px-3 py-2 text-sm rounded-[var(--radius-button)]',
             'border border-[var(--border)] hover:border-[var(--accent-hover)]',
@@ -1229,7 +1233,7 @@ function DeploymentPageInner({ hash }: { hash: string }) {
           )}
         >
           Back to Subgraphs
-        </button>
+        </Link>
       </div>
 
       {/* Chain liveness banner.
