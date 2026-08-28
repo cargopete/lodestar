@@ -36,7 +36,11 @@ export function ProgressBar({
   size = 'md',
   className,
 }: ProgressBarProps) {
-  const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
+  // Rounded to two decimals because (58 / 100) * 100 is 57.99999999999999 in IEEE-754, and that
+  // is what ends up in the DOM. Harmless to render, ugly to read, and it makes a diff of the
+  // served HTML noisy for no reason.
+  const percentage =
+    Math.round(Math.min(Math.max((value / max) * 100, 0), 100) * 100) / 100;
 
   return (
     <div className={cn('w-full', className)}>
