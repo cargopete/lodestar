@@ -99,7 +99,7 @@ it ourselves.
 |---|---|---|---|---|---|---|---|
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **45%** | 90% 🔒 | ~65% | The Dock, gib |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
-| CAT-3 | Memory for AI | RFC-003 | 22% | 22% | 90% 🔒 | ~75% | compass, seahorn |
+| CAT-3 | Memory for AI | RFC-003 | 22% | **38%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | 45% | 90% | 90% | Lodestar |
@@ -583,13 +583,32 @@ reusable write/store primitive.
 
 ### Tasks
 
-- [ ] **`MemoryDataService.sol`.** Fork `MCPDataService.sol`; registry keyed on
-      memory-namespace rather than subgraph deployment; identical `collect()` path.
-- [ ] **Encrypted store + sink.**
-  - [ ] Reuse seahorn's PostgresSink.
-  - [ ] Client-side envelope encryption with a user-held key.
-  - [ ] pgvector semantic index.
-  - [ ] Per-user namespacing, retention and GC.
+- [x] **`MemoryDataService.sol`.** Done 2026-08-28:
+      [nightswatchhq/nutcracker](https://github.com/nightswatchhq/nutcracker). 15 tests.
+      **The plan said "registry keyed on memory-namespace rather than subgraph deployment". Do not
+      do that.** A public registry of namespaces leaks who keeps memory, with which provider, how
+      much, and since when — permanently, against an address. The registry is of **providers,
+      never of users**; namespaces never touch the chain. There is a test named for it.
+  - [x] Providers can declare "I have stopped serving" without deregistering. The signal a registry
+        usually lacks, and the one whose absence made three of our own services look healthy for
+        39 days.
+  - [x] Per-operation usage counters, monotonic. Self-reported and unprovable, recorded anyway so a
+        provider's forget-to-write ratio is a public number — the only observable a user has that
+        deletion happens at all.
+- [x] **The design, which is where this workstream actually is.**
+      [`docs/design.md`](https://github.com/nightswatchhq/nutcracker/blob/main/docs/design.md).
+      **The brief contains a contradiction nobody has named:** end-to-end encryption and semantic
+      recall do not compose. `memory.search` means comparing a query against stored memories; E2E
+      means the provider cannot read them. Every product claiming both gives one up, and the usual
+      casualty is the encryption — storing plaintext embeddings beside the ciphertext, when
+      embeddings are not one-way and a provider holding `(blob, vector)` holds an approximate copy.
+      Three real options are worked through; the default is a **blind index over coarse buckets
+      keyed per namespace**, leakage bounded and tunable. Plaintext-vector mode must be *named* at
+      write time and voids the E2E claim for that namespace.
+  - [x] Key hierarchy settled: user root → namespace key → per-item content key. Three layers
+        because revocation must not mean re-encrypting everything, or nobody ever revokes.
+- [ ] **Encrypted store + sink.** Reuse seahorn's PostgresSink; envelope encryption; the blind
+      index; per-user namespacing, retention and GC.
 - [ ] **MCP memory tools.** `memory.write` / `read` / `search` / `forget` over compass's MCP
       Streamable HTTP; TAP and x402 rails inherited.
 - [ ] **Client SDK + harness integration.** A drop-in memory provider for one agent framework.
