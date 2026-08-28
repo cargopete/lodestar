@@ -410,8 +410,16 @@ is a wire-format spec read off live payloads, not a runbook, and no publisher sh
   - [ ] Aggregate receipts into a RAV.
   - [ ] **Redeem that RAV on-chain via GraphTallyCollector. Record the tx hash here.**
   - [ ] Verify the Stage-2 `--profile escrow` path with real funds and a raw network-subgraph source.
-- [ ] **QoS publisher.**
-  - [ ] Ship the doc-08 publisher writing the QoS oracle subgraph wire format.
+- [ ] **QoS publisher.** *In progress: the aggregation half is built and tested.*
+  - [x] Ship the doc-08 publisher's aggregation: `gib/qos-publisher/`, a Rust crate taking the
+        gateway's Kafka stream to the oracle's two 5-minute JSON arrays. 18 tests over bucketing,
+        statistics, CIDv0 encoding and error attribution; `--dry-run` only.
+  - [x] **Correction to doc 08:** do not map the protobuf's `gateway_id` onto the oracle's. The
+        gateway fills it from `graph_env_id`, which gib templates as `gib-${CHAIN_ID}`, so every
+        gib operator would publish under `gib-42161`. The publisher takes `--gateway-id` separately.
+  - [ ] IPFS pin + DataEdge post. Needs a funded poster key holding a little xDAI, and an unpinned
+        payload is a permanent hole in every consumer's history rather than a retryable failure,
+        so this is deliberately not half-built.
   - [ ] Wire into Lodestar's scoring.
   - [ ] Align with GRC-009 "The Lodestar Oracle" so gib and REO consume the same signal.
 - [ ] **Onboarding automation.**
