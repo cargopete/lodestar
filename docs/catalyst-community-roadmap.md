@@ -160,8 +160,9 @@ deepest moat". Those two positions are incompatible and someone needs to pick on
       problem and it is currently undocumented.
 - [ ] ❓ **REO snapshot.** "49 of 97 indexers eligible at activation" comes from the report. Confirm
       against `qos-reo-nest` / the REO oracle and date the figure.
-- [ ] ❓ **GIP-0087 / GIP-0088 status.** The report treats these as in-progress, unlike GIP-0086 and
-      GIP-0089 which are ratified. Re-check before planning CAT-1 around them.
+- [x] ~~❓ **GIP-0087 / GIP-0088 status.**~~ Resolved 2026-08-28. The contracts are deployed and
+      wired on Arbitrum One; only the allocation parameter is still zero. "In progress" was too
+      pessimistic: the correct statement is *live and switched off*. See CAT-1.
 - [ ] ❓ **nuthatch claims** (DOUDOCHAIN_V2, 13 Arbitrum contracts, SQL-over-HTTP) are carried from
       the report and not re-verified here.
 
@@ -287,11 +288,27 @@ calendar, not the effort, is the constraint.
 
 ## CAT-1: Studio continuity via DIPS
 
-**40% → 90% (100% 🔒).** Depends on CAT-2's payment loop.
+**40% → 90% (100% 🔒).** The *participating* half depends on CAT-2's payment loop. The *observing*
+half does not, and is unblocked as of 2026-08-28. **Started here.**
 
 Make Subgraph Studio fully network-powered so the Edge & Node upgrade indexer's role is replaced by
 real indexers earning through Direct Indexer Payments. We can build the gateway and the developer
 surface. The issuance-funded escrow and the decision to wind the upgrade indexer down are not ours.
+
+**The DIPS rails are live on Arbitrum One and switched off.** Verified 2026-08-28 by reading the
+chain, not the roadmap. `IssuanceAllocator` (`0xb64f29b2…`), `RecurringAgreementManager`
+(`0x51f860b0…`), `RecurringCollector` (`0xff0dc731…`), `DefaultAllocation` (`0x28cd50e9…`) and
+`ReclaimedRewards` (`0xe26cdc4e…`) all hold bytecode. The allocator is wired, with `getTargets()`
+returning `[DefaultAllocation, RewardsManager]`, and it is distributing. But
+`getTargetAllocation(DefaultAllocation)` is **zero** and the RewardsManager still takes the full
+120.73 GRT per block, which `RewardsManager.issuancePerBlock()` independently confirms.
+
+So GIP-0088's 5% split is a governance parameter change, not a deployment. Full state in
+[`../plans/on-chain-indexing-agreements.md`](../plans/on-chain-indexing-agreements.md).
+
+The consequence for this workstream: **everything observable is buildable today.** Whoever is
+already indexing these contracts sees the split move the moment it moves. That is the moat the
+parked tracker predicted, and it is still unclaimed.
 
 **What is already true.** The Dock is Studio-parity today: on-chain lifecycle via
 `GNS.updateSubgraphMetadata` / `transfer` / `deprecate`, deploy keys, a GraphiQL playground on the
@@ -305,6 +322,19 @@ parity replacing the upgrade indexer. Fallback routing.
 
 ### Tasks
 
+- [x] **Confirm the protocol state rather than assuming it.** Done 2026-08-28: the contracts are on
+      mainnet and the allocation is zero. See above.
+- [ ] **DIPS observability (`dips-nest` + Lodestar panel).** 🔑 *In progress. Unblocked, ours end to
+      end, no payment loop required.*
+  - [ ] `dips-nest`: index `IssuanceAllocator`, `RecurringAgreementManager` and
+        `RecurringCollector` on Arbitrum One.
+  - [ ] Allocation-split panel: current targets and rates, and the moment DefaultAllocation moves
+        off zero.
+  - [ ] Agreement lifecycle view: offer → acceptance → POI presentation → collection → cancellation.
+  - [ ] Per-indexer agreement portfolio: active agreements, revenue, compliance.
+  - [ ] Alert on the split changing. It is the starting gun for the rest of this workstream.
+  - [ ] Watch for `InnovationAllocation` appearing in the mainnet address book (GIP-0089, due
+        2026-08-31); it is on Sepolia only today.
 - [ ] **Dipper client in the gateway.** Extend gib to speak the GIP-0081 agreement flow.
   - [ ] Discover indexers by QoS (consumes CAT-2's publisher).
   - [ ] Negotiate price-per-unit-work.
@@ -710,7 +740,9 @@ the Foundation's item has the community covered", this file is an *internal* del
 - Status is as of **2026-08-28**. Foundation roadmap language is forward-looking. **GIP-0089**
   (20% of issuance, 24.146 GRT per block, to the Innovation Allocation, live **2026-08-31**) and
   **GIP-0086** (Rewards Manager + Subgraph Service upgrade, passed unanimously) are ratified.
-  **GIP-0087 / GIP-0088** remain in progress: treat those specific dependencies as intentions.
+  **GIP-0087 / GIP-0088**: the contracts are deployed and configured on Arbitrum One as of
+  2026-08-28, with the agreement allocation set to zero. Treat the *contracts* as fact and the
+  *split* as pending governance.
 - Horizon went live **2025-12-11**. Its payment stack is reused unchanged by every service here,
   which is why a roughly 60-line contract delta stands up a new data service.
 - **REO** (GIP-0079) reclaims the 15.2% of 2025 indexing rewards that went to inactive indexers.
@@ -730,6 +762,9 @@ the Foundation's item has the community covered", this file is an *internal* del
 
 ## Changelog
 
+- **2026-08-28**: CAT-1 started. Found the whole DIPS contract stack live on Arbitrum One with the
+  agreement allocation set to zero, which unparks `plans/on-chain-indexing-agreements.md` (its
+  trigger had fired five months earlier, unnoticed) and unblocks the observable half of CAT-1.
 - **2026-08-28**: created. Ground-truth pass against `gib`, `dispatch`, `SDSCE`, `compass`,
   `seahorn` and Arbitrum One. Corrected three claims from the source research report: the
   `nightswatchhq` org is fully public, Seahorn is deployed on mainnet, and the Dispatch address in
