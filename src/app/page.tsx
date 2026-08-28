@@ -13,6 +13,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { HorizonParameters } from '@/components/ui/HorizonParameters';
 import { HorizonActivity } from '@/components/ui/HorizonActivity';
 import { CatalystCoverage } from '@/components/ui/CatalystCoverage';
+import { DipsStatus } from '@/components/ui/DipsStatus';
 import dynamic from 'next/dynamic';
 
 const StakingTrendChart = dynamic(() => import('@/components/charts/StakingTrendChart').then(m => ({ default: m.StakingTrendChart })), { ssr: false });
@@ -123,6 +124,11 @@ export default function ProtocolOverview() {
           roadmap is the live argument in the ecosystem right now; move it down the
           page once it stops being. */}
       <CatalystCoverage />
+
+      {/* DIPS: live contracts, zero allocation. Sits directly under the Catalyst card because it is
+          the one roadmap item where the protocol has already moved and nobody has noticed. Renders
+          nothing when `dips-nest` is unconfigured. */}
+      <DipsStatus />
 
       {/* Epoch progress */}
       <Card>
