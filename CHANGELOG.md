@@ -2,6 +2,95 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.27.0] - 2026-08-29
+
+Two histories had been running in parallel since 24 August. The 4.26.0 tag, carrying the
+Nuthatch-only delegation panels, was published to GitHub and never merged into `main`, while
+`main` accumulated thirty-eight commits of Project Catalyst work that knew nothing about it.
+Neither branch was wrong; they simply had not met. This release merges them, which surfaced two
+faults that only exist in the combination: `nuthatchEnabled` had been retired on one side while
+the other built DIPS on top of it, and the delegation route tests still asserted a Graph fallback
+that no longer exists. Both are fixed here rather than papered over.
+
+The Tokens page is also gone, along with the whole subsystem behind it.
+
+### Added
+
+- **Project Catalyst delivery tracker** — a verified, zero-budget status board for all eight
+  roadmap items, with the homepage scoring how much of it the community has already built.
+  Positions are recorded against evidence rather than intent, so an item counts as delivered only
+  where something answers.
+- **DIPS observability** — `GET /api/dips` served from the dips-nest behind `NUTHATCH_DIPS`, a
+  `check-dips` cron, and a homepage panel showing the live allocation. DIPS went live on Arbitrum
+  One on 25 August with every step complete except moving the allocation off zero, and the panel
+  says so plainly. An alert fires when the allocation moves, seeding silently on first run so the
+  initial observation is not itself an event.
+- **Provider liveness probing** — `GET /api/provider-liveness`, a `check-provider-liveness` cron,
+  and `dispatch-liveness`. The registry panel now probes what it advertises: being registered is a
+  promise, and only a response is evidence.
+- **QoS publisher aggregation** and the **gib onboard pre-flight** (CAT-2).
+- **Keyless x402 pay-per-query mode** in the subgraph playground, arriving via the 4.26.0 merge and
+  still marked experimental until a payment is confirmed end to end.
+
+### Changed
+
+- **G-1 now requires liveness, not registration.** Three services were found not serving, not one.
+  Dispatch, CAT-5, Seahorn and Camp all had their badges corrected against what actually answers,
+  and Dispatch is recorded as retired by decision rather than broken, open to operators.
+- **The operating model is written down**: we develop, we do not operate, with the Nuthatch data
+  service as the standing exception.
+- **Open Graph cards** for the disassembly and subgraph pages carry real figures — a scorecard and
+  six live stats — instead of zeros over dead canvas.
+- **`yatr.toml` matches CI**, using pnpm rather than npm, with the shadowed check task dropped.
+
+### Removed
+
+- **The Tokens page and everything behind it** — both page routes, the `/api/tokens` tree, the
+  `warm-tokens` and `warm-token-details` crons, fourteen library modules with their tests, four
+  components and the `useTokens` hook. Thirty-nine files, 10,986 lines. The `warm-tokens` entry is
+  out of `vercel.json`; `warm-token-details` turned out never to have been scheduled there at all.
+- **`NUTHATCH_DELEGATION_EVENTS` and `NUTHATCH_DEVELOPER_ACTIVITY`**, retired by the 4.26.0
+  migration. `.env.example` had carried the latter twice.
+
+### Fixed
+
+- **`nuthatchEnabled` restored** for the dips-nest. It was removed when the migrated panels stopped
+  needing a flag, but DIPS is still being staged in behind one, and the merged tree would not have
+  compiled without it.
+- **Delegation route tests updated to the fail-closed contract.** They asserted an empty 200 where
+  the migrated routes now return 503, and the stale expectation was also poisoning an unrelated
+  payments address-validation test through ordering.
+- **`ProgressBar` renders 58%, not 57.99999999999999%.**
+- **"Back to Subgraphs" goes to `/subgraphs`** rather than wherever you happened to come from (#24).
+- **The public card is rescored to match the tracker**, with a test pinning the two together so
+  they cannot drift apart again.
+
+### Notes
+
+- `src/lib/tokens/total-supply.ts` was doing honest work for GRT global supply and survives as
+  `src/lib/erc20-supply.ts`. `/api/token-metrics` is unrelated to the Tokens page despite the name
+  and is untouched — it still feeds per-epoch issuance and burn to the network stats.
+
+## [4.26.0] - 2026-08-24
+
+Backfilled on 2026-08-29. This version was tagged and published on 24 August but never merged into
+`main`, so it left no trace in this file or in `package.json` at the time. It is recorded here for
+completeness; its contents reach the mainline in 4.27.0.
+
+### Changed
+
+- **Delegation Flows and Delegation Events are served only from Nuthatch.** Legacy history is read
+  from a read-only nest and stitched to the live Horizon tail. There is deliberately no Graph
+  fallback: the routes fail closed with a 503 rather than quietly serving a different source, so
+  provenance is never ambiguous.
+- **The per-panel staging flags are gone.** A migrated panel needs a configured Nuthatch origin and
+  says so when it does not have one.
+
+### Added
+
+- **Keyless x402 pay-per-query mode** in the subgraph playground, marked experimental until a
+  payment is confirmed.
+
 ## [4.25.0] - 2026-08-16
 
 ### Changed
