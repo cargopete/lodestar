@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { getRedisClient, hasRedis } from '@/lib/cache';
 import { log } from '@/lib/logger';
+import {
+  assessCrons,
+  failingCrons,
+  staleCrons,
+  type CronRunRow,
+  type CronStatus,
+} from '@/lib/cron-expectations';
 import { isCronAuthorized } from '@/lib/cron-auth';
 
 // Staleness thresholds in minutes per ingestion type
@@ -85,26 +92,35 @@ export async function GET(request: NextRequest) {
 
   // ── Last cron run (if table exists) ──
   const lastCronRuns: Record<string, { last_run: string; duration_ms: number; success: boolean }> = {};
+  let cronStatuses: CronStatus[] = [];
   if (postgres.status === 'up' && db) {
     try {
-      const runs = await db`
+      const runs = await db<CronRunRow[]>`
         SELECT DISTINCT ON (step) step, started_at, duration_ms, success
         FROM cron_runs
         ORDER BY step, started_at DESC
       `;
       for (const r of runs) {
         lastCronRuns[r.step] = {
-          last_run: r.started_at,
-          duration_ms: r.duration_ms,
+          last_run: r.started_at as unknown as string,
+          duration_ms: r.duration_ms as number,
           success: r.success,
         };
       }
+      cronStatuses = assessCrons(runs);
     } catch {
       // Table might not exist yet — that's fine
     }
   }
 
   // ── Overall status ──
+  //
+  // A stale cron does NOT degrade this, and that is a deliberate restraint rather than an
+  // oversight. `status` is what an uptime monitor pages on; folding a new condition into it would
+  // change the meaning of an existing contract from the inside, and the first anyone would learn of
+  // it is an alert at three in the morning about a job that has been quiet for a week. The staleness
+  // is published in `crons` below, where a reader or a monitor can opt into it deliberately. Worth
+  // revisiting once the cadences below have been observed to be right rather than merely plausible.
   const allIngestionHealthy = Object.values(ingestion).every((i) => i.healthy);
   const status =
     postgres.status === 'down' ? 'unhealthy' :
@@ -123,7 +139,23 @@ export async function GET(request: NextRequest) {
   };
 
   if (Object.keys(lastCronRuns).length > 0) {
+    // Kept in its original shape: something out there may already read it, and quietly changing a
+    // health endpoint's contract is how a monitor starts reporting green about a field that moved.
     body.cron_runs = lastCronRuns;
+  }
+  if (cronStatuses.length > 0) {
+    const stale = staleCrons(cronStatuses);
+    const failing = failingCrons(cronStatuses);
+    // The judgement the old surface left to whoever happened to be reading, and to whether they
+    // remembered each job's cadence.
+    body.crons = {
+      tracked: cronStatuses.length,
+      stale: stale.map((s) => ({ step: s.step, age_minutes: s.ageMinutes, what: s.what, where: s.where })),
+      failing: failing.map((s) => ({ step: s.step, what: s.what, where: s.where })),
+      // Named rather than hidden, so a decommissioned job stops reading as a broken one.
+      retired: cronStatuses.filter((s) => s.retired).map((s) => ({ step: s.step, why: s.retired })),
+      detail: cronStatuses,
+    };
   }
 
   const httpStatus = status === 'unhealthy' ? 503 : 200;

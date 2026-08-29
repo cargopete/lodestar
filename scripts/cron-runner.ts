@@ -9,7 +9,10 @@
  *   npx tsx scripts/cron-runner.ts delegations    # ingest delegation events
  *   npx tsx scripts/cron-runner.ts disputes       # ingest disputes
  *   npx tsx scripts/cron-runner.ts snapshot       # network snapshot
- *   npx tsx scripts/cron-runner.ts compute-scores # score indexers → push to Redis
+ *
+ * `compute-scores` was folded into `refresh`, which computes the composite in the same pass. The
+ * case was removed and this line advertised it for 28 days afterwards, during which `/api/health`
+ * showed a job that had "stopped" and had in fact been retired.
  *
  * Requires .env.local with: GRAPH_API_KEY, DATABASE_URL
  * For refresh: also needs REDIS_URL (rediss:// for the self-hosted TLS Redis)
