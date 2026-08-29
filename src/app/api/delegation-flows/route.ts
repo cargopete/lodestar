@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, hasDbAccess } from '@/lib/db';
 import { cached } from '@/lib/cache';
-import { delegationEventsQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { hasNuthatch, nuthatchSql } from '@/lib/nuthatch';
 import { log } from '@/lib/logger';
 
 export interface DelegationFlowPoint {
@@ -12,55 +11,64 @@ export interface DelegationFlowPoint {
 }
 
 const ALLOWED_DAYS = new Set([30, 60, 90, 180, 360, 365, 730]);
+const LEGACY_HISTORY_END_EXCLUSIVE = 1_787_555_748;
 
-async function fetchFromSubgraph(days: number): Promise<DelegationFlowPoint[]> {
-  const cutoff = Math.floor((Date.now() - days * 86400_000) / 1000).toString();
+interface DailyFlowRow {
+  date: string;
+  inflows: number | string;
+  outflows: number | string;
+}
 
-  // Paginate up to 5000 events (5 pages × 1000)
-  const MAX_PAGES = 5;
-  const allEvents: Array<{ eventType: string; tokens: string; timestamp: string }> = [];
-  let cursor = cutoff;
+function dailyFlowSql(startTimestamp: number, endTimestamp: number, legacy: boolean): string {
+  const events = legacy
+    ? `
+      SELECT block_timestamp, CAST(tokens_dec AS DOUBLE) / 1e18 AS tokens, 'inflow' AS direction
+      FROM staking_legacy__stake_delegated
+      UNION ALL
+      SELECT block_timestamp, CAST(tokens_dec AS DOUBLE) / 1e18, 'outflow'
+      FROM staking_legacy__stake_delegated_locked
+      UNION ALL
+      SELECT block_timestamp, CAST(tokens_dec AS DOUBLE) / 1e18, 'inflow'
+      FROM staking__tokens_delegated
+      UNION ALL
+      SELECT block_timestamp, CAST(tokens_dec AS DOUBLE) / 1e18, 'outflow'
+      FROM staking__tokens_undelegated`
+    : `
+      SELECT block_timestamp, CAST(tokens_dec AS DOUBLE) / 1e18 AS tokens, 'inflow' AS direction
+      FROM staking__tokens_delegated
+      UNION ALL
+      SELECT block_timestamp, CAST(tokens_dec AS DOUBLE) / 1e18, 'outflow'
+      FROM staking__tokens_undelegated`;
 
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const result = await delegationEventsQuery<{
-      delegationEvents: Array<{ eventType: string; tokens: string; timestamp: string }>;
-    }>(`{
-      delegationEvents(
-        first: 1000
-        orderBy: timestamp
-        orderDirection: asc
-        where: { timestamp_gt: "${cursor}" }
-      ) {
-        eventType
-        tokens
-        timestamp
-      }
-    }`);
+  return `
+    WITH events AS (${events})
+    SELECT
+      strftime(to_timestamp(block_timestamp), '%Y-%m-%d') AS date,
+      SUM(CASE WHEN direction = 'inflow' THEN tokens ELSE 0 END) AS inflows,
+      SUM(CASE WHEN direction = 'outflow' THEN tokens ELSE 0 END) AS outflows
+    FROM events
+    WHERE block_timestamp >= ${startTimestamp} AND block_timestamp < ${endTimestamp}
+    GROUP BY 1
+    ORDER BY 1`;
+}
 
-    const events = result.delegationEvents;
-    if (events.length === 0) break;
-    allEvents.push(...events);
-    cursor = events[events.length - 1].timestamp;
-    if (events.length < 1000) break;
-  }
-
-  // Group by date (UTC)
-  const grouped = new Map<string, { inflows: number; outflows: number }>();
-  for (const event of allEvents) {
-    const date = new Date(parseInt(event.timestamp) * 1000).toISOString().slice(0, 10);
-    const existing = grouped.get(date) ?? { inflows: 0, outflows: 0 };
-    const grt = parseFloat(event.tokens) / 1e18;
-    if (event.eventType === 'delegation') {
-      existing.inflows += grt;
-    } else if (event.eventType === 'undelegation') {
-      existing.outflows += grt;
+function mergeDailyFlows(...sources: DailyFlowRow[][]): DelegationFlowPoint[] {
+  const days = new Map<string, { inflows: number; outflows: number }>();
+  for (const source of sources) {
+    for (const row of source) {
+      const total = days.get(row.date) ?? { inflows: 0, outflows: 0 };
+      total.inflows += Number(row.inflows);
+      total.outflows += Number(row.outflows);
+      days.set(row.date, total);
     }
-    grouped.set(date, existing);
   }
 
-  return Array.from(grouped.entries())
-    .map(([date, { inflows, outflows }]) => ({ date, inflows, outflows, net: inflows - outflows }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  return Array.from(days, ([date, { inflows, outflows }]) => ({
+    date,
+    inflows,
+    outflows,
+    net: inflows - outflows,
+  })).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export async function GET(request: NextRequest) {
@@ -71,52 +79,31 @@ export async function GET(request: NextRequest) {
   const compare = params.get('compare') === '1';
   const days = compare ? baseDays * 2 : baseDays;
 
-  const cacheKey = `lodestar:delegation-flows:v3:${days}`;
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
+  }
+
+  const cacheKey = `lodestar:delegation-flows:nuthatch:v4:${days}`;
 
   try {
     const data = await cached<DelegationFlowPoint[]>(cacheKey, 600, async () => {
-      // Try DB first
-      if (hasDbAccess() && db) {
-        try {
-          const cutoff = new Date(Date.now() - days * 86400_000).toISOString();
-          const rows = await db!`
-            SELECT
-              DATE(timestamp) AS date,
-              COALESCE(SUM(CASE
-                WHEN event_type = 'delegation' THEN tokens_grt
-                ELSE 0
-              END), 0) AS inflows,
-              COALESCE(SUM(CASE
-                WHEN event_type = 'undelegation' THEN tokens_grt
-                ELSE 0
-              END), 0) AS outflows
-            FROM delegation_events
-            WHERE timestamp >= ${cutoff}
-              AND timestamp IS NOT NULL
-            GROUP BY DATE(timestamp)
-            ORDER BY DATE(timestamp) ASC
-          `;
-
-          if (rows.length > 0) {
-            return rows.map((r) => ({
-              date: r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
-              inflows: Number(r.inflows),
-              outflows: Number(r.outflows),
-              net: Number(r.inflows) - Number(r.outflows),
-            }));
-          }
-        } catch {
-          // DB unreachable or query failed — fall through to subgraph
-        }
-      }
-
-      // DB empty, unavailable, or failed — fall back to subgraph
-      if (!hasSubgraphAccess()) return [];
-      return fetchFromSubgraph(days);
+      const startTimestamp = Math.floor((Date.now() - days * 86400_000) / 1000);
+      const [historical, live] = await Promise.all([
+        startTimestamp < LEGACY_HISTORY_END_EXCLUSIVE
+          ? nuthatchSql<DailyFlowRow>(
+              dailyFlowSql(startTimestamp, LEGACY_HISTORY_END_EXCLUSIVE, true),
+              '/legacy-flows'
+            )
+          : Promise.resolve([]),
+        nuthatchSql<DailyFlowRow>(
+          dailyFlowSql(Math.max(startTimestamp, LEGACY_HISTORY_END_EXCLUSIVE), Number.MAX_SAFE_INTEGER, false)
+        ),
+      ]);
+      return mergeDailyFlows(historical, live);
     });
 
     return NextResponse.json(
-      { data },
+      { data, source: 'nuthatch' },
       {
         headers: {
           'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
@@ -124,7 +111,7 @@ export async function GET(request: NextRequest) {
       },
     );
   } catch (error) {
-    log.api.error({ err: error }, 'Delegation flows error');
-    return NextResponse.json({ data: [] });
+    log.api.error({ err: error }, 'Nuthatch delegation flows error');
+    return NextResponse.json({ error: 'Failed to load delegation flows from Nuthatch' }, { status: 503 });
   }
 }

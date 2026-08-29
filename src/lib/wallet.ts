@@ -1,5 +1,5 @@
 import { http, createConfig } from 'wagmi';
-import { arbitrum } from 'wagmi/chains';
+import { arbitrum, base, baseSepolia } from 'wagmi/chains';
 import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors';
 import { getAddress } from 'viem';
 
@@ -7,7 +7,10 @@ import { getAddress } from 'viem';
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo';
 
 export const config = createConfig({
-  chains: [arbitrum],
+  // Base / Base Sepolia carry no Lodestar contracts. They are here solely so a
+  // wallet can sign x402 USDC payment authorisations for The Graph's keyless
+  // gateway endpoints. See src/lib/x402-client.ts.
+  chains: [arbitrum, base, baseSepolia],
   connectors: [
     injected(),
     walletConnect({ projectId }),
@@ -15,6 +18,8 @@ export const config = createConfig({
   ],
   transports: {
     [arbitrum.id]: http(),
+    [base.id]: http(),
+    [baseSepolia.id]: http(),
   },
   ssr: true,
 });

@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { GraphiQL } from 'graphiql';
-import { createGraphiQLFetcher } from '@graphiql/toolkit';
+import { createGraphiQLFetcher, type Fetcher } from '@graphiql/toolkit';
 import 'graphiql/style.css';
 
 const DEFAULT_QUERY = `{
@@ -17,14 +17,24 @@ const DEFAULT_QUERY = `{
  * syntax highlighting, query history. Queries are proxied server-side through
  * /api/subgraph-playground/[hash] so GRAPH_API_KEY is never exposed.
  *
+ * Pass `fetcher` to route queries somewhere else — see SubgraphPlaygroundPanel,
+ * which substitutes a keyless pay-per-query fetcher.
+ *
  * Client-only (relies on browser APIs + localStorage); import via next/dynamic
  * with ssr:false.
  */
-export default function SubgraphGraphiQL({ hash }: { hash: string }) {
-  const fetcher = useMemo(
+export default function SubgraphGraphiQL({
+  hash,
+  fetcher: override,
+}: {
+  hash: string;
+  fetcher?: Fetcher;
+}) {
+  const fallback = useMemo(
     () => createGraphiQLFetcher({ url: `/api/subgraph-playground/${hash}` }),
     [hash],
   );
+  const fetcher = override ?? fallback;
 
   return (
     <div className="h-[640px] rounded-[var(--radius-card)] overflow-hidden border border-[var(--border)]">

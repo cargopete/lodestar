@@ -1,38 +1,16 @@
 import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
-import { nuthatchEnabled, nuthatchSql } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSql } from '@/lib/nuthatch';
 import { log } from '@/lib/logger';
 
 // This handler takes no request argument, so Next would otherwise statically cache it at build time
-// and never re-run it — freezing the data source (and defeating the `NUTHATCH_*` flags). The app-level
+// and never re-run it. The app-level
 // `cached()` below is the real cache; the route itself must run each request.
 export const dynamic = 'force-dynamic';
 
 interface SubgraphRow {
   id: string;
   createdAt: number;
-}
-
-/** All subgraphs published since `cutoff`, from the network subgraph (paginated by id cursor). */
-async function fetchSubgraphRows(cutoff: number): Promise<SubgraphRow[]> {
-  const rows: SubgraphRow[] = [];
-  let lastId = '';
-  while (true) {
-    const result = await subgraphQuery<{ subgraphs: SubgraphRow[] }>(`{
-      subgraphs(
-        first: 1000
-        orderBy: id
-        orderDirection: asc
-        where: { createdAt_gte: ${cutoff} ${lastId ? `id_gt: "${lastId}"` : ''} }
-      ) { id createdAt }
-    }`);
-    if (result.subgraphs.length === 0) break;
-    rows.push(...result.subgraphs);
-    lastId = result.subgraphs[result.subgraphs.length - 1].id;
-    if (result.subgraphs.length < 1000) break;
-  }
-  return rows;
 }
 
 /**
@@ -73,8 +51,8 @@ export interface DeveloperActivityResponse {
   lastWeekCount: number;
   /** Week-over-week change (%) between the last two complete weeks, null when the prior week is empty */
   weekOverWeekPct: number | null;
-  /** Which backend served this payload (RFC-0011 pilot). Absent on cached pre-migration payloads. */
-  source?: 'nuthatch' | 'subgraph';
+  /** Dataset that served this payload. */
+  source: 'nuthatch';
 }
 
 /** Monday (UTC) of the ISO week containing the given unix-seconds timestamp. */
@@ -94,38 +72,19 @@ function weekStartUTC(unixSeconds: number): string {
  * faithful proxy for "a developer shipped something new".
  */
 export async function GET() {
-  if (!hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
 
   const windowMonths = 12;
-  // v2: payload gained the `partial` flag + complete-week-only headline figures.
-  // v3: payload gained a `source` field (nuthatch vs subgraph) — new key so we don't serve a v2
-  // entry cached before the nuthatch migration (which has no source and the old subgraph totals).
-  // v4: force a fresh generation when the production GNS Nuthatch panel is enabled, rather than
-  // serving the previous subgraph-backed hourly entry through the staged cutover.
-  const cacheKey = `lodestar:developer-activity:v4:${windowMonths}m`;
+  const cacheKey = `lodestar:developer-activity:nuthatch:v5:${windowMonths}m`;
 
   try {
     const data = await cached<DeveloperActivityResponse>(cacheKey, 3600, async () => {
       const cutoff = Math.floor(Date.now() / 1000) - windowMonths * 30 * 86400;
 
-      // RFC-0011 pilot: when the flag is on, source the published-subgraph rows from our own nuthatch
-      // nest instead of the network subgraph. Identical bucketing runs below either way, so only the
-      // data origin changes. Falls back to the subgraph on any error.
-      let source: 'nuthatch' | 'subgraph' = 'subgraph';
-      let rows: SubgraphRow[];
-      if (nuthatchEnabled('NUTHATCH_DEVELOPER_ACTIVITY')) {
-        try {
-          rows = await fetchNuthatchRows(cutoff);
-          source = 'nuthatch';
-        } catch (err) {
-          log.api.error({ err }, 'nuthatch developer-activity failed, falling back to subgraph');
-          rows = await fetchSubgraphRows(cutoff);
-        }
-      } else {
-        rows = await fetchSubgraphRows(cutoff);
-      }
+      const rows = await fetchNuthatchRows(cutoff);
+      const source = 'nuthatch' as const;
 
       // Tally into weekly buckets.
       const counts = new Map<string, number>();
