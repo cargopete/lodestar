@@ -84,23 +84,23 @@ export const CATALYST_ITEMS: CatalystItem[] = [
     ],
   },
   {
+    slug: 'multi-product-studio',
+    label: 'A multi-product Studio experience',
+    coverage: 60,
+    rationale:
+      'Lodestar proves the concept and covers a lot of surface, but "the Foundation\'s multi-product Studio" means thegraph.com, hosted syncs, subscription billing and the transitioned E&N stack in one experience. Lodestar is a strong reference implementation, not a drop-in. The binding constraint here is legal rather than technical: taking payment needs an entity. New on 29 Aug is a second product tier alongside subgraphs: /sql opens the nuthatch nests behind this dashboard to anyone, with a schema catalogue, a playground and results stamped with the block they were true as of. That gap was discovery rather than capability, since the paid door already existed and nobody outside could see a table name to knock on it. Added since: a named-query tier, where the caller sends a name and typed arguments and never sends SQL. Every declared query is pinned to a block, so its answer is reproducible and can carry a signed receipt, which is the difference between a surface for exploring and one you could depend on.',
+    projects: [
+      { name: 'Lodestar', url: '/' },
+      { name: 'SQL', url: '/sql' },
+    ],
+  },
+  {
     slug: 'substreams',
     label: 'Finish the Substreams data service',
     coverage: 58,
     rationale:
       'Live contract on Arbitrum One, settlement daemon, runbooks and a rehearsed end-to-end path: that is most of the engineering, and none of it moved on 28 Aug. The missing 42% is heavy — external audit, multisig ownership, a hosted gateway and oracle, and a provider actually onboarding. Code is the smaller half of shipping a data service people trust with funds.',
     projects: [{ name: 'SDSCE', url: 'https://github.com/nightswatchhq/SDSCE' }],
-  },
-  {
-    slug: 'multi-product-studio',
-    label: 'A multi-product Studio experience',
-    coverage: 55,
-    rationale:
-      'Lodestar proves the concept and covers a lot of surface, but "the Foundation\'s multi-product Studio" means thegraph.com, hosted syncs, subscription billing and the transitioned E&N stack in one experience. Lodestar is a strong reference implementation, not a drop-in. The binding constraint here is legal rather than technical: taking payment needs an entity. New on 29 Aug is a second product tier alongside subgraphs: /sql opens the nuthatch nests behind this dashboard to anyone, with a schema catalogue, a playground and results stamped with the block they were true as of. That gap was discovery rather than capability, since the paid door already existed and nobody outside could see a table name to knock on it.',
-    projects: [
-      { name: 'Lodestar', url: '/' },
-      { name: 'SQL', url: '/sql' },
-    ],
   },
   {
     slug: 'rpc-service',

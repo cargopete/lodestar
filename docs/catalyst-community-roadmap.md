@@ -102,7 +102,7 @@ it ourselves.
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
-| CAT-6 | Multi-product Studio | RFC-006 | 45% | **55%** 🔺 | 90% | 90% | Lodestar |
+| CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | 90% | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **35%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
 | CAT-8 | Institutional audit layer | RFC-008 | 5% | **26%** 🔺 | 80% 🔒 | ~45% | tattler |
 
@@ -123,7 +123,7 @@ the code does not move this as far as finishing code usually does.
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
 
-**Mean, as of 2026-08-29: 53.0%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-29: 53.6%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
@@ -961,9 +961,25 @@ per-panel fallback to the gateway.
         thing being rationed is not bandwidth but the CPU the Lodestar Oracle, dips-nest and the
         data-service gateway share on that host. The per-IP counter is per edge instance and so is
         a soft ceiling; the timeout is the hard one.
-  - [ ] Named-query tier. nuthatch's RFC-0034 bounded surfaces let a nest answer
-        `name + arguments, never SQL`, which is the right shape for anything production. Free-form
-        is the exploring tier.
+  - [x] **Named-query tier, live on `/sql` and at `/api/sql/named`.** The caller sends a name and
+        typed arguments and never sends SQL. nuthatch's own RFC-0034 is blunt about why free-form
+        alone is not enough: the node's guards are "self-protection, not a security boundary" — they
+        bound one query's cost and say nothing about which questions the surface answers at all.
+  - [x] Five declared queries across `staking` and `dips`, **every one pinned to a block**, so every
+        answer is reproducible and can carry a [receipt](https://github.com/nightswatchhq/tattler).
+        A name is the unit two parties can agree on; an ad-hoc SELECT from six months ago is not.
+  - [x] **Only `int` and `address` parameters**, because both have a total validating parse into a
+        form with no escaping hazard. `text` is deliberately absent, and the reasoning is nuthatch's
+        adopted wholesale: escaping has to be right in every dialect and every context, and "we
+        escaped it carefully" is how this class of bug ships. 32 tests, including a property test
+        that no caller-supplied character reaches the SQL under any of the declared queries.
+  - [x] Rationed at 15/min against free-form's 5, and that ordering is a product statement rather
+        than a shrug: a declared, pinned question has a cost chosen in advance, an arbitrary SELECT
+        has one a stranger explores for free.
+  - [ ] Move the surface into the nests' own mount config (RFC-0034 phase 1) so the bound holds even
+        for callers who bypass this dashboard. It lives here today because those nests are
+        single-nest processes serving live panels, and a product feature is a poor reason to
+        reconfigure four of them.
 - [ ] **Adoption.** Onboard paying developers to managed pipelines.
 - [ ] Keep `src/data/catalyst-roadmap.ts` in sync with this file (see below).
 

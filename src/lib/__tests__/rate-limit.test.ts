@@ -27,6 +27,7 @@ describe('rateLimit — tier limits', () => {
   // dips-nest and the data-service gateway. Raise these deliberately or not at all.
   it.each([
     ['/api/sql/query', 5],
+    ['/api/sql/named', 15],
     ['/api/sql/catalog', 30],
   ])('holds the public SQL limit for %s', async (path, limit) => {
     const r = await rateLimit(freshIp(), path);
@@ -37,6 +38,14 @@ describe('rateLimit — tier limits', () => {
     const q = await rateLimit(freshIp(), '/api/sql/query');
     const c = await rateLimit(freshIp(), '/api/sql/catalog');
     expect(q.limit).toBeLessThan(c.limit);
+  });
+
+  // The ordering is the product statement: a declared, pinned question has a cost we chose in
+  // advance, an arbitrary SELECT has one a stranger explores for free.
+  it('gives a declared question a better allowance than an arbitrary one', async () => {
+    const named = await rateLimit(freshIp(), '/api/sql/named');
+    const free = await rateLimit(freshIp(), '/api/sql/query');
+    expect(named.limit).toBeGreaterThan(free.limit);
   });
 });
 

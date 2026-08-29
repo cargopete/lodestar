@@ -39,6 +39,11 @@ const LIMITS: Array<[RegExp, number]> = [
   // a global quota. The query timeout in the route is the harder limit, and the nest's own timeout
   // and row cap are harder still.
   [/^\/api\/sql\/query/, 5],
+  // Named queries are rationed more generously than free-form on purpose, and it is a product
+  // statement rather than a shrug: a declared, pinned query has a shape and a cost we chose in
+  // advance, where an arbitrary SELECT has a cost profile a stranger can explore for free by
+  // trying things. Declaring your question buys a better allowance.
+  [/^\/api\/sql\/named/, 15],
   [/^\/api\/sql\//, 30],
   [/^\/api\//, 200],
 ];

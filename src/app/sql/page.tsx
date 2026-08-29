@@ -382,6 +382,8 @@ export default function SqlPage() {
                 cited rather than merely quoted.
               </p>
             </Card>
+
+            <NamedQueries />
           </div>
         </div>
       )}
@@ -390,5 +392,176 @@ export default function SqlPage() {
         <p className="text-sm text-[var(--text-muted)]">Loading the catalogue…</p>
       )}
     </main>
+  );
+}
+
+// ── The named-query tier ─────────────────────────────────────────────────────
+
+interface NamedQueryParam {
+  name: string;
+  type: 'int' | 'address';
+  description: string;
+}
+
+interface NamedQueryDef {
+  name: string;
+  dataset: string;
+  description: string;
+  params: NamedQueryParam[];
+  sql: string;
+}
+
+interface NamedResult {
+  query: string;
+  sql: string;
+  count: number;
+  rows: Record<string, unknown>[];
+  provenance: { as_of?: number | null } | null;
+}
+
+/**
+ * The other door. A caller sends a name and typed arguments; it never sends SQL.
+ *
+ * Surfaced here rather than left in the docs because a bounded surface nobody can find is a
+ * documented secret. Every one of these is pinned to a block, which is what makes its answer
+ * reproducible and therefore worth attaching a receipt to.
+ */
+function NamedQueries() {
+  const [openQuery, setOpenQuery] = useState<string | null>(null);
+  const [args, setArgs] = useState<Record<string, string>>({});
+  const [result, setResult] = useState<NamedResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+
+  const list = useQuery({
+    queryKey: ['named-queries'],
+    queryFn: async (): Promise<{ queries: NamedQueryDef[] }> => {
+      const res = await fetch('/api/sql/named');
+      if (!res.ok) throw new Error('unavailable');
+      return res.json();
+    },
+    staleTime: 30 * 60_000,
+  });
+
+  const queries = list.data?.queries ?? [];
+  const active = queries.find((q) => q.name === openQuery);
+
+  const run = useCallback(async () => {
+    if (!active) return;
+    setRunning(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/sql/named', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: active.name, args }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? `Request failed (${res.status}).`);
+        setResult(null);
+      } else {
+        setResult(json as NamedResult);
+      }
+    } catch {
+      setError('Could not reach the API.');
+      setResult(null);
+    } finally {
+      setRunning(false);
+    }
+  }, [active, args]);
+
+  if (!queries.length) return null;
+
+  return (
+    <Card>
+      <h3 className="text-sm font-semibold text-[var(--text)] mb-1">Named queries</h3>
+      <p className="text-[13px] text-[var(--text-muted)] leading-relaxed mb-3">
+        The production shape: you send a <strong className="text-[var(--text)]">name and typed
+        arguments, never SQL</strong>. Each one is pinned to a block, so the answer is reproducible
+        and can carry a{' '}
+        <Link href="/verify" className="text-[var(--accent)] hover:underline">
+          receipt
+        </Link>
+        . Rationed more generously than free-form, because a declared question has a cost we chose in
+        advance and an arbitrary one has a cost a stranger explores for free.
+      </p>
+
+      <div className="flex flex-wrap gap-2 mb-3">
+        {queries.map((q) => (
+          <button
+            key={q.name}
+            onClick={() => {
+              setOpenQuery(q.name === openQuery ? null : q.name);
+              setArgs({});
+              setResult(null);
+              setError(null);
+            }}
+            className={cn(
+              'px-2.5 py-1 rounded-[var(--radius-button)] text-[12px] font-mono border-[0.5px] transition-colors',
+              q.name === openQuery
+                ? 'bg-[var(--accent)] text-[var(--accent-text)] border-[var(--accent)]'
+                : 'bg-[var(--bg-elevated)] text-[var(--text)] border-[var(--border)] hover:border-[var(--accent)]'
+            )}
+          >
+            {q.name}
+          </button>
+        ))}
+      </div>
+
+      {active && (
+        <div className="space-y-3">
+          <p className="text-[12px] text-[var(--text-muted)]">{active.description}</p>
+
+          {active.params.map((p) => (
+            <label key={p.name} className="block">
+              <span className="text-[10px] uppercase tracking-wide text-[var(--text-faint)]">
+                {p.name} <span className="text-[var(--accent)]">{p.type}</span>
+              </span>
+              <input
+                value={args[p.name] ?? ''}
+                onChange={(e) => setArgs((a) => ({ ...a, [p.name]: e.target.value }))}
+                placeholder={p.type === 'address' ? '0x…40 hex' : 'a block number'}
+                className="w-full mt-0.5 px-2 py-1.5 font-mono text-[12px] rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border-[0.5px] border-[var(--border)] text-[var(--text)] outline-none focus:border-[var(--accent)]"
+              />
+              <span className="text-[10px] text-[var(--text-faint)]">{p.description}</span>
+            </label>
+          ))}
+
+          <button
+            onClick={() => void run()}
+            disabled={running}
+            className="px-4 py-1.5 rounded-[var(--radius-button)] bg-[var(--accent)] text-[var(--accent-text)] text-sm font-medium disabled:opacity-50"
+          >
+            {running ? 'Running…' : 'Ask'}
+          </button>
+
+          {error && (
+            <p className="text-[12px] text-[var(--amber)] font-mono break-words">{error}</p>
+          )}
+
+          {result && (
+            <div>
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <Badge variant="default">
+                  {result.count} row{result.count === 1 ? '' : 's'}
+                </Badge>
+                {result.provenance?.as_of != null && (
+                  <span className="text-[11px] text-[var(--text-faint)]">
+                    as of block {result.provenance.as_of.toLocaleString()}
+                  </span>
+                )}
+              </div>
+              {/* Shown because a name is stable but the statement is what the nest answered, and a
+                  reader is entitled to see which. */}
+              <pre className="text-[10px] font-mono text-[var(--text-faint)] whitespace-pre-wrap break-words bg-[var(--bg-elevated)] rounded p-2 mb-2">
+                {result.sql}
+              </pre>
+              <ResultTable rows={result.rows} />
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }

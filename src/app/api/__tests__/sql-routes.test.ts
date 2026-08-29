@@ -26,6 +26,7 @@ vi.mock('@/lib/nuthatch', () => ({
 }));
 
 import { GET as catalogGET } from '../sql/catalog/route';
+import { GET as namedGET, POST as namedPOST } from '../sql/named/route';
 import { POST as queryPOST } from '../sql/query/route';
 import { SQL_DATASETS } from '@/lib/sql-datasets';
 
@@ -171,5 +172,81 @@ describe('/api/sql/query', () => {
     expect(body.truncated).toBe(true);
     expect(body.degraded).toBe(true);
     expect(body.degradedTables).toEqual(['staking__delegated']);
+  });
+});
+
+const postNamed = (body: unknown) =>
+  namedPOST(
+    new Request('http://localhost/api/sql/named', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: typeof body === 'string' ? body : JSON.stringify(body),
+    })
+  );
+
+describe('/api/sql/named', () => {
+  const okResult = {
+    ok: true as const,
+    data: { count: 1, rows: [{ tokens: '5000' }], truncated: false, provenance: { as_of: 9 } },
+  };
+
+  it('lists what may be asked', async () => {
+    const body = await (await namedGET()).json();
+    expect(body.queries.length).toBeGreaterThan(0);
+    expect(body.queries[0]).toHaveProperty('params');
+  });
+
+  it('renders the declared statement and sends it to the right nest', async () => {
+    mockSqlFull.mockResolvedValue(okResult);
+    const res = await postNamed({
+      name: 'issuance_rate_changes',
+      args: { before_block: 497000000 },
+    });
+    expect(res.status).toBe(200);
+    const [sql, basePath] = mockSqlFull.mock.calls[0];
+    expect(sql).toContain('block_number <= 497000000');
+    expect(basePath).toBe('/dips');
+    // Returned so a receipt can record the statement, not only the name.
+    expect((await res.json()).sql).toContain('497000000');
+  });
+
+  // A refusal that only says "no" leaves a caller guessing, and guessing at an endpoint is how you
+  // get a thousand probing requests.
+  it('names the allowed set when the query is unknown', async () => {
+    const res = await postNamed({ name: 'drop_everything', args: {} });
+    expect(res.status).toBe(400);
+    expect((await res.json()).allowed).toContain('issuance_rate_changes');
+    expect(mockSqlFull).not.toHaveBeenCalled();
+  });
+
+  it('refuses a bad argument before touching the network', async () => {
+    const res = await postNamed({
+      name: 'delegations_to_indexer',
+      args: { indexer: "0x' OR 1=1 --", before_block: 1 },
+    });
+    expect(res.status).toBe(400);
+    expect(mockSqlFull).not.toHaveBeenCalled();
+  });
+
+  it('refuses a missing pin, because an unpinned answer cannot be reproduced', async () => {
+    const res = await postNamed({
+      name: 'delegations_to_indexer',
+      args: { indexer: '0x' + 'a'.repeat(40) },
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('before_block');
+    expect(mockSqlFull).not.toHaveBeenCalled();
+  });
+
+  it('accepts no SQL from the caller at all', async () => {
+    mockSqlFull.mockResolvedValue(okResult);
+    await postNamed({
+      name: 'issuance_rate_changes',
+      args: { before_block: 1 },
+      q: 'SELECT * FROM secrets',
+      sql: 'SELECT * FROM secrets',
+    });
+    // Whatever else was in the body, the statement is the declared one.
+    expect(mockSqlFull.mock.calls[0][0]).not.toContain('secrets');
   });
 });
