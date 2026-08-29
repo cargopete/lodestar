@@ -66,6 +66,9 @@ export async function GET() {
       chain: d.chain,
       description: d.description,
       sample: d.sample,
+      // Surfaced so the page can say so. An archive sitting beside three live datasets, with
+      // nothing to distinguish it, invites a reader to take three-week-old data for current.
+      archival: Boolean(d.archival),
       available: schema?.available ?? false,
       tableCount: schema?.tables.length ?? 0,
       tables: schema?.tables ?? [],

@@ -29,6 +29,7 @@ interface CatalogDataset {
   description: string;
   sample: string;
   available: boolean;
+  archival?: boolean;
   tableCount: number;
   tables: CatalogTable[];
   error?: string;
@@ -233,6 +234,7 @@ export default function SqlPage() {
           >
             {d.label}
             {!d.available && <span className="ml-1.5 text-[11px]">(down)</span>}
+            {d.available && d.archival && <span className="ml-1.5 text-[11px]">(archive)</span>}
           </button>
         ))}
       </div>
@@ -250,6 +252,12 @@ export default function SqlPage() {
                 {dataset.description}
               </p>
               <p className="text-[11px] text-[var(--text-faint)] mt-1">{dataset.chain}</p>
+              {dataset.archival && (
+                <p className="text-[11px] text-[var(--amber)] mt-2 leading-relaxed">
+                  Frozen archive. It answers from sealed history and does not follow the chain, so
+                  recent blocks are not here. Pin your query and read the provenance stamp.
+                </p>
+              )}
             </div>
 
             {dataset.tables.length > 8 && (

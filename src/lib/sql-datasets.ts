@@ -24,6 +24,17 @@ export interface SqlDataset {
   chain: string;
   /** A query that returns something interesting immediately, so the playground opens on a result. */
   sample: string;
+  /**
+   * A frozen archive rather than a live follower.
+   *
+   * Such a nest runs `nuthatch serve` with no cursor: it answers from sealed segments and never
+   * advances, so `/ready` reports `stalled: true` for ever and is right to. Two things follow, and
+   * both matter. The health check must not alert on it, or it cries wolf from day one and the next
+   * real outage is ignored with it. And the reader must be told, because a page that shows an
+   * archive beside three live datasets and says nothing is inviting someone to mistake three-week-old
+   * data for current.
+   */
+  archival?: true;
 }
 
 /**
@@ -69,8 +80,9 @@ export const SQL_DATASETS: SqlDataset[] = [
     label: 'Legacy GRT flows',
     basePath: '/legacy-flows',
     chain: 'Arbitrum One',
+    archival: true,
     description:
-      'Delegation across the Horizon and pre-Horizon staking contracts together, which is what the GRT flow views need and what neither contract gives you alone.',
+      'Delegation across the Horizon and pre-Horizon staking contracts together, which is what the GRT flow views need and what neither contract gives you alone. A frozen full-history archive, not a live follower: it answers from sealed segments and does not advance, so its data ends where the archive ends.',
     sample: LIST_TABLES,
   },
 ];

@@ -123,6 +123,25 @@ the code does not move this as far as finishing code usually does.
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
 
+### Watching the thing everything else stands on (2026-08-29)
+
+Eighteen crons existed and **not one watched the Helsinki box**, which answers the delegation feed,
+developer activity, the DIPS panel, the Lodestar Oracle, the SQL surface and the named-query tier.
+On-chain checks cannot see it, and `/health` returning "ok" would not either: the failure worth
+catching is a nest that answers instantly with three-week-old data, where every page renders and
+every number is quietly wrong. `check-nest-health` now asks each nest's own `/ready` every fifteen
+minutes, edge-triggered like the provider check so a nest that is dark for a week does not push
+every quarter hour until everyone mutes it.
+
+**It found something on its first real probe, before it shipped.** `legacy-flows` reports
+`stalled: true` with `last_block: 0` and no poll ever recorded. That turned out to be correct and
+deliberate — it is `graph-staking-legacy-readonly.service`, a frozen full-history shadow running
+`nuthatch serve` rather than `dev` — but two things followed. Archival nests are now excluded from
+alerting, or the monitor would have cried wolf from day one and taken the next real outage down with
+it. And `/sql` now says so: an archive sitting beside three live datasets with nothing to
+distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
+because nobody had looked.
+
 **Mean, as of 2026-08-29: 53.6%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
