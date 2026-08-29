@@ -677,8 +677,17 @@ reusable write/store primitive.
         via `/proc` and environment blocks leak into crash reports and child processes.
   - [x] The bundled embedder is a documented placeholder, and the docs say loudly that it must stay
         local — a remote embedding call ships the plaintext to a third party and undoes everything.
-- [ ] **A drop-in provider for one agent framework**, and a durable (Postgres-backed) provider
-      build. Both are packaging rather than design.
+- [x] **First real user: it is installed and running on Chief's machine.** Provider under launchd
+      on `127.0.0.1:8099` only, snapshotting to `~/.nutcracker/store.json`; registered with
+      `claude mcp add nutcracker --scope user`. `docs/install.md` says what lives where and which
+      file is catastrophic to lose.
+  - [x] **Snapshot persistence**, because a provider that forgets everything on restart is a demo.
+        Tests: an item survives a restart, a forgotten memory does not resurrect, the file on disk
+        holds no fragment of the plaintext, and a corrupt snapshot is an error rather than a silent
+        fresh start — starting empty looks identical to a provider that lost everything and did not
+        mention it.
+- [ ] **A drop-in provider for one agent framework**, and a Postgres-backed provider build. Both
+      are packaging rather than design.
 - [ ] **MCP memory tools.** `memory.write` / `read` / `search` / `forget` over compass's MCP
       Streamable HTTP; TAP and x402 rails inherited.
 - [ ] **Client SDK + harness integration.** A drop-in memory provider for one agent framework.
