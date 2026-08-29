@@ -81,6 +81,17 @@ export const CATALYST_ITEMS: CatalystItem[] = [
     projects: [{ name: 'SDSCE', url: 'https://github.com/nightswatchhq/SDSCE' }],
   },
   {
+    slug: 'studio-dips',
+    label: 'Make Subgraph Studio fully network-powered',
+    coverage: 55,
+    rationale:
+      'The frontend half is largely done via the Dock. The news of 28 Aug is the protocol half: every DIPS contract is live on Arbitrum One and was fully wired on 25 August — issuance allocator, agreement manager, recurring collector, eligibility oracle — with the indexing-agreement allocation still set to zero. GIP-0088 is a governance parameter change away, not a deployment away. dips-nest indexes it and the dashboard shows it, so the moment that number moves is observable rather than announced. And the participating half turned out never to have been blocked: DIPS settles through RecurringCollector, not the query-fee path, so no gateway is involved. weaver builds and signs the agreements, with its EIP-712 hashing checked against the deployed contract.',
+    projects: [
+      { name: 'dips-nest', url: 'https://github.com/nightswatchhq/dips-nest' },
+      { name: 'The Dock', url: '/dock' },
+    ],
+  },
+  {
     slug: 'rpc-service',
     label: 'The RPC data service',
     coverage: 50,
@@ -95,17 +106,6 @@ export const CATALYST_ITEMS: CatalystItem[] = [
     rationale:
       'Lodestar proves the concept and covers a lot of surface, but "the Foundation\'s multi-product Studio" means thegraph.com, hosted syncs, subscription billing and the transitioned E&N stack in one experience. Lodestar is a strong reference implementation, not a drop-in. The binding constraint here is legal rather than technical: taking payment needs an entity.',
     projects: [{ name: 'Lodestar', url: '/' }],
-  },
-  {
-    slug: 'studio-dips',
-    label: 'Make Subgraph Studio fully network-powered',
-    coverage: 45,
-    rationale:
-      'The frontend half is largely done via the Dock. The news of 28 Aug is the protocol half: every DIPS contract is live on Arbitrum One and was fully wired on 25 August — issuance allocator, agreement manager, recurring collector, eligibility oracle — with the indexing-agreement allocation still set to zero. GIP-0088 is a governance parameter change away, not a deployment away. dips-nest indexes it and the dashboard shows it, so the moment that number moves is observable rather than announced.',
-    projects: [
-      { name: 'dips-nest', url: 'https://github.com/nightswatchhq/dips-nest' },
-      { name: 'The Dock', url: '/dock' },
-    ],
   },
   {
     slug: 'chain-integrations',

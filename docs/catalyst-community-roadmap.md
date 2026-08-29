@@ -97,7 +97,7 @@ it ourselves.
 
 | WS | Item | Source ref | 08-28 open | 08-28 close | Community ceiling | **Our ceiling** | Primary asset |
 |---|---|---|---|---|---|---|---|
-| CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **45%** | 90% 🔒 | ~65% | The Dock, gib |
+| CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **55%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
@@ -482,7 +482,22 @@ parity replacing the upgrade indexer. Fallback routing.
         August, and announcing those as news would be a false alarm about history.
   - [ ] Watch for `InnovationAllocation` appearing in the mainnet address book (GIP-0089, due
         2026-08-31); it is on Sepolia only today.
-- [ ] **Dipper client in the gateway.** Extend gib to speak the GIP-0081 agreement flow.
+- [x] **Agreement tooling: [nightswatchhq/weaver](https://github.com/nightswatchhq/weaver).**
+      10 tests. Builds, hashes, signs and checks Recurring Collection Agreements — the actual
+      GIP-0087 path, replacing the "Dipper client in the gateway" task below, which was written
+      against GIP-0081's off-chain MVP and involves a gateway that DIPS does not use.
+  - [x] **The EIP-712 hashing is checked against the deployed contract**, not against a reading of
+        the spec: the test asserts our digest equals what `hashRCA()` returns on
+        `RecurringCollector`. Mutation-tested twice — inlining `bytes metadata` instead of hashing
+        it, and swapping two adjacent same-width fields, each make it fail. A wrong EIP-712 hash
+        produces a perfectly valid, entirely useless signature and an on-chain revert carrying
+        nothing.
+  - [x] `sign` refuses when the key is not the payer the agreement names; `verify` exits non-zero
+        on a mismatch. Both turn an opaque revert into an obvious mistake before gas is spent.
+  - [ ] Broadcast `accept()` / `collect()` against Sepolia end to end. Free, and the last step to
+        having exercised the whole DIPS path.
+- [ ] ~~**Dipper client in the gateway.** Extend gib to speak the GIP-0081 agreement flow.~~
+      Superseded: see above.
   - [ ] Discover indexers by QoS (consumes CAT-2's publisher).
   - [ ] Negotiate price-per-unit-work.
   - [ ] Issue payment vouchers on POI receipt.
