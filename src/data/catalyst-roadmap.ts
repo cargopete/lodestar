@@ -53,24 +53,24 @@ export interface CatalystItem {
 /** Ordered by coverage, descending — the card renders them in array order. */
 export const CATALYST_ITEMS: CatalystItem[] = [
   {
+    slug: 'memory-for-ai',
+    label: 'Memory for AI',
+    coverage: 70,
+    rationale:
+      'The biggest move of 28 Aug, from 25%. nutcracker implements it: contract, client crypto, provider store, local MCP shim. The design names a contradiction in the brief nobody had — end-to-end encryption and semantic recall do not compose, and the usual casualty is the encryption, via plaintext embeddings stored beside the ciphertext. It picks a keyed blind index instead and publishes measured recall rather than adjectives. It now runs: a provider binary and an end-to-end round trip over real HTTP, where a memory is sealed locally, stored, found by blinded bucket tokens and decrypted back. Two places where the obvious build would have been actively harmful are documented and tested against.',
+    projects: [
+      { name: 'nutcracker', url: 'https://github.com/nightswatchhq/nutcracker' },
+      { name: 'compass', url: 'https://github.com/nightswatchhq/compass' },
+      { name: 'AI/MCP directory', url: '/ai' },
+    ],
+  },
+  {
     slug: 'gateway-operators',
     label: 'Onboard new gateway operators',
     coverage: 64,
     rationale:
       'gib solves the genuinely hard technical part: a working TAP v2 / Horizon gateway used to be a multi-week ordeal and is now a compose file with a smoke test. Added since: `gib onboard`, which withholds the block an indexer must paste until your own side would actually work — the whitelist handshake is slow because every failure in it is discovered by the indexer, hours later, as receipts that bounce. The remaining third is money actually flowing and a second operator choosing to run it, and we have decided not to be that operator.',
     projects: [{ name: 'gib', url: 'https://github.com/nightswatchhq/gib' }],
-  },
-  {
-    slug: 'memory-for-ai',
-    label: 'Memory for AI',
-    coverage: 64,
-    rationale:
-      'The biggest move of 28 Aug, from 25%. nutcracker implements it: contract, client crypto, provider store, local MCP shim. The design names a contradiction in the brief nobody had — end-to-end encryption and semantic recall do not compose, and the usual casualty is the encryption, via plaintext embeddings stored beside the ciphertext. It picks a keyed blind index instead and publishes measured recall rather than adjectives. Two places where the obvious build would have been actively harmful are documented and tested against.',
-    projects: [
-      { name: 'nutcracker', url: 'https://github.com/nightswatchhq/nutcracker' },
-      { name: 'compass', url: 'https://github.com/nightswatchhq/compass' },
-      { name: 'AI/MCP directory', url: '/ai' },
-    ],
   },
   {
     slug: 'substreams',

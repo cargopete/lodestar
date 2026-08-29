@@ -99,7 +99,7 @@ it ourselves.
 |---|---|---|---|---|---|---|---|
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **45%** | 90% 🔒 | ~65% | The Dock, gib |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
-| CAT-3 | Memory for AI | RFC-003 | 22% | **64%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
+| CAT-3 | Memory for AI | RFC-003 | 22% | **70%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | 45% | 90% | 90% | Lodestar |
@@ -651,8 +651,22 @@ reusable write/store primitive.
   - [x] Candidates that will not decrypt (wrong key generation) are skipped rather than surfaced as
         rubbish.
 - [ ] **Client SDK + harness integration.** A drop-in memory provider for one agent framework.
-- [ ] **HTTP transport + a runnable provider binary.** The `ProviderTransport` trait is implemented
-      in-process for tests; the real HTTP one and a servable provider are outstanding.
+- [x] **A runnable provider.** `crates/nutcracker-provider`, axum over the sealed store, 12 tests.
+      `cargo run -p nutcracker-provider` starts one; `--example http_roundtrip` seals a memory
+      locally, writes it over HTTP, searches by blinded bucket tokens and decrypts what comes back.
+      **Proven end to end over real HTTP, not mocked.**
+  - [x] The wire format has a test asserting it has nowhere to put a `text`, `key`, `embedding` or
+        `vector` field.
+  - [x] Anything that is not exactly `"blind"` is treated as the unsafe named mode, so a typo in
+        `mode` fails closed rather than silently voiding a namespace's e2e claim.
+  - [x] `DELETE` on a non-existent item returns 200 with `removed: false` rather than 404 — a 404
+        would leak whether an item exists to anyone who guesses an id.
+  - [x] Search limit clamped at 500: one request must not be able to ask a provider to serialise a
+        whole namespace.
+  - [x] Said plainly rather than implied: storage in this build is in-memory, and payment belongs in
+        front of these handlers rather than half-built inside them.
+- [ ] **Client SDK + harness integration.** A drop-in memory provider for one agent framework, and
+      an MCP stdio binary an agent can actually be pointed at.
 - [ ] **MCP memory tools.** `memory.write` / `read` / `search` / `forget` over compass's MCP
       Streamable HTTP; TAP and x402 rails inherited.
 - [ ] **Client SDK + harness integration.** A drop-in memory provider for one agent framework.
