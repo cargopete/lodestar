@@ -102,7 +102,7 @@ it ourselves.
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
-| CAT-6 | Multi-product Studio | RFC-006 | 45% | 45% | 90% | 90% | Lodestar |
+| CAT-6 | Multi-product Studio | RFC-006 | 45% | **55%** 🔺 | 90% | 90% | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **35%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
 | CAT-8 | Institutional audit layer | RFC-008 | 5% | 5% | 80% 🔒 | ~45% | (greenfield) |
 
@@ -123,7 +123,7 @@ the code does not move this as far as finishing code usually does.
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
 
-**Mean, as of 2026-08-29: 49.1%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-29: 50.4%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
@@ -933,7 +933,33 @@ per-panel fallback to the gateway.
   - [ ] Resolve the prepaid-GRT legal gate flagged in `GAP_ANALYSIS.md`. **Do this in Q1, not Q2.**
 - [ ] **Unified publish surface.** One catalogue-driven UI to publish a subgraph, a
       Substreams package (SDSCE), an RPC tier (Dispatch) and an MCP tool (compass).
-- [ ] **SQL / direct-DB delivery.** Expose nuthatch SQL-over-HTTP as a first-class product tier.
+- [x] **SQL / direct-DB delivery.** Live at [`/sql`](https://www.lodestar-dashboard.com/sql).
+      Schema catalogue, a query playground and a guarded read-only proxy over the nuthatch nests we
+      run. This is the one product tier the operating-model decision permits us to operate, and it
+      was the cheapest thing on this list because the nests were already there.
+  - [x] **The gap it closes was discovery, not capability.** The Helsinki host fronts seven indexed
+        datasets behind one credential, serving exactly one consumer: this dashboard. The paid door
+        existed too, the Nuthatch Data Service answering `402 TAP-Receipt header required`. But
+        nobody outside could see a table name or run a single query without asking us first, and a
+        paywall in front of an undocumented surface is not a product.
+  - [x] Four datasets exposed by an **explicit allowlist**, not a passthrough: proxying every nest
+        that happens to share a hostname is how a private dataset becomes public by accident.
+  - [x] **The security is the nest's, and deliberately so.** nuthatch opens DuckDB with
+        `enable_external_access=false`, an `allowed_directories` restriction and
+        `lock_configuration=true` so a query cannot widen its own access mid-flight, plus a function
+        allowlist as well as a denylist, comment stripping before matching, and rejection of unknown
+        table references. That was checked in the source before a line of this was written, because
+        a public SQL endpoint over DuckDB without it is a file-read primitive.
+        `isReadOnlySql` on our side is a cheap first pass, 10 tests, and is documented as not being
+        the boundary.
+  - [x] Results carry nuthatch's provenance stamp: the block the answer was true as of, what was
+        sealed, and the registry that decoded it. An answer nobody can date is an answer nobody can
+        cite.
+  - [x] A dataset that stops answering stays in the catalogue marked unavailable rather than
+        vanishing, which is the lesson from three data services reading as healthy for 39 days.
+  - [ ] Named-query tier. nuthatch's RFC-0034 bounded surfaces let a nest answer
+        `name + arguments, never SQL`, which is the right shape for anything production. Free-form
+        is the exploring tier.
 - [ ] **Adoption.** Onboard paying developers to managed pipelines.
 - [ ] Keep `src/data/catalyst-roadmap.ts` in sync with this file (see below).
 

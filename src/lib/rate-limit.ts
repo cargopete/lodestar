@@ -28,6 +28,11 @@ const LIMITS: Array<[RegExp, number]> = [
   // Keyless x402 relay: each call costs the caller real USDC, so abuse is
   // self-limiting, but the route makes an outbound gateway request per hit.
   [/^\/api\/x402\//, 30],
+  // Public SQL. Every call is an analytical query against our own VPS, which is a considerably
+  // more expensive thing to hand a stranger than a cached JSON read. Tight on purpose; the nest
+  // applies its own timeout and row cap underneath.
+  [/^\/api\/sql\/query/, 20],
+  [/^\/api\/sql\//, 60],
   [/^\/api\//, 200],
 ];
 

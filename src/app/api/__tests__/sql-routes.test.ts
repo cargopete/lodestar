@@ -1,0 +1,175 @@
+/**
+ * Contract tests for the public SQL surface: /api/sql/catalog and /api/sql/query.
+ *
+ * The behaviours worth pinning are the ones that would be quietly wrong rather than loudly broken:
+ * a dataset that stops answering must stay visible as unavailable rather than vanish, a query must
+ * never reach the nest unless the dataset was named on the allowlist, and the provenance stamp must
+ * survive the trip, because an answer nobody can date is an answer nobody can cite.
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('@/lib/cache', () => ({
+  cached: vi.fn((_key: string, _ttl: number, fetcher: () => Promise<unknown>) => fetcher()),
+}));
+
+vi.mock('@/lib/logger', () => ({
+  log: { api: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } },
+}));
+
+const mockHasNuthatch = vi.fn(() => true);
+const mockTables = vi.fn();
+const mockSqlFull = vi.fn();
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => mockHasNuthatch(),
+  nuthatchTables: (...args: unknown[]) => mockTables(...args),
+  nuthatchSqlFull: (...args: unknown[]) => mockSqlFull(...args),
+}));
+
+import { GET as catalogGET } from '../sql/catalog/route';
+import { POST as queryPOST } from '../sql/query/route';
+import { SQL_DATASETS } from '@/lib/sql-datasets';
+
+const post = (body: unknown) =>
+  queryPOST(
+    new Request('http://localhost/api/sql/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: typeof body === 'string' ? body : JSON.stringify(body),
+    })
+  );
+
+const TABLE = {
+  alias: 'staking',
+  table: 'staking__delegated',
+  event: 'Delegated(address,address,uint256,uint256)',
+  columns: [
+    { name: 'block_number', sol_type: 'implicit', storage: 'u64', indexed: false },
+    { name: 'delegator', sol_type: 'address', storage: 'address', indexed: true },
+  ],
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockHasNuthatch.mockReturnValue(true);
+});
+
+describe('/api/sql/catalog', () => {
+  it('reports tables and columns for each dataset', async () => {
+    mockTables.mockResolvedValue([TABLE]);
+    const body = await (await catalogGET()).json();
+
+    expect(body.available).toBe(true);
+    expect(body.datasets).toHaveLength(SQL_DATASETS.length);
+    const first = body.datasets[0];
+    expect(first.available).toBe(true);
+    expect(first.tableCount).toBe(1);
+    expect(first.tables[0].name).toBe('staking__delegated');
+    // `implicit` is a nuthatch internal; a caller wants the storage type they can compare against.
+    expect(first.tables[0].columns[0]).toEqual({ name: 'block_number', type: 'u64', indexed: false });
+    expect(first.tables[0].columns[1].type).toBe('address');
+  });
+
+  // A catalogue that drops a broken dataset is indistinguishable from one that never had it, which
+  // is the failure mode that let three data services sit dead for 39 days.
+  it('keeps a dataset that will not answer, marked unavailable', async () => {
+    mockTables.mockRejectedValue(new Error('connect ECONNREFUSED'));
+    const body = await (await catalogGET()).json();
+
+    expect(body.datasets).toHaveLength(SQL_DATASETS.length);
+    expect(body.datasets.every((d: { available: boolean }) => d.available === false)).toBe(true);
+    expect(body.datasets[0].error).toBeTruthy();
+  });
+
+  it('does not claim a broken dataset is fine just because a sibling answered', async () => {
+    mockTables.mockImplementation((basePath: string) =>
+      basePath === '' ? Promise.resolve([TABLE]) : Promise.reject(new Error('down'))
+    );
+    const body = await (await catalogGET()).json();
+    const byId = Object.fromEntries(
+      body.datasets.map((d: { id: string; available: boolean }) => [d.id, d.available])
+    );
+    expect(byId.staking).toBe(true);
+    expect(byId.dips).toBe(false);
+  });
+
+  it('says so plainly when no nest is configured at all', async () => {
+    mockHasNuthatch.mockReturnValue(false);
+    const res = await catalogGET();
+    expect(res.status).toBe(503);
+    expect((await res.json()).available).toBe(false);
+  });
+});
+
+describe('/api/sql/query', () => {
+  const okResult = {
+    ok: true as const,
+    data: {
+      count: 1,
+      rows: [{ block_number: 42 }],
+      truncated: false,
+      provenance: { as_of: 12345, sealed_through: 12000, source: 'hot+sealed', nid: 'abc' },
+    },
+  };
+
+  it('runs a query against the named dataset and returns rows with provenance', async () => {
+    mockSqlFull.mockResolvedValue(okResult);
+    const res = await post({ dataset: 'staking', q: 'SELECT block_number FROM staking__delegated LIMIT 1' });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.rows).toEqual([{ block_number: 42 }]);
+    // The stamp is the reason to prefer this over a screenshot of someone's terminal.
+    expect(body.provenance.as_of).toBe(12345);
+  });
+
+  it('routes to the dataset base path, not to whatever the caller fancies', async () => {
+    mockSqlFull.mockResolvedValue(okResult);
+    await post({ dataset: 'dips', q: 'SELECT 1' });
+    expect(mockSqlFull).toHaveBeenCalledWith('SELECT 1', '/dips', expect.any(Number));
+  });
+
+  it('refuses a dataset that is not on the allowlist, without calling the nest', async () => {
+    const res = await post({ dataset: '../admin', q: 'SELECT 1' });
+    expect(res.status).toBe(400);
+    expect(mockSqlFull).not.toHaveBeenCalled();
+  });
+
+  it('refuses a write before it reaches the network', async () => {
+    const res = await post({ dataset: 'staking', q: 'DROP TABLE staking__delegated' });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: expect.stringContaining('DROP') });
+    expect(mockSqlFull).not.toHaveBeenCalled();
+  });
+
+  it('relays the nest own error text, which is already sanitised there', async () => {
+    mockSqlFull.mockResolvedValue({ ok: false, status: 400, error: 'no such column: tokns' });
+    const res = await post({ dataset: 'staking', q: 'SELECT tokns FROM staking__delegated' });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('no such column: tokns');
+  });
+
+  it('turns a timeout into advice rather than a stack trace', async () => {
+    const err = new Error('timed out');
+    err.name = 'TimeoutError';
+    mockSqlFull.mockRejectedValue(err);
+    const res = await post({ dataset: 'staking', q: 'SELECT * FROM staking__delegated' });
+    expect(res.status).toBe(504);
+    expect((await res.json()).error).toMatch(/LIMIT/);
+  });
+
+  it('rejects a body that is not JSON', async () => {
+    const res = await post('not json at all');
+    expect(res.status).toBe(400);
+  });
+
+  it('surfaces truncation, because a silently short answer is a wrong answer', async () => {
+    mockSqlFull.mockResolvedValue({
+      ok: true,
+      data: { count: 500, rows: [], truncated: true, degraded_tables: ['staking__delegated'], degraded: true },
+    });
+    const body = await (await post({ dataset: 'staking', q: 'SELECT 1' })).json();
+    expect(body.truncated).toBe(true);
+    expect(body.degraded).toBe(true);
+    expect(body.degradedTables).toEqual(['staking__delegated']);
+  });
+});
