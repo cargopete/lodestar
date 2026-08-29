@@ -6,8 +6,16 @@ import { log } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
-/** Below the nest's own timeout, so a slow query fails here with a clear message rather than there. */
-const QUERY_TIMEOUT_MS = 12_000;
+/**
+ * Below the nest's own timeout, so a slow query fails here with a clear message rather than there.
+ *
+ * Six seconds rather than something generous, because this is the harder of the two limits on what
+ * a stranger can spend of the Helsinki box's CPU: the per-IP rate limit is per edge instance and so
+ * is a soft ceiling, while this bounds every single call. A query that cannot answer in six seconds
+ * against a nest holding four tables is a query that wants a WHERE clause, and one against the
+ * 56-table DIPS nest is better asked of your own nest.
+ */
+const QUERY_TIMEOUT_MS = 6_000;
 
 /**
  * Run one read-only query against one of the datasets in `SQL_DATASETS`.

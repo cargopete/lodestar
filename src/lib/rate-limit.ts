@@ -28,11 +28,18 @@ const LIMITS: Array<[RegExp, number]> = [
   // Keyless x402 relay: each call costs the caller real USDC, so abuse is
   // self-limiting, but the route makes an outbound gateway request per hit.
   [/^\/api\/x402\//, 30],
-  // Public SQL. Every call is an analytical query against our own VPS, which is a considerably
-  // more expensive thing to hand a stranger than a cached JSON read. Tight on purpose; the nest
-  // applies its own timeout and row cap underneath.
-  [/^\/api\/sql\/query/, 20],
-  [/^\/api\/sql\//, 60],
+  // Public SQL. Every call is an analytical query against the Helsinki box, which also runs the
+  // Lodestar Oracle, dips-nest and the data-service gateway — so the thing being rationed is not
+  // bandwidth but the CPU those depend on. Five a minute is enough to explore a dataset and not
+  // enough to lean on it.
+  //
+  // Read the note at the top of this file before treating that as a hard number: the counter is
+  // per-instance, so the real ceiling is 5 × however many edge instances happen to be warm. It
+  // throttles one IP hammering one instance, which is the shape abuse usually takes, and it is not
+  // a global quota. The query timeout in the route is the harder limit, and the nest's own timeout
+  // and row cap are harder still.
+  [/^\/api\/sql\/query/, 5],
+  [/^\/api\/sql\//, 30],
   [/^\/api\//, 200],
 ];
 

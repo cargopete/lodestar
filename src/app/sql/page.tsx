@@ -196,7 +196,8 @@ export default function SqlPage() {
             nuthatch
           </a>{' '}
           nests we run: read-only, row-capped, and stamped with the block they were true as of. Free
-          and unauthenticated, at a rate limit that suits exploring rather than production.
+          and unauthenticated, at five queries a minute with a six-second timeout, which suits
+          exploring a dataset rather than depending on one.
         </p>
       </header>
 

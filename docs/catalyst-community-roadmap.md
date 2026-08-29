@@ -957,6 +957,10 @@ per-panel fallback to the gateway.
         cite.
   - [x] A dataset that stops answering stays in the catalogue marked unavailable rather than
         vanishing, which is the lesson from three data services reading as healthy for 39 days.
+  - [x] Rationed at **five queries a minute with a six-second timeout**, pinned by a test. The
+        thing being rationed is not bandwidth but the CPU the Lodestar Oracle, dips-nest and the
+        data-service gateway share on that host. The per-IP counter is per edge instance and so is
+        a soft ceiling; the timeout is the hard one.
   - [ ] Named-query tier. nuthatch's RFC-0034 bounded surfaces let a nest answer
         `name + arguments, never SQL`, which is the right shape for anything production. Free-form
         is the exploring tier.

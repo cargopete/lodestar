@@ -20,6 +20,24 @@ describe('rateLimit — tier limits', () => {
     expect(r.limit).toBe(limit);
     expect(r.allowed).toBe(true);
   });
+
+  // Pinned rather than merely configured. Public SQL is the one tier where the limit is a spending
+  // decision about the Helsinki box rather than a tuning preference, and a number that drifts back
+  // up during a refactor would do so silently and cost real CPU on a host running the Oracle,
+  // dips-nest and the data-service gateway. Raise these deliberately or not at all.
+  it.each([
+    ['/api/sql/query', 5],
+    ['/api/sql/catalog', 30],
+  ])('holds the public SQL limit for %s', async (path, limit) => {
+    const r = await rateLimit(freshIp(), path);
+    expect(r.limit).toBe(limit);
+  });
+
+  it('rations the query surface more tightly than the schema surface', async () => {
+    const q = await rateLimit(freshIp(), '/api/sql/query');
+    const c = await rateLimit(freshIp(), '/api/sql/catalog');
+    expect(q.limit).toBeLessThan(c.limit);
+  });
 });
 
 describe('rateLimit — enforcement', () => {
