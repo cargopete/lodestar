@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
@@ -111,8 +111,12 @@ function ResultTable({ rows }: { rows: Record<string, unknown>[] }) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SqlPage() {
-  const [datasetId, setDatasetId] = useState<string>('');
-  const [sql, setSql] = useState<string>('');
+  // Deliberately *not* a useEffect that picks a default and calls setState. That triggers a
+  // cascading render (and a lint error saying so), and the state it sets is derivable: the chosen
+  // dataset is whatever the reader clicked, else the first one that can actually answer. Same for
+  // the editor contents, which are the dataset's sample until the reader types over it.
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [edited, setEdited] = useState<string | null>(null);
   const [result, setResult] = useState<QueryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -129,16 +133,12 @@ export default function SqlPage() {
     staleTime: 5 * 60_000,
   });
 
-  const datasets = catalog.data?.datasets ?? [];
-  const dataset = datasets.find((d) => d.id === datasetId);
-
-  // Land on the first dataset that can actually answer, so the page opens on something that works.
-  useEffect(() => {
-    if (datasetId || !datasets.length) return;
-    const first = datasets.find((d) => d.available) ?? datasets[0];
-    setDatasetId(first.id);
-    setSql(first.sample);
-  }, [datasets, datasetId]);
+  const datasets = useMemo(() => catalog.data?.datasets ?? [], [catalog.data]);
+  const dataset =
+    datasets.find((d) => d.id === chosen) ?? datasets.find((d) => d.available) ?? datasets[0];
+  const datasetId = dataset?.id ?? '';
+  const sql = edited ?? dataset?.sample ?? '';
+  const setSql = setEdited;
 
   const run = useCallback(async () => {
     if (!datasetId || !sql.trim()) return;
@@ -215,8 +215,8 @@ export default function SqlPage() {
           <button
             key={d.id}
             onClick={() => {
-              setDatasetId(d.id);
-              setSql(d.sample);
+              setChosen(d.id);
+              setEdited(null);
               setResult(null);
               setError(null);
               setOpenTable(null);
@@ -280,7 +280,10 @@ export default function SqlPage() {
                       {t.columns.map((c) => (
                         <button
                           key={c.name}
-                          onClick={() => setSql((s) => `${s}${s.endsWith(' ') ? '' : ' '}${c.name}`)}
+                          // Not the functional form: `edited` is null until the reader types, and
+                          // the thing to append to is the derived `sql`, which is the sample when
+                          // they have not.
+                          onClick={() => setSql(`${sql}${sql.endsWith(' ') ? '' : ' '}${c.name}`)}
                           title="Append to the query"
                           className="flex items-baseline gap-2 w-full text-left py-0.5 hover:bg-[var(--bg-elevated)] rounded px-1"
                         >

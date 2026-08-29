@@ -1,0 +1,42 @@
+{
+  "body": {
+    "nid": null,
+    "dataset": "staking",
+    "query": "SELECT block_number, delegator, tokens FROM staking__tokens_delegated WHERE block_number <= 497000000 ORDER BY block_number DESC LIMIT 5",
+    "as_of_block": 497000000,
+    "sealed_through": 499665627,
+    "registry_hash": "0xbfb02cde4d07cab26cd815c5534f895b0e756dfab5af231b03a9272f62a9ad7b",
+    "result_hash": "0x87bace01dd464438c431fdac73191fb479f5d2ffbf02a20b4e784978ae91bab4",
+    "row_count": 5,
+    "issued_at": "2026-08-29T17:02:49.133175Z"
+  },
+  "rows": [
+    {
+      "block_number": 496987131,
+      "delegator": "0xc146073d03467cbeff8ae3b9bafe45af60d78a58",
+      "tokens": "2500000000000000000000"
+    },
+    {
+      "block_number": 496986600,
+      "delegator": "0xc146073d03467cbeff8ae3b9bafe45af60d78a58",
+      "tokens": "2500000000000000000000"
+    },
+    {
+      "block_number": 496918527,
+      "delegator": "0xdd2153e1c796d755ae326c47b9d9d1980fb45e25",
+      "tokens": "58246590000000000000000"
+    },
+    {
+      "block_number": 496916021,
+      "delegator": "0xdd2153e1c796d755ae326c47b9d9d1980fb45e25",
+      "tokens": "38629678893940000000000"
+    },
+    {
+      "block_number": 496911547,
+      "delegator": "0x89180ad3c3f36fc70a8199e155d15062e6b469e3",
+      "tokens": "56000000000000000000000"
+    }
+  ],
+  "pubkey": "444da4e920e6402e1011f2ec33cbdee8790370e907cde10ea07ed1717b1436ed",
+  "signature": "907404220f10afed57c9b23b66598890cf150528afb783b0f1618917ad9039812f9c0779258470a8778c61ec880e5afa91bf0ad465456aea416d9fc4d964df0c"
+}

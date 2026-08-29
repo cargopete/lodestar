@@ -104,7 +104,7 @@ it ourselves.
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **55%** 🔺 | 90% | 90% | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **35%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
-| CAT-8 | Institutional audit layer | RFC-008 | 5% | **18%** 🔺 | 80% 🔒 | ~45% | tattler |
+| CAT-8 | Institutional audit layer | RFC-008 | 5% | **26%** 🔺 | 80% 🔒 | ~45% | tattler |
 
 **"Our ceiling"** applies the operating-model decision above: the highest score reachable without
 running a service or signing a commercial deal. These are judgement calls to one significant
@@ -123,7 +123,7 @@ the code does not move this as far as finishing code usually does.
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
 
-**Mean, as of 2026-08-29: 52.0%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-29: 53.0%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
@@ -1093,8 +1093,27 @@ SOC 2 Type II or ISO 27001.
       against the ground-truth store; emit signed audit tags; support permissioned decryption and
       selective disclosure. **Half of this now exists**: tattler establishes the ground truth a
       disclosure would be checked *against*. Checking an actual ZK or view-key scheme does not.
-- [ ] **Auditor console.** Lodestar module: query disclosures, verify against ground truth,
-      export audit reports, role-based access.
+- [x] **Auditor console, first half: [`/verify`](https://www.lodestar-dashboard.com/verify).**
+      Paste or drop a receipt and see whether the rows still hash to what was signed and whether
+      the signature covers the body. Three outcomes, kept distinct because collapsing them into
+      "invalid" tells a reader nothing about whether they are looking at a bad paste or at somebody
+      lying: rows altered, bad signature, not a receipt.
+  - [x] **It is the tattler crate compiled to WebAssembly, not a TypeScript rewrite.** Verification
+        hinges on two parties computing byte-identical canonical bytes; a second implementation is a
+        second set of decisions about key ordering, integer formatting and length prefixes, and the
+        day they disagree the page reports a forgery that never happened. Whoever chased that would
+        be debugging the verifier while believing they were auditing the data.
+  - [x] **It runs entirely in the reader's browser and cannot phone home.** Everything needed to
+        *issue* a receipt sits behind a `cli` feature, so the library has no clock, no network and
+        no randomness: the browser build cannot generate a key and cannot make a request. Not that
+        it does not — that it cannot, and `cargo tree` is the proof. Checking a receipt against our
+        server would mean trusting us, which is the thing a receipt exists to avoid.
+  - [x] **A guard against the failure this design could still have had.** A committed `.wasm` can
+        go stale against the Rust it came from, and then the page verifies by yesterday's rules
+        while the CLI uses today's — silently, which is the exact divergence compiling was meant to
+        prevent. A Lodestar test runs the *shipped* binary against the frozen production receipt.
+        Checked by installing a deliberately divergent build: four tests fail, one naming the cause.
+  - [ ] Export audit reports, role-based access, and a disclosure view. Not started.
 - [ ] **Adoption.** One auditor, regulator or institutional counterparty as design partner.
 - [ ] 🔒 A dispute/attestation standard; issuance eligibility.
 

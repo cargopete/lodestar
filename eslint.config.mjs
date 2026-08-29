@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "coverage/**",
+    // wasm-bindgen output, built from the tattler crate and copied in. Generated code that no
+    // rule here should have an opinion about, and editing it would be editing a build artefact.
+    "public/tattler/**",
   ]),
 ]);
 
