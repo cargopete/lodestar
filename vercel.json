@@ -45,10 +45,6 @@
       "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/cron/warm-tokens",
-      "schedule": "0 * * * *"
-    },
-    {
       "path": "/api/cron/warm-protocols",
       "schedule": "*/45 * * * *"
     },

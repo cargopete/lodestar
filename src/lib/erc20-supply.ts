@@ -1,27 +1,24 @@
 /**
- * On-chain ERC-20 `totalSupply()` reader used to populate FDV.
+ * On-chain ERC-20 `totalSupply()` and `balanceOf()` readers.
  *
- * Why on-chain instead of Token API: Token API consistently returns
- * `total_supply: null` for our seed list (deficiency
- * TOKEN_API_NO_TOTAL_SUPPLY). The Uniswap V3 subgraph's `Token.totalSupply`
- * field doesn't track ERC-20 supply either — it carries a counter that
- * increments per pool/transaction. The contract is the only authoritative
- * source.
+ * The contract is the only authoritative source for circulating supply:
+ * indexed sources either omit it or, in the case of the Uniswap V3
+ * subgraph's `Token.totalSupply`, carry a per-pool transaction counter
+ * that has nothing to do with ERC-20 supply.
  *
- * Reuses the viem fallback client from `contract-detection.ts`, which
- * already has request batching configured for high-fan-out reads. One
- * cold pass = a couple of batched RPC round-trips for ~150 tokens.
+ * Builds its own viem client per chain with a public-RPC fallback list and
+ * request batching, so a fan-out of reads costs a couple of batched
+ * round-trips rather than one call each.
  *
- * Process-scoped cache. Total supply changes only on mint/burn, which is
- * rare enough that a process lifetime cache is fine for v0.
+ * Total supply is cached for the process lifetime — it only moves on
+ * mint/burn. Balances are not cached; they move constantly.
  */
 
 import { erc20Abi, parseUnits } from 'viem';
 import { createPublicClient, fallback, http, type PublicClient } from 'viem';
 import { arbitrum, base, mainnet, optimism, polygon } from 'viem/chains';
-import type { TokenChain } from './types';
 
-type ChainKey = TokenChain | 'arbitrum' | 'base' | 'polygon' | 'optimism';
+export type ChainKey = 'mainnet' | 'arbitrum' | 'base' | 'polygon' | 'optimism';
 
 const PUBLIC_RPCS: Record<ChainKey, string[]> = {
   mainnet: [
@@ -79,9 +76,8 @@ export async function fetchTotalSupply(
   try {
     // Fetch both totalSupply and decimals atomically. Tokens with non-18
     // decimals (USDC=6, WBTC=8, cbBTC=8, etc.) need the on-chain decimals
-    // to scale correctly — the directory's parallel fan-out pre-empts the
-    // metadata call so we can't rely on Token API for the decimals here.
-    // viem coalesces these into the same JSON-RPC batch.
+    // to scale correctly, and callers that don't already know them get
+    // them read here. viem coalesces both into the same JSON-RPC batch.
     const [raw, dec] = await Promise.all([
       client.readContract({
         address: contract as `0x${string}`,
@@ -140,18 +136,4 @@ export async function fetchErc20Balance(
   } catch {
     return null;
   }
-}
-
-export async function fetchTotalSupplies(
-  items: Array<{ chain: ChainKey; contract: string; decimals?: number }>
-): Promise<Map<string, number>> {
-  const results = await Promise.all(
-    items.map(async (it) => ({
-      key: `${it.chain}:${it.contract.toLowerCase()}`,
-      value: await fetchTotalSupply(it.chain, it.contract, it.decimals),
-    }))
-  );
-  const out = new Map<string, number>();
-  for (const r of results) if (r.value != null) out.set(r.key, r.value);
-  return out;
 }

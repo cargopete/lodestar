@@ -12,7 +12,7 @@ vi.mock('viem', async (importOriginal) => {
   };
 });
 
-import { fetchTotalSupply, fetchTotalSupplies } from '@/lib/tokens/total-supply';
+import { fetchTotalSupply } from '@/lib/erc20-supply';
 
 beforeEach(() => {
   readContract.mockReset();
@@ -69,20 +69,5 @@ describe('fetchTotalSupply', () => {
     const second = await fetchTotalSupply('mainnet', '0xCACHED', 18);
     expect(second).toBe(9);
     expect(readContract).not.toHaveBeenCalled();
-  });
-});
-
-describe('fetchTotalSupplies', () => {
-  it('builds a map keyed by chain:address, omitting nulls', async () => {
-    readContract.mockImplementation(({ address }: { address: string }) => {
-      if (address.toLowerCase() === '0xgood') return Promise.resolve(10n * 10n ** 18n);
-      return Promise.resolve(0n); // 0xbad -> null, omitted
-    });
-    const res = await fetchTotalSupplies([
-      { chain: 'mainnet', contract: '0xGOOD', decimals: 18 },
-      { chain: 'arbitrum', contract: '0xBAD', decimals: 18 },
-    ]);
-    expect(res.get('mainnet:0xgood')).toBe(10);
-    expect(res.has('arbitrum:0xbad')).toBe(false);
   });
 });
