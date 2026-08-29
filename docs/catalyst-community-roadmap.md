@@ -403,8 +403,21 @@ calendar, not the effort, is the constraint.
 
 ## CAT-1: Studio continuity via DIPS
 
-**40% → 45% → 90% (100% 🔒).** The *participating* half depends on CAT-2's payment loop. The
-*observing* half does not, and shipped on 2026-08-28: `dips-nest` and a live homepage panel.
+**40% → 45% → 90% (100% 🔒).** The *observing* half shipped on 2026-08-28: `dips-nest` and a live
+homepage panel.
+
+**Correction, 2026-08-29: the participating half was never blocked on CAT-2's payment loop.** That
+claim came from the source report and I carried it without checking. gib's payment loop is
+GraphTallyCollector **query fees**; DIPS indexing agreements settle through **RecurringCollector**,
+a different contract with a different path. `accept()` is, in its own words, *"callable by the data
+service the RCA was issued to"*, authorised either by an EIP-712 signature from the payer or by an
+offer the payer stored on-chain. No gateway is involved at any point.
+
+What participating actually needs is a payer with funded escrow — which is the same
+"we do not operate" answer, not a software blocker — and **the tooling to construct, sign, accept
+and collect against an agreement, which is pure software and can be built and exercised end to end
+on Arbitrum Sepolia**, where `RecurringCollector` (`0x0b18befc…`) and `RecurringAgreementManager`
+(`0x590dbbbd…`) are both deployed and gas is free.
 
 Make Subgraph Studio fully network-powered so the Edge & Node upgrade indexer's role is replaced by
 real indexers earning through Direct Indexer Payments. We can build the gateway and the developer
