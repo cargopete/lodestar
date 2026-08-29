@@ -104,7 +104,7 @@ it ourselves.
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **55%** 🔺 | 90% | 90% | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **35%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
-| CAT-8 | Institutional audit layer | RFC-008 | 5% | 5% | 80% 🔒 | ~45% | (greenfield) |
+| CAT-8 | Institutional audit layer | RFC-008 | 5% | **18%** 🔺 | 80% 🔒 | ~45% | tattler |
 
 **"Our ceiling"** applies the operating-model decision above: the highest score reachable without
 running a service or signing a commercial deal. These are judgement calls to one significant
@@ -123,7 +123,7 @@ the code does not move this as far as finishing code usually does.
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
 
-**Mean, as of 2026-08-29: 50.4%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-29: 52.0%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
@@ -1069,11 +1069,30 @@ SOC 2 Type II or ISO 27001.
   - [ ] Publish SLOs first, then contractual SLAs (99.9 / 99.95 / 99.99% tiers with measurement and
         credit remedies).
   - [ ] HSM key management (shares with G-4).
-- [ ] **Deterministic ground-truth pipeline.** Seahorn-pattern service producing
-      reproducible, lineage-tagged entities from canonical chain state. Append-only, hash-anchored.
+- [x] **Deterministic ground-truth pipeline: it was not greenfield.** nuthatch already produces
+      content-addressed sealed segments with a provenance stamp naming the block an answer was true
+      as of, how far the nest had sealed, and the registry hash that decoded it. That is the
+      lineage-tagged, hash-anchored substrate this item describes, and it has been running on
+      Helsinki for six weeks. What was missing was a way to hand an answer to someone who does not
+      trust you.
+  - [x] **[nightswatchhq/tattler](https://github.com/nightswatchhq/tattler)**, 20 tests. Signed,
+        replayable receipts: `attest` signs an answer, `verify` checks offline that nothing was
+        edited, `replay` re-runs the question against another nest and compares.
+  - [x] **Proven across two independently built nests.** `staking` and `legacy-flows` on the
+        Helsinki box are separately backfilled and both index `TokensDelegated`. A receipt issued
+        against one replays to the identical hash against the other. Two indexes, built at
+        different times from different configs, computed the same answer.
+  - [x] **The finding that shapes the whole thing: an answer must pin its block.** nuthatch's
+        `/sql` answers from sealed history *plus the unsealed tip*, and the tip moves — the same
+        dataset reported `as_of` 499,659,175, then 499,659,807, then 499,666,752 inside one
+        afternoon. An unpinned answer cannot be reproduced by anyone, including whoever took it.
+        So `attest` refuses to sign one, and `replay` refuses to compare against a nest that has
+        not sealed that far, because that mismatch means "not caught up" rather than "the issuer
+        lied". That guard fired on its first real use.
 - [ ] **Verification / attestation service.** Verify ZK proofs or view-key disclosures
       against the ground-truth store; emit signed audit tags; support permissioned decryption and
-      selective disclosure.
+      selective disclosure. **Half of this now exists**: tattler establishes the ground truth a
+      disclosure would be checked *against*. Checking an actual ZK or view-key scheme does not.
 - [ ] **Auditor console.** Lodestar module: query disclosures, verify against ground truth,
       export audit reports, role-based access.
 - [ ] **Adoption.** One auditor, regulator or institutional counterparty as design partner.

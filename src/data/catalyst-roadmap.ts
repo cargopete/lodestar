@@ -123,10 +123,10 @@ export const CATALYST_ITEMS: CatalystItem[] = [
   {
     slug: 'institutional-audit',
     label: 'Institutional audit layer',
-    coverage: 5,
+    coverage: 18,
     rationale:
-      'Almost entirely business development and positioning. No repo pre-builds relationships with auditors and financial institutions, and the SLA and SOC 2 gap is conceded. The 5% credits the deterministic-pipeline and signed-attestation patterns that exist in Seahorn and Dispatch as a genuine seed. It needs a legal entity that can hold a certification and sign an SLA, which is not an engineering problem.',
-    projects: [],
+      'Still mostly business development: SOC 2 and SLAs need a legal entity, which is not an engineering problem, and no repo pre-builds relationships with auditors. But the "deterministic ground-truth pipeline" this item asks for turned out not to be greenfield. nuthatch has been producing content-addressed sealed segments with a provenance stamp — the block an answer was true as of, how far the nest had sealed, the registry hash that decoded it — on a live box for six weeks. What was missing was a way to hand an answer to someone who does not trust you, and tattler is that: signed receipts you can verify offline, and replay against a different nest. Proven across two independently backfilled nests that both index TokensDelegated, which produced the identical hash. The finding underneath it is that an answer must pin its block, because nuthatch serves sealed history plus a moving tip and an unpinned answer cannot be reproduced by anyone, including whoever took it.',
+    projects: [{ name: 'tattler', url: 'https://github.com/nightswatchhq/tattler' }],
   },
 ];
 
