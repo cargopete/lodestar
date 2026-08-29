@@ -218,15 +218,6 @@ const moreSections: MoreSection[] = [
         ),
       },
       {
-        label: 'Tokens',
-        href: '/tokens',
-        icon: (
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c2.485 0 4.5-1.343 4.5-3S14.485 2 12 2 7.5 3.343 7.5 5 9.515 8 12 8zm0 0c-2.485 0-4.5 1.343-4.5 3v2c0 1.657 2.015 3 4.5 3s4.5-1.343 4.5-3v-2c0-1.657-2.015-3-4.5-3zm0 8c-2.485 0-4.5 1.343-4.5 3v0c0 1.657 2.015 3 4.5 3s4.5-1.343 4.5-3v0c0-1.657-2.015-3-4.5-3z" />
-          </svg>
-        ),
-      },
-      {
         label: 'GRT Flow',
         href: '/grt-flow',
         icon: (

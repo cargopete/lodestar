@@ -18,7 +18,7 @@
  * L2-only `totalSupply` (~3.6B) overstates the rate ~3× (the 8.6% confusion).
  */
 
-import { fetchTotalSupply, fetchErc20Balance } from './tokens/total-supply';
+import { fetchTotalSupply, fetchErc20Balance } from './erc20-supply';
 
 // GraphToken on Ethereum mainnet — genesis 10B, verified 2020-12-14.
 export const L1_GRAPH_TOKEN = '0xc944E90C64B2c07662A292be6244BDf05Cda44a7';
