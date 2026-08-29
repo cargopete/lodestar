@@ -99,7 +99,7 @@ it ourselves.
 |---|---|---|---|---|---|---|---|
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **62%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
-| CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
+| CAT-3 | Memory for AI | RFC-003 | 22% | **68%** 🔻 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | 90% | Lodestar |
@@ -123,6 +123,33 @@ the code does not move this as far as finishing code usually does.
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
 
+### CAT-3 marked DOWN, 74% → 68% (2026-08-29)
+
+The second number today to move backwards after somebody went and checked, and like the Dispatch
+correction it is the more useful kind of movement.
+
+nutcracker's published recall figures — 100% at 0.2 perturbation, 94% at 0.5, ~3% false candidates —
+are correct, and they characterise the LSH scheme fairly. They were measured against **uniformly
+random vectors**, and transformer embeddings are not that: they crowd into a narrow cone. Re-running
+the identical index against that geometry (`--example geometry`) gives **26% false candidates at
+realistic anisotropy, not 3%**, and at severe anisotropy the index degenerates entirely — every item
+matches every query, which reads as 100% recall and is the scheme telling you nothing. The
+false-candidate rate *is* the leakage: each one is an item the provider is asked for and learns was
+a candidate.
+
+Mean-centring the embeddings fixes it and restores the uniform-sphere baseline exactly, at the cost
+of a mean that must stay fixed for a namespace's lifetime. Not yet implemented.
+
+And separately: 0.05 perturbation is a near-duplicate. On loosely clustered data — related but not
+nearly identical, which is what semantic search actually means — recall at the default parameters is
+about **28%**, not 94–100%.
+
+Nothing is broken and no claim was dishonest. But half the product is semantic recall, that half has
+never been measured against a real embedding model, and the agent binary still ships a bag-of-bytes
+placeholder embedder. 74% described a system whose retrieval quality was assumed; 68% describes one
+where it is an open question with numbers attached. Written up in nutcracker's README under *What
+the recall numbers actually measured*.
+
 ### Watching the thing everything else stands on (2026-08-29)
 
 Eighteen crons existed and **not one watched the Helsinki box**, which answers the delegation feed,
@@ -142,7 +169,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-29: 54.1%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-29: 53.4%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
