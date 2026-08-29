@@ -1,0 +1,26 @@
+{
+  "body": {
+    "nid": null,
+    "dataset": "staking",
+    "query": "SELECT\n  CAST(SUM(CAST(tokens AS HUGEINT)) AS VARCHAR) AS delegated,\n  CAST(COUNT(*) AS VARCHAR) AS events\nFROM staking__tokens_delegated\nWHERE serviceProvider = '0xf92f430dd8567b0d466358c79594ab58d919a6d4' AND block_number <= 497000000",
+    "as_of_block": 497000000,
+    "sealed_through": 499687263,
+    "registry_hash": "0xbfb02cde4d07cab26cd815c5534f895b0e756dfab5af231b03a9272f62a9ad7b",
+    "result_hash": "0x391879482d93e9984626f8b35e391a2f2b710aeb661f83328aca3eab3fdb25fd",
+    "row_count": 1,
+    "issued_at": "2026-08-29T18:34:11.330193Z",
+    "query_name": "net_delegation_to_indexer",
+    "query_args": {
+      "before_block": "497000000",
+      "indexer": "0xf92f430dd8567b0d466358c79594ab58d919a6d4"
+    }
+  },
+  "rows": [
+    {
+      "delegated": "3701472744388750142364887",
+      "events": "118"
+    }
+  ],
+  "pubkey": "444da4e920e6402e1011f2ec33cbdee8790370e907cde10ea07ed1717b1436ed",
+  "signature": "dfdc8a34c5bb0a27ce901ec8948183fdc0e3b3d5e68061938131dcb508ca7bba142039db35870b46e90a2ee5fd85a2b24794b4b60222beee3b2ca9ee34e57d0e"
+}

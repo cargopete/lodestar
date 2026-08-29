@@ -35,13 +35,14 @@ interface Wasm {
 
 let wasm: Wasm;
 let receipt: string;
+let namedReceipt: string;
 
 beforeAll(() => {
   wasm = require(path.join(PUBLIC, 'tattler_wasm_node.cjs')) as Wasm;
-  receipt = readFileSync(
-    path.join(process.cwd(), 'src/lib/__tests__/fixtures/receipt-staking-497000000.json'),
-    'utf8'
-  );
+  const fixture = (n: string) =>
+    readFileSync(path.join(process.cwd(), 'src/lib/__tests__/fixtures', n), 'utf8');
+  receipt = fixture('receipt-staking-497000000.json');
+  namedReceipt = fixture('receipt-named-net-delegation.json');
 });
 
 const check = (json: string) => JSON.parse(wasm.verify_receipt(json));
@@ -73,6 +74,25 @@ describe('the shipped tattler verifier', () => {
     const rebody = JSON.parse(receipt);
     rebody.body.as_of_block = 1;
     expect(check(JSON.stringify(rebody)).verdict).toBe('bad_signature');
+  });
+
+  /**
+   * The gap this closes, found by walking into it.
+   *
+   * `query_name` and `query_args` were added to the signed body after this verifier was built.
+   * serde ignores unknown fields, so the stale wasm parsed a named receipt happily, computed the
+   * signing bytes **without** those fields, and reported `bad_signature` — a verifier calling an
+   * honest receipt a forgery, which is the worst answer it can give. The staleness guard did not
+   * catch it, because it only ever checked a receipt issued before the fields existed.
+   *
+   * So both shapes are pinned now. A verifier must be re-tested against every shape it may be
+   * handed, not merely against the oldest one.
+   */
+  it('accepts a receipt in the newer named shape', () => {
+    const r = check(namedReceipt);
+    expect(r.verdict, 'stale wasm: rebuild it from the tattler repo').toBe('ok');
+    expect(r.body.query_name).toBe('net_delegation_to_indexer');
+    expect(r.body.query_args.before_block).toBe('497000000');
   });
 
   it('calls a bad paste malformed rather than a forgery', () => {

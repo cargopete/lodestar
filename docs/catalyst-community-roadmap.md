@@ -104,7 +104,7 @@ it ourselves.
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | 90% | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **35%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
-| CAT-8 | Institutional audit layer | RFC-008 | 5% | **26%** 🔺 | 80% 🔒 | ~45% | tattler |
+| CAT-8 | Institutional audit layer | RFC-008 | 5% | **30%** 🔺 | 80% 🔒 | ~45% | tattler |
 
 **"Our ceiling"** applies the operating-model decision above: the highest score reachable without
 running a service or signing a commercial deal. These are judgement calls to one significant
@@ -142,7 +142,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-29: 53.6%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-29: 54.1%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
@@ -1148,6 +1148,24 @@ SOC 2 Type II or ISO 27001.
         while the CLI uses today's — silently, which is the exact divergence compiling was meant to
         prevent. A Lodestar test runs the *shipped* binary against the frozen production receipt.
         Checked by installing a deliberately divergent build: four tests fail, one naming the cause.
+  - [x] **Receipts over declared queries, not just over SQL.** `tattler attest-named` signs the
+        answer to a published question asked by name and typed arguments, and a named receipt
+        **replays by name**: the other endpoint answers using *its own* definition rather than being
+        asked to agree with your text. A name is the unit two parties can agree on;
+        `net_delegation_to_indexer(0x…, 497000000)` means the same thing to both of them next year,
+        where reading back somebody's ad-hoc SELECT is interpretation rather than verification. If
+        the two sides define it differently, `replay` prints both, because replaying raw SQL would
+        have hidden exactly the disagreement worth seeing.
+  - [x] Adding those fields **did not invalidate a single receipt already issued**: both are omitted
+        when unset, so an unnamed body signs as it always did. Asserted directly, and the frozen
+        production fixture from before they existed is checked by the current binary every run.
+  - [x] **A gap in yesterday's staleness guard, found by walking into it.** The browser verifier is
+        a compiled artefact, and serde ignores unknown fields — so the stale build parsed a named
+        receipt, computed the signature without the new fields, and reported `bad_signature`. A
+        verifier calling an honest receipt a forgery is the worst answer it can give, and the guard
+        missed it because it only checked a receipt issued *before* the fields existed. Both shapes
+        are pinned now: a verifier must be re-tested against every shape it may be handed, not
+        merely the oldest.
   - [ ] Export audit reports, role-based access, and a disclosure view. Not started.
 - [ ] **Adoption.** One auditor, regulator or institutional counterparty as design partner.
 - [ ] 🔒 A dispute/attestation standard; issuance eligibility.
