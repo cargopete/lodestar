@@ -22,6 +22,14 @@ vi.mock('@/lib/cache', () => ({
 // Mock @/lib/subgraph
 const mockSubgraphQuery = vi.fn();
 const mockEnsQuery = vi.fn();
+const mockNuthatchSql = vi.fn();
+const mockHasNuthatch = vi.fn(() => false);
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => mockHasNuthatch(),
+  nuthatchEnabled: (flag: string) => mockHasNuthatch() && process.env[flag] === 'true',
+  nuthatchSql: (...args: unknown[]) => mockNuthatchSql(...args),
+}));
+
 const mockHasSubgraphAccess = vi.fn(() => true);
 
 vi.mock('@/lib/subgraph', () => ({
@@ -1096,15 +1104,30 @@ describe('/api/delegation-events', () => {
     GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
-  it('returns empty data when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValueOnce(false);
+  // Migrated to Nuthatch in 4.26.0: no Graph fallback, so an unconfigured
+  // origin is a visible 503 rather than an empty 200.
+  it('fails closed with 503 when Nuthatch is not configured', async () => {
+    mockHasNuthatch.mockReturnValue(false);
+
+    const req = makeRequest('/api/delegation-events');
+    const res = await GET(req);
+    const json = await getJson(res);
+
+    expect(res.status).toBe(503);
+    expect(json.error).toMatch(/not configured/i);
+  });
+
+  it('returns delegationEvents with nuthatch provenance when the nest answers', async () => {
+    mockHasNuthatch.mockReturnValue(true);
+    mockNuthatchSql.mockResolvedValue([]);
+
     const req = makeRequest('/api/delegation-events');
     const res = await GET(req);
     const json = await getJson(res);
 
     expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
     expect(json.data).toHaveProperty('delegationEvents');
+    expect(json.data.source).toBe('nuthatch');
   });
 });
 

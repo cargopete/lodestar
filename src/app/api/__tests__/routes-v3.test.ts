@@ -57,6 +57,14 @@ vi.mock('@/lib/amp', () => ({
   AmpError: class AmpError extends Error {},
 }));
 
+const mockNuthatchSql = vi.fn();
+const mockHasNuthatch = vi.fn(() => false);
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => mockHasNuthatch(),
+  nuthatchEnabled: (flag: string) => mockHasNuthatch() && process.env[flag] === 'true',
+  nuthatchSql: (...args: unknown[]) => mockNuthatchSql(...args),
+}));
+
 const mockDb = vi.fn();
 const mockHasDbAccess = vi.fn(() => false);
 vi.mock('@/lib/db', () => ({
@@ -244,26 +252,40 @@ describe('/api/delegation-flows', () => {
     GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
-  it('returns { data: [] } when DB not configured', async () => {
+  // Migrated to Nuthatch in 4.26.0: the route fails closed rather than falling
+  // back to The Graph, so an unconfigured origin is a 503, not an empty 200.
+  it('fails closed with 503 when Nuthatch is not configured', async () => {
+    mockHasNuthatch.mockReturnValue(false);
+
     const req = makeRequest('/api/delegation-flows');
     const res = await GET(req);
     const json = await getJson(res);
-    expect(res.status).toBe(200);
-    expect(json.data).toEqual([]);
+
+    expect(res.status).toBe(503);
+    expect(json.error).toMatch(/not configured/i);
   });
 
-  it('returns { data } with flow records from DB', async () => {
-    mockHasDbAccess.mockReturnValue(true);
-    mockDb.mockResolvedValueOnce([
-      { indexer_address: '0x1', net_flow: '500000000000000000000', delegations_in: 1, delegations_out: 0, period_days: 7 },
-    ]);
+  it('returns { data, source: nuthatch } when the nest answers', async () => {
+    mockHasNuthatch.mockReturnValue(true);
+    mockNuthatchSql.mockResolvedValue([]);
 
     const req = makeRequest('/api/delegation-flows');
     const res = await GET(req);
     const json = await getJson(res);
 
     expect(res.status).toBe(200);
+    expect(json.source).toBe('nuthatch');
     expect(Array.isArray(json.data)).toBe(true);
+  });
+
+  it('returns 503 when the nest errors rather than serving a Graph fallback', async () => {
+    mockHasNuthatch.mockReturnValue(true);
+    mockNuthatchSql.mockRejectedValue(new Error('nest down'));
+
+    const req = makeRequest('/api/delegation-flows');
+    const res = await GET(req);
+
+    expect(res.status).toBe(503);
   });
 });
 
