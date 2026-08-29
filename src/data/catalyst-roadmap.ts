@@ -55,9 +55,9 @@ export const CATALYST_ITEMS: CatalystItem[] = [
   {
     slug: 'memory-for-ai',
     label: 'Memory for AI',
-    coverage: 70,
+    coverage: 74,
     rationale:
-      'The biggest move of 28 Aug, from 25%. nutcracker implements it: contract, client crypto, provider store, local MCP shim. The design names a contradiction in the brief nobody had — end-to-end encryption and semantic recall do not compose, and the usual casualty is the encryption, via plaintext embeddings stored beside the ciphertext. It picks a keyed blind index instead and publishes measured recall rather than adjectives. It now runs: a provider binary and an end-to-end round trip over real HTTP, where a memory is sealed locally, stored, found by blinded bucket tokens and decrypted back. Two places where the obvious build would have been actively harmful are documented and tested against.',
+      'The biggest move of 28 Aug, from 25%. nutcracker implements it: contract, client crypto, provider store, local MCP shim. The design names a contradiction in the brief nobody had — end-to-end encryption and semantic recall do not compose, and the usual casualty is the encryption, via plaintext embeddings stored beside the ciphertext. It picks a keyed blind index instead and publishes measured recall rather than adjectives. It now runs: a provider binary and an MCP server you point an agent at, driven end to end in a real session where memories were sealed locally, stored, found by blinded bucket tokens and ranked after decryption. Two places where the obvious build would have been actively harmful are documented and tested against.',
     projects: [
       { name: 'nutcracker', url: 'https://github.com/nightswatchhq/nutcracker' },
       { name: 'compass', url: 'https://github.com/nightswatchhq/compass' },

@@ -99,7 +99,7 @@ it ourselves.
 |---|---|---|---|---|---|---|---|
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **45%** | 90% 🔒 | ~65% | The Dock, gib |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
-| CAT-3 | Memory for AI | RFC-003 | 22% | **70%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
+| CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | 45% | 90% | 90% | Lodestar |
@@ -665,8 +665,20 @@ reusable write/store primitive.
         whole namespace.
   - [x] Said plainly rather than implied: storage in this build is in-memory, and payment belongs in
         front of these handlers rather than half-built inside them.
-- [ ] **Client SDK + harness integration.** A drop-in memory provider for one agent framework, and
-      an MCP stdio binary an agent can actually be pointed at.
+- [x] **An MCP server an agent can be pointed at.** `nutcracker-mcp`, stdio, driven end to end in a
+      real session: initialize → tools/list → two writes → a search that came back ranked. 61 Rust
+      tests.
+  - [x] **Found a gap between the design note and the code by running it.** The design says the
+        client does the fine ranking; the code returned the provider's coarse bucket ordering
+        untouched, so a real session surfaced an unrelated memory as a match. Now decrypts,
+        re-embeds and ranks by cosine locally — 1.00 vs 0.89 in that session — with a test that did
+        not exist until the session exposed the need for it.
+  - [x] The key is read from a **file**, never a flag or env var: argv is world-readable on Linux
+        via `/proc` and environment blocks leak into crash reports and child processes.
+  - [x] The bundled embedder is a documented placeholder, and the docs say loudly that it must stay
+        local — a remote embedding call ships the plaintext to a third party and undoes everything.
+- [ ] **A drop-in provider for one agent framework**, and a durable (Postgres-backed) provider
+      build. Both are packaging rather than design.
 - [ ] **MCP memory tools.** `memory.write` / `read` / `search` / `forget` over compass's MCP
       Streamable HTTP; TAP and x402 rails inherited.
 - [ ] **Client SDK + harness integration.** A drop-in memory provider for one agent framework.
