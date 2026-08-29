@@ -686,6 +686,23 @@ reusable write/store primitive.
         holds no fragment of the plaintext, and a corrupt snapshot is an error rather than a silent
         fresh start — starting empty looks identical to a provider that lost everything and did not
         mention it.
+- [x] **Validated across two machines, which found a leak loopback never would have.** Provider
+      built and running on the ThinkPad (Debian 13) under a systemd user unit, bound to the tailnet
+      address only; the Mac's shim wrote to it over the network. All 65 tests, fmt and clippy pass
+      identically on Linux and macOS.
+  - [x] **The leak:** everything the remote provider held was opaque — ciphertext, bucket tokens,
+        an unlinkable namespace handle — and beside it, in plain text, `item_id: "crossmachine"`.
+        Default ids are content hashes so it only bites when a caller names one, and callers name
+        things descriptively: `sofia-lease-renewal` would have told the provider everything the
+        encryption was hiding, and would have passed every test that checked the *ciphertext*.
+  - [x] **The fix:** the id a provider sees is a keyed hash, and the caller's own name is sealed
+        **inside** the payload. Search recovers it on decrypt, so an agent still gets back the name
+        it chose rather than a hash it cannot read or forget by. Two tests, one of which asserts no
+        5-byte fragment of a descriptive id crosses the wire. The two items now sit side by side in
+        the ThinkPad's store — `crossmachine` and `f173877361de6645e…` — which is the before and
+        after in one file.
+  - [x] The lesson, duller than the fix: **it is not enough to check that the secret is encrypted.**
+        Everything travelling beside it is also a disclosure.
 - [ ] **A drop-in provider for one agent framework**, and a Postgres-backed provider build. Both
       are packaging rather than design.
 - [ ] **MCP memory tools.** `memory.write` / `read` / `search` / `forget` over compass's MCP
