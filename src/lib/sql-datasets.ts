@@ -42,7 +42,7 @@ export const SQL_DATASETS: SqlDataset[] = [
     basePath: '',
     chain: 'Arbitrum One',
     description:
-      'Delegation events from HorizonStaking: delegated, undelegated, withdrawn, and thawing. The source behind the delegation feed on this dashboard.',
+      'Four delegation events from HorizonStaking: TokensDelegated, TokensUndelegated, DelegatedTokensWithdrawn and StakeDelegatedWithdrawn. The source behind the delegation feed on this dashboard.',
     sample:
       'SELECT block_number, serviceProvider, delegator, tokens\nFROM staking__tokens_delegated\nORDER BY block_number DESC\nLIMIT 20',
   },
@@ -61,7 +61,7 @@ export const SQL_DATASETS: SqlDataset[] = [
     basePath: '/gns',
     chain: 'Arbitrum One',
     description:
-      'Subgraph publishing and curation signal from the GNS. The source behind the developer-activity chart.',
+      'One table, gns__subgraph_published, from the GNS. Narrow by design: it is what the developer-activity chart on this dashboard counts.',
     sample: LIST_TABLES,
   },
   {
@@ -69,7 +69,8 @@ export const SQL_DATASETS: SqlDataset[] = [
     label: 'Legacy GRT flows',
     basePath: '/legacy-flows',
     chain: 'Arbitrum One',
-    description: 'Token transfer history used for the GRT flow views.',
+    description:
+      'Delegation across the Horizon and pre-Horizon staking contracts together, which is what the GRT flow views need and what neither contract gives you alone.',
     sample: LIST_TABLES,
   },
 ];
