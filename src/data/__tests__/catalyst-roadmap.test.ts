@@ -33,7 +33,7 @@ describe('CATALYST_ITEMS', () => {
 describe('catalystSummary', () => {
   it('reproduces the headline the card renders', () => {
     const { overall } = catalystSummary();
-    expect(overall).toBeCloseTo(48.25, 3);
+    expect(overall).toBeCloseTo(49.125, 3);
   });
 
   /// The card is public and the tracker is internal, and they drifted badly once already —
@@ -47,7 +47,7 @@ describe('catalystSummary', () => {
       substreams: 58,
       'rpc-service': 50,
       'multi-product-studio': 45,
-      'studio-dips': 55,
+      'studio-dips': 62,
       'chain-integrations': 35,
       'institutional-audit': 5,
     });

@@ -97,7 +97,7 @@ it ourselves.
 
 | WS | Item | Source ref | 08-28 open | 08-28 close | Community ceiling | **Our ceiling** | Primary asset |
 |---|---|---|---|---|---|---|---|
-| CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **55%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
+| CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **62%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
@@ -123,7 +123,10 @@ the code does not move this as far as finishing code usually does.
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
 
-### Why the needles barely moved, and why one went backwards
+**Mean, as of 2026-08-29: 49.1%**, against 37.2% when this tracker was opened on 28 August. The
+section below is the 28 August retrospective and its figures are that day's, kept as written.
+
+### Why the needles barely moved, and why one went backwards (28 August)
 
 The mean closed at **40.5%**, from 37.2% at the start of the day. Almost all of that is CAT-7, and
 the rest of the day was flat or negative. That is the correct result and worth reading rather than
@@ -483,7 +486,8 @@ parity replacing the upgrade indexer. Fallback routing.
   - [ ] Watch for `InnovationAllocation` appearing in the mainnet address book (GIP-0089, due
         2026-08-31); it is on Sepolia only today.
 - [x] **Agreement tooling: [nightswatchhq/weaver](https://github.com/nightswatchhq/weaver).**
-      10 tests. Builds, hashes, signs and checks Recurring Collection Agreements — the actual
+      13 Rust tests and 10 Foundry fork tests. Builds, hashes, signs and checks Recurring
+      Collection Agreements — the actual
       GIP-0087 path, replacing the "Dipper client in the gateway" task below, which was written
       against GIP-0081's off-chain MVP and involves a gateway that DIPS does not use.
   - [x] **The EIP-712 hashing is checked against the deployed contract**, not against a reading of
@@ -494,8 +498,26 @@ parity replacing the upgrade indexer. Fallback routing.
         nothing.
   - [x] `sign` refuses when the key is not the payer the agreement names; `verify` exits non-zero
         on a mismatch. Both turn an opaque revert into an obvious mistake before gas is spent.
-  - [ ] Broadcast `accept()` / `collect()` against Sepolia end to end. Free, and the last step to
-        having exercised the whole DIPS path.
+  - [x] **`accept()` exercised against the deployed contract on Arbitrum Sepolia.** Eight fork
+        tests against `RecurringCollector` at `0x0b18befc…`: the happy path, and six ways it is
+        meant to fail. A fork rather than a broadcast, because the faucet is behind a captcha, and
+        because a fork is deterministic and runs in CI. Nothing is mocked; the contract under test
+        is the deployed one with its real code and storage.
+  - [x] **Found and fixed: a payer must authorize their own key before signing anything.**
+        `Authorizable._isAuthorized` requires `authorizations[signer].authorizer == payer` and does
+        **not** special-case signer == payer. So a payer's own perfectly-formed signature over
+        their own agreement is rejected with `RecurringCollectorInvalidSigner()`, an error that
+        blames the signature and points at nothing. `weaver authorize-proof` now produces the
+        `authorizeSigner` proof and the `cast send` to go with it. Note the mixed conventions: the
+        agreement is EIP-712, the proof is a plain `eth_sign`. Getting the wrong one gives bytes
+        the contract rejects without saying why. The CLI's output is pasted verbatim into a fork
+        test that sends it to the real contract, so the Rust encoding is checked against deployed
+        bytecode rather than against a reading of the source.
+  - [x] The negative tests assert **specific** revert selectors. A bare `vm.expectRevert()` passes
+        for any reason at all, including the one the test exists to rule out, which is how the
+        authorization requirement survived a green run.
+  - [ ] `collect()` end to end. Needs funded `PaymentsEscrow` on Sepolia, so it is a separate
+        exercise from `accept()` and is **not** covered by the above.
 - [ ] ~~**Dipper client in the gateway.** Extend gib to speak the GIP-0081 agreement flow.~~
       Superseded: see above.
   - [ ] Discover indexers by QoS (consumes CAT-2's publisher).
