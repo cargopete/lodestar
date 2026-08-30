@@ -9,6 +9,31 @@ one, it is yours.
 
 ---
 
+## What it costs, which is probably not what you think
+
+Read from each service's own `ProvisionManager` on Arbitrum One, 2026-08-30. These are live and on
+[the data services page](https://www.lodestar-dashboard.com/data-services), so they cannot go stale
+the way this table would.
+
+| Service | Minimum provision | Thawing period |
+|---|---|---|
+| **Subgraph Service** | **100,000 GRT** | 28 days |
+| Dispatch | **555 GRT** | 14 to 28 days |
+| Seahorn | **555 GRT** | 14 to 28 days |
+| Mainline | none set | 21 to 28 days |
+| Nuthatch Data Service | none set | 14 to 28 days |
+| SDSCE | none set | up to 28 days |
+
+**The bar you are thinking of is the Subgraph Service's bar.** 100,000 GRT is what it takes to be an
+indexer, everybody knows it, and it is not what these ask. Dispatch and Seahorn want 555 GRT, and
+three of them set no floor at all. That is a difference of about a hundred and eighty times, and it
+was on chain the whole time nobody was running these.
+
+Two honest caveats. A service with no floor is not necessarily generous: on SDSCE both the token
+floor and the thawing floor are zero, which reads more like parameters nobody set than a deliberate
+offer. And a provision is not a cost, it is stake at risk under the service's slashing terms, which
+you should read before choosing a number.
+
 ## The shape, whichever service you pick
 
 Five steps, and the fourth is where people lose a day:
@@ -36,7 +61,12 @@ Pass 30 days, the obvious round number, and the provision is refused by a custom
 them and realise one is your input and the other is the limit. Paste it into
 [`/revert`](https://www.lodestar-dashboard.com/revert) and it will say so in English.
 
-**Use 14 days.** It is comfortably inside and nothing depends on it being larger.
+**Use the service's own floor, which for Dispatch and Seahorn is 14 days.** This page previously
+said "use 14 days, it is comfortably inside", which is right for those two by accident and wrong as
+reasoning: 14 days is their **minimum**, not a comfortable middle, and 13 would be refused by the
+service before the protocol ever saw it. Mainline's floor is 21 days. Read the range rather than
+copying a number, and be aware that the ceiling and the floor come from different places: the floor
+is the data service's, the ceiling is the protocol's.
 
 ### 2. Two Horizon addresses in circulation are implementations, not proxies
 

@@ -102,7 +102,7 @@ it ourselves.
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | **~65%** 🔻 | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **55%** 🔺 | 95% | **~60%** 🔻 | Dispatch |
-| CAT-6 | Multi-product Studio | RFC-006 | 45% | **62%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
+| CAT-6 | Multi-product Studio | RFC-006 | 45% | **64%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **48%** 🔺 | 85% 🔒 | **48%** 🔻 | chain-integration-ds |
 | CAT-8 | Institutional audit layer | RFC-008 | 5% | **42%** 🔺 | 80% 🔒 | ~45% | tattler |
 
@@ -179,6 +179,46 @@ have never been paid outside a fork, the catalogue says which, and that is the h
 as the opportunity.
 
 **A promise published without checking it is just a nicer-sounding gap.**
+
+### Putting a price on the invitation. CAT-6 62% → 64% (2026-08-30)
+
+The catalogue has said "Built and unclaimed, could be yours to run" since 30 August, which is an
+invitation with no number on it. Anybody who has been near The Graph supplies the number themselves,
+and the one they supply is 100,000 GRT, because that is the indexer bar and the Subgraph Service is
+the one people have heard of.
+
+It is not the bar here. Every Horizon data service sets its own range through `ProvisionManager`,
+and reading them off Arbitrum One gives:
+
+| Service | Minimum provision | Thawing period |
+|---|---|---|
+| Subgraph Service | 100,000 GRT | 28 days |
+| Dispatch | **555 GRT** | 14 to 28 days |
+| Seahorn | **555 GRT** | 14 to 28 days |
+| Mainline | none set | 21 to 28 days |
+| Nuthatch DS | none set | 14 to 28 days |
+| SDSCE | none set | up to 28 days |
+
+**About a hundred and eighty times cheaper than the bar everyone assumes**, and it has been on chain
+the whole time nobody has been running these. It is now beside the invitation, read live rather than
+transcribed, with the Subgraph Service shown next to it because the comparison is the point.
+
+**It corrected our operator guide twice.** The guide said "use 14 days, it is comfortably inside",
+which is right for Dispatch by accident and wrong as reasoning: 14 days is that service's
+**minimum**, and 13 would be refused by the service before the protocol saw it. Mainline's floor is
+21 days. The floor and the ceiling come from different places, the service's and the protocol's, and
+a reader told only "comfortably inside" reasons downward into a revert.
+
+**Two things stated rather than sold.** A service with no floor is not necessarily generous: SDSCE
+has both floors at zero, which reads more like parameters nobody set than a deliberate offer, and
+telling somebody a service is free to run when the truth is that it is unconfigured is the wrong
+kind of encouragement. And a provision is stake at risk under the service's slashing terms, not a
+fee.
+
+**A bug caught before it shipped rather than after.** These values are `bigint`, and
+`NextResponse.json` throws on one, so the route carrying the raw struct would have returned 500 in
+production while every unit test that never stringified it stayed green. There is a serialised shape
+now, and a test that asserts the raw struct throws and the serialised one does not.
 
 ### Making the reverts legible. CAT-6 60% → 62% (2026-08-30)
 
@@ -584,7 +624,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 59.0%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 59.3%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
