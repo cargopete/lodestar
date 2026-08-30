@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/Card';
 import type { ServiceCensus, ProbeVerdict } from '@/lib/service-census';
+import type { RequirementsJson } from '@/lib/operator-requirements';
 
 /**
  * The provider count for every service, read from chain, published because it is embarrassing.
@@ -29,6 +30,7 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 interface Payload {
   data: {
     services: ServiceCensus[];
+    benchmark: RequirementsJson | null;
     headline: {
       services: number;
       withAnyProvider: number;
@@ -65,7 +67,7 @@ export function ProviderCensus() {
     );
   }
 
-  const { services, headline } = data.data;
+  const { services, headline, benchmark } = data.data;
 
   return (
     <Card className="mb-4">
@@ -81,6 +83,20 @@ export function ProviderCensus() {
         answering endpoints for 39 days without anyone noticing, because everything anyone watched
         was on-chain and on-chain state stayed green throughout.
       </p>
+
+      {/* The price, next to the invitation. "Could be yours to run" is an invitation without a
+          number on it, and everybody assumes the number is the indexer number, because the
+          Subgraph Service is the one people have heard of. It is not the number here. */}
+      {benchmark && (
+        <p className="text-[12px] text-[var(--text-muted)] leading-relaxed mb-3">
+          What each one asks of an operator, read from its own contract. For scale, the Subgraph
+          Service asks{' '}
+          <strong className="text-[var(--text)]">
+            {benchmark.minTokensGrt.toLocaleString('en-GB')} GRT
+          </strong>
+          , which is the bar most people assume applies to all of this.
+        </p>
+      )}
 
       <div className="space-y-2.5">
         {services.map((s) => (
@@ -110,6 +126,15 @@ export function ProviderCensus() {
               <p className="text-[11px] text-[var(--text-faint)] mt-0.5">
                 Nobody has registered. The contract is live and untried, which is an opening rather
                 than a fault.
+              </p>
+            )}
+
+            {s.requirements && (
+              <p className="text-[11px] text-[var(--accent)] mt-0.5">
+                To run it: {s.requirements.summary}
+                {s.requirements.noMinimum
+                  ? ' Both floors are zero, which reads more like parameters nobody set than a deliberate offer.'
+                  : ''}
               </p>
             )}
 

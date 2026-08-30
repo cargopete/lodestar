@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { censusHeadline, runCensus, type ServiceCensus } from '@/lib/service-census';
+import {
+  benchmarkRequirements,
+  censusHeadline,
+  runCensus,
+  type ServiceCensus,
+} from '@/lib/service-census';
+import type { RequirementsJson } from '@/lib/operator-requirements';
 import { log } from '@/lib/logger';
 
 // Same reason as the Dispatch probe next door: no request argument, so Next would freeze this at
@@ -17,9 +23,13 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
   try {
-    const data = await cached<{ services: ServiceCensus[] }>('service-census:v1', 300, async () => ({
-      services: await runCensus(),
-    }));
+    const data = await cached<{
+      services: ServiceCensus[];
+      benchmark: RequirementsJson | null;
+    }>('service-census:v2', 300, async () => {
+      const [services, benchmark] = await Promise.all([runCensus(), benchmarkRequirements()]);
+      return { services, benchmark };
+    });
     return NextResponse.json(
       { data: { ...data, headline: censusHeadline(data.services) } },
       { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }

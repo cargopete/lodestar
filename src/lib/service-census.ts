@@ -19,6 +19,14 @@
 
 import { createPublicClient, http, parseAbiItem, type PublicClient } from 'viem';
 import { arbitrum } from 'viem/chains';
+import { readRequirements, toJson, type RequirementsJson } from './operator-requirements';
+
+/**
+ * The Subgraph Service, carried as a benchmark rather than as a census row: it has no registry of
+ * this shape, and it is not ours. It is here because it is the bar everybody assumes applies, and
+ * the whole point of showing what these services cost is that it does not.
+ */
+export const SUBGRAPH_SERVICE = '0xb2Bb92d0DE618878E438b55D5846cfecD9301105' as const;
 
 const PROVIDER_REGISTERED = parseAbiItem(
   'event ProviderRegistered(address indexed provider, string endpoint, string geoHash)'
@@ -211,6 +219,8 @@ export interface ServiceCensus {
   /** Registered, advertising an endpoint, and that endpoint does not answer. */
   lying: number;
   providers: ProviderProbe[];
+  /** What this service demands of an operator, read from its own ProvisionManager. */
+  requirements?: RequirementsJson | null;
   /** Set when the registry itself could not be read, so 0 is never mistaken for "we checked". */
   error?: string;
 }
@@ -274,8 +284,15 @@ export async function runCensus(
   return Promise.all(
     services.map(async (s) => {
       try {
-        const providers = currentProviders(await readRegistry(c, s.address));
-        return summarise(s, await Promise.all(providers.map((p) => probe(p, s.probe))));
+        const [events, requirements] = await Promise.all([
+          readRegistry(c, s.address),
+          readRequirements(c, s.address),
+        ]);
+        const providers = currentProviders(events);
+        return {
+          ...summarise(s, await Promise.all(providers.map((p) => probe(p, s.probe)))),
+          requirements: requirements && toJson(requirements),
+        };
       } catch (e) {
         return {
           id: s.id,
@@ -308,4 +325,10 @@ export function censusHeadline(all: ServiceCensus[]): {
     registered: measured.reduce((n, s) => n + s.registered, 0),
     serving: measured.reduce((n, s) => n + s.serving, 0),
   };
+}
+
+/** The Subgraph Service's requirements, for the comparison that makes the others legible. */
+export async function benchmarkRequirements(): Promise<RequirementsJson | null> {
+  const r = await readRequirements(client(), SUBGRAPH_SERVICE);
+  return r && toJson(r);
 }
