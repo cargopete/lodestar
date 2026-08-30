@@ -103,7 +103,7 @@ it ourselves.
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | 90% | Lodestar |
-| CAT-7 | Chain integrations DS | RFC-007 | 6% | **40%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
+| CAT-7 | Chain integrations DS | RFC-007 | 6% | **48%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
 | CAT-8 | Institutional audit layer | RFC-008 | 5% | **30%** 🔺 | 80% 🔒 | ~45% | tattler |
 
 The second column is **live, not a snapshot**. It said "08-28 close" for two days after CAT-3 and
@@ -173,10 +173,24 @@ who must act before a payer's own intention takes effect and would buy nothing. 
 enforces the one rule that matters, so the omission cannot recur quietly. 19 unit tests, 4 fork
 tests.
 
-**Not moved further, and the reason is the honest one:** the fix has not been driven end to end on a
-fork, because that needs a real Controller, a staked provision and a registration, which is a
-deployment rehearsal rather than a test of this behaviour. Still nothing deployed and nothing has
-ever collected. 40% is a contract that *could* now be paid; it is not one that has been.
+**Then the rehearsal was done, and it found a second fatal defect. 40% → 48%.**
+`test/ForkPaid.t.sol` deploys against the real Controller and collector, stakes, provisions,
+registers, accepts, funds escrow and collects. The first run reverted with
+`RecurringCollectorInvalidCollectData`: `collect()` encoded **four fields against a six-field
+`CollectParams`**, missing `collectionId` and `maxSlippage`. Every real collection would have failed.
+
+The unit tests were green because `MockRecurringCollector.collect()` stored the calldata **without
+decoding it**, so literally any encoding passed. The mock now decodes exactly what the real collector
+decodes.
+
+**Two fatal defects in one contract, both invisible to sixteen passing tests**: no accept path, and a
+malformed collect payload. The contract is now paid end to end against deployed contracts, with the
+integrator's balance asserted to rise. 48% rather than the 50% ceiling because nothing is deployed
+and nothing has collected outside a fork.
+
+That is also the evidence behind the new **Step 5b** in `horizon-skills`: a fork rehearsal is now a
+required step, because `forge test` against a mock establishes the arithmetic and nothing whatever
+about the counterparty.
 
 **And the incidental finding worth carrying:** `collect()` was listed all day as blocked on funded
 escrow. That blocker is only real for a broadcast. On a fork, escrow can be funded with cheatcodes,
@@ -294,7 +308,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 55.1%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 56.1%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
