@@ -77,12 +77,17 @@ describe('decodeHorizonRevert', () => {
    * implementation does not revert. Where it does surface, as a disallowed verifier, the
    * explanation has to name it, since the reader is otherwise looking at a permissions problem.
    */
-  it('names the implementation trap where it surfaces as a rejected verifier', () => {
+  it('names both halves of the implementation trap, not just the zeroes', () => {
     const d = decodeHorizonRevert(
       revert('HorizonStakingVerifierNotAllowed', ['0x0000000000000000000000000000000000000042'])
     );
     expect(d.plain).toContain('implementation');
-    expect(d.plain).toContain('return zero');
+    // Both halves. The usual telling is "uninitialised storage, so views return zero", which is the
+    // benign one: a zero is obviously wrong and gets caught. An initialised implementation returns
+    // stale values that look right, and the stray RPCDataService does exactly that, reporting a
+    // 10,000 GRT minimum provision where the live proxy says 555.
+    expect(d.plain).toContain('zero if it was never initialised');
+    expect(d.plain).toContain('stale but plausible');
   });
 
   it('still names an error it has no hand-written explanation for', () => {

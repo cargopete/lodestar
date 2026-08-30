@@ -70,9 +70,16 @@ is the data service's, the ceiling is the protocol's.
 
 ### 2. Two Horizon addresses in circulation are implementations, not proxies
 
-And this is the nasty one, because **calling an implementation does not revert**. Its storage is
-uninitialised, so a view returns **zero** — forever, silently. A service built against one reads
-zeros and nothing in any log says why.
+And this is the nasty one, because **calling an implementation does not revert**. If it was never
+initialised its storage is empty and views return **zero**, forever, silently, which is at least
+obviously wrong once you notice it.
+
+If it *was* initialised, it answers with stale values that look entirely reasonable, and that is
+worse. Measured on 2026-08-30: the stray `RPCDataService` implementation at `0xA983…`, which
+Dispatch's own example configs and subgraph pointed at until that day, agrees with the live proxy on
+the thawing range, the verifier cut and the owner, and reports a minimum provision of **10,000 GRT
+where the live proxy says 555**. Four answers right, one eighteenfold wrong, and nothing anywhere
+saying so.
 
 Resolve them from the Controller instead of copying any table, including ours:
 

@@ -125,12 +125,15 @@ export default function RevertPage() {
               What this cannot tell you
             </h3>
             <p className="text-[13px] text-[var(--text-muted)] leading-relaxed">
-              The worst trap of the four throws no error at all. Two Horizon addresses in
-              circulation are implementations rather than proxies, and calling an implementation
-              does not revert: its storage is uninitialised, so a view returns{' '}
-              <strong className="text-[var(--text)]">zero</strong>, forever, silently. A service
-              built against one reads zeros and nothing anywhere says why. Resolve addresses from
-              the Controller rather than copying any table, including ours.
+              The worst trap of the four throws no error at all. Several Horizon addresses in
+              circulation are implementations rather than proxies, and calling one does not revert.
+              If it was never initialised its views return zero, which is at least obviously wrong.
+              If it was initialised they return{' '}
+              <strong className="text-[var(--text)]">stale values that look right</strong>: the
+              stray RPC data service implementation our own configuration pointed at for months
+              agrees with the live proxy on the thawing period, the verifier cut and the owner, and
+              reports a minimum provision of 10,000 GRT where the real one is 555. Resolve
+              addresses from the Controller rather than copying any table, including ours.
             </p>
           </Card>
         </div>

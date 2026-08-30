@@ -131,11 +131,11 @@ export const CATALYST_ITEMS: CatalystItem[] = [
   {
     slug: 'rpc-service',
     label: 'The RPC data service',
-    coverage: 55,
+    coverage: 57,
     communityCeiling: 95,
     ourCeiling: 60,
     rationale:
-      'Marked DOWN from 60%, and it is the honest direction. Three real improvements landed on 28 Aug: the April audit was re-scoped against the current contract and its one surviving High was disproved by a proof-of-concept rather than by argument, a live filter-routing bug was fixed, and a liveness probe now exists. All of it is outweighed by discovering that Dispatch had not answered a request in 39 days. 60% described a codebase; 50% describes a codebase whose operation is at zero. The contract is live, the code is maintained, and it is open to any operator. Added 30 Aug: an audit scope somebody else can fund — the surface measured, the settled parts fenced off so nobody pays to rediscover our homework, what to audit in the order we would pay for it, and what is explicitly out of scope. A tight brief is the difference between an affordable engagement and an open-ended one, and it is a thing a group with no audit budget can still produce.',
+      'Marked DOWN from 60%, and it is the honest direction. Three real improvements landed on 28 Aug: the April audit was re-scoped against the current contract and its one surviving High was disproved by a proof-of-concept rather than by argument, a live filter-routing bug was fixed, and a liveness probe now exists. All of it is outweighed by discovering that Dispatch had not answered a request in 39 days. 60% described a codebase; 50% describes a codebase whose operation is at zero. The contract is live, the code is maintained, and it is open to any operator. Added 30 Aug: an audit scope somebody else can fund — the surface measured, the settled parts fenced off so nobody pays to rediscover our homework, what to audit in the order we would pay for it, and what is explicitly out of scope. A tight brief is the difference between an affordable engagement and an open-ended one, and it is a thing a group with no audit budget can still produce. Corrected 30 Aug: two addresses in this repo were dead. RPCDataService pointed at a stray implementation the proxy has never used, and that was the default in the proxy source, both example gateway configs and the address the subgraph indexed; GraphPayments pointed at an address holding no code. Both quiet failures: a receipt signed against the wrong data service verifies locally and fails at redemption, and a subgraph on a dead address syncs perfectly and returns nothing. A chain-checking guard script now catches it.',
     projects: [{ name: 'Dispatch (GRC-005)', url: 'https://github.com/nightswatchhq/dispatch' }],
   },
   {

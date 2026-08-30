@@ -10,11 +10,19 @@
  * no gas**: you can paste somebody else's address, or one you have not funded yet, and see the
  * shape of the job.
  *
- * The check that earns its place is the first one. Two Horizon addresses in circulation are
- * implementations rather than proxies, and calling an implementation **does not revert**: its
- * storage is uninitialised, so views return zero, forever, silently. That trap has no error to
- * decode and no failing transaction to inspect. It does have a definitive test, which is whether
- * the EIP-1967 implementation slot holds anything.
+ * The check that earns its place is the first one. Several Horizon addresses in circulation are
+ * implementations rather than proxies, and calling an implementation **does not revert**. The
+ * usual telling of this trap is that uninitialised storage makes views return zero, which is true
+ * and is the *benign* half: a zero is obviously wrong and gets caught.
+ *
+ * The other half was measured on 2026-08-30 and is worse. The stray `RPCDataService`
+ * implementation at `0xA983…`, which our own configs pointed at for months, **is** initialised. It
+ * returns the same thawing range, the same verifier cut and the same owner as the live proxy, and
+ * a minimum provision of **10,000 GRT where the live proxy says 555**. Four answers right, one
+ * eighteenfold wrong, and nothing anywhere says so.
+ *
+ * That trap has no error to decode and no failing transaction to inspect. It does have a
+ * definitive test, which is whether the EIP-1967 implementation slot holds anything.
  */
 
 import { erc20Abi, formatUnits, type PublicClient } from 'viem';
@@ -126,9 +134,12 @@ export function preflight(i: PreflightInput): PreflightStep[] {
           status: 'blocked',
           detail:
             'Its EIP-1967 implementation slot is empty, so this is either an implementation ' +
-            'contract or not an upgradeable proxy at all. Calling an implementation does not ' +
-            'revert: its storage is uninitialised, so views return zero forever and nothing says ' +
-            'why. Resolve the address from the Controller before going further.',
+            'contract or not an upgradeable proxy at all, and calling one does not revert. If it ' +
+            'was never initialised its views return zero forever. If it was initialised, and one ' +
+            'of these is, they return stale values that look entirely plausible: the stray ' +
+            'RPCDataService implementation reports a minimum provision of 10,000 GRT where the ' +
+            'live proxy says 555, and agrees with it on everything else. Resolve the address from ' +
+            'the Controller before going further.',
         }
       : {
           key: 'proxy',

@@ -190,8 +190,8 @@ const EXPLAIN: Record<string, Explainer> = {
   HorizonStakingVerifierNotAllowed: ([verifier]) => ({
     plain:
       `${verifier} is not an allowed verifier. Check you are provisioning to the data service's ` +
-      `proxy address and not to an implementation: an implementation has uninitialised storage, ` +
-      `so its views return zero rather than reverting, and nothing in any log says why.`,
+      `proxy address and not to an implementation. An implementation does not revert when called: ` +
+      `it returns zero if it was never initialised, and stale but plausible values if it was.`,
   }),
   HorizonStakingTooManyThawRequests: () => ({
     plain:

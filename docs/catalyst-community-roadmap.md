@@ -101,7 +101,7 @@ it ourselves.
 | CAT-2 | New gateway operators | RFC-002 | 60% | **68%** 🔺 | 95% | ~75% | gib |
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | **~65%** 🔻 | SDSCE |
-| CAT-5 | RPC service | RFC-005 | 62% | **55%** 🔺 | 95% | **~60%** 🔻 | Dispatch |
+| CAT-5 | RPC service | RFC-005 | 62% | **57%** 🔺 | 95% | **~60%** 🔻 | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **66%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **48%** 🔺 | 85% 🔒 | **48%** 🔻 | chain-integration-ds |
 | CAT-8 | Institutional audit layer | RFC-008 | 5% | **42%** 🔺 | 80% 🔒 | ~45% | tattler |
@@ -179,6 +179,56 @@ have never been paid outside a fork, the catalogue says which, and that is the h
 as the opportunity.
 
 **A promise published without checking it is just a nicer-sounding gap.**
+
+### A ceiling I am not moving on my own (2026-08-30)
+
+**CAT-2's cap of ~75% looks generous under our own decisions, and it stays where it is until Chief
+says otherwise.** Its seven points of headroom are almost entirely "close the payment loop", which
+needs funded escrow on Arbitrum One with real GRT and an indexer whitelisting our sender; the QoS
+publisher underneath it needs a funded poster key holding xDAI. The standing decision is that we are
+not putting more GRT in.
+
+That is the same reasoning that took CAT-4 from ~75% to ~65% on the 30th, because an audit costs
+money we are not spending. Applied consistently, CAT-2 should come down too.
+
+It is recorded rather than done because re-cutting it **raises the apparent completion**, and that
+is the one direction where the person doing the arithmetic should not also be the person deciding
+it. Raised, and left open.
+
+### Two dead addresses in live configuration. CAT-5 55% → 57% (2026-08-30)
+
+CAT-5 carried a task reading "the proxy has been upgraded; make the implementation history explicit
+and kill the `0xA983…` reference everywhere it appears". Checking it settled the premise the wrong
+way and turned up something larger.
+
+**The proxy has never been upgraded.** One `Upgraded` event, at block 456,917,519, naming the
+implementation it still uses, which is the event emitted on construction. So `0xA983…` was never a
+previous version of this contract; it is a stray deployment the proxy has never pointed at.
+
+**And it was not confined to documentation.** It was the default in `proxy/src/index.ts`, the
+`data_service_address` in `config.example.toml` and `docker/gateway.example.toml`, and the address
+`subgraph/networks.json` told the subgraph to index. Anybody following the repository would have
+signed TAP receipts against the wrong data service, which verify locally and fail at redemption, and
+run a subgraph that syncs perfectly and returns nothing.
+
+**A second dead address, found only because I checked the others.** `GraphPayments` was listed as
+`0xb98a3D45…` in five files including `docs/src/deployed-addresses.md`, and that address **holds no
+code at all**. The live one is `0x7Aae8ae0…`, agreed by upstream's `addresses.json` and by
+`getContractProxy` on the Arbitrum One Controller.
+
+**The finding that corrected our own writing everywhere.** I have been describing the
+implementation-versus-proxy trap all week as "uninitialised storage, so views return zero, forever,
+silently". That is the *benign* half, because a zero is obviously wrong and gets caught. `0xA983…`
+is initialised. Called directly it returns the **same** thawing range, the **same** verifier cut and
+the **same** owner as the live proxy, and a minimum provision of **10,000 GRT where the live proxy
+says 555**. Four answers right and one eighteenfold wrong, sitting plausibly between Dispatch's real
+555 and the Subgraph Service's 100,000. An operator reading it would over-provision and never know.
+Corrected in `becoming-an-operator.md`, on `/revert`, on `/operate`, in the revert decoder and in the
+preflight, with a test pinning both halves.
+
+**A guard, because my own sweep was not enough.** `scripts/check-addresses.sh` asks the chain
+whether each address holds code and whether the upgradeable ones have an EIP-1967 slot, then greps
+for the known-dead. It caught three files I had already declared clean, on its first run.
 
 ### Rehearsing the job for somebody. CAT-6 64% → 66% (2026-08-30)
 
@@ -659,7 +709,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 59.5%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 59.8%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
@@ -1442,8 +1492,26 @@ issuance. No trusted state roots. UUPS, `OwnableUpgradeable`, pause guardian, `w
 - [ ] **External audit** (G-2). Now scoped as a **fresh review, not remediation**: there is
       nothing outstanding to re-check, so the money buys new coverage of 365 lines. Cheaper than
       the source report assumed on both counts.
-- [ ] **Document dead-code paths in the deployed bytecode.** The proxy has been upgraded; make the
-      implementation history explicit and kill the `0xA983…` reference everywhere it appears.
+- [x] **Implementation history documented, and the premise of this task was wrong.** It read "the
+      proxy has been upgraded". It has not: the proxy carries exactly one `Upgraded` event, at block
+      456,917,519, naming `0x3527a12a…`, and that is the one emitted on construction. So `0xA983…`
+      is not a superseded implementation of this proxy. It is a stray earlier deployment the proxy
+      has never pointed at, which is a different and more confusing thing to find in a config file.
+  - [x] **`0xA983…` killed everywhere, and it was not only in documentation.** It was the default
+        in `proxy/src/index.ts`, the `data_service_address` in both example gateway configs, and the
+        address the subgraph indexed. A receipt signed against the wrong data service verifies
+        locally and fails at redemption; a subgraph pointed at an address with no events syncs
+        perfectly and returns nothing. Every one of those failures is quiet.
+  - [x] **A second dead address, found while checking the first.** `GraphPayments` was listed as
+        `0xb98a3D45…` in five places including `docs/src/deployed-addresses.md`. That address holds
+        **no code at all**. The live one is `0x7Aae8ae0…`, confirmed twice over: upstream's
+        `addresses.json` and `getContractProxy` on the Arbitrum One Controller
+        (`0x0a849154…`) agree.
+  - [x] **A guard, because the manual sweep missed three files.**
+        `scripts/check-addresses.sh` asks the chain whether each address holds code and, where it
+        should be upgradeable, whether its EIP-1967 slot is set, then greps for the known-dead ones.
+        It found `README.md`, `docs/src/providers.md` and `docs/src/deployed-addresses.md` on its
+        first run, after I had already declared the sweep finished.
 - [ ] **Sticky sessions + drop-in compat.**
   - [x] Provider affinity for `eth_newFilter` / `getFilterChanges` / `getFilterLogs` /
         `uninstallFilter`. **Correction:** it was not the 3-way quorum. Filter methods are not in
