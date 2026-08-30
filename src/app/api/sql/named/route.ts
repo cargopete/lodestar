@@ -3,6 +3,7 @@ import { hasNuthatch, nuthatchSqlFull } from '@/lib/nuthatch';
 import { findDataset } from '@/lib/sql-datasets';
 import { NAMED_QUERIES, findNamedQuery, renderNamedQuery } from '@/lib/named-queries';
 import { log } from '@/lib/logger';
+import { x402Gate } from '@/lib/x402-gate';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,6 +73,18 @@ export async function POST(req: Request) {
     );
   }
 
+  // The counter, after the query is known to be valid and before any work is done.
+  //
+  // Order matters: charging for a request that was going to be refused anyway would take money for
+  // an error, and quoting before validating would mean a caller pays to discover they mistyped an
+  // address. Free unless an operator has configured a price.
+  const gate = await x402Gate(
+    req,
+    new URL(req.url).toString(),
+    `One answer to ${query.name} on ${query.dataset}`
+  );
+  if (gate.challenge) return gate.challenge;
+
   const dataset = findDataset(query.dataset);
   if (!dataset) {
     // A declared query naming a dataset nobody exposes is our bug, not the caller's.
@@ -87,6 +100,15 @@ export async function POST(req: Request) {
         { status: result.status === 400 ? 400 : 502 }
       );
     }
+    if (gate.accepted) {
+      // Recorded rather than settled here: settlement is an operator-side job with an operator-side
+      // key, out of process, so that no third party sits in the request path. See `x402-gate.ts`.
+      log.api.info(
+        { query: query.name, payer: gate.accepted.from, value: gate.accepted.value, nonce: gate.accepted.nonce },
+        'x402 payment accepted, awaiting settlement'
+      );
+    }
+
     return NextResponse.json({
       query: query.name,
       dataset: dataset.id,

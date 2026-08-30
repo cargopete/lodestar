@@ -6,7 +6,7 @@
  * never reach the nest unless the dataset was named on the allowlist, and the provenance stamp must
  * survive the trip, because an answer nobody can date is an answer nobody can cite.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@/lib/cache', () => ({
   cached: vi.fn((_key: string, _ttl: number, fetcher: () => Promise<unknown>) => fetcher()),
@@ -248,5 +248,71 @@ describe('/api/sql/named', () => {
     });
     // Whatever else was in the body, the statement is the declared one.
     expect(mockSqlFull.mock.calls[0][0]).not.toContain('secrets');
+  });
+});
+
+/**
+ * The counter.
+ *
+ * The behaviour that must never regress is the first one: **free unless configured**. A paywall
+ * that switches itself on would start charging for something that was free, silently, and the only
+ * signal would be somebody's client breaking.
+ */
+describe('/api/sql/named — x402', () => {
+  const saved = { ...process.env };
+  afterEach(() => {
+    process.env = { ...saved };
+  });
+
+  it('is free when no receiving address is configured', async () => {
+    delete process.env.X402_SELL_PAY_TO;
+    mockSqlFull.mockResolvedValue({
+      ok: true,
+      data: { count: 0, rows: [], truncated: false, provenance: {} },
+    });
+    const res = await postNamed({ name: 'issuance_rate_changes', args: { before_block: 1 } });
+    expect(res.status).toBe(200);
+  });
+
+  it('asks for payment once an address is set, and the challenge is payable', async () => {
+    process.env.X402_SELL_PAY_TO = '0x1111111111111111111111111111111111111111';
+    process.env.X402_SELL_PRICE = '1000';
+    const res = await postNamed({ name: 'issuance_rate_changes', args: { before_block: 1 } });
+    expect(res.status).toBe(402);
+
+    // A 402 a caller cannot read is a 402 they cannot pay. The challenge must arrive in both places
+    // and name a price, a recipient and an asset.
+    const header = res.headers.get('payment-required');
+    expect(header, 'the challenge must be in the header').toBeTruthy();
+    const decoded = JSON.parse(Buffer.from(header!, 'base64').toString('utf8'));
+    expect(decoded.accepts[0].payTo).toBe(process.env.X402_SELL_PAY_TO);
+    expect(decoded.accepts[0].amount).toBe('1000');
+    expect(decoded.accepts[0].asset).toBeTruthy();
+
+    const body = await res.json();
+    expect(body.accepts[0].payTo).toBe(process.env.X402_SELL_PAY_TO);
+    // Browsers cannot read a response header they were not told about, which is the exact wall our
+    // own buyer-side code hit against The Graph's gateway.
+    expect(res.headers.get('Access-Control-Expose-Headers')).toContain('payment-required');
+    expect(mockSqlFull).not.toHaveBeenCalled();
+  });
+
+  // Charging for a request that was going to be refused would take money for an error.
+  it('validates the query before quoting a price', async () => {
+    process.env.X402_SELL_PAY_TO = '0x1111111111111111111111111111111111111111';
+    const res = await postNamed({ name: 'nonexistent_query', args: {} });
+    expect(res.status).toBe(400);
+  });
+
+  it('refuses to run at all when the price has nowhere to go', async () => {
+    process.env.X402_SELL_PAY_TO = 'not-an-address';
+    mockSqlFull.mockResolvedValue({
+      ok: true,
+      data: { count: 0, rows: [], truncated: false, provenance: {} },
+    });
+    // A half-configured paywall serves free rather than charging into the void, and says so in the
+    // log. The alternative — charging with no recipient — loses money invisibly.
+    const res = await postNamed({ name: 'issuance_rate_changes', args: { before_block: 1 } });
+    expect(res.status).toBe(200);
   });
 });
