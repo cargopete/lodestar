@@ -99,7 +99,7 @@ it ourselves.
 |---|---|---|---|---|---|---|---|
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **62%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
-| CAT-3 | Memory for AI | RFC-003 | 22% | **72%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
+| CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | 90% | Lodestar |
@@ -222,8 +222,18 @@ trap: chasing the 9% candidate rate triples disclosure to buy *less* recall than
 is paying on the expensive axis to optimise the cheap one. That is precisely what my earlier framing
 would have recommended.
 
-Not implemented, and honestly so: the mean must be fixed for a namespace's lifetime, so it is a
-migration and belongs beside the embedder-identity check rather than in a config flag.
+**Then implemented, because the migration turned out not to exist.** I had assumed twice that the
+mean is a property of a corpus and must be frozen per namespace. Assumed, not tested, and wrong: two
+disjoint 48-sentence corpora on unrelated topics produce means pointing the same way, `cos = 0.939`.
+Centring corpus B by corpus **A's** mean takes its anisotropy from 0.420 to 0.048, and through the
+index at 8x4 turns 88%/70% into **81%/45%** on a corpus the mean never saw.
+
+So it ships as a **per-model constant** and an index is stable from its first item. Revising that
+constant *would* be a migration, so it is versioned into the embedder identity (`+centred-v1`) and
+the manifest check written earlier refuses a mismatch, with no second mechanism to keep in step. The
+manifest now also records `bands x band_bits`: a token is that many hyperplane signs, so changing
+the shape breaks an index exactly as changing the model does, and guarding one without the other
+would have left the same trapdoor open under a different label.
 
 ### Watching the thing everything else stands on (2026-08-29)
 
@@ -244,7 +254,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 53.9%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 54.1%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
