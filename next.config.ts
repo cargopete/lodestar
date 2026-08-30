@@ -69,6 +69,21 @@ const nextConfig: NextConfig = {
       // oracle, one ranking, one page. /network-health was this page's name before that.
       { source: '/network-health', destination: '/qos', permanent: true },
       { source: '/indexer-qos', destination: '/qos', permanent: true },
+      // The Intel Feed moved to The Graph Academy on 2026-08-30 and became its
+      // Dispatches shelf. A dashboard and a library are different jobs: the writing
+      // was never about Lodestar's own numbers, and splitting it across two domains
+      // meant neither was the place to look. The posts moved unchanged, so these are
+      // permanent and slug-for-slug.
+      {
+        source: '/blog',
+        destination: 'https://learn-thegraph.com/dispatches/',
+        permanent: true,
+      },
+      {
+        source: '/blog/:slug',
+        destination: 'https://learn-thegraph.com/dispatches/:slug/',
+        permanent: true,
+      },
     ];
   },
 };
