@@ -25,11 +25,16 @@ Five steps, and the fourth is where people lose a day:
 Every one of these cost us real time in the last two days. None of them is in the contract
 documentation and all of them fail in a way that points somewhere else.
 
-### 1. The thawing period is capped at about 2,418,000 seconds
+### 1. The thawing period is capped at 2,419,200 seconds
 
-Roughly 28 days. Pass 30 days — the obvious round number — and the provision is refused by a custom
-error carrying **two raw numbers and no name**, which reads as an opaque failure until you convert
-them and realise one is your input and the other is the ceiling.
+Exactly 28 days, read from `getMaxThawingPeriod()` on Arbitrum One rather than remembered. This
+page said "about 2,418,000" until 30 August, which was both wrong and wrong in the unhelpful
+direction: it implied the ceiling sits just under a round 28 days when 28 days is the ceiling.
+
+Pass 30 days, the obvious round number, and the provision is refused by a custom error carrying
+**two raw numbers and no name**, in seconds, which reads as an opaque failure until you convert
+them and realise one is your input and the other is the limit. Paste it into
+[`/revert`](https://www.lodestar-dashboard.com/revert) and it will say so in English.
 
 **Use 14 days.** It is comfortably inside and nothing depends on it being larger.
 
@@ -68,6 +73,17 @@ Services settling through `GraphTallyCollector` (most of them) have no such step
 The collector checks `getProviderTokensAvailable(you, dataService) > 0` before paying anybody — the
 guard against a rogue data service draining somebody's escrow. Miss it and everything else is
 well-formed and the collection is refused for a reason that reads like something else entirely.
+
+## When something reverts and the message points elsewhere
+
+Every trap above fails in a way that names the wrong thing. Paste the revert data into
+[**lodestar-dashboard.com/revert**](https://www.lodestar-dashboard.com/revert): it knows the 63
+custom errors the staking, payments and data-service contracts declare, converts seconds into days
+and wei into GRT, and for the ones that actually catch people out it says what to change. It runs
+in your browser and makes no request, so it is fine to paste a failing transaction from a terminal
+into it.
+
+The exception is trap 2, which throws nothing at all. Nothing can decode a silent zero.
 
 ## Rehearse it on a fork before you spend anything
 

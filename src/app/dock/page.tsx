@@ -1,5 +1,7 @@
 'use client';
 
+import { explainWriteError } from '@/lib/horizon-revert';
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount, useSignMessage, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { arbitrum } from 'wagmi/chains';
@@ -365,7 +367,7 @@ function PublishWizard({
         setStep('mining');
       },
       onError: (e) => {
-        setErrMsg(e.message.slice(0, 300));
+        setErrMsg(explainWriteError(e));
         setStep('error');
       },
     },
@@ -731,14 +733,14 @@ function PostBountyWizard({
   const { writeContract: writeApprove, isPending: approvePending } = useWriteContract({
     mutation: {
       onSuccess: (hash) => { setApproveTxHash(hash); setStep('approving'); },
-      onError: (e) => { setErrMsg(e.message.slice(0, 300)); setStep('error'); },
+      onError: (e) => { setErrMsg(explainWriteError(e)); setStep('error'); },
     },
   });
 
   const { writeContract: writePost, isPending: postPending } = useWriteContract({
     mutation: {
       onSuccess: (hash) => { setPostTxHash(hash); setStep('posting'); },
-      onError: (e) => { setErrMsg(e.message.slice(0, 300)); setStep('error'); },
+      onError: (e) => { setErrMsg(explainWriteError(e)); setStep('error'); },
     },
   });
 
@@ -1099,7 +1101,7 @@ function ClaimModal({ bounty, onClose }: { bounty: SyncBounty; onClose: () => vo
   const { writeContract, isPending } = useWriteContract({
     mutation: {
       onSuccess: (hash) => { setClaimTxHash(hash); setStep('claiming'); },
-      onError: (e) => { setErrMsg(e.message.slice(0, 600)); setStep('error'); },
+      onError: (e) => { setErrMsg(explainWriteError(e)); setStep('error'); },
     },
   });
 
