@@ -113,9 +113,9 @@ export const CATALYST_ITEMS: CatalystItem[] = [
   {
     slug: 'chain-integrations',
     label: 'Chain integrations data service',
-    coverage: 35,
+    coverage: 40,
     rationale:
-      'Was 5% because nobody had built it. chain-integration-ds now has the contract, the metering design, an integrator runbook and a deploy script. The design changed on contact with the protocol: supporting a chain is a commitment held over time, not a request, so it settles through RecurringCollector rather than per-query receipts — the Recurring Collection Agreement already has fields for an integration fee and an ongoing retainer. It does not go higher because nothing is deployed, and because the value-capture policy, which is most of what this item is, remains Council\'s.',
+      'Was 5% because nobody had built it. chain-integration-ds now has the contract, the metering design, an integrator runbook and a deploy script. The design changed on contact with the protocol: supporting a chain is a commitment held over time, not a request, so it settles through RecurringCollector rather than per-query receipts — the Recurring Collection Agreement already has fields for an integration fee and an ongoing retainer. It does not go higher because nothing is deployed, and because the value-capture policy, which is most of what this item is, remains Council\'s. Fixed on 30 Aug: the contract could not be paid at all. It called the RecurringCollector to collect but never to accept, and accept is callable only by the data service an agreement names, so an agreement written for it could be accepted by nobody. Sixteen tests were silent because they ran against a mock that modelled no rule. Proven against the deployed collector on a Sepolia fork, then closed.',
     projects: [
       { name: 'chain-integration-ds', url: 'https://github.com/nightswatchhq/chain-integration-ds' },
     ],

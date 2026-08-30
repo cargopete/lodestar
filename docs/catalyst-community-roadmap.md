@@ -103,7 +103,7 @@ it ourselves.
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | 90% | Lodestar |
-| CAT-7 | Chain integrations DS | RFC-007 | 6% | **35%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
+| CAT-7 | Chain integrations DS | RFC-007 | 6% | **40%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
 | CAT-8 | Institutional audit layer | RFC-008 | 5% | **30%** 🔺 | 80% 🔒 | ~45% | tattler |
 
 The second column is **live, not a snapshot**. It said "08-28 close" for two days after CAT-3 and
@@ -154,6 +154,34 @@ placeholder embedder. 74% described a system whose retrieval quality was assumed
 where it is an open question with numbers attached. Written up in nutcracker's README under *What
 the recall numbers actually measured*.
 
+### CAT-7: the contract could not be paid at all. 35% → 40% (2026-08-30)
+
+`ChainIntegrationDataService` calls `RECURRING_COLLECTOR.collect(...)` and **never called
+`accept()`**. Per this morning's weaver work, `accept()` is callable only by the data service an
+agreement names, so an RCA written for this contract could be accepted by nobody: not the payer who
+signed it, not the integrator who benefits, not any third party. `collect()` could therefore never
+succeed, and the sixteen passing tests were silent because they ran against a mock whose `collect()`
+returned a number and modelled no rule at all.
+
+Established against the **deployed** collector on Arbitrum Sepolia rather than argued: the payer is
+refused, every third party is refused, and the named data service succeeds. The capability existed
+the whole time and the contract could not reach it.
+
+`acceptAgreement()` closes it, permissionless on purpose - the payer's signature *is* the
+authorisation and the collector checks it, so demanding a particular caller would add a second party
+who must act before a payer's own intention takes effect and would buy nothing. The mock now
+enforces the one rule that matters, so the omission cannot recur quietly. 19 unit tests, 4 fork
+tests.
+
+**Not moved further, and the reason is the honest one:** the fix has not been driven end to end on a
+fork, because that needs a real Controller, a staked provision and a registration, which is a
+deployment rehearsal rather than a test of this behaviour. Still nothing deployed and nothing has
+ever collected. 40% is a contract that *could* now be paid; it is not one that has been.
+
+**And the incidental finding worth carrying:** `collect()` was listed all day as blocked on funded
+escrow. That blocker is only real for a broadcast. On a fork, escrow can be funded with cheatcodes,
+which is how this was reached at all - and the same trick is available to CAT-1's outstanding
+`collect()`.
 ### CAT-3: measured, then given a real embedder. 68% → 72% (2026-08-30)
 
 Yesterday's mark-down said the retrieval half had never been measured against a real embedding
@@ -266,7 +294,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 54.1%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 54.75%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
