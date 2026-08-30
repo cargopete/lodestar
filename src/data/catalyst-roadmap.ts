@@ -19,7 +19,7 @@
  * movement and the reason this is dated rather than evergreen.
  */
 
-export const CATALYST_LAST_SCORED = '2026-08-28';
+export const CATALYST_LAST_SCORED = '2026-08-30';
 
 export const CATALYST_SOURCE_POST = '/blog/we-read-the-foundations-new-roadmap';
 

@@ -114,8 +114,11 @@ catch elsewhere. Anyone changing a number changes the date in the header with it
 decision that audits, entities and deployments are things we recommend rather than buy: the highest score reachable without
 running a service or signing a commercial deal. These are judgement calls to one significant
 figure, not measurements — their job is to stop us recording adoption we have decided not to pursue
-as work outstanding on our side. CAT-6 is unchanged at 90% because Lodestar is the one thing we do
-run.
+as work outstanding on our side. **CAT-6 was cut to ~70% on 30 August** along with three others,
+because the last stretch of it is subscription billing with paying users and that needs an entity.
+This paragraph said "CAT-6 is unchanged at 90%" for most of that day, sixty lines above the table
+recording the cut, which is the ordinary way a document starts lying: not by stating a falsehood but
+by keeping a sentence that was true when it was written.
 
 **CAT-7: 6% → 35%.** The engineering that was at zero this morning is largely done —
 [chain-integration-ds](https://github.com/nightswatchhq/chain-integration-ds) has the contract,
@@ -177,6 +180,34 @@ as the opportunity.
 
 **A promise published without checking it is just a nicer-sounding gap.**
 
+### Auditing the scoreboard itself (2026-08-30)
+
+Asked directly whether these numbers are legitimate, which is the right question to ask of a
+document written by the people it scores. The eight scores reconcile: the public card and this
+tracker carry the same figures, checked mechanically.
+
+Four things did not survive the check, and all four are staleness rather than dishonesty, which is
+the failure mode this document is most exposed to.
+
+- **The test that exists to stop drift could not detect drift.** It compared the card against eight
+  numbers *typed into the test file*, so it pinned the card to a copy of the scoreboard rather than
+  to the scoreboard. Editing this markdown and forgetting the card left the suite green. It parses
+  the table now, so the two cannot disagree.
+- **The public card was dated 28 August** while five of the eight scores had moved on the 29th and
+  30th. A stale disclosure is worse than no disclosure: a reader who thinks to check the date is
+  told the staleness they were right to suspect is absent. Now derived from this table's own header
+  and pinned by a test.
+- **The ceiling paragraph still said CAT-6 was 90%**, sixty lines above the table recording its cut
+  to ~70%.
+- **The headroom line still read CAT-2 64 and CAT-8 30.** Both had moved.
+
+**What remains a judgement call, stated rather than fixed.** The headline is an unweighted mean of
+eight editorial scores each argued to one significant figure, so "58%" carries about as much
+precision as "roughly three fifths", and the card's phrasing of it as a share of the roadmap is a
+little stronger than the arithmetic underneath. The scoring is also self-assessment by the party
+that built the things, with no external check. Both are disclosed on the card. Neither is a defect;
+both are worth a reader knowing.
+
 ### Four ceilings re-cut downward (2026-08-30)
 
 The "our ceiling" column already assumed we would not **operate**. It still quietly assumed three
@@ -195,7 +226,7 @@ different organisation is not a ceiling, it is a wish, and the column exists pre
 recording somebody else's work as our own outstanding tasks. CAT-1, CAT-3 and CAT-7 now sit **at**
 their ceilings, and three of the four re-cuts are within ten points of theirs.
 
-What that leaves as genuinely ours to move: CAT-2 (64 → ~75), CAT-6 (60 → ~70), CAT-8 (30 → ~45).
+What that leaves as genuinely ours to move: CAT-2 (68 → ~75), CAT-6 (60 → ~70), CAT-8 (36 → ~45).
 
 ### CAT-3 marked DOWN, 74% → 68% (2026-08-29)
 
