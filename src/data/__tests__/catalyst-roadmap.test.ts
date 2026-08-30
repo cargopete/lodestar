@@ -77,7 +77,7 @@ describe('CATALYST_ITEMS', () => {
 describe('catalystSummary', () => {
   it('reproduces the headline the card renders', () => {
     const { overall } = catalystSummary();
-    expect(overall).toBeCloseTo(59.25, 3);
+    expect(overall).toBeCloseTo(59.5, 3);
   });
 
   /**

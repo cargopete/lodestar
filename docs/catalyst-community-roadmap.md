@@ -102,7 +102,7 @@ it ourselves.
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | **~65%** 🔻 | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **55%** 🔺 | 95% | **~60%** 🔻 | Dispatch |
-| CAT-6 | Multi-product Studio | RFC-006 | 45% | **64%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
+| CAT-6 | Multi-product Studio | RFC-006 | 45% | **66%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **48%** 🔺 | 85% 🔒 | **48%** 🔻 | chain-integration-ds |
 | CAT-8 | Institutional audit layer | RFC-008 | 5% | **42%** 🔺 | 80% 🔒 | ~45% | tattler |
 
@@ -179,6 +179,41 @@ have never been paid outside a fork, the catalogue says which, and that is the h
 as the opportunity.
 
 **A promise published without checking it is just a nicer-sounding gap.**
+
+### Rehearsing the job for somebody. CAT-6 64% → 66% (2026-08-30)
+
+[`becoming-an-operator.md`](becoming-an-operator.md) tells a prospective operator to rehearse on a
+fork before spending anything. That is right, and it asks them to install Foundry and write a
+Solidity test before they have decided whether they care. Nearly everything a fork rehearsal tells
+you is readable straight off mainnet with `eth_call`, for nothing.
+
+[**`/operate`**](https://www.lodestar-dashboard.com/operate) takes a pasted address and a service
+and says what would happen: what it holds, what it has staked, what it has provisioned and on what
+terms, whether the registry lists it, and which step it would fail on. **No wallet, no signature,
+no gas**, deliberately, because connecting a wallet to find out whether a job is worth doing is a
+much larger ask than typing an address, and because this way you can check one you have not funded
+yet or do not control.
+
+**The first check is the one that earns its place**, and it is the only one of the four documented
+traps with no error to decode: calling a Horizon implementation rather than its proxy does not
+revert, it returns zero forever. There is a definitive test, which is whether the EIP-1967
+implementation slot holds anything, and it is now the first thing checked because everything after
+it is meaningless if it fires.
+
+**A bug the tests caught, and the right one.** The verdict originally reported the first *blocker*
+anywhere in the list. An address holding GRT and no stake has a blocked provision step, because
+provisioning needs idle stake, so it announced "blocked: provision to this service" when the next
+move was simply to stake. Leading with a downstream blocker is the same species of misdirection
+every trap here exists to spare people. It reads the sequence in order now.
+
+**And run against the live chain it says the quiet part.** `0xb43b2ccc…` on Dispatch returns
+**"Everything on chain is in place"**, and that provider's endpoint has not answered since July.
+The page says so underneath: every line is on-chain state, and on-chain state is exactly what stayed
+green for 39 days.
+
+**This closes the operator-tooling thread.** CAT-6 cannot honestly move further without managed
+pipelines, which is an operating decision we have made, or subscription billing, which is blocked on
+G-3. What was left that was ours is done.
 
 ### Putting a price on the invitation. CAT-6 62% → 64% (2026-08-30)
 
@@ -624,7 +659,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 59.3%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 59.5%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
