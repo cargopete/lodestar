@@ -28,7 +28,14 @@ const WS_TO_SLUG: Record<string, string> = {
  * table whose rows also start that way (the ceiling re-cut), and matching both would compare a
  * score against a ceiling.
  */
-function trackerScoreboard(): { scores: Record<string, number>; asOf: string } {
+interface TrackerRow {
+  current: number;
+  communityCeiling: number;
+  ourCeiling: number;
+  locked: boolean;
+}
+
+function trackerScoreboard(): { scores: Record<string, number>; rows: Record<string, TrackerRow>; asOf: string } {
   const lines = readFileSync(TRACKER, 'utf8').split('\n');
   const head = lines.findIndex((l) => l.startsWith('| WS | Item |'));
   if (head < 0) throw new Error('the tracker has no scoreboard table');
@@ -37,16 +44,28 @@ function trackerScoreboard(): { scores: Record<string, number>; asOf: string } {
   if (!date) throw new Error('the scoreboard header carries no "Current (MM-DD)" date');
 
   const scores: Record<string, number> = {};
+  const rows: Record<string, TrackerRow> = {};
   for (const line of lines.slice(head + 2)) {
     if (!line.startsWith('|')) break;
     const cells = line.split('|').slice(1, -1).map((c) => c.trim());
     const slug = WS_TO_SLUG[cells[0]];
     if (!slug) throw new Error(`unknown workstream in the scoreboard: ${cells[0]}`);
-    const current = /(\d+)%/.exec(cells[4] ?? '');
-    if (!current) throw new Error(`no current score in scoreboard row: ${line}`);
-    scores[slug] = Number(current[1]);
+    const num = (cell: string | undefined, what: string) => {
+      const m = /(\d+)%/.exec(cell ?? '');
+      if (!m) throw new Error(`no ${what} in scoreboard row: ${line}`);
+      return Number(m[1]);
+    };
+    scores[slug] = num(cells[4], 'current score');
+    rows[slug] = {
+      current: scores[slug],
+      communityCeiling: num(cells[5], 'community ceiling'),
+      ourCeiling: num(cells[6], 'our ceiling'),
+      // The padlock lives in the community-ceiling cell and means the last stretch is protocol or
+      // Foundation policy rather than work anybody outside can do.
+      locked: (cells[5] ?? '').includes('\u{1F512}'),
+    };
   }
-  return { scores, asOf: `2026-${date[1]}-${date[2]}` };
+  return { scores, rows, asOf: `2026-${date[1]}-${date[2]}` };
 }
 
 describe('CATALYST_ITEMS', () => {
@@ -101,6 +120,36 @@ describe('catalystSummary', () => {
    */
   it('is dated when the tracker last moved a number, not when it was opened', () => {
     expect(CATALYST_LAST_SCORED).toBe(trackerScoreboard().asOf);
+  });
+
+  /**
+   * The ceilings drift exactly like the scores did, and worse: the tracker's own prose claimed
+   * CAT-6 was capped at 90% for most of a day, sixty lines above the table recording its cut to
+   * 70%. They are on the public card now, so they get the same treatment as the scores.
+   */
+  it('carries the same two ceilings as the tracker', () => {
+    const { rows } = trackerScoreboard();
+    for (const item of CATALYST_ITEMS) {
+      const row = rows[item.slug];
+      expect(row, `${item.slug} is not in the tracker scoreboard`).toBeDefined();
+      expect(item.communityCeiling, `${item.slug} community ceiling`).toBe(row.communityCeiling);
+      expect(item.ourCeiling, `${item.slug} our ceiling`).toBe(row.ourCeiling);
+      expect(Boolean(item.ceilingLocked), `${item.slug} padlock`).toBe(row.locked);
+    }
+  });
+
+  /** A score above its own ceiling would mean one of the two numbers is wrong, not that we did well. */
+  it('never scores an item above either ceiling', () => {
+    for (const item of CATALYST_ITEMS) {
+      expect(item.coverage, item.slug).toBeLessThanOrEqual(item.ourCeiling);
+      expect(item.ourCeiling, item.slug).toBeLessThanOrEqual(item.communityCeiling);
+    }
+  });
+
+  it('reproduces both ceiling headlines the card renders', () => {
+    const { ourCeiling, communityCeiling } = catalystSummary();
+    expect(ourCeiling).toBeCloseTo(62.875, 3);
+    expect(communityCeiling).toBe(90);
   });
 
   it('counts items with and without community work', () => {
