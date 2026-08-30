@@ -196,6 +196,26 @@ about the counterparty.
 escrow. That blocker is only real for a broadcast. On a fork, escrow can be funded with cheatcodes,
 which is how this was reached at all - and the same trick is available to CAT-1's outstanding
 `collect()`.
+### The payment-path sweep, which found nothing (2026-08-30)
+
+After two fatal defects in `chain-integration-ds`, the obvious question was how many siblings share
+them. Checked: **Seahorn, Camp, FHSCE, WSaaS**, plus SDSCE and Dispatch.
+
+All clear, and the reason is worth recording rather than the result alone. Both defects were
+specific to **`RecurringCollector`**, whose `CollectParams` is a six-field struct and whose
+`accept()` may be called only by the data service an agreement names. Every other service settles
+through **`GraphTallyCollector`**, which decodes a three-tuple `(SignedRAV, dataServiceCut,
+receiverDestination)` and has no accept step - and all four encode exactly that. SDSCE has its own
+anvil fork rehearsal reconciled to the token; Dispatch is proven by 18.44 GRT settled on mainnet.
+
+So the base rate is better than a one-in-two sample suggested, and the risk concentrates where the
+counterparty is most complex. One cosmetic leftover: WSaaS's only test file is named
+`CampDataService.t.sol` from a copy, though the contract inside is `WebSocketDataServiceTest` and
+tests the right thing.
+
+**A negative result recorded on purpose.** "We checked and found nothing" is evidence; leaving it
+unwritten means the next person re-runs the sweep or, worse, assumes it was done.
+
 ### CAT-3: measured, then given a real embedder. 68% → 72% (2026-08-30)
 
 Yesterday's mark-down said the retrieval half had never been measured against a real embedding
