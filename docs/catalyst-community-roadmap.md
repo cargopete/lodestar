@@ -180,6 +180,44 @@ as the opportunity.
 
 **A promise published without checking it is just a nicer-sounding gap.**
 
+### The address sweep, extended to the other repos (2026-08-30)
+
+Dispatch had two dead addresses in live configuration, so the same check ran against SDSCE, seahorn,
+camp, wsaas and FHSCE: every address in a file an operator would copy from, checked against the
+chain the file names.
+
+**Three of five are clean.** seahorn's five addresses all hold code. camp and FHSCE carry nothing
+operator-facing beyond the correct collector. SDSCE looked alarming and is not: its `0x1d01649b…`
+collector is under a heading reading "the devenv is deterministic", and its Arbitrum One table has
+the right one. Checking the label before the address is what stopped that becoming a wrong fix.
+
+**WSaaS had all three of its Sepolia Horizon addresses wrong**, which is the worst result of the
+day, because they are constructor arguments and therefore **immutable**: a contract deployed from
+that script cannot be corrected by an upgrade.
+
+| | in the script | actually |
+|---|---|---|
+| HorizonStaking | `0xFf2Ee30d…`, 21 kB, **no proxy slot** | `0x865365C4…`, a 2.3 kB proxy |
+| PaymentsEscrow | `0x09B985a2…`, 6.8 kB, **no proxy slot** | `0x4b5D3Da4…`, a 1.2 kB proxy |
+| GraphTallyCollector | `0xacC71844…`, the **legacy TAPCollector** | `0x382863e7…` |
+
+The first two are the implementation-not-proxy trap, and they are the *same two addresses* our own
+`horizon-skills` gotchas file was corrected for earlier this week, which is the mistake propagating
+rather than a new one.
+
+The third is subtler and worse. `config.example.toml` declared
+`eip712_domain_name = "GraphTallyCollector"` while pointing at a contract whose own `eip712Domain()`
+reports **"TAPCollector"**. The domain separator is `keccak(name, version, chainId,
+verifyingContract)`, so every receipt signed under that pairing is computed over a separator the
+contract does not use. It verifies perfectly on your own side and is rejected at redemption, which
+is the same shape as Dispatch's wrong `data_service_address` and just as quiet.
+
+Fixed and pushed, with the verification commands in the file rather than in a wiki nobody opens.
+
+**No score moved.** WSaaS is not one of the eight workstreams, and finding a defect in a repo is not
+progress against a roadmap item. It belongs to G-1: somebody following any of these repositories has
+to end up with something that works.
+
 ### A ceiling I am not moving on my own (2026-08-30)
 
 **CAT-2's cap of ~75% looks generous under our own decisions, and it stays where it is until Chief
