@@ -17,6 +17,7 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { cn } from '@/lib/utils';
 import { Playground } from '@/components/data-services/Playground';
 import { RegistryVsReality } from '@/components/data-services/RegistryVsReality';
+import { ProviderCensus } from '@/components/data-services/ProviderCensus';
 
 // ── Provider traffic light — the single most decision-relevant signal ──────────
 const PROVIDER_META: Record<
@@ -388,6 +389,11 @@ export default function DataServicesPage() {
           pattern. The signal that matters most is whether anyone is actually serving paid queries.
         </p>
       </div>
+
+      {/* Above the catalogue rather than inside a drawer. The catalogue is hand-written and said
+          "Live · Production" for 39 days about a service that had stopped answering in July; this
+          is the same page saying what the chain says, where it cannot be scrolled past. */}
+      <ProviderCensus />
 
       <StatGrid className="lg:grid-cols-3 xl:grid-cols-3">
         <StatCard label="Services tracked" value={String(stats.total)} subtitle="across 4 maturity tiers" />
