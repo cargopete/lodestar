@@ -97,7 +97,7 @@ it ourselves.
 
 | WS | Item | Source ref | 08-28 open | **Current (08-30)** | Community ceiling | **Our ceiling** | Primary asset |
 |---|---|---|---|---|---|---|---|
-| CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **62%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
+| CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **65%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
@@ -294,7 +294,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 54.75%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 55.1%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
@@ -687,8 +687,23 @@ parity replacing the upgrade indexer. Fallback routing.
   - [x] The negative tests assert **specific** revert selectors. A bare `vm.expectRevert()` passes
         for any reason at all, including the one the test exists to rule out, which is how the
         authorization requirement survived a green run.
-  - [ ] `collect()` end to end. Needs funded `PaymentsEscrow` on Sepolia, so it is a separate
-        exercise from `accept()` and is **not** covered by the above.
+  - [x] **`collect()` end to end, and the blocker was not what it said.** "Needs funded escrow" is
+        true of a *broadcast* and false of a fork: `deal` mints GRT and the provision and deposit are
+        then ordinary calls to the real contracts. `ForkCollect.t.sol` runs the whole path against
+        deployed Sepolia - authorise, sign, accept, stake, provision, fund escrow, warp, collect -
+        and asserts the service provider's balance goes up. Nothing mocked.
+    - [x] The **provision** is what makes a data service payable: `_collect` requires
+          `getProviderTokensAvailable(serviceProvider, dataService) > 0`, the guard against a
+          signer-as-data-service draining escrow. Tested for specifically.
+    - [x] The thawing period is capped at ~2,418,000 seconds, so 30 days is refused by a custom
+          error carrying two raw numbers and no name.
+    - [x] **Two Sepolia addresses in our own skill were implementations, not proxies** - and calling
+          an implementation returns zero from uninitialised storage rather than reverting, so a
+          service built on one reads zeros forever. Corrected in `horizon-skills`; this test
+          resolves from the Controller and asserts code size instead of trusting a table.
+
+**CAT-1 is now at its ceiling.** What is left is a governance parameter (the DIPS allocation is
+still zero) and running managed pipelines, which is the operating we have decided against.
 - [ ] ~~**Dipper client in the gateway.** Extend gib to speak the GIP-0081 agreement flow.~~
       Superseded: see above.
   - [ ] Discover indexers by QoS (consumes CAT-2's publisher).
