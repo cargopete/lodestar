@@ -104,7 +104,7 @@ it ourselves.
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | **~60%** 🔻 | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **48%** 🔺 | 85% 🔒 | **48%** 🔻 | chain-integration-ds |
-| CAT-8 | Institutional audit layer | RFC-008 | 5% | **30%** 🔺 | 80% 🔒 | ~45% | tattler |
+| CAT-8 | Institutional audit layer | RFC-008 | 5% | **36%** 🔺 | 80% 🔒 | ~45% | tattler |
 
 The second column is **live, not a snapshot**. It said "08-28 close" for two days after CAT-3 and
 CAT-8 moved on the 29th and 30th, which is a small lie of exactly the kind this document exists to
@@ -380,7 +380,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 56.1%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 56.9%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
@@ -1349,7 +1349,18 @@ SOC 2 Type II or ISO 27001.
 
 ### Tasks
 
-- [ ] **SLA + SOC 2 track (runs in parallel from day one).** 🔴 **Start Q1.**
+- [x] **The advisory deliverable, written**:
+      [`institutional-readiness.md`](institutional-readiness.md). Since 30 August we recommend what a
+      body with an entity should do rather than becoming one, and this is that document — evidence
+      backed rather than a framework. It carries measured SLOs from our own infrastructure (named
+      query p50 0.45 s, 13 jobs tracked, 0 stale, 0 failing), the sequencing argument that matters
+      most (**the SOC 2 observation window is calendar-bound, so start the clock in Q1 even if the
+      code lands in Q4**), the distinction most vendors blur (**a signature makes tampering
+      detectable; only replay makes lying detectable**), and four questions an auditor should ask a
+      data-service operator — the first of which found two fatal defects in one of our own contracts
+      behind a fully green test suite.
+- [ ] **SLA + SOC 2 track.** 🔴 Advisory only since 30 August: the recommendation above is our
+      deliverable; acquiring the entity is not.
   - [ ] Resolve G-3: identify the entity that will hold the certification and sign SLAs.
   - [ ] Adopt a compliance automation platform (Vanta / Drata / Comp AI class).
   - [ ] Stand up controls for Security + Confidentiality.
