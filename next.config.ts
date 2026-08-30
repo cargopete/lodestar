@@ -45,6 +45,13 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/api/disassembly/**': ['./src/lib/disassembly/decode-classify/pkg/**'],
     '/disassembly/**': ['./src/lib/disassembly/decode-classify/pkg/**'],
+    // The receipt route signs with the SAME compiled crypto `/verify` ships to the browser, so
+    // there is one copy of it and it lives in `public/`. Vercel serves `public/` from the CDN and
+    // does NOT put it in the function's filesystem, so the route 502s without this — locally it
+    // works, which is the worst way for it to fail. Traced rather than duplicated: a second copy
+    // could drift from the one the browser verifies against, and one implementation is the whole
+    // argument for compiling it instead of rewriting it in TypeScript.
+    '/api/sql/receipt': ['./public/tattler/**'],
   },
   async headers() {
     return [
