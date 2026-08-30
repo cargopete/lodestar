@@ -60,7 +60,7 @@ function Row({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="w-full text-left py-3 grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_140px_3rem] items-center gap-x-3 gap-y-2 hover:bg-[var(--bg-elevated)] transition-colors rounded-[var(--radius-button)] px-2 -mx-2"
+        className="w-full text-left py-3 grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_140px_5.5rem] items-center gap-x-3 gap-y-2 hover:bg-[var(--bg-elevated)] transition-colors rounded-[var(--radius-button)] px-2 -mx-2"
       >
         <span className="flex items-center gap-2 min-w-0">
           <svg
@@ -91,10 +91,14 @@ function Row({
             {item.coverage}%
           </span>
           {/* Our ceiling, not the community's. It is the one that changes what we do next, and on
-              four of the eight it is already reached. */}
-          <span className="block font-mono text-[10px] tabular-nums text-[var(--text-faint)]">
-            of {item.ourCeiling}
-            {item.ceilingLocked ? ' 🔒' : ''}
+              four of the eight it is already reached.
+
+              Labelled "our cap" rather than "of 75", which is what it said first and which is
+              ambiguous twice over: it reads as a fraction, and it reads as a percentage of a
+              percentage. The person who asked for this column had to ask what it meant, which
+              settles it. */}
+          <span className="block font-mono text-[10px] tabular-nums text-[var(--text-faint)] whitespace-nowrap">
+            our cap {item.ourCeiling}%{item.ceilingLocked ? ' 🔒' : ''}
           </span>
         </span>
       </button>
@@ -297,10 +301,11 @@ export function CatalystCoverage() {
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="w-4 h-1.5 rounded-full bg-[var(--bg-elevated)] shrink-0" />
-            <span className="text-[11px] text-[var(--text-faint)]">
-              Foundation policy · 🔒 marks an item whose last stretch cannot be engineered from
-              outside
-            </span>
+            <span className="text-[11px] text-[var(--text-faint)]">Foundation policy</span>
+          </span>
+          <span className="basis-full text-[11px] text-[var(--text-faint)]">
+            🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be
+            engineered from outside.
           </span>
         </div>
 
