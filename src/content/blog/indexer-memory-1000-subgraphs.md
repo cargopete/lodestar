@@ -145,7 +145,7 @@ Working through the entity cache math with two pools:
 |------|-------|--------------------|-------|
 | Active (full cache) | 4,000 | 30 MB | ~120 GB |
 | Dormant (minimal cache) | 11,500 | 5 MB | ~58 GB |
-| Shared caches, runtimes, overhead | — | — | ~20 GB |
+| Shared caches, runtimes, overhead | - | - | ~20 GB |
 | **VM RAM total** | | | **~200 GB** |
 
 That puts the VM RAM estimate at roughly **200–400 GB**, distributed across **10–20 graph-node instances**. The wide range accounts for subgraph complexity variance: a network skewed toward heavy DeFi subgraphs lands at the top end; a mix of simpler subgraphs sits closer to 200 GB.

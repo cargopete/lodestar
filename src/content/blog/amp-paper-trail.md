@@ -67,7 +67,7 @@ The `setup-amp` README is the most quietly informative document in that list, be
 
 This is the part where people either take my word for it or do not, so here are the identifiers, which are checkable without my involvement.
 
-The fork network root of `nightswatchhq/amp` is `aUsABuisnessman/amp`, GitHub `network_root_id` **1101719220**. `nightswatchhq/amp` itself is repo id **1250506772**, carried 1,313 commits, and was archived on 6 June 2026 marked "DEPRECATED — moved to a clean standalone repo."
+The fork network root of `nightswatchhq/amp` is `aUsABuisnessman/amp`, GitHub `network_root_id` **1101719220**. `nightswatchhq/amp` itself is repo id **1250506772**, carried 1,313 commits, and was archived on 6 June 2026 marked "DEPRECATED - moved to a clean standalone repo."
 
 That clean repo is `camp-node`, repo id **1261433744**. That single id is shared by both `lodestar-team/camp-node` and `nightswatchhq/camp-node`, which is the useful bit: **an identical repository id means the repo was transferred or renamed between the two orgs, not independently re-created.** One repository, two names, no clean-room story.
 
@@ -101,7 +101,7 @@ What that means in practice, split into the two piles that actually matter:
 
 The line is "learn from it, then write your own." That is not a legal hedge, it is genuinely how this is supposed to work, and it is why [the benchmark post](/blog/yes-camp-is-better-than-amp) was careful to state on the record that it was black-box observation with no decompilation. If you are going to publish numbers about somebody else's binary, say how you got them.
 
-The camp-node README makes the same point about upstream, and I think it is worth quoting because the precision is the point: Edge & Node "distributes Amp via ampup.sh; its source is not currently published at a public URL — the BUSL `LICENSE` shipped with the code is the governing grant." The licence travels with the code, not with the repository's visibility setting. Taking the repo private does not retroactively narrow the grant on a copy that was lawfully obtained beforehand.
+The camp-node README makes the same point about upstream, and I think it is worth quoting because the precision is the point: Edge & Node "distributes Amp via ampup.sh; its source is not currently published at a public URL - the BUSL `LICENSE` shipped with the code is the governing grant." The licence travels with the code, not with the repository's visibility setting. Taking the repo private does not retroactively narrow the grant on a copy that was lawfully obtained beforehand.
 
 ## Caveats, because there are always caveats
 
