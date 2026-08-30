@@ -235,6 +235,18 @@ manifest now also records `bands x band_bits`: a token is that many hyperplane s
 the shape breaks an index exactly as changing the model does, and guarding one without the other
 would have left the same trapdoor open under a different label.
 
+**And that guard immediately earned itself, on my own mistake.** Centring shipped while the default
+was still 8x8, and *centred 8x8 gives 17% recall* against the uncentred 46%. For about an hour the
+released configuration was worse than the one it replaced, because two halves of one decision were
+treated as two decisions. The default is now centred 8x4 (67% recall, 32 bits/item), pinned by a
+test that says a change needs a newer measurement than the one in the repo. Anyone who indexed
+during that hour gets a refusal naming both shapes rather than a silently broken index, which is the
+only reason this was an inconvenience rather than an incident.
+
+**CAT-3 stays at 74%**, which is where it was put an hour ago on the strength of centring shipping.
+That number described the intended state; for an hour the actual state was worse. It is now the
+state described.
+
 ### Watching the thing everything else stands on (2026-08-29)
 
 Eighteen crons existed and **not one watched the Helsinki box**, which answers the delegation feed,
