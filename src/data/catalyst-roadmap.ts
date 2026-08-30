@@ -73,17 +73,6 @@ export const CATALYST_ITEMS: CatalystItem[] = [
     projects: [{ name: 'gib', url: 'https://github.com/nightswatchhq/gib' }],
   },
   {
-    slug: 'studio-dips',
-    label: 'Make Subgraph Studio fully network-powered',
-    coverage: 65,
-    rationale:
-      'The frontend half is largely done via the Dock. The news of 28 Aug is the protocol half: every DIPS contract is live on Arbitrum One and was fully wired on 25 August — issuance allocator, agreement manager, recurring collector, eligibility oracle — with the indexing-agreement allocation still set to zero. GIP-0088 is a governance parameter change away, not a deployment away. dips-nest indexes it and the dashboard shows it, so the moment that number moves is observable rather than announced. And the participating half turned out never to have been blocked: DIPS settles through RecurringCollector, not the query-fee path, so no gateway is involved. weaver builds and signs the agreements, and the whole accept() path is now exercised against the deployed RecurringCollector on a Sepolia fork: the happy path plus six ways it fails. That found a trap worth knowing about, because it costs a day: a payer must authorize their own key before any agreement they sign will verify, since the contract does not special-case signer == payer, and the revert blames the signature. And collect() is done too, on 30 Aug: the whole path runs against deployed Sepolia contracts, ending with the service provider actually being paid. The blocker was misstated — funded escrow is required for a broadcast, not for a fork, where GRT is dealt and the provision and deposit are ordinary calls. That leaves CAT-1 at its ceiling: what remains is a governance parameter and running pipelines we have decided not to run.',
-    projects: [
-      { name: 'dips-nest', url: 'https://github.com/nightswatchhq/dips-nest' },
-      { name: 'The Dock', url: '/dock' },
-    ],
-  },
-  {
     slug: 'multi-product-studio',
     label: 'A multi-product Studio experience',
     coverage: 66,
@@ -92,6 +81,17 @@ export const CATALYST_ITEMS: CatalystItem[] = [
     projects: [
       { name: 'Lodestar', url: '/' },
       { name: 'SQL', url: '/sql' },
+    ],
+  },
+  {
+    slug: 'studio-dips',
+    label: 'Make Subgraph Studio fully network-powered',
+    coverage: 65,
+    rationale:
+      'The frontend half is largely done via the Dock. The news of 28 Aug is the protocol half: every DIPS contract is live on Arbitrum One and was fully wired on 25 August — issuance allocator, agreement manager, recurring collector, eligibility oracle — with the indexing-agreement allocation still set to zero. GIP-0088 is a governance parameter change away, not a deployment away. dips-nest indexes it and the dashboard shows it, so the moment that number moves is observable rather than announced. And the participating half turned out never to have been blocked: DIPS settles through RecurringCollector, not the query-fee path, so no gateway is involved. weaver builds and signs the agreements, and the whole accept() path is now exercised against the deployed RecurringCollector on a Sepolia fork: the happy path plus six ways it fails. That found a trap worth knowing about, because it costs a day: a payer must authorize their own key before any agreement they sign will verify, since the contract does not special-case signer == payer, and the revert blames the signature. And collect() is done too, on 30 Aug: the whole path runs against deployed Sepolia contracts, ending with the service provider actually being paid. The blocker was misstated — funded escrow is required for a broadcast, not for a fork, where GRT is dealt and the provision and deposit are ordinary calls. That leaves CAT-1 at its ceiling: what remains is a governance parameter and running pipelines we have decided not to run.',
+    projects: [
+      { name: 'dips-nest', url: 'https://github.com/nightswatchhq/dips-nest' },
+      { name: 'The Dock', url: '/dock' },
     ],
   },
   {
