@@ -589,6 +589,39 @@ function NamedQueries() {
  */
 function TakeAReceipt({ name, args }: { name: string; args: Record<string, string> }) {
   const [copied, setCopied] = useState(false);
+  const [issuing, setIssuing] = useState(false);
+  const [issueError, setIssueError] = useState<string | null>(null);
+
+  // Downloaded rather than displayed: a receipt is a file you hand somebody, and the useful next
+  // step is dropping it on /verify or replaying it, neither of which wants it pasted out of a page.
+  const download = useCallback(async () => {
+    setIssuing(true);
+    setIssueError(null);
+    try {
+      const res = await fetch('/api/sql/receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, args }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setIssueError(json.error ?? `Request failed (${res.status}).`);
+        return;
+      }
+      const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt-${name}-${args.before_block ?? 'pinned'}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setIssueError('Could not reach the receipt API.');
+    } finally {
+      setIssuing(false);
+    }
+  }, [name, args]);
+
   const argLine = Object.entries(args)
     .filter(([, v]) => v !== '')
     .map(([k, v]) => `--arg ${k}=${v}`)
@@ -599,8 +632,30 @@ function TakeAReceipt({ name, args }: { name: string; args: Record<string, strin
 
   return (
     <div className="mt-3 pt-3 border-t-[0.5px] border-[var(--border)]">
-      <div className="flex items-center justify-between gap-2 mb-1">
+      <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[11px] font-medium text-[var(--text)]">Take a signed receipt</span>
+        <button
+          onClick={() => void download()}
+          disabled={issuing}
+          className="text-[10px] px-2 py-0.5 rounded-[var(--radius-button)] bg-[var(--accent)] text-[var(--accent-text)] disabled:opacity-50"
+        >
+          {issuing ? 'signing…' : 'download'}
+        </button>
+      </div>
+
+      {issueError && (
+        <p className="text-[10px] text-[var(--amber)] font-mono break-words mb-2">{issueError}</p>
+      )}
+
+      <p className="text-[10px] text-[var(--text-faint)] mb-2 leading-relaxed">
+        Signed by this dashboard, so it is worth what this dashboard is worth. What makes a receipt
+        evidence is <strong className="text-[var(--text)]">replay</strong>: anyone with a nest of the
+        same data can re-ask the question and compare hashes, and agreement between parties who did
+        not coordinate is the part a signature cannot fake. Or sign it yourself:
+      </p>
+
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <span className="text-[10px] text-[var(--text-faint)]">with your own key</span>
         <button
           onClick={() => {
             void navigator.clipboard?.writeText(cmd.replace(/\\\n/g, ' ')).then(

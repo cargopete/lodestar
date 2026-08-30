@@ -44,6 +44,8 @@ const LIMITS: Array<[RegExp, number]> = [
   // advance, where an arbitrary SELECT has a cost profile a stranger can explore for free by
   // trying things. Declaring your question buys a better allowance.
   [/^\/api\/sql\/named/, 15],
+  // Signing is cheap; the query behind it is not, and each one is a request we put our name to.
+  [/^\/api\/sql\/receipt/, 10],
   [/^\/api\/sql\//, 30],
   [/^\/api\//, 200],
 ];

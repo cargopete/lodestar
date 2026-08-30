@@ -1,4 +1,42 @@
 /**
+ * Sign an answer into a receipt.
+ *
+ * **Here rather than in TypeScript, and that is the whole point of this crate.** A second
+ * implementation of the canonical encoding would be a second set of decisions about key ordering,
+ * integer formatting and length prefixes, and the day they disagree a verifier reports a forgery
+ * that never happened. Issuing and verifying must share one implementation or neither is worth
+ * anything.
+ *
+ * Signing needs no randomness - Ed25519 is deterministic - so this stays inside the
+ * `--no-default-features` build that cannot generate a key or open a socket.
+ *
+ * `body_json` is the receipt body; `rows_json` the rows it attests to; `key_hex` 32 bytes of hex.
+ * The key is a **server-side secret**: calling this in a browser would hand it to the reader.
+ * @param {string} body_json
+ * @param {string} rows_json
+ * @param {string} key_hex
+ * @returns {string}
+ */
+export function issue_receipt(body_json, rows_json, key_hex) {
+    let deferred4_0;
+    let deferred4_1;
+    try {
+        const ptr0 = passStringToWasm0(body_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(rows_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(key_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.issue_receipt(ptr0, len0, ptr1, len1, ptr2, len2);
+        deferred4_0 = ret[0];
+        deferred4_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+    }
+}
+
+/**
  * The canonical result hash of a JSON array of rows, for anyone wanting to check the hash of data
  * they hold against a receipt they were sent.
  * @param {string} rows_json
