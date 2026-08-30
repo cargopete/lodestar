@@ -101,7 +101,7 @@ it ourselves.
 | CAT-2 | New gateway operators | RFC-002 | 60% | **68%** 🔺 | 95% | ~75% | gib |
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | **~65%** 🔻 | SDSCE |
-| CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | **~60%** 🔻 | Dispatch |
+| CAT-5 | RPC service | RFC-005 | 62% | **55%** 🔺 | 95% | **~60%** 🔻 | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **48%** 🔺 | 85% 🔒 | **48%** 🔻 | chain-integration-ds |
 | CAT-8 | Institutional audit layer | RFC-008 | 5% | **36%** 🔺 | 80% 🔒 | ~45% | tattler |
@@ -127,6 +127,30 @@ the code does not move this as far as finishing code usually does.
 
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
+
+### CAT-5 50% → 55%: an audit brief somebody else can fund
+
+The re-cut ceiling named the deliverable — *"the re-scoped audit brief, not the audit"* — so it has
+been written. [`dispatch/docs/audit-scope.md`](https://github.com/nightswatchhq/dispatch/blob/main/docs/audit-scope.md).
+
+The point of a scope document is that it makes an audit **cheap to buy and hard to waste**, which is
+the most useful thing available to a group with no budget for one. It carries the surface measured
+rather than described (365 lines, 13 external functions, 36 tests, the function list so a quote can
+be written without cloning), and three lists that matter more than the prose:
+
+- **Already established, do not re-derive.** 18.44 GRT settled on mainnet, so collection is not
+  theoretical; the collect encoding checked against what `GraphTallyCollector` actually decodes; H-1
+  disproved by proof-of-concept rather than argument; H-2, H-3, M-1 and L-2 gone by deletion, since
+  the April audit targeted a different and larger contract. **An auditor charging to rediscover
+  these is charging for our homework.**
+- **What to actually audit**, in the order we would pay for it: the collect path and its arithmetic,
+  upgrade authority, registration invariants, pausing, then the leftover CEI style issue.
+- **Explicitly out of scope**, because this is where hours quietly go: slashing and fraud proofs
+  (`slash()` reverts and that is now a product decision), issuance (none), the Rust gateway, and
+  Graph's own upstream contracts.
+
+It also discloses unprompted what an auditor finds in an hour anyway: owner is a single EOA, nobody
+is serving, and the contract is unaudited in its current shape.
 
 ### The invitation now leads somewhere. CAT-2 64% → 68% (2026-08-30)
 
@@ -405,7 +429,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 57.4%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 58.0%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
