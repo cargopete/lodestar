@@ -19,9 +19,22 @@ import { cn } from '@/lib/utils';
 
 interface Verdict {
   ok: boolean;
-  verdict: 'ok' | 'malformed' | 'rows_altered' | 'bad_signature' | 'error';
+  /** `not_proven` and `no_commitment` only ever come back for a disclosure. */
+  verdict:
+    | 'ok'
+    | 'malformed'
+    | 'rows_altered'
+    | 'bad_signature'
+    | 'not_proven'
+    | 'no_commitment'
+    | 'error';
   detail?: string;
+  /** Which of the two artefacts this was read as. Decided here, not by the reader. */
+  kind?: 'receipt' | 'disclosure';
   body?: {
+    merkle_root?: string | null;
+    disclosed_row?: Record<string, unknown>;
+    path_len?: number;
     nid: string | null;
     dataset: string;
     query: string;
@@ -35,17 +48,23 @@ interface Verdict {
 }
 
 type WasmModule = {
-  default: (path?: string) => Promise<unknown>;
+  default: (init?: { module_or_path: string }) => Promise<unknown>;
   verify_receipt: (json: string) => string;
+  verify_disclosure: (json: string) => string;
 };
 
-const PLACEHOLDER = `Paste a receipt here, or drop the .json file anywhere on this page.
+const PLACEHOLDER = `Paste a receipt or a disclosure here, or drop the .json file anywhere on
+this page. Which one it is is worked out from its shape.
 
-Produce one with:
+Produce a receipt with:
   tattler attest --endpoint https://www.lodestar-dashboard.com \\
     --dataset staking --as-of 497000000 \\
     --query "SELECT ... WHERE block_number <= 497000000" \\
-    --key issuer.key --out receipt.json`;
+    --key issuer.key --out receipt.json
+
+And a disclosure, showing one row of it and no others, with:
+  tattler disclose --receipt receipt.json \\
+    --matching delegator=0x... --out disclosure.json`;
 
 export default function VerifyPage() {
   const [text, setText] = useState('');
@@ -66,7 +85,10 @@ export default function VerifyPage() {
           p: string
         ) => Promise<WasmModule>;
         const mod = await importAtRuntime('/tattler/tattler_wasm.js');
-        await mod.default('/tattler/tattler_wasm_bg.wasm');
+        // The object form, not the bare path: wasm-bindgen still accepts a string and warns that
+        // it is deprecated, and a deprecation warning on the one page whose whole argument is that
+        // it can be trusted is noise nobody should have to weigh up.
+        await mod.default({ module_or_path: '/tattler/tattler_wasm_bg.wasm' });
         if (cancelled) return;
         wasm.current = mod;
         setReady(true);
@@ -86,7 +108,24 @@ export default function VerifyPage() {
       return;
     }
     try {
-      setVerdict(JSON.parse(wasm.current.verify_receipt(raw)) as Verdict);
+      // A disclosure carries a `proof` and no rows; a receipt carries rows and no proof. Routing on
+      // the shape rather than asking the reader to pick, because someone handed one of these has no
+      // reason to know which they were sent, and the two make different claims. Checking one as the
+      // other would report a bad paste for an artefact that is perfectly good.
+      let isDisclosure = false;
+      try {
+        const parsed = JSON.parse(raw) as { proof?: unknown };
+        isDisclosure = typeof parsed === 'object' && parsed !== null && 'proof' in parsed;
+      } catch {
+        // Not JSON at all. Fall through to the receipt path, which names that properly.
+      }
+      const out = isDisclosure
+        ? wasm.current.verify_disclosure(raw)
+        : wasm.current.verify_receipt(raw);
+      setVerdict({
+        ...(JSON.parse(out) as Verdict),
+        kind: isDisclosure ? 'disclosure' : 'receipt',
+      });
     } catch (e) {
       setVerdict({ ok: false, verdict: 'error', detail: String(e) });
     }
@@ -126,9 +165,10 @@ export default function VerifyPage() {
             tattler
           </a>{' '}
           receipt: whether the rows still hash to what was signed, and whether the signature covers
-          the body. This runs entirely in your browser, on the same compiled Rust the command-line
-          tool runs. Nothing is uploaded, because checking a receipt against our server would mean
-          trusting us.
+          the body. Or a disclosure, which shows one row of an answer and proves it belonged there
+          without handing over the rest. This runs entirely in your browser, on the same compiled
+          Rust the command-line tool runs. Nothing is uploaded, because checking a receipt against
+          our server would mean trusting us.
         </p>
       </header>
 
@@ -158,6 +198,27 @@ export default function VerifyPage() {
 
         <div className="space-y-4">
           {verdict && <VerdictCard v={verdict} />}
+
+          {/* What a disclosure does and does not hide, stated up front rather than in the docs. */}
+          <Card>
+            <h3 className="text-sm font-semibold text-[var(--text)] mb-1">
+              What a disclosure shows
+            </h3>
+            <p className="text-[13px] text-[var(--text-muted)] leading-relaxed">
+              One row, how many rows there were, and the question that was asked. Not the other
+              rows: those are present only as hashes of hashes, and the answer they came from is
+              never sent. It is for the ordinary case where a counterparty wants to check a single
+              line and the holder will prove that line without publishing the book.
+            </p>
+            <p className="text-[13px] text-[var(--text-muted)] leading-relaxed mt-2">
+              The limit worth knowing: the leaves are{' '}
+              <strong className="text-[var(--text)]">not salted</strong>, so anyone holding a
+              disclosure can test a guess at a neighbouring row by hashing it. Against rows carrying
+              an address or a <code className="font-mono text-[11px]">uint256</code> that is no
+              help at all. Against rows drawn from a small set, a single low-cardinality column
+              say, it is trivial. Disclose from the former.
+            </p>
+          </Card>
 
           {/* The honest limit, stated where it cannot be missed rather than in a footnote. */}
           <Card>
@@ -191,13 +252,28 @@ export default function VerifyPage() {
 
 function VerdictCard({ v }: { v: Verdict }) {
   const tone = v.ok ? 'var(--green)' : 'var(--amber)';
-  const label: Record<Verdict['verdict'], string> = {
-    ok: 'Signature valid, rows unaltered',
-    rows_altered: 'The rows were changed after signing',
-    bad_signature: 'The signature does not cover this body',
-    malformed: 'Not a receipt',
-    error: 'Could not check this',
-  };
+  // A disclosure and a receipt do not make the same claim, so a green tick must not read the same
+  // way for both. "rows unaltered" would be an outright lie about a disclosure: it carries no rows.
+  const label: Record<Verdict['verdict'], string> =
+    v.kind === 'disclosure'
+      ? {
+          ok: 'This row was in the answer that was signed',
+          rows_altered: 'The rows were changed after signing',
+          bad_signature: 'The signature does not cover this body',
+          not_proven: 'Signed body, and this row does not belong to it',
+          no_commitment: 'That answer committed to nothing to prove against',
+          malformed: 'Not a disclosure',
+          error: 'Could not check this',
+        }
+      : {
+          ok: 'Signature valid, rows unaltered',
+          rows_altered: 'The rows were changed after signing',
+          bad_signature: 'The signature does not cover this body',
+          not_proven: 'Signed body, and this row does not belong to it',
+          no_commitment: 'That answer committed to nothing to prove against',
+          malformed: 'Not a receipt',
+          error: 'Could not check this',
+        };
 
   return (
     <Card className={cn('border-[0.5px]')} >
@@ -210,6 +286,21 @@ function VerdictCard({ v }: { v: Verdict }) {
 
       {v.detail && (
         <p className="text-[12px] text-[var(--text-muted)] font-mono break-words mb-3">{v.detail}</p>
+      )}
+
+      {v.kind === 'disclosure' && v.body?.disclosed_row && (
+        <div className="mb-3">
+          <div className="text-[var(--text-faint)] uppercase tracking-wide text-[10px] mb-1">
+            the one row being shown, of {v.body.row_count}
+          </div>
+          <pre className="font-mono text-[11px] text-[var(--text)] whitespace-pre-wrap break-words bg-[var(--bg-elevated)] rounded p-2">
+            {JSON.stringify(v.body.disclosed_row, null, 1)}
+          </pre>
+          <p className="text-[11px] text-[var(--text-faint)] mt-1.5">
+            The other {v.body.row_count - 1} are not here and cannot be recovered from what you
+            hold. {v.body.path_len} sibling hashes were enough to prove this one belongs.
+          </p>
+        </div>
       )}
 
       {v.body && (
@@ -239,7 +330,9 @@ function VerdictCard({ v }: { v: Verdict }) {
         <div className="mt-3">
           <Badge variant="default">unreplayed</Badge>
           <span className="text-[11px] text-[var(--text-faint)] ml-2">
-            nobody has independently reproduced this yet
+            {v.kind === 'disclosure'
+              ? 'the row is authentic; whether the answer was true is a separate question'
+              : 'nobody has independently reproduced this yet'}
           </span>
         </div>
       )}

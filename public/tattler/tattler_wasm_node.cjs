@@ -60,6 +60,32 @@ function result_hash(rows_json) {
 exports.result_hash = result_hash;
 
 /**
+ * Verify a **disclosure**: one row proved to have been in a signed answer, without the answer.
+ *
+ * A separate entry point from [`verify_receipt`] rather than one that sniffs the shape, because
+ * the two say different things and a reader must not be left guessing which they were told. A
+ * receipt says "these are all the rows". A disclosure says "this row was among rows you are not
+ * being shown", and how many there were.
+ * @param {string} json
+ * @returns {string}
+ */
+function verify_disclosure(json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.verify_disclosure(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+exports.verify_disclosure = verify_disclosure;
+
+/**
  * Verify a receipt supplied as JSON text.
  *
  * Returns JSON: `{ok, verdict, detail?, body?}`. A string rather than a rich type because the

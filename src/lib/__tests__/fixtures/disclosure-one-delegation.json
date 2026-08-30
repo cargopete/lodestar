@@ -1,0 +1,57 @@
+{
+  "body": {
+    "nid": null,
+    "dataset": "staking",
+    "query": "SELECT block_number, block_timestamp, delegator, tokens, shares, tx_hash\nFROM staking__tokens_delegated\nWHERE serviceProvider = '0xfeff9093f6b32d0e5cddba743b06a1fedb87c004' AND block_number <= 497000000\nORDER BY block_number DESC\nLIMIT 500",
+    "as_of_block": 497000000,
+    "sealed_through": 499944633,
+    "registry_hash": "0xbfb02cde4d07cab26cd815c5534f895b0e756dfab5af231b03a9272f62a9ad7b",
+    "result_hash": "0x8a4981e171f8e73f1f18adccf0a851dbe361e45106e57921898906a9c1e4a148",
+    "row_count": 34,
+    "issued_at": "2026-08-30T12:43:27.989136Z",
+    "query_name": "delegations_to_indexer",
+    "query_args": {
+      "before_block": "497000000",
+      "indexer": "0xfeff9093f6b32d0e5cddba743b06a1fedb87c004"
+    },
+    "merkle_root": "0xacfb2d832c51606f1f6b3eb42e201e9c9b0a018392004ab713b884dc614f5fb3"
+  },
+  "pubkey": "73edf0735750f47c39832162566c78fc513d0ffd9eedf3e87b0aec9c24fd5155",
+  "signature": "d6f2d5a520c0959c86dab7956d0928aa7f375f4f8ec609fbc85fde76b2d9f18c8de0e12933e93dee399d7444d972d70a16167299e6539d6bde59a8fe9190ab05",
+  "proof": {
+    "row": {
+      "block_number": 493449825,
+      "block_timestamp": 1786458211,
+      "delegator": "0x9ebed36285e65a5591e42bed37f817541c642ebe",
+      "shares": "281478775061411144853",
+      "tokens": "3310247906480000000000",
+      "tx_hash": "0x96f4b78f750c4516a8d4c5706d07484290d90132bf43319bdd1a5f7e741130a9"
+    },
+    "path": [
+      {
+        "sibling": "0x087de02ce6a1ee80e103127fc37decb16c4f53e34dff88e5fe48b3e6d0a8fb1d",
+        "sibling_is_left": true
+      },
+      {
+        "sibling": "0xfc213b3232759704390088aae76cc9250b518c06aedcb370e9e78daff6290878",
+        "sibling_is_left": false
+      },
+      {
+        "sibling": "0xe1be0ddef31d9b73dd515fd193e11f02fdb980258babce83c0409b4ab07cf509",
+        "sibling_is_left": false
+      },
+      {
+        "sibling": "0x6f3b65c9d7f0378eca3326577545566a4a58b424b9cb29d1f929908807014055",
+        "sibling_is_left": false
+      },
+      {
+        "sibling": "0x696973b138596ef43b8ef77479815a5797b59f580a34802cb68ecf31fc674d78",
+        "sibling_is_left": false
+      },
+      {
+        "sibling": "0xc4eb3c7fc8aba03fc713ab977b9ed320db40717a68b38a3e09ad44e4d22c2c06",
+        "sibling_is_left": false
+      }
+    ]
+  }
+}

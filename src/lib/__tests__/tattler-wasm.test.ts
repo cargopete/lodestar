@@ -30,12 +30,15 @@ const FROZEN_HASH = '0x87bace01dd464438c431fdac73191fb479f5d2ffbf02a20b4e784978a
 
 interface Wasm {
   verify_receipt: (json: string) => string;
+  verify_disclosure: (json: string) => string;
   result_hash: (rowsJson: string) => string;
 }
 
 let wasm: Wasm;
 let receipt: string;
 let namedReceipt: string;
+let merkleReceipt: string;
+let disclosure: string;
 
 beforeAll(() => {
   wasm = require(path.join(PUBLIC, 'tattler_wasm_node.cjs')) as Wasm;
@@ -43,6 +46,8 @@ beforeAll(() => {
     readFileSync(path.join(process.cwd(), 'src/lib/__tests__/fixtures', n), 'utf8');
   receipt = fixture('receipt-staking-497000000.json');
   namedReceipt = fixture('receipt-named-net-delegation.json');
+  merkleReceipt = fixture('receipt-merkle-delegations.json');
+  disclosure = fixture('disclosure-one-delegation.json');
 });
 
 const check = (json: string) => JSON.parse(wasm.verify_receipt(json));
@@ -93,6 +98,62 @@ describe('the shipped tattler verifier', () => {
     expect(r.verdict, 'stale wasm: rebuild it from the tattler repo').toBe('ok');
     expect(r.body.query_name).toBe('net_delegation_to_indexer');
     expect(r.body.query_args.before_block).toBe('497000000');
+  });
+
+  /**
+   * Shape three: a receipt carrying `merkle_root`. Added for the same reason as the named shape
+   * above, before it could bite rather than after. A stale verifier would drop the field, compute
+   * the signing bytes without it and call an honest receipt a forgery.
+   */
+  it('accepts a receipt in the newer Merkle shape', () => {
+    const r = check(merkleReceipt);
+    expect(r.verdict, 'stale wasm: rebuild it with tattler/wasm/build.sh').toBe('ok');
+    expect(r.body.merkle_root).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(r.body.row_count).toBe(34);
+  });
+
+  /** Shape four: a disclosure, which carries no rows at all. */
+  it('accepts a disclosure and says what it proves', () => {
+    const d = JSON.parse(wasm.verify_disclosure(disclosure));
+    expect(d.verdict, 'stale wasm: rebuild it with tattler/wasm/build.sh').toBe('ok');
+    expect(d.ok).toBe(true);
+    // What the recipient learns: one row, and how many there were.
+    expect(d.body.disclosed_row.delegator).toMatch(/^0x[0-9a-f]{40}$/);
+    expect(d.body.row_count).toBe(34);
+    expect(d.body.path_len).toBe(6);
+  });
+
+  /** And what it must not learn. This is the privacy claim, checked against the bytes. */
+  it('a disclosure carries no rows', () => {
+    const parsed = JSON.parse(disclosure);
+    expect(parsed.rows).toBeUndefined();
+    const shown = parsed.proof.row.tx_hash;
+    const all = JSON.parse(merkleReceipt).rows as Array<{ tx_hash: string }>;
+    for (const row of all) {
+      if (row.tx_hash === shown) continue;
+      expect(disclosure, `row ${row.tx_hash} leaked`).not.toContain(row.tx_hash);
+    }
+  });
+
+  it('separates a forged proof from an edited body', () => {
+    const swapped = JSON.parse(disclosure);
+    swapped.proof.row = { ...swapped.proof.row, tokens: '999999999999999999999' };
+    expect(JSON.parse(wasm.verify_disclosure(JSON.stringify(swapped))).verdict).toBe('not_proven');
+
+    const edited = JSON.parse(disclosure);
+    edited.body.row_count = 1;
+    expect(JSON.parse(wasm.verify_disclosure(JSON.stringify(edited))).verdict).toBe(
+      'bad_signature'
+    );
+  });
+
+  /**
+   * A receipt is not a disclosure and must not be checked as one. They make different claims: a
+   * receipt says "these are all the rows", a disclosure says "this row was among rows you are not
+   * being shown". Reading one as the other would tell a reader the wrong thing about what they hold.
+   */
+  it('refuses a receipt handed to the disclosure checker', () => {
+    expect(JSON.parse(wasm.verify_disclosure(receipt)).verdict).toBe('malformed');
   });
 
   it('calls a bad paste malformed rather than a forgery', () => {

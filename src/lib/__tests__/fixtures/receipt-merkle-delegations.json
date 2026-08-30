@@ -1,0 +1,295 @@
+{
+  "body": {
+    "nid": null,
+    "dataset": "staking",
+    "query": "SELECT block_number, block_timestamp, delegator, tokens, shares, tx_hash\nFROM staking__tokens_delegated\nWHERE serviceProvider = '0xfeff9093f6b32d0e5cddba743b06a1fedb87c004' AND block_number <= 497000000\nORDER BY block_number DESC\nLIMIT 500",
+    "as_of_block": 497000000,
+    "sealed_through": 499944633,
+    "registry_hash": "0xbfb02cde4d07cab26cd815c5534f895b0e756dfab5af231b03a9272f62a9ad7b",
+    "result_hash": "0x8a4981e171f8e73f1f18adccf0a851dbe361e45106e57921898906a9c1e4a148",
+    "row_count": 34,
+    "issued_at": "2026-08-30T12:43:27.989136Z",
+    "query_name": "delegations_to_indexer",
+    "query_args": {
+      "before_block": "497000000",
+      "indexer": "0xfeff9093f6b32d0e5cddba743b06a1fedb87c004"
+    },
+    "merkle_root": "0xacfb2d832c51606f1f6b3eb42e201e9c9b0a018392004ab713b884dc614f5fb3"
+  },
+  "rows": [
+    {
+      "block_number": 496271395,
+      "block_timestamp": 1787168310,
+      "delegator": "0x32759011a15627befa1681f252575f2c20550afd",
+      "shares": "10833760921509003869819",
+      "tokens": "129883398187980000000000",
+      "tx_hash": "0x76f2c9dddac29c10b592dcdbaf4a467bd564fef6d8d59c1ecc35c0e5c17c8d28"
+    },
+    {
+      "block_number": 495859718,
+      "block_timestamp": 1787064789,
+      "delegator": "0x9ebed36285e65a5591e42bed37f817541c642ebe",
+      "shares": "1805429841949480165355",
+      "tokens": "21644871505040000000000",
+      "tx_hash": "0xc3a303b13a23868ad141fab6ac4d1c63f9d2588996ca810496c0b35eb85f58f6"
+    },
+    {
+      "block_number": 494542297,
+      "block_timestamp": 1786732824,
+      "delegator": "0xcdb918200c36537196a4ef7e6ad1edf55b8cb2c3",
+      "shares": "585120875023718248724",
+      "tokens": "7000000000000000000000",
+      "tx_hash": "0x1a549eb8a3ea44de6c59dde54051756e5a6f5d7a4970be120c7ce647e585e2b3"
+    },
+    {
+      "block_number": 493800890,
+      "block_timestamp": 1786546518,
+      "delegator": "0x9ebed36285e65a5591e42bed37f817541c642ebe",
+      "shares": "873055595459677705420",
+      "tokens": "10267312185370000000000",
+      "tx_hash": "0x7ade8e5c227aa18365967f0894771fc7a6159f94ac66d278ccb5849c9c26dd50"
+    },
+    {
+      "block_number": 493564207,
+      "block_timestamp": 1786486882,
+      "delegator": "0xcdb918200c36537196a4ef7e6ad1edf55b8cb2c3",
+      "shares": "510195217422357358862",
+      "tokens": "6000000000000000000000",
+      "tx_hash": "0xa145ccc79e804a438b6dc77e499d410b41f69b164c8365691402812a9951882b"
+    },
+    {
+      "block_number": 493449825,
+      "block_timestamp": 1786458211,
+      "delegator": "0x9ebed36285e65a5591e42bed37f817541c642ebe",
+      "shares": "281478775061411144853",
+      "tokens": "3310247906480000000000",
+      "tx_hash": "0x96f4b78f750c4516a8d4c5706d07484290d90132bf43319bdd1a5f7e741130a9"
+    },
+    {
+      "block_number": 492810644,
+      "block_timestamp": 1786297565,
+      "delegator": "0x0797e57fcd7db92f4a1ab2cd2e3a414daa10feb4",
+      "shares": "326703662048550906474",
+      "tokens": "3842101817800000000000",
+      "tx_hash": "0x0dd30994a17a5683c192bed0ff7704b58a2e67d9fa5bf35ed5b6bfd33ff8136d"
+    },
+    {
+      "block_number": 492618393,
+      "block_timestamp": 1786249135,
+      "delegator": "0x371a4004aae7990f0b32b61b8ff4a9c2e0ccd2fe",
+      "shares": "76562254614339241095",
+      "tokens": "900000000000000000000",
+      "tx_hash": "0xefd3de5abb409fb39bbea1e5443b0fe9d9491b713ef667b9150dd499003c3474"
+    },
+    {
+      "block_number": 491822029,
+      "block_timestamp": 1786048761,
+      "delegator": "0x9ebed36285e65a5591e42bed37f817541c642ebe",
+      "shares": "95521424433670246286",
+      "tokens": "1122867125360000000000",
+      "tx_hash": "0x528a3049be9dd03073aa13110e36b421e550163392095deb4964e4822069912f"
+    },
+    {
+      "block_number": 491628289,
+      "block_timestamp": 1786000306,
+      "delegator": "0x128dc36b1954f7ff6e8604efd5ec849d01ae93b4",
+      "shares": "1320723520324137413061",
+      "tokens": "15500000000000000000000",
+      "tx_hash": "0x5a845019d2d5aa82438feab24528ff6cbfebc2e102f68a67fb0ee63c8c0689b3"
+    },
+    {
+      "block_number": 491514449,
+      "block_timestamp": 1785971686,
+      "delegator": "0x737760e1da3632d4f0a0c4c244e674b3a08fb488",
+      "shares": "852080189695349562539",
+      "tokens": "10000000000000000000000",
+      "tx_hash": "0x9b2c56816f71cebf6d75a66c56df37fd2908a2a89d83e87e0c3fbc6a528b6c4a"
+    },
+    {
+      "block_number": 491349017,
+      "block_timestamp": 1785930330,
+      "delegator": "0xcdb918200c36537196a4ef7e6ad1edf55b8cb2c3",
+      "shares": "511248113817209737523",
+      "tokens": "6000000000000000000000",
+      "tx_hash": "0xbb89effa686130490e4a7fadaf27e1870a6ff58c125a377f77abb4748d94d44e"
+    },
+    {
+      "block_number": 491094091,
+      "block_timestamp": 1785866390,
+      "delegator": "0x0797e57fcd7db92f4a1ab2cd2e3a414daa10feb4",
+      "shares": "1329762320067185587665",
+      "tokens": "15606070134580000000000",
+      "tx_hash": "0x4f612072ac875e4829587e0c3b0d3ba890f0196abc1a378ee278f0bbfbc6f2cc"
+    },
+    {
+      "block_number": 490738326,
+      "block_timestamp": 1785777262,
+      "delegator": "0x9ebed36285e65a5591e42bed37f817541c642ebe",
+      "shares": "85208018969534956253",
+      "tokens": "1000000000000000000000",
+      "tx_hash": "0x2e017b0854d190c71d3a547529cd383c7b7d342665ffa0e635db4365fbab6fbd"
+    },
+    {
+      "block_number": 490732755,
+      "block_timestamp": 1785775870,
+      "delegator": "0x9ebed36285e65a5591e42bed37f817541c642ebe",
+      "shares": "85208018969534956253",
+      "tokens": "1000000000000000000000",
+      "tx_hash": "0xb118b48a61698a562e21f847f4dfdcdd6dba35600127f5c87a3bac2802f3dd40"
+    },
+    {
+      "block_number": 490685392,
+      "block_timestamp": 1785764048,
+      "delegator": "0xb85abe3f491ca6523e2595e756987b158704cf05",
+      "shares": "8520801896953495625391",
+      "tokens": "100000000000000000000000",
+      "tx_hash": "0xdf6988db47356e2933d23badae19840f12d368aa5f0edad220ced523d10ccce5"
+    },
+    {
+      "block_number": 490418410,
+      "block_timestamp": 1785696716,
+      "delegator": "0xb67e2a801000703c56e491d449fe1681f85acaf2",
+      "shares": "2641448588055583643871",
+      "tokens": "31000000000000000000000",
+      "tx_hash": "0x8c03b68022bdbabe95cae7de3eafd9bf19e948c06465410cfb921428fba8bdc5"
+    },
+    {
+      "block_number": 490408756,
+      "block_timestamp": 1785694289,
+      "delegator": "0x371a4004aae7990f0b32b61b8ff4a9c2e0ccd2fe",
+      "shares": "426040094847674781269",
+      "tokens": "5000000000000000000000",
+      "tx_hash": "0xcd1c388d09e2f2133fe4480784d1fda4f47863ab5415bd760db412d585a56dae"
+    },
+    {
+      "block_number": 490291853,
+      "block_timestamp": 1785664953,
+      "delegator": "0x0797e57fcd7db92f4a1ab2cd2e3a414daa10feb4",
+      "shares": "284099998270437204584",
+      "tokens": "3334193209820000000000",
+      "tx_hash": "0x5fc6c82744becdc1ed642e850c53940f701a115c3f6148965e3c8f85cab0c19c"
+    },
+    {
+      "block_number": 488959846,
+      "block_timestamp": 1785331524,
+      "delegator": "0x31902cab2992b1ce4d216b909f6110cb80093e0a",
+      "shares": "852725756984799682743",
+      "tokens": "10000000000000000000000",
+      "tx_hash": "0x55b8d69aa6a17746d60dd7ac94479a0a5bf18f059192d0e12cb7d187a9232512"
+    },
+    {
+      "block_number": 488714050,
+      "block_timestamp": 1785270017,
+      "delegator": "0x9ebed36285e65a5591e42bed37f817541c642ebe",
+      "shares": "85272575698479968274",
+      "tokens": "1000000000000000000000",
+      "tx_hash": "0x10de5c88ea2e3adc3ad50c9d3f9b950179958b2ef3041b56d18fecbc2fe4e2db"
+    },
+    {
+      "block_number": 488638919,
+      "block_timestamp": 1785251238,
+      "delegator": "0x80e956bd248706e6835a45a978cfb427fbda4ad8",
+      "shares": "426362878492399841371",
+      "tokens": "5000000000000000000000",
+      "tx_hash": "0x2b90943fd17f43d79ad2a134e82ad980cbbff1c6d8add8cc6207dd25f1de5b39"
+    },
+    {
+      "block_number": 487996004,
+      "block_timestamp": 1785090539,
+      "delegator": "0xcdb918200c36537196a4ef7e6ad1edf55b8cb2c3",
+      "shares": "512168146311298605527",
+      "tokens": "6000000000000000000000",
+      "tx_hash": "0xe5515b01506e1ab3f0ade32b3c8ae745d449126e88f57cdc38d46d8eda3af28d"
+    },
+    {
+      "block_number": 487574550,
+      "block_timestamp": 1784984967,
+      "delegator": "0x9b38ff7c70c326f1124a8731f2a920403ae42ee0",
+      "shares": "70513475272867154968",
+      "tokens": "826058501850000000000",
+      "tx_hash": "0xdb88f4662db9b76f9b20d4553978d3d38aad8bf944e2990377314860ebda9cd7"
+    },
+    {
+      "block_number": 487571874,
+      "block_timestamp": 1784984300,
+      "delegator": "0x9b38ff7c70c326f1124a8731f2a920403ae42ee0",
+      "shares": "54803800260172589068",
+      "tokens": "642021187630000000000",
+      "tx_hash": "0x4eb628aee0965def7331a85b9f41590ffa987f43f1fcb7a29f9135094ab0d1b0"
+    },
+    {
+      "block_number": 486781428,
+      "block_timestamp": 1784786620,
+      "delegator": "0x371a4004aae7990f0b32b61b8ff4a9c2e0ccd2fe",
+      "shares": "428983234757706293667",
+      "tokens": "5000000000000000000000",
+      "tx_hash": "0x98f3bf224f0088e9abb1f7af6c842e97599302025de24c0ad6bc881ae4623e29"
+    },
+    {
+      "block_number": 486533729,
+      "block_timestamp": 1784724551,
+      "delegator": "0x01661fbb056605672897d0d8fc86b985ecbd7a90",
+      "shares": "461462012171766530951",
+      "tokens": "5378555323174861970366",
+      "tx_hash": "0x6fb09dd26cc3575feb91bae19d6d7bb005b228b0a184bcf3aa6544c6891a0aca"
+    },
+    {
+      "block_number": 486012297,
+      "block_timestamp": 1784594156,
+      "delegator": "0xb3cb3b4385b08bd5dcf59ea30169804cbd5229ad",
+      "shares": "20889245827423953246",
+      "tokens": "242877208072610958251",
+      "tx_hash": "0x447fc399ae24c69a178059f0df5de87e4a3deda4989f60677ebb63dfc602d53a"
+    },
+    {
+      "block_number": 486012171,
+      "block_timestamp": 1784594125,
+      "delegator": "0xd856da0e687820205bcbcd80e12f63f9b3e726e5",
+      "shares": "43003717790552975502292",
+      "tokens": "500000000000000000000000",
+      "tx_hash": "0xe305b8883e5ab5a67faf7cd9f46c830cb3cb87c1032a80cd07740f6feb8c2530"
+    },
+    {
+      "block_number": 485906094,
+      "block_timestamp": 1784567586,
+      "delegator": "0x9ebed36285e65a5591e42bed37f817541c642ebe",
+      "shares": "86007435581105951004",
+      "tokens": "1000000000000000000000",
+      "tx_hash": "0x9de01044ad12e7e1d2ca6129da1eb26747d099d198b92b27bc6579b15f3c24cd"
+    },
+    {
+      "block_number": 485556205,
+      "block_timestamp": 1784480112,
+      "delegator": "0xcdb918200c36537196a4ef7e6ad1edf55b8cb2c3",
+      "shares": "430037177905529755022",
+      "tokens": "5000000000000000000000",
+      "tx_hash": "0x1b17af4d8ee59fd6ce9f4987e2b077630b1758e947efabb0cbfca8c60e47f88e"
+    },
+    {
+      "block_number": 484234930,
+      "block_timestamp": 1784149527,
+      "delegator": "0x66a038259c18c7ff64f753aa7ff8c7a4ad8f0946",
+      "shares": "16007841335070658538",
+      "tokens": "186121597823656645873",
+      "tx_hash": "0xf5f031f765e8202ee7402f2d6ee6e70377207849d7a9e1889ed92321e5464858"
+    },
+    {
+      "block_number": 483337552,
+      "block_timestamp": 1783925412,
+      "delegator": "0xd0e126c81491468c223bbf9bec280630e27948bb",
+      "shares": "4006008768480526816271",
+      "tokens": "46555717951236942921253",
+      "tx_hash": "0xb3630487eefbb24074b8a850d720038c694bed590592545ad0f42dfcdc87f272"
+    },
+    {
+      "block_number": 482459410,
+      "block_timestamp": 1783705859,
+      "delegator": "0x9ebed36285e65a5591e42bed37f817541c642ebe",
+      "shares": "86047620888941544520",
+      "tokens": "1000000000000000000000",
+      "tx_hash": "0x7aa3c7074fd535acab0ce4ff4fa17eda46034b371dab68e9f62c2bdd684d7cc6"
+    }
+  ],
+  "pubkey": "73edf0735750f47c39832162566c78fc513d0ffd9eedf3e87b0aec9c24fd5155",
+  "signature": "d6f2d5a520c0959c86dab7956d0928aa7f375f4f8ec609fbc85fde76b2d9f18c8de0e12933e93dee399d7444d972d70a16167299e6539d6bde59a8fe9190ab05"
+}
