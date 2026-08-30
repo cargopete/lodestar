@@ -68,10 +68,10 @@ the last stretch of each now belongs to a third party rather than to us:
 | Workstream | Needs an operator we are not going to be | Our reachable ceiling |
 |---|---|---|
 | CAT-2 | "settles a paid query", "one external operator runs it" | build + document, not demonstrate |
-| CAT-4 | "≥1 live provider serving a real Substreams package" | audited contract + provider kit |
-| CAT-5 | "≥10 providers across ≥3 regions" | re-audited contract + client compat + tooling |
-| CAT-7 | "one chain routing real revenue through the protocol" | contract + metering + dashboard + runbook |
-| CAT-8 | SOC 2, SLAs, an institutional design partner | ground-truth + attestation service |
+| CAT-4 | "≥1 live provider serving a real Substreams package", plus an external audit | unaudited contract + provider kit + a published audit scope somebody else can fund |
+| CAT-5 | "≥10 providers across ≥3 regions", plus a re-audit | client compat + tooling + the re-scoped audit brief, not the audit |
+| CAT-7 | "one chain routing real revenue", plus a deployment we have said we will not do | contract + metering + runbook, verified on a fork |
+| CAT-8 | SOC 2, SLAs, an institutional design partner | ground-truth + attestation service + a written recommendation for a body that has an entity |
 
 This is not a retreat, and it should not be written up as one. A reference implementation somebody
 else runs is the *stated goal* of four of these eight items, which exist to be adopted rather than
@@ -110,7 +110,8 @@ The second column is **live, not a snapshot**. It said "08-28 close" for two day
 CAT-8 moved on the 29th and 30th, which is a small lie of exactly the kind this document exists to
 catch elsewhere. Anyone changing a number changes the date in the header with it.
 
-**"Our ceiling"** applies the operating-model decision above: the highest score reachable without
+**"Our ceiling"** applies the operating-model decision above, and since 30 August also the
+decision that audits, entities and deployments are things we recommend rather than buy: the highest score reachable without
 running a service or signing a commercial deal. These are judgement calls to one significant
 figure, not measurements — their job is to stop us recording adoption we have decided not to pursue
 as work outstanding on our side. CAT-6 is unchanged at 90% because Lodestar is the one thing we do
