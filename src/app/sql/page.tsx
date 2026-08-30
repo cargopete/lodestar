@@ -566,10 +566,73 @@ function NamedQueries() {
                 {result.sql}
               </pre>
               <ResultTable rows={result.rows} />
+              <TakeAReceipt name={active.name} args={args} />
             </div>
           )}
         </div>
       )}
     </Card>
+  );
+}
+
+/**
+ * The bridge between three things this dashboard already has and nobody connects.
+ *
+ * A named query is pinned, so its answer is reproducible; `tattler` signs a reproducible answer;
+ * `/verify` checks a signature offline. Standing on this page you would never know the other two
+ * exist, which makes them a product only to whoever built them.
+ *
+ * Deliberately a **command, not a button.** A button would mean this dashboard holds a signing key
+ * and issues receipts in its own name, and a receipt is only worth what its issuer is worth — so
+ * yours should be signed by you. This prints the exact invocation for the query you just ran, and
+ * says plainly what it needs, rather than implying a click produces a receipt.
+ */
+function TakeAReceipt({ name, args }: { name: string; args: Record<string, string> }) {
+  const [copied, setCopied] = useState(false);
+  const argLine = Object.entries(args)
+    .filter(([, v]) => v !== '')
+    .map(([k, v]) => `--arg ${k}=${v}`)
+    .join(' ');
+  const cmd = `tattler attest-named \\\n  --endpoint ${
+    typeof window === 'undefined' ? 'https://www.lodestar-dashboard.com' : window.location.origin
+  } \\\n  --name ${name} ${argLine} \\\n  --key issuer.key --out receipt.json`;
+
+  return (
+    <div className="mt-3 pt-3 border-t-[0.5px] border-[var(--border)]">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <span className="text-[11px] font-medium text-[var(--text)]">Take a signed receipt</span>
+        <button
+          onClick={() => {
+            void navigator.clipboard?.writeText(cmd.replace(/\\\n/g, ' ')).then(
+              () => setCopied(true),
+              () => setCopied(false)
+            );
+          }}
+          className="text-[10px] px-2 py-0.5 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] border-[0.5px] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)]"
+        >
+          {copied ? 'copied' : 'copy'}
+        </button>
+      </div>
+      <pre className="text-[10px] font-mono text-[var(--text-faint)] whitespace-pre-wrap break-all bg-[var(--bg-elevated)] rounded p-2">
+        {cmd}
+      </pre>
+      <p className="text-[10px] text-[var(--text-faint)] mt-1 leading-relaxed">
+        Needs{' '}
+        <a
+          href="https://github.com/nightswatchhq/tattler"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[var(--accent)] hover:underline"
+        >
+          tattler
+        </a>{' '}
+        and a key of your own, so the receipt is signed by you rather than by us. Anyone can then
+        check it at{' '}
+        <Link href="/verify" className="text-[var(--accent)] hover:underline">
+          /verify
+        </Link>{' '}
+        without trusting either of us, and replay it against a nest we do not run.
+      </p>
+    </div>
   );
 }

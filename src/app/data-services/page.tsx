@@ -138,6 +138,15 @@ function ServiceCard({
         <ProviderLight status={service.providerStatus} />
       </div>
 
+      {/* Said on the card rather than only in the drawer, because the drawer is where a claim goes
+          to be unread. "Nobody is running it" is the most decision-relevant fact about a finished
+          service, and it is an invitation rather than an apology. */}
+      {service.awaitingOperator && (
+        <p className="text-[10px] text-[var(--accent)] leading-snug">
+          Built and unclaimed — could be yours to run.
+        </p>
+      )}
+
       <div className="space-y-1.5 pt-1 border-t border-[var(--border)]">
         <ChainChip service={service} />
         <StackChips stack={service.stack} />
@@ -384,12 +393,46 @@ export default function DataServicesPage() {
         <StatCard label="Services tracked" value={String(stats.total)} subtitle="across 4 maturity tiers" />
         <StatCard label="Live on Arbitrum One" value={String(stats.mainnetLive)} subtitle="production + mainnet-deployed" />
         <StatCard
-          label="Lodestar services live"
-          value={String(stats.selfRunProviders)}
-          subtitle="Dispatch · Camp · Seahorn · Substreams"
-          tooltip="Four Lodestar-run data services live on Arbitrum One with a completed paid-query loop (single self-run provider each). The Subgraph Service is the only one with a broad multi-indexer active set."
+          label="Built, awaiting an operator"
+          value={String(stats.awaitingOperator)}
+          subtitle="Deployed contracts, nobody serving"
+          tooltip="Services that are finished and unclaimed. The contracts are deployed and the code is maintained; nobody is running them, because The Night's Watch builds these services and does not operate them. This card said 'Lodestar services live' until 30 August, which described an arrangement that had already been retired by decision."
         />
       </StatGrid>
+
+      {/* The ask, at the top, in plain words. A catalogue of finished things nobody runs is only
+          depressing if it does not say what it wants. */}
+      <Card className="my-4 border-[var(--accent)]">
+        <h2 className="text-sm font-semibold text-[var(--text)] mb-1">Indexers: several of these are yours for the taking</h2>
+        <p className="text-[13px] text-[var(--text-muted)] leading-relaxed">
+          The Night&apos;s Watch builds data services and does not operate them. A box, a domain, a
+          bill and an on-call rota, indefinitely, per service, is a different job from writing the
+          thing — so several of the services below are finished, deployed on Arbitrum One, with the
+          payment path rehearsed against real Horizon contracts, and nobody serving.
+        </p>
+        <p className="text-[13px] text-[var(--text-muted)] leading-relaxed mt-2">
+          That is not a gap we are hiding. It is the offer. If you index and fancy testing one, the
+          contracts are live, the runbooks are written, and{' '}
+          <a
+            href="https://github.com/nightswatchhq/gib"
+            target="_blank"
+            rel="noreferrer"
+            className="text-[var(--accent)] hover:underline"
+          >
+            gib onboard
+          </a>{' '}
+          exists so your first hour is not wasted. Come and say so in{' '}
+          <a
+            href="https://discord.gg/484vgDETEZ"
+            target="_blank"
+            rel="noreferrer"
+            className="text-[var(--accent)] hover:underline"
+          >
+            the Discord
+          </a>{' '}
+          and we will help you stand one up. Nothing is asked in return.
+        </p>
+      </Card>
 
       {TIERS.map((tier) => {
         const services = byTier.get(tier.tier) ?? [];

@@ -106,6 +106,17 @@ export interface DataService {
   notable?: string;
   /** Interactive playground — live sample query, example code, prerequisites. */
   playground?: PlaygroundConfig;
+  /**
+   * Built, tested, and waiting for somebody to run it.
+   *
+   * The Night's Watch builds these services and does not operate them: a box, a domain, a bill and
+   * an on-call rota, indefinitely, per service, is a different job from writing the thing. So a
+   * service can be finished and still have nobody serving, and the catalogue has to be able to say
+   * that without either claiming production or implying the code is unready.
+   *
+   * "Endpoint down" was the wrong words for it. Nothing is down; nothing was ever brought up.
+   */
+  awaitingOperator?: true;
 }
 
 /** Interactive "try it" config for a live, queryable service. */
@@ -197,12 +208,13 @@ export const DATA_SERVICES: DataService[] = [
     // live and both providers are still registered on-chain — which is exactly the problem, since
     // the registry advertises endpoints that do not answer. Saying "Live · Production" here while
     // inviting people to try a dead endpoint is the one thing this catalogue must never do.
-    statusLabel: 'Reference impl · needs an operator',
+    statusLabel: 'Ready · awaiting an operator',
     statusVariant: 'default',
     stage: 'Contract live on Arbitrum One; no operator currently serving',
     providerStatus: 'single-self-run',
+    awaitingOperator: true,
     providerNote:
-      'The RPCDataService contract is live on Arbitrum One and the code is maintained, but no operator is currently serving: as of 2026-08-28 no advertised endpoint answers. The self-run gateway was retired by decision, not by failure — The Night\'s Watch builds these services and does not run them. On-chain collect was proven historically (18.44 GRT settled). Open to any operator; `gib onboard` exists so a new one\'s first hour is not wasted.',
+      'The RPCDataService contract is live on Arbitrum One and the code is maintained, and nobody is serving it. The self-run gateway was retired by decision, not by failure: we build these services and do not run them. On-chain collect is proven — 18.44 GRT settled historically — so this is a service that has been paid, waiting for somebody to run it again. **Want to run it?** The contract is deployed, the code is maintained and the payment path is rehearsed against real Horizon contracts. What is missing is an operator. If you index and fancy trying it, say so in The Night\'s Watch Discord and we will get your first hour right.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: '10 chains supported', isMainnet: true },
     stack: ['TypeScript', 'Rust', 'Solidity'],
     links: [
@@ -266,12 +278,13 @@ npm i @lodestar-dispatch/consumer-sdk`,
     // from the other host too. SolanaDataService (0xdDE3F913…) still holds code on Arbitrum One,
     // so the contract is live and the serving endpoint is gone — a different sentence, and the
     // honest one.
-    statusLabel: 'Contract live · endpoint down',
-    statusVariant: 'warning',
-    stage: 'Deployed on Arbitrum One; serving endpoint not currently up',
+    statusLabel: 'Ready · awaiting an operator',
+    statusVariant: 'default',
+    stage: 'Deployed on Arbitrum One; ready for an operator to bring up',
     providerStatus: 'single-self-run',
+    awaitingOperator: true,
     providerNote:
-      'SolanaDataService is deployed on Arbitrum One, but as of 2026-08-28 the advertised endpoint (seahorn.89.167.109.4.sslip.io) does not answer, and no seahorn service is running on either host. Single self-run provider; unaudited. Restoring a serving endpoint is the open item.',
+      'SolanaDataService is deployed on Arbitrum One and nobody is serving it. That is a decision rather than a failure: The Night\'s Watch builds these services and does not operate them, so the self-run endpoint was retired and not replaced. Unaudited. **Want to run it?** The contract is deployed, the code is maintained and the payment path is rehearsed against real Horizon contracts. What is missing is an operator. If you index and fancy trying it, say so in The Night\'s Watch Discord and we will get your first hour right.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Solana mainnet data', isMainnet: true },
     stack: ['Rust', 'Solidity'],
     links: [
@@ -361,10 +374,11 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
     description:
       'A community-maintained payment layer for Substreams on Horizon: a consumer sidecar signs EIP-712 RAVs over a persistent payment session, a provider gateway meters usage authoritatively from the Firehose plugin path, and an on-chain SubstreamsDataService settles via GraphTally. Forked from the graphprotocol MVP and hardened to a live, upgradeable mainnet contract.',
     tier: 1,
-    statusLabel: 'Live · Production',
-    statusVariant: 'success',
+    statusLabel: 'Ready · awaiting an operator',
+    statusVariant: 'default',
     stage: 'Live: self-run provider streaming substreams + on-chain collect',
     providerStatus: 'single-self-run',
+    awaitingOperator: true,
     providerNote:
       'Live: streaming + paid loop proven (streaming → metered-RAV → on-chain collect, real GRT settled, ~2% burned). Currently on a clock-demo substrate to avoid upstream firehose cost; real Arbitrum via Pinax firehose runs on demand. Single self-run provider; unaudited.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Substreams (firecore)', isMainnet: true },
@@ -525,10 +539,11 @@ substreams run common@v0.1.0 map_clocks -e localhost:9002 --plaintext -s 0 -t +2
     description:
       'Reference implementation for GRC-006 "Mainline". Positioned as the decentralized substrate beneath Substreams / Subgraphs / Tycho / Token API / Dispatch. Wraps streamingfast/firehose-core unchanged.',
     tier: 1,
-    statusLabel: 'Live · Production',
-    statusVariant: 'success',
+    statusLabel: 'Ready · awaiting an operator',
+    statusVariant: 'default',
     stage: 'Live on Arbitrum One, serving Ethereum mainnet firehose',
     providerStatus: 'single-self-run',
+    awaitingOperator: true,
     providerNote: 'Live: FirehoseDataService deployed to Arbitrum One; a self-run operator serves REAL Ethereum mainnet firehose (proxied from Pinax), each block EIP-712 attested + TAP-gated, verified end-to-end by the SDK consumer. Single self-run provider; unaudited.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Ethereum mainnet blocks', isMainnet: true },
     stack: ['Solidity', 'Rust', 'TypeScript'],
@@ -581,10 +596,11 @@ cargo run --example stream_blocks -- \\
     description:
       'A Horizon data service that streams pre-parsed transfers / swaps / exchange events over a single WebSocket, gated by TAP v2 and settled on-chain. It sits in front of an upstream Pinax WebSocket feed: a consumer opens a WS with a signed TAP receipt, and the gateway relays every pre-parsed message back, billing per message.',
     tier: 1,
-    statusLabel: 'Live \u00b7 Production',
-    statusVariant: 'success',
+    statusLabel: 'Ready · awaiting an operator',
+    statusVariant: 'default',
     stage: 'Live on Arbitrum One \u2014 WebSocket relay over a Pinax feed',
     providerStatus: 'single-self-run',
+    awaitingOperator: true,
     providerNote:
       'Live: WebSocketDataService deployed to Arbitrum One; a self-run provider relays pre-parsed transfers/swaps from an upstream Pinax WebSocket, TAP-gated (receipt in the ?receipt= query). Single self-run provider; unaudited.',
     chain: { payment: 'arbitrum-one', paymentLabel: 'Arbitrum One', dataLabel: 'Multi-chain pre-parsed events', isMainnet: true },
@@ -670,11 +686,12 @@ wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
     tier: 1,
     // Corrected 2026-08-28. camp.89.167.109.4.sslip.io does not answer, and no camp service
     // exists on either host. CampDataService (0x8ED61266…) still holds code on Arbitrum One.
-    statusLabel: 'Contract live · endpoint down',
-    statusVariant: 'warning',
-    stage: 'Deployed on Arbitrum One; serving endpoint not currently up',
+    statusLabel: 'Ready · awaiting an operator',
+    statusVariant: 'default',
+    stage: 'Deployed on Arbitrum One; ready for an operator to bring up',
     providerStatus: 'single-self-run',
-    providerNote: 'CampDataService is deployed on Arbitrum One, but as of 2026-08-28 the advertised endpoint (camp.89.167.109.4.sslip.io) does not answer, and no camp service is running on either host. Single self-run provider; unaudited. Restoring a serving endpoint is the open item.',
+    awaitingOperator: true,
+    providerNote: 'CampDataService is deployed on Arbitrum One and nobody is serving it. A decision rather than a failure: we build these and do not operate them. Unaudited. **Want to run it?** The contract is deployed, the code is maintained and the payment path is rehearsed against real Horizon contracts. What is missing is an operator. If you index and fancy trying it, say so in The Night\'s Watch Discord and we will get your first hour right.',
     chain: {
       payment: 'arbitrum-one',
       paymentLabel: 'Arbitrum One',
@@ -830,6 +847,8 @@ export interface CatalogueStats {
   mainnetLive: number;
   activeProviders: number;
   selfRunProviders: number;
+  /** Finished, deployed, and nobody serving. */
+  awaitingOperator: number;
   homeTeam: number;
 }
 
@@ -840,6 +859,7 @@ export function catalogueStats(services: DataService[] = DATA_SERVICES): Catalog
     mainnetLive: services.filter((s) => s.chain.isMainnet).length,
     activeProviders: services.filter((s) => s.providerStatus === 'active').length,
     selfRunProviders: services.filter((s) => s.providerStatus === 'single-self-run').length,
+    awaitingOperator: services.filter((s) => s.awaitingOperator).length,
     homeTeam: services.filter((s) => s.homeTeam).length,
   };
 }
