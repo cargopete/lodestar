@@ -180,6 +180,45 @@ as the opportunity.
 
 **A promise published without checking it is just a nicer-sounding gap.**
 
+### Counting the providers instead of remembering them (2026-08-30)
+
+G-1 is the top programme risk and its provider counts were kept by hand in this file. Hand-written
+counts drift, and these had: the table said Seahorn had none, and its registry holds **two**
+registrations. It also carried "what is the actual Dispatch provider count?" as an open question,
+which is four RPC calls to settle.
+
+`/api/service-census` reads all five registries of the Horizon `DataService` shape, calls every
+endpoint they advertise, and the number now sits **above** the catalogue rather than in a drawer.
+**Five registrations across three of five services, one answering endpoint, zero independent
+operators.**
+
+**No score moved.** This is a gate item, not a workstream, and finding that a number was wrong is
+not the same as improving the thing it counted.
+
+Four things the measurement decided that a description would have got wrong.
+
+**Last event wins, and set subtraction is the trap.** Dispatch's second provider deregistered at
+block 456,950,409 and registered again at 456,950,419, ten blocks later. Removing every address
+that ever appears in a deregistration reports Dispatch as having one provider. It has two. I wrote
+the naive version first, got "1 active", and was drafting a note about a bug in our own liveness API
+before checking the ordering. **The API was right and my census was wrong**, which is the direction
+that is easy to miss when the wrong answer is the more interesting one.
+
+**A 402 is the door working.** The Nuthatch Data Service's whole product is a paywall, and it
+answers `402 TAP-Receipt header required` when perfectly healthy. A prober treating 2xx as the only
+good answer marks the one service in this stack that *is* serving as down, and a dead Railway
+container returning a cheerful 404 as merely unhealthy. So the probe is per-service, and a test
+pins that only the Nuthatch service is allowed to count a 402 as alive.
+
+**Zero registrations is not the same failure as registrations that do not answer.** SDSCE and
+Mainline have nobody registered at all: a contract that is live and untried, with nothing to have
+gone stale. Dispatch and Seahorn have registries telling consumers to call hosts that are gone.
+The page says which of the two it is, because they are different conversations.
+
+**A registry that could not be read is excluded rather than counted as zero.** Reporting "0
+providers" for a service nobody managed to ask is the same class of mistake as a catalogue reading
+"Live · Production" about a service that stopped answering in July.
+
 ### CAT-8: one row, proved, without the answer. 36% → 42% (2026-08-30)
 
 The console could establish that nobody had edited a receipt. It could not help anyone who was
@@ -687,18 +726,37 @@ provider is a contract address, not a market.
       the registry from chain, calls every endpoint it advertises, and the data-services page shows
       "registry vs reality" beside the hand-written catalogue text. Currently reads **0/2
       answering**. A cron every 15 minutes alerts on transitions only, seeding silently on first
-      run so a 39-day-old outage is not announced as news. Extend to the other services next.
+      run so a 39-day-old outage is not announced as news.
+- [x] **Extended to every service, 2026-08-30.** `/api/service-census` reads all five registries of
+      this shape and calls what each advertises; the count now sits above the catalogue rather than
+      inside a drawer. **Five registrations across three of five services, one answering.** The
+      table below is measured from that rather than remembered.
 - [ ] Target list of candidate providers per service, maintained, with who has been asked and when.
 
 Current independent-provider count:
 
-| Service | Independent providers | Target |
-|---|---|---|
-| Dispatch | ❓ 1 or 2 (see above) | ≥10 |
-| SDSCE | 0 | ≥1 then ≥3 |
-| Seahorn | 0 | ≥1 |
-| compass | 0 | ≥1 |
-| gib (operators) | 0 | ≥2 |
+**Measured from chain 2026-08-30** by `/api/service-census`, not maintained by hand. "Registered"
+is what the registry says; "answering" is what the endpoint does.
+
+| Service | Registered | Answering | Independent | Target |
+|---|---|---|---|---|
+| Dispatch | **2** | 0 | 0 | ≥10 |
+| Seahorn | **2** | 0 | 0 | ≥1 |
+| Nuthatch DS | **1** | **1** | 0 | ≥1 |
+| SDSCE | 0 | 0 | 0 | ≥1 then ≥3 |
+| Mainline | 0 | 0 | 0 | ≥1 |
+| compass | no registry of this shape | | 0 | ≥1 |
+| gib (operators) | not a data service | | 0 | ≥2 |
+
+**Independent is still zero everywhere**, and that is the number G-1 is about. `0xb43b2ccc…`
+appears as a provider on both Dispatch and Seahorn and is ours; so are the other three. Five
+registrations, one answering endpoint, no independent operators.
+
+**Two corrections this measurement forced.** Seahorn was recorded here as 0 and its registry holds
+**two** registrations, both advertising endpoints that no longer answer, which makes it the same
+failure as Dispatch rather than a service nobody ever tried. And SDSCE and Mainline are genuinely
+**zero registrations**, which is a different and better-shaped problem: nothing to go stale, a
+contract that is live and untried.
 
 ### G-2: External audits 🔴 **one of the two things money is required for**
 
@@ -1633,8 +1691,11 @@ The card's *rationales* are still editorial and argued in prose. The numbers are
    conversation with juanmardefago and StreamingFast should happen before we spend the one scarce
    resource we have on auditing a contract that might be superseded.
 4. **Entity: form or partner?** G-3 gates two workstreams and has no engineering workaround.
-5. **What is the actual Dispatch provider count?** Documented as one, claimed as two. Trivial to
-   resolve and it is the load-bearing counter-example to the one-provider problem.
+5. ~~**What is the actual Dispatch provider count?**~~ **Resolved 2026-08-30: two, and neither
+   answers.** `0xb43b2ccc…` at `rpc.cargopete.com` (unreachable) and `0x575267ee…` at a Railway
+   host returning 404. The reason the count looked ambiguous is worth keeping: the second provider
+   deregistered at block 456,950,409 and registered again ten blocks later, so any reading that
+   subtracts every address ever seen deregistering reports one. Last event wins.
 
 ---
 
