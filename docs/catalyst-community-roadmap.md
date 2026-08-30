@@ -180,6 +180,38 @@ as the opportunity.
 
 **A promise published without checking it is just a nicer-sounding gap.**
 
+### Every data service had the same upgrade defect (2026-08-30)
+
+CAT-4's L-01 is that nothing stops an upgrade changing the contract's immutables. Having found it
+there, I checked whether it was an SDSCE quirk. It is not: **all six UUPS data services in this
+stack carry the identical empty `_authorizeUpgrade`** — SDSCE, Seahorn, WSaaS, FHSCE, Dispatch and
+chain-integration-ds. Camp has no UUPS contract.
+
+The failure mode is that immutables live in the *implementation's* bytecode, not in proxy storage,
+and an upgrade is a new implementation with its own constructor arguments. Point a proxy at one
+built against a different collector and the service silently settles somewhere else: no event, no
+revert, and the storage anybody would inspect is unchanged. **WSaaS had already shipped it**, with
+a deploy script passing a stray implementation as `HorizonStaking` and the legacy TAPCollector as
+its collector. Two auditors called this Low; one of ours had done it.
+
+**Fixed once, properly, where it could be tested.** `chain-integration-ds` is the only one of the
+six with a Foundry harness, so the guard went there:
+[`8542148`](https://github.com/nightswatchhq/chain-integration-ds). `_authorizeUpgrade` asks the
+candidate for its `RECURRING_COLLECTOR()` and refuses a mismatch. The property that makes immutables
+dangerous is what makes them checkable, because being in bytecode means the candidate can be asked
+directly before adoption. Five tests: the same collector passes, a different one reverts and leaves
+the proxy untouched, an address with no code and an unrelated contract get distinct errors, and a
+stranger still cannot upgrade with a valid implementation. **29 tests, no skips**, fork suites
+included.
+
+**The other five did not get it, and that is the honest state.** None of them has a test harness in
+the repository, and pasting an unverified change into five live mainnet contracts is how this class
+of bug arrives rather than leaves. There is now a tested reference to adopt, and adopting it starts
+with a harness, which SDSCE's own audit already asks for as I-03.
+
+**No score moved.** chain-integration-ds is CAT-7's asset and CAT-7 sits at its ceiling, which was
+set by the decision not to deploy it and is unchanged by the contract being better.
+
 ### Two of CAT-4's three audit findings were already fixed. 58% → 60% (2026-08-30)
 
 The plan said "fix L-01, L-02 and L-03 before the external round so the vendor is not billing for
