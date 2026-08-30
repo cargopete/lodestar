@@ -300,7 +300,7 @@ npm i @lodestar-dispatch/consumer-sdk`,
     ],
     minProvision: '555 GRT',
     becomeProvider: [
-      'HorizonStaking.provision(addr, 0xdDE3F913…, 555e18, maxVerifierCut, thawingPeriod).',
+      'HorizonStaking.provision(addr, 0xdDE3F913…, 555e18, maxVerifierCut, thawingPeriod) — thawing is capped near 2,418,000s, so use 14 days not 30.',
       'SolanaDataService.register(addr, abi.encode(endpoint, geoHash, paymentsDestination)).',
       'Owner adds programs to allowlist; startService per program.',
       'Run the stack: Yellowstone → seahorn → Postgres → PostgREST → seahorn-gateway.',
@@ -402,7 +402,7 @@ curl -s 'https://seahorn.89.167.109.4.sslip.io/buys?limit=3&order=slot.desc' \\
     ],
     minProvision: '0 GRT (soft launch)',
     becomeProvider: [
-      'HorizonStaking: stake, then provision(addr, 0x1c3e9cca…, tokens, maxVerifierCut, thawingPeriod) toward the SubstreamsDataService proxy.',
+      'HorizonStaking: stake, then provision(addr, 0x1c3e9cca…, tokens, maxVerifierCut, thawingPeriod) — thawing is capped near 2,418,000s, so use 14 days not 30 toward the SubstreamsDataService proxy.',
       'SubstreamsDataService.register(addr, abi.encode(paymentsDestination)).',
       'Run the stack: firecore (Substreams data plane, sds:// plugins) + sds provider gateway + Postgres.',
       'Run sds provider operator collect-daemon to auto-collect RAVs (the 1% cut is burned).',
@@ -710,7 +710,7 @@ wscat -c "wss://ws.89.167.109.4.sslip.io/ws/solana/swaps?receipt=$RECEIPT_JSON"
     ],
     minProvision: '555 GRT',
     becomeProvider: [
-      'HorizonStaking.provision(addr, CampDataService, ≥555e18, maxVerifierCut, thawingPeriod).',
+      'HorizonStaking.provision(addr, CampDataService, ≥555e18, maxVerifierCut, thawingPeriod) — thawing is capped near 2,418,000s, so use 14 days not 30.',
       'CampDataService.register(addr, abi.encode(endpoint, geoHash, paymentsDestination)).',
       'startService per tier (BASIC=0, DECODED=1, SQL=2; a provider can serve all three).',
       'Serve queries: receipts → RAVs every 60s → collect() hourly. Requires a running camp instance + camp-gateway.',

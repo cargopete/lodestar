@@ -421,7 +421,16 @@ export default function DataServicesPage() {
           >
             gib onboard
           </a>{' '}
-          exists so your first hour is not wasted. Come and say so in{' '}
+          exists so your first hour is not wasted. Start with{' '}
+          <a
+            href="https://github.com/nightswatchhq/lodestar/blob/main/docs/becoming-an-operator.md"
+            target="_blank"
+            rel="noreferrer"
+            className="text-[var(--accent)] hover:underline"
+          >
+            Running one of these services
+          </a>
+          , which carries the four traps that will otherwise cost you an afternoon. Then say so in{' '}
           <a
             href="https://discord.gg/484vgDETEZ"
             target="_blank"
