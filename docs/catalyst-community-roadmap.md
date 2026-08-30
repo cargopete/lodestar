@@ -100,7 +100,7 @@ it ourselves.
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **65%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **68%** 🔺 | 95% | ~75% | gib |
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
-| CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | **~65%** 🔻 | SDSCE |
+| CAT-4 | Substreams data service | RFC-004 | 58% | **60%** 🔺 | 95% | **~65%** 🔻 | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **57%** 🔺 | 95% | **~60%** 🔻 | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **66%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **48%** 🔺 | 85% 🔒 | **48%** 🔻 | chain-integration-ds |
@@ -179,6 +179,30 @@ have never been paid outside a fork, the catalogue says which, and that is the h
 as the opportunity.
 
 **A promise published without checking it is just a nicer-sounding gap.**
+
+### Two of CAT-4's three audit findings were already fixed. 58% → 60% (2026-08-30)
+
+The plan said "fix L-01, L-02 and L-03 before the external round so the vendor is not billing for
+known issues". Checking them against the deployed bytecode rather than against the June audit
+report: **two are already done**.
+
+`pendingOwner()` on the proxy answers rather than reverting, so the contract is `Ownable2Step` and
+L-02 is closed. `initialize` called directly on implementation `0x6f0bb704…` reverts, so
+`_disableInitializers()` is working and L-03 has nothing to front-run. The audit report is dated
+2026-06-03 and the remediation happened after it; the task list had simply never been told.
+
+**L-01 stands, and today it stopped being theoretical.** `_authorizeUpgrade` is empty, so nothing
+checks that a replacement implementation carries the same immutables, and immutables live in
+implementation bytecode. An upgrade deployed with different constructor arguments silently rewires
+the contract, with no event and no revert. That is the *same defect class* the WSaaS sweep found an
+hour earlier, where a deploy script passed a stray implementation and the legacy TAPCollector as
+constructor arguments. A finding two auditors would have called Low is one somebody has now shipped.
+
+**Not fixed, and said plainly rather than fudged.** SDSCE carries no Foundry harness in the
+repository, so a change to `_authorizeUpgrade` could not be tested here, and an untested change to a
+live mainnet contract is worse than an open ticket. It is written up with the fix named.
+
+**Two points**, for closing two of three sub-items and correcting the plan, not for new capability.
 
 ### The address sweep, extended to the other repos (2026-08-30)
 
@@ -747,7 +771,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 59.8%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 60.0%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
@@ -1451,9 +1475,23 @@ unaudited. EOA-owned. `slash()` is a deliberate no-op.
 
 - [ ] **External audit + multisig.** The one paid line item here (G-2).
   - [ ] Get quotes against the existing `docs/net-02-audit-brief.md`.
-  - [ ] Fix L-01 (immutables not preserved across upgrades), L-02 (single-step ownership),
-        L-03 (front-runnable `initialize`) before the external round so the vendor is not billing
-        for known issues.
+  - [x] **L-02 and L-03 are already fixed, verified against the deployed bytecode on 2026-08-30.**
+        `pendingOwner()` on the proxy answers instead of reverting, so it is `Ownable2Step`; and
+        `initialize` called on the implementation `0x6f0bb704…` reverts, so `_disableInitializers()`
+        did its job and there is nothing to front-run. The task list had been planning to do both.
+        An auditor billing to re-check them would be billing for finished work, which is the same
+        argument Dispatch's audit scope makes.
+  - [ ] **L-01 is the one that stands, and it stopped being theoretical today.**
+        `_authorizeUpgrade(address newImplementation) internal override onlyOwner {}` is empty, so
+        nothing checks that a replacement implementation carries the same immutables. Immutables
+        live in implementation bytecode, so an upgrade deployed with different constructor
+        arguments silently rewires the contract to a different collector or controller, with no
+        event and no revert. **WSaaS shipped exactly that mistake**: its deploy script passed a
+        stray implementation as `HorizonStaking` and the legacy TAPCollector as the collector, both
+        as constructor arguments. The fix is for `_authorizeUpgrade` to read the candidate's
+        `GRAPH_TALLY_COLLECTOR()` and refuse a mismatch. Not written here, because SDSCE has no
+        Foundry harness in the repository and an untested change to a live mainnet contract is not
+        a change worth making.
   - [ ] Transfer ownership to a Safe (G-4).
 - [ ] **Provider bootstrap kit.** Turnkey `firecore` + provider-gateway compose bundle so an
       existing Substreams operator onboards in a day.

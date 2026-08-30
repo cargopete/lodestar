@@ -121,11 +121,11 @@ export const CATALYST_ITEMS: CatalystItem[] = [
   {
     slug: 'substreams',
     label: 'Finish the Substreams data service',
-    coverage: 58,
+    coverage: 60,
     communityCeiling: 95,
     ourCeiling: 65,
     rationale:
-      'Live contract on Arbitrum One, settlement daemon, runbooks and a rehearsed end-to-end path: that is most of the engineering, and none of it moved on 28 Aug. The missing 42% is heavy — external audit, multisig ownership, a hosted gateway and oracle, and a provider actually onboarding. Code is the smaller half of shipping a data service people trust with funds.',
+      'Live contract on Arbitrum One, settlement daemon, runbooks and a rehearsed end-to-end path: that is most of the engineering, and none of it moved on 28 Aug. The missing 42% is heavy — external audit, multisig ownership, a hosted gateway and oracle, and a provider actually onboarding. Code is the smaller half of shipping a data service people trust with funds. Corrected 30 Aug against the deployed bytecode: two of the three Low audit findings are already fixed. pendingOwner() answers so it is Ownable2Step, and initialize on the implementation reverts so there is nothing to front-run. Only L-01 stands, and it stopped being theoretical the same day: an empty _authorizeUpgrade lets an upgrade silently rewire the contract\'s immutables, which is exactly what WSaaS\'s deploy script did with a stray implementation and the legacy TAPCollector.',
     projects: [{ name: 'SDSCE', url: 'https://github.com/nightswatchhq/SDSCE' }],
   },
   {
