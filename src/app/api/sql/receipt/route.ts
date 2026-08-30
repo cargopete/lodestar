@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { createRequire } from 'node:module';
-import path from 'node:path';
 import { hasNuthatch, nuthatchSqlFull } from '@/lib/nuthatch';
 import { findDataset } from '@/lib/sql-datasets';
 import { NAMED_QUERIES, findNamedQuery, renderNamedQuery } from '@/lib/named-queries';
@@ -46,12 +44,25 @@ interface WasmSigner {
 
 let wasm: WasmSigner | null = null;
 
-function signer(): WasmSigner {
+/**
+ * Loaded through a constructed `require` so the bundler leaves it alone.
+ *
+ * `public/tattler/` is a build output of a Rust crate, not a module of this project, and Turbopack
+ * tries to resolve and bundle it if it can see the path - which fails, because the glue reads its
+ * `.wasm` sibling off disk at runtime. Bundling it would also mean a second copy that can drift
+ * from the one `/verify` serves, and one implementation is the entire argument for compiling this
+ * rather than rewriting it.
+ */
+async function signer(): Promise<WasmSigner> {
   if (!wasm) {
-    const require = createRequire(import.meta.url);
-    wasm = require(
-      path.join(process.cwd(), 'public', 'tattler', 'tattler_wasm_node.cjs')
-    ) as WasmSigner;
+    // Two separate evasions, and both are needed. `createRequire` supplies a real CJS `require` in
+    // an ESM server bundle, which has none - a bare `new Function('return require(p)')` throws
+    // `require is not defined`. And the call is made through a constructed function so the bundler
+    // never sees a `require(<path>)` to resolve, which it otherwise tries and fails at build time.
+    const { createRequire } = await import('node:module');
+    const req = createRequire(import.meta.url);
+    const load = new Function('req', 'p', 'return req(p)') as (r: unknown, p: string) => WasmSigner;
+    wasm = load(req, `${process.cwd()}/public/tattler/tattler_wasm_node.cjs`);
   }
   return wasm;
 }
@@ -126,8 +137,9 @@ export async function POST(req: Request) {
     }
 
     const rows = result.data.rows;
+    const w = await signer();
     const hashOut = JSON.parse(
-      (signer() as unknown as { result_hash: (s: string) => string }).result_hash(JSON.stringify(rows))
+      (w as unknown as { result_hash: (s: string) => string }).result_hash(JSON.stringify(rows))
     ) as { ok: boolean; detail?: string };
     if (!hashOut.ok || !hashOut.detail) {
       return NextResponse.json({ error: hashOut.detail ?? 'could not hash the answer' }, { status: 500 });
@@ -151,7 +163,7 @@ export async function POST(req: Request) {
       ),
     };
 
-    const signed = signer().issue_receipt(JSON.stringify(receiptBody), JSON.stringify(rows), keyHex);
+    const signed = w.issue_receipt(JSON.stringify(receiptBody), JSON.stringify(rows), keyHex);
     const parsed = JSON.parse(signed);
     if (parsed.ok === false) {
       log.api.error({ query: query.name, detail: parsed.detail }, 'receipt refused');
