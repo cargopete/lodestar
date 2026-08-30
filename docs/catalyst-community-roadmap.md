@@ -104,7 +104,7 @@ it ourselves.
 | CAT-5 | RPC service | RFC-005 | 62% | **55%** 🔺 | 95% | **~60%** 🔻 | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **48%** 🔺 | 85% 🔒 | **48%** 🔻 | chain-integration-ds |
-| CAT-8 | Institutional audit layer | RFC-008 | 5% | **36%** 🔺 | 80% 🔒 | ~45% | tattler |
+| CAT-8 | Institutional audit layer | RFC-008 | 5% | **42%** 🔺 | 80% 🔒 | ~45% | tattler |
 
 The second column is **live, not a snapshot**. It said "08-28 close" for two days after CAT-3 and
 CAT-8 moved on the 29th and 30th, which is a small lie of exactly the kind this document exists to
@@ -179,6 +179,57 @@ have never been paid outside a fork, the catalogue says which, and that is the h
 as the opportunity.
 
 **A promise published without checking it is just a nicer-sounding gap.**
+
+### CAT-8: one row, proved, without the answer. 36% → 42% (2026-08-30)
+
+The console could establish that nobody had edited a receipt. It could not help anyone who was
+unwilling to publish the answer in order to prove one line of it, and that is the ordinary
+institutional case: a counterparty wants to check a single transfer, and the holder will prove that
+transfer without handing over the book.
+
+**A receipt is all-or-nothing by construction**, because it carries its rows. So a disclosure had to
+be a different artefact: the same signed body and signature with the rows removed, plus one row and
+its path to a Merkle root the body commits to. That root is built over the *same* sorted row hashes
+the result hash already folds together, so a receipt now carries two commitments to one set of facts
+rather than commitments to two.
+
+Driven end to end on live data rather than in a fixture. One delegation out of 34 to
+`0xfeff9093…` is 1,991 bytes against the receipt's 10,271, with six sibling hashes, and it verifies
+in the browser on the deployed page.
+
+**The ambiguity guard fired on its first real use**, which is the part worth recording. Picking the
+row by `--matching delegator=0x9ebe…` matched **nine** rows, because that delegator delegated nine
+separate times to the same indexer. Disclosing the first of nine would have published a line the
+holder did not choose, so it refuses and asks to be narrowed.
+
+**And a check of my own that was wrong before the code was.** A quick probe said eight other rows
+were recoverable from the disclosure. They were not: the probe was matching the *disclosed* row's
+own delegator address, which eight other rows share, and which the holder had chosen to reveal. The
+honest test is the `tx_hash`, which is unique per row, and zero of those appear. The test that now
+guards this walks every undisclosed row and asserts its `tx_hash` is absent from the bytes.
+
+Three things were deliberately not done, and the reasons are the interesting half.
+
+**The leaves are not salted**, so a holder can test a guess at a neighbouring row by hashing it.
+Against rows carrying an address or a `uint256` that is no help at all; against rows drawn from a
+small set it is trivial. Salting closes it and costs the issuer a per-receipt secret held forever,
+and the tree would no longer be built from the hashes the result hash commits to. That trade is not
+obviously right, so it is stated on the page instead of made quietly.
+
+**Receipts issued before today committed to no root**, and `disclose` refuses them rather than
+computing one now. A commitment chosen after the fact by whoever wants to use it is not a
+commitment. They still verify exactly as they always did, which the frozen fixture proves on every
+run.
+
+**The verifier was rebuilt and re-pinned against two new shapes.** The last time a field was added
+to the signed body, the shipped WASM dropped it, computed the signing bytes without it and reported
+`bad_signature` on an honest receipt, which is the worst answer a verifier can give. That guard only
+checked the oldest shape. There are four pinned shapes now, and the artefacts are built by
+`wasm/build.sh` rather than by hand, because a hand-built artefact is how the first one went stale.
+
+**Not moved further than 42%** because the other half of the item is still absent: checking an
+actual ZK or view-key scheme, exporting audit reports, and role-based access. Selective disclosure
+against our own ground truth is the part that was ours to build.
 
 ### Auditing the scoreboard itself (2026-08-30)
 
@@ -460,7 +511,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 58.0%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 58.8%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
@@ -1470,8 +1521,33 @@ SOC 2 Type II or ISO 27001.
         lied". That guard fired on its first real use.
 - [ ] **Verification / attestation service.** Verify ZK proofs or view-key disclosures
       against the ground-truth store; emit signed audit tags; support permissioned decryption and
-      selective disclosure. **Half of this now exists**: tattler establishes the ground truth a
-      disclosure would be checked *against*. Checking an actual ZK or view-key scheme does not.
+      selective disclosure. tattler establishes the ground truth a disclosure would be checked
+      *against*, and since 30 August it also does **selective disclosure itself**. Checking an
+      actual ZK or view-key scheme still does not exist.
+  - [x] **One row, proved, without the answer it came from.** Every receipt now commits to a Merkle
+        root over the *same* sorted row hashes the result hash already folds together, so the two
+        commitments are over one set of facts and cannot disagree. `tattler disclose` emits the
+        signed body and signature with the rows removed, plus the chosen row and its path.
+        Measured on live data: one delegation out of 34 is 1,991 bytes against the receipt's
+        10,271, carrying six sibling hashes.
+  - [x] **The signature is checked before the proof, and the order is load-bearing.** The committed
+        root is a field in the body, so checking a proof first would be checking it against a number
+        the presenter chose. Pinned by a test that edits the body and expects `bad_signature`
+        rather than a mismatch.
+  - [x] **The tree is RFC 6962's, for two properties worth the fidelity.** Leaves and internal nodes
+        are domain-separated by a `0x00` / `0x01` prefix, without which an internal node can be
+        presented as a leaf and a row that was never in the answer becomes provable. And an odd node
+        is promoted rather than duplicated, which is what Bitcoin does and what makes two different
+        leaf lists produce one root (CVE-2012-2459). Both are pinned by tests that fail if either
+        property is removed, rather than asserted in a comment.
+  - [x] **The privacy claim is checked against the bytes, not described.** A test walks every row
+        the disclosure did not disclose and asserts none of them appears in it.
+  - [ ] **Stated limit: the leaves are not salted.** A holder of a disclosure can test a guess at a
+        neighbouring row by hashing it. Against rows carrying an address or a `uint256` that is no
+        help; against rows drawn from a small set it is trivial. Salting would close it at the cost
+        of the issuer holding a per-receipt secret forever and of the tree no longer being built
+        from the hashes the result hash commits to. Not obviously the right trade, so it is not
+        made, and the limit is on the page rather than in a footnote.
 - [x] **Auditor console, first half: [`/verify`](https://www.lodestar-dashboard.com/verify).**
       Paste or drop a receipt and see whether the rows still hash to what was signed and whether
       the signature covers the body. Three outcomes, kept distinct because collapsing them into
@@ -1510,7 +1586,12 @@ SOC 2 Type II or ISO 27001.
         missed it because it only checked a receipt issued *before* the fields existed. Both shapes
         are pinned now: a verifier must be re-tested against every shape it may be handed, not
         merely the oldest.
-  - [ ] Export audit reports, role-based access, and a disclosure view. Not started.
+  - [x] **A disclosure view**, on the same page. Drop a disclosure instead of a receipt and it is
+        routed on its shape rather than on the reader being asked which they hold, because somebody
+        handed one of these has no reason to know. The verdict wording differs deliberately: a
+        receipt that passes says "signature valid, rows unaltered", and saying that about a
+        disclosure would be a plain lie, since it carries no rows.
+  - [ ] Export audit reports and role-based access. Not started.
 - [ ] **Adoption.** One auditor, regulator or institutional counterparty as design partner.
 - [ ] 🔒 A dispute/attestation standard; issuance eligibility.
 
