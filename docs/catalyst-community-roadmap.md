@@ -98,7 +98,7 @@ it ourselves.
 | WS | Item | Source ref | 08-28 open | **Current (08-30)** | Community ceiling | **Our ceiling** | Primary asset |
 |---|---|---|---|---|---|---|---|
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **65%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
-| CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
+| CAT-2 | New gateway operators | RFC-002 | 60% | **68%** 🔺 | 95% | ~75% | gib |
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | **~65%** 🔻 | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | **~60%** 🔻 | Dispatch |
@@ -127,6 +127,31 @@ the code does not move this as far as finishing code usually does.
 
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
+
+### The invitation now leads somewhere. CAT-2 64% → 68% (2026-08-30)
+
+Having published a CTA saying *"the runbooks are written… we will get your first hour right"*, the
+next thing to do was check whether that was true. It was not, quite. Each service's
+`becomeProvider` steps were contract-call summaries — `provision(addr, 0x…, 555e18, maxVerifierCut,
+thawingPeriod)` — which say what to call and nothing about what will go wrong.
+
+An indexer following them would pass **30 days** for the thawing period, the obvious round number,
+and be refused by a custom error carrying two raw numbers and no name. That is the first afternoon
+gone, and it is one of four traps we hit ourselves in the last two days and had written down
+nowhere a stranger would find them.
+
+[`becoming-an-operator.md`](becoming-an-operator.md) is the fix, linked from the CTA: the five-step
+shape, then the four traps in the order they bite — the thawing cap, the
+implementation-versus-proxy addresses that return **zero rather than reverting**, the
+`authorizeSigner` step for anything on `RecurringCollector`, and the provision requirement that
+makes a service payable at all. Plus the fork-rehearsal harness, so an operator can prove they get
+paid before spending gas.
+
+It also says what we will not do: run it, fund it, or promise it earns anything. Several of these
+have never been paid outside a fork, the catalogue says which, and that is the honest state as well
+as the opportunity.
+
+**A promise published without checking it is just a nicer-sounding gap.**
 
 ### Four ceilings re-cut downward (2026-08-30)
 
@@ -380,7 +405,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 56.9%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 57.4%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)

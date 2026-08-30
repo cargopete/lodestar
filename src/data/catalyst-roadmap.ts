@@ -65,6 +65,14 @@ export const CATALYST_ITEMS: CatalystItem[] = [
     ],
   },
   {
+    slug: 'gateway-operators',
+    label: 'Onboard new gateway operators',
+    coverage: 68,
+    rationale:
+      'gib solves the genuinely hard technical part: a working TAP v2 / Horizon gateway used to be a multi-week ordeal and is now a compose file with a smoke test. Added since: `gib onboard`, which withholds the block an indexer must paste until your own side would actually work — the whitelist handshake is slow because every failure in it is discovered by the indexer, hours later, as receipts that bounce. The remaining third is money actually flowing and a second operator choosing to run it, and we have decided not to be that operator. Added 30 Aug: the invitation now leads somewhere. becoming-an-operator.md carries the four traps that cost us afternoons — a thawing period capped near 2,418,000 seconds so 30 days is refused by a nameless error, Horizon addresses in circulation that are implementations rather than proxies and return zero instead of reverting, the authorizeSigner step, and the provision requirement — plus a fork harness so an operator can prove they get paid before spending gas.',
+    projects: [{ name: 'gib', url: 'https://github.com/nightswatchhq/gib' }],
+  },
+  {
     slug: 'studio-dips',
     label: 'Make Subgraph Studio fully network-powered',
     coverage: 65,
@@ -74,14 +82,6 @@ export const CATALYST_ITEMS: CatalystItem[] = [
       { name: 'dips-nest', url: 'https://github.com/nightswatchhq/dips-nest' },
       { name: 'The Dock', url: '/dock' },
     ],
-  },
-  {
-    slug: 'gateway-operators',
-    label: 'Onboard new gateway operators',
-    coverage: 64,
-    rationale:
-      'gib solves the genuinely hard technical part: a working TAP v2 / Horizon gateway used to be a multi-week ordeal and is now a compose file with a smoke test. Added since: `gib onboard`, which withholds the block an indexer must paste until your own side would actually work — the whitelist handshake is slow because every failure in it is discovered by the indexer, hours later, as receipts that bounce. The remaining third is money actually flowing and a second operator choosing to run it, and we have decided not to be that operator.',
-    projects: [{ name: 'gib', url: 'https://github.com/nightswatchhq/gib' }],
   },
   {
     slug: 'multi-product-studio',

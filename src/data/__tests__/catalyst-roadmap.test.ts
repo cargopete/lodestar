@@ -33,7 +33,7 @@ describe('CATALYST_ITEMS', () => {
 describe('catalystSummary', () => {
   it('reproduces the headline the card renders', () => {
     const { overall } = catalystSummary();
-    expect(overall).toBeCloseTo(56.875, 3);
+    expect(overall).toBeCloseTo(57.375, 3);
   });
 
   /// The card is public and the tracker is internal, and they drifted badly once already —
@@ -42,7 +42,7 @@ describe('catalystSummary', () => {
   it('matches the delivery tracker, which is the thing that drifts', () => {
     const byslug = Object.fromEntries(CATALYST_ITEMS.map((i) => [i.slug, i.coverage]));
     expect(byslug).toEqual({
-      'gateway-operators': 64,
+      'gateway-operators': 68,
       'memory-for-ai': 74,
       substreams: 58,
       'rpc-service': 50,
