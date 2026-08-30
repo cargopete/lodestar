@@ -102,7 +102,7 @@ it ourselves.
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | **~65%** 🔻 | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **55%** 🔺 | 95% | **~60%** 🔻 | Dispatch |
-| CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
+| CAT-6 | Multi-product Studio | RFC-006 | 45% | **62%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **48%** 🔺 | 85% 🔒 | **48%** 🔻 | chain-integration-ds |
 | CAT-8 | Institutional audit layer | RFC-008 | 5% | **42%** 🔺 | 80% 🔒 | ~45% | tattler |
 
@@ -179,6 +179,40 @@ have never been paid outside a fork, the catalogue says which, and that is the h
 as the opportunity.
 
 **A promise published without checking it is just a nicer-sounding gap.**
+
+### Making the reverts legible. CAT-6 60% → 62% (2026-08-30)
+
+Every trap in [`becoming-an-operator.md`](becoming-an-operator.md) fails in a way that names
+something else, and that document was the whole of our answer to "how do I run one of these". A
+markdown file is a poor place to meet an error.
+
+`decodeHorizonRevert` knows the **63 custom errors** the staking, payments and data-service
+contracts declare, generated from the compiled ABIs rather than transcribed, because a hand-copied
+selector that is one character out decodes nothing and looks like an unknown error. For the ones
+that actually catch people it says what to change: seconds become days, wei becomes GRT, and the
+documented traps are named as traps.
+
+**[`/revert`](https://www.lodestar-dashboard.com/revert)** is the page for somebody who is not
+using this dashboard at all, which is most of the people we want. Paste what `cast send` printed,
+in full, and it finds the data in it. It runs in the browser and makes no request, so pasting a
+failing transaction into it costs nothing.
+
+`explainWriteError` wires the same table into the Dock's four write paths, which were each slicing
+the error message to 300 characters. That reliably keeps the words "execution reverted" and
+discards the only part that says why.
+
+**And the measurement corrected our own document.** `getMaxThawingPeriod()` on Arbitrum One returns
+**2,419,200**, which is exactly 28 days. The operator write-up said "about 2,418,000 seconds,
+roughly 28 days", which was wrong and wrong in the unhelpful direction: it implies the ceiling sits
+just under a round 28 days when 28 days *is* the ceiling.
+
+**Only two points**, because this makes an existing surface better rather than adding a product
+tier. CAT-6's real remaining weight is managed pipelines and subscription billing, and those are an
+operating decision and a legal one respectively, neither of which is code.
+
+**What it cannot do, said on the page.** The worst of the four traps throws nothing at all: calling
+a Horizon implementation rather than its proxy does not revert, it returns zero forever, silently.
+Nothing decodes a silent zero.
 
 ### Counting the providers instead of remembering them (2026-08-30)
 
@@ -550,7 +584,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-30: 58.8%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 59.0%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
