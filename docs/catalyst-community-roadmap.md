@@ -100,10 +100,10 @@ it ourselves.
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **65%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
 | CAT-3 | Memory for AI | RFC-003 | 22% | **74%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
-| CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
-| CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
-| CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | 90% | Lodestar |
-| CAT-7 | Chain integrations DS | RFC-007 | 6% | **48%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
+| CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | **~65%** 🔻 | SDSCE |
+| CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | **~60%** 🔻 | Dispatch |
+| CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | **~70%** 🔻 | Lodestar |
+| CAT-7 | Chain integrations DS | RFC-007 | 6% | **48%** 🔺 | 85% 🔒 | **48%** 🔻 | chain-integration-ds |
 | CAT-8 | Institutional audit layer | RFC-008 | 5% | **30%** 🔺 | 80% 🔒 | ~45% | tattler |
 
 The second column is **live, not a snapshot**. It said "08-28 close" for two days after CAT-3 and
@@ -126,6 +126,26 @@ the code does not move this as far as finishing code usually does.
 
 🔒 marks an item whose last stretch is protocol or Foundation policy and cannot be engineered
 around from outside.
+
+### Four ceilings re-cut downward (2026-08-30)
+
+The "our ceiling" column already assumed we would not **operate**. It still quietly assumed three
+other things that the 30 August decisions removed: that we would **buy an audit**, **hold an entity**
+that can take payment, and **deploy** a service we have said we will not run.
+
+| | was | now | what it was assuming |
+|---|---|---|---|
+| CAT-4 | ~75% | **~65%** | "audited contract + provider kit" — the audit costs money we are not spending |
+| CAT-5 | ~70% | **~60%** | "re-audited contract" — same |
+| CAT-6 | 90% | **~70%** | subscription billing with paying users, which needs an entity |
+| CAT-7 | ~50% | **48%** | that we would deploy it; we will not, so 48% *is* the ceiling |
+
+Headroom shrinks and that is the point. A ceiling describing what we might reach if we became a
+different organisation is not a ceiling, it is a wish, and the column exists precisely to stop
+recording somebody else's work as our own outstanding tasks. CAT-1, CAT-3 and CAT-7 now sit **at**
+their ceilings, and three of the four re-cuts are within ten points of theirs.
+
+What that leaves as genuinely ours to move: CAT-2 (64 → ~75), CAT-6 (60 → ~70), CAT-8 (30 → ~45).
 
 ### CAT-3 marked DOWN, 74% → 68% (2026-08-29)
 
