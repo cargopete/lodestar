@@ -197,6 +197,34 @@ All four paths driven against a real Ollama. One of them looked like a bug in th
 bug in my test: `pkill` missed the tunnel because the real process args carried a `-f` I had not
 matched, so the embedder was still up and the probe was right to pass.
 
+### A correction I owed, and a design decision it changed (2026-08-30)
+
+For two days this tracker and nutcracker's README described the blind index's false-candidate rate
+as "the leakage". **That is wrong, and the original code said so before I overrode it.** A false
+candidate is *bandwidth*: the client fetches an item, decrypts it, ranks it and discards it, and the
+provider learns nothing it did not already know from the bucket token. The per-item disclosure is
+`bits/item` = bands x bits, and the two move in **opposite** directions. If anything a higher false
+rate helps query privacy, because it is cover: the provider cannot tell which candidate you wanted.
+
+Reading the sweep correctly reverses the recommendation. Fourteen parameter settings, centred and
+not, on the real corpus; a point is dominated when another beats it on recall *and* cost at once.
+**11 of 16 frontier points are centred**, so centring moves the frontier rather than sliding along
+it. But the point to adopt is not the one with the lowest candidate rate:
+
+| | recall | candidates | **bits/item** |
+|---|---|---|---|
+| as-is 8x8 *(today's default)* | 46% | 22% | **64** |
+| **centred 8x4** | **67%** | 36% | **32** |
+| centred 24x8 | 42% | 9% | 192 |
+
+`centred 8x4` gives half again more recall at **half** the per-item disclosure. The third row is the
+trap: chasing the 9% candidate rate triples disclosure to buy *less* recall than the default, which
+is paying on the expensive axis to optimise the cheap one. That is precisely what my earlier framing
+would have recommended.
+
+Not implemented, and honestly so: the mean must be fixed for a namespace's lifetime, so it is a
+migration and belongs beside the embedder-identity check rather than in a config flag.
+
 ### Watching the thing everything else stands on (2026-08-29)
 
 Eighteen crons existed and **not one watched the Helsinki box**, which answers the delegation feed,
