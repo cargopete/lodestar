@@ -99,7 +99,7 @@ it ourselves.
 |---|---|---|---|---|---|---|---|
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **62%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
-| CAT-3 | Memory for AI | RFC-003 | 22% | **68%** 🔻 | 90% 🔒 | ~75% | nutcracker, compass |
+| CAT-3 | Memory for AI | RFC-003 | 22% | **72%** 🔺 | 90% 🔒 | ~75% | nutcracker, compass |
 | CAT-4 | Substreams data service | RFC-004 | 58% | 58% | 95% | ~75% | SDSCE |
 | CAT-5 | RPC service | RFC-005 | 62% | **50%** 🔻 | 95% | ~70% | Dispatch |
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | 90% | Lodestar |
@@ -154,7 +154,7 @@ placeholder embedder. 74% described a system whose retrieval quality was assumed
 where it is an open question with numbers attached. Written up in nutcracker's README under *What
 the recall numbers actually measured*.
 
-### CAT-3 measured against a real model, and held at 68% (2026-08-30)
+### CAT-3: measured, then given a real embedder. 68% → 72% (2026-08-30)
 
 Yesterday's mark-down said the retrieval half had never been measured against a real embedding
 model. Now it has: 48 sentences over 12 topics through `nomic-embed-text` (768-dim) on the ThinkPad,
@@ -171,9 +171,31 @@ whole corpus and calling it a search. Mean-centring cuts disclosure to 3% and co
 17%, worse than predicted, because on real embeddings part of the topical signal genuinely lives
 along the shared direction.
 
-**Held at 68% rather than moved.** The uncertainty is resolved and the answer is "a real search with
-a real cost", which is neither better nor worse than 68% described. Moving it up would be rewarding
-the audit rather than the artefact.
+**Held at 68% for the measurement alone.** Resolving an uncertainty is not an improvement, and
+moving the number for having audited it would be rewarding the audit rather than the artefact.
+
+**Then 68% → 72%, for replacing the placeholder.** The agent binary shipped a bag-of-bytes embedder
+- a histogram of byte values, not a semantic model - and now runs `nomic-embed-text` through a local
+Ollama by default. That is the difference between search and coincidence, and it is the largest
+single gap the project had.
+
+Three refusals came with it, each a refusal rather than a warning, and each closing a way to destroy
+the product silently:
+
+- **A non-loopback embedder is refused.** An embedder sees the plaintext *before* it is sealed, so a
+  remote one hands every memory to a third party in the clear and leaves the encryption decorating
+  the trip afterwards. One config line. The override is named
+  `--i-accept-sending-plaintext-to-a-remote-embedder`, for what it costs rather than what it enables.
+- **Changing the model is refused.** Two models are two disjoint token spaces over the same
+  memories: swap one and everything stored before becomes unfindable, everything after looks fine,
+  and nothing errors. The model is recorded beside the key and checked at every start.
+- **A failing embedder is refused, never fallen back from**, because a fallback returns vectors from
+  a different space and corrupts the index quietly. It probes at startup rather than failing inside
+  somebody's conversation.
+
+All four paths driven against a real Ollama. One of them looked like a bug in the guard and was a
+bug in my test: `pkill` missed the tunnel because the real process args carried a `-f` I had not
+matched, so the embedder was still up and the probe was right to pass.
 
 ### Watching the thing everything else stands on (2026-08-29)
 
@@ -194,7 +216,7 @@ it. And `/sql` now says so: an archive sitting beside three live datasets with n
 distinguish it invites a reader to take three-week-old data for current, which nobody had noticed
 because nobody had looked.
 
-**Mean, as of 2026-08-29: 53.4%**, against 37.2% when this tracker was opened on 28 August. The
+**Mean, as of 2026-08-30: 53.9%**, against 37.2% when this tracker was opened on 28 August. The
 section below is the 28 August retrospective and its figures are that day's, kept as written.
 
 ### Why the needles barely moved, and why one went backwards (28 August)
