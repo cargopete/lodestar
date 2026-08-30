@@ -95,7 +95,7 @@ it ourselves.
 
 ## Scoreboard
 
-| WS | Item | Source ref | 08-28 open | 08-28 close | Community ceiling | **Our ceiling** | Primary asset |
+| WS | Item | Source ref | 08-28 open | **Current (08-30)** | Community ceiling | **Our ceiling** | Primary asset |
 |---|---|---|---|---|---|---|---|
 | CAT-1 | Studio continuity via DIPS | RFC-001 | 40% | **62%** 🔺 | 90% 🔒 | ~65% | dips-nest, weaver |
 | CAT-2 | New gateway operators | RFC-002 | 60% | **64%** | 95% | ~75% | gib |
@@ -105,6 +105,10 @@ it ourselves.
 | CAT-6 | Multi-product Studio | RFC-006 | 45% | **60%** 🔺 | 90% | 90% | Lodestar |
 | CAT-7 | Chain integrations DS | RFC-007 | 6% | **35%** 🔺 | 85% 🔒 | ~50% | chain-integration-ds |
 | CAT-8 | Institutional audit layer | RFC-008 | 5% | **30%** 🔺 | 80% 🔒 | ~45% | tattler |
+
+The second column is **live, not a snapshot**. It said "08-28 close" for two days after CAT-3 and
+CAT-8 moved on the 29th and 30th, which is a small lie of exactly the kind this document exists to
+catch elsewhere. Anyone changing a number changes the date in the header with it.
 
 **"Our ceiling"** applies the operating-model decision above: the highest score reachable without
 running a service or signing a commercial deal. These are judgement calls to one significant
@@ -149,6 +153,27 @@ never been measured against a real embedding model, and the agent binary still s
 placeholder embedder. 74% described a system whose retrieval quality was assumed; 68% describes one
 where it is an open question with numbers attached. Written up in nutcracker's README under *What
 the recall numbers actually measured*.
+
+### CAT-3 measured against a real model, and held at 68% (2026-08-30)
+
+Yesterday's mark-down said the retrieval half had never been measured against a real embedding
+model. Now it has: 48 sentences over 12 topics through `nomic-embed-text` (768-dim) on the ThinkPad,
+same-topic pairs deliberately not near-duplicates, corpus committed so the numbers reproduce without
+a GPU.
+
+The synthetic argument was a fair predictor. **Unrelated sentences sit at cosine 0.43**, and at the
+default parameters the blind index retrieves **46% of related pairs while surfacing 22% of unrelated
+ones** as candidates. Published figures were 100% recall and 3% false.
+
+The finding the synthetic work missed is that the two columns move together, and there is no setting
+that buys both: 100% recall costs 96% false candidates, which is asking the provider for nearly the
+whole corpus and calling it a search. Mean-centring cuts disclosure to 3% and costs recall down to
+17%, worse than predicted, because on real embeddings part of the topical signal genuinely lives
+along the shared direction.
+
+**Held at 68% rather than moved.** The uncertainty is resolved and the answer is "a real search with
+a real cost", which is neither better nor worse than 68% described. Moving it up would be rewarding
+the audit rather than the artefact.
 
 ### Watching the thing everything else stands on (2026-08-29)
 
