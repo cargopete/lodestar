@@ -196,6 +196,37 @@ about the counterparty.
 escrow. That blocker is only real for a broadcast. On a fork, escrow can be funded with cheatcodes,
 which is how this was reached at all - and the same trick is available to CAT-1's outstanding
 `collect()`.
+### Decisions taken, 2026-08-30
+
+Chief answered the open list. Recording them here because a decision nobody wrote down gets
+re-litigated, and because several of them change what "our ceiling" means rather than what is built.
+
+**We build, we do not operate — and now we say so as an offer.** Dispatch, Seahorn, Camp, SDSCE,
+WSaaS and Mainline are finished, deployed, and unclaimed. The catalogue said "endpoint down", which
+was the wrong words: nothing is down, nothing was ever brought up. They now read **"Ready · awaiting
+an operator"** with a standing call to indexers on `/data-services`. A stat card claiming "four
+Lodestar services live" was describing an arrangement already retired by decision, and is corrected.
+
+**gib's payment loop is not ours to close.** It is the highest-value item on the board and it stays
+open: we are gib's maintainers, not its users. An external operator drives it, or nobody does.
+
+**chain-integration-ds will not be deployed by us.** It passes a full fork rehearsal ending in the
+integrator being paid; that is as far as we take it. Local and testnet verification is the ceiling
+for a service we will not run.
+
+**Legal and entity items are advisory only.** SOC 2, the prepaid-GRT gate, SLAs, external audits: we
+publish what a body that *has* an entity should do, and we do not acquire one. Those items are
+recommendations in this document, not tasks, and the ceilings reflect it.
+
+**x402 is adopted.** The line is crossed deliberately and we use it wherever it fits. RFC-0046 in
+nuthatch recorded the governance question; it is answered. The seller code is built and tested and
+now has a decision behind it rather than a caveat.
+
+**No slashing.** Dispatch's `ROADMAP.md` was right and the research report was wrong: EIP-1186 and
+slashing stay out of scope, and the public messaging should stop implying otherwise.
+
+**No action on:** the Vindicate domain, nuthatch's progress log, the WSaaS test filename, PR #967.
+
 ### The payment-path sweep, which found nothing (2026-08-30)
 
 After two fatal defects in `chain-integration-ds`, the obvious question was how many siblings share
