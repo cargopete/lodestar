@@ -62,9 +62,7 @@ verified, but each line remains a separate cutover.
 
 - [ ] `/api/indexers`
 - [ ] `/api/indexer/[address]`
-- [ ] `/api/indexer-status/[address]`
 - [ ] `/api/indexer-stake-history/[address]`
-- [ ] `/api/indexer-trends`
 - [ ] `/api/indexer-qos/[address]`
 - [ ] `/api/network-stats`
 - [ ] `/api/token-metrics`
@@ -74,7 +72,6 @@ verified, but each line remains a separate cutover.
 
 ### Subgraph, curation and discovery
 
-- [ ] `/api/indexing-status/[hash]`
 - [ ] `/api/subgraph-curation/[hash]`
 - [ ] `/api/subgraph-deployments`
 - [ ] `/api/subgraph-fees-30d`
@@ -82,7 +79,6 @@ verified, but each line remains a separate cutover.
 - [ ] `/api/subgraph-names`
 - [ ] `/api/subgraph-search`
 - [ ] `/api/subgraph-versions/[hash]`
-- [ ] `/api/bounty-query/[id]`
 - [ ] `/api/poi`
 
 ### Financial and protocol lifecycle
@@ -96,7 +92,6 @@ verified, but each line remains a separate cutover.
 
 ### Scheduled ingestion and snapshots
 
-- [ ] `/api/cron/check-subgraph-health`
 - [ ] `/api/cron/ingest-allocations`
 - [ ] `/api/cron/ingest-disputes`
 - [ ] `/api/cron/ingest-epochs`
@@ -105,6 +100,48 @@ verified, but each line remains a separate cutover.
 - [ ] `/api/cron/ingest-rav`
 - [ ] `/api/cron/snapshot-network`
 - [ ] `/api/cron/tap-provision`
+
+## Intended Graph surfaces - not migration work
+
+Recorded because "Lodestar still has N files touching the gateway" is true, alarming and misleading,
+and without this list somebody eventually tries to migrate a GraphiQL component off GraphQL. These
+are **correct as they are**, and they are not counted in the completion figure. Cross-referenced with
+`nuthatch#1074`'s inventory, which classifies every gateway-touching file in this repository.
+
+**The gateway, or an indexer, is the subject.** No on-chain indexer can serve these, because the
+thing being measured is the serving:
+
+| Surface | Why it stays |
+|---|---|
+| `/api/subgraph-playground/[hash]` | proxies a query to a user-chosen deployment. A playground with no subgraph is a deleted feature, not a migrated one. |
+| `/api/x402/query` | keyless pay-per-query proxy to the gateway. The gateway is the product being resold. |
+| `/api/studio/query/[id]` | queries an arbitrary studio subgraph by id. |
+| `/api/bounty-query/[id]` | proxies a query to the winning indexer's own endpoint. |
+| `/api/gateway/[key]` | the metered query gateway proxy. |
+| `/api/indexer-status/[address]` | reads indexers' own `/status` endpoints. Serving telemetry, not chain state. |
+| `/api/indexing-status/[hash]` | same: probes which indexers are serving a deployment, and how far behind. |
+| `/api/cron/check-subgraph-health` | alerts on serving health. Cannot be answered by not querying. |
+| `/api/indexer-trends` | community Horizon performance timeseries, a third party's subgraph. |
+| `lib/gateway-probe.ts` | fires a live query *through* the gateway. That is the measurement. |
+| `components/SubgraphGraphiQL.tsx` | GraphiQL against a user-chosen deployment. |
+
+**On chain you get a hash; the meaning lives off chain.** The `subgraph-*` routes and the disassembly
+helpers read curation signal and allocations - both on chain and both already declared in
+`graph-allocations-nest` - alongside display names, schemas and manifests, which exist only on IPFS.
+Nuthatch forbids IPFS at runtime by design. **These are therefore split, not excluded**: the on-chain
+half is migration work and stays in the checklists above; the name beside it is not, and never will
+be. A route is not "migrated" until it can render an unresolved hash honestly rather than silently
+showing nothing.
+
+`/api/ens` is the same shape with a different reason: ENS lives on Ethereum mainnet, which is a
+different chain, a different cursor and a different nest. In scope for a future mainnet nest; out of
+scope for the Arbitrum ones.
+
+`/api/indexer-qos/[address]` and `lib/ingest/qos.ts` are a genuine boundary case and are **still
+counted** as migration work. QoS is gateway telemetry, but it reaches us through a subgraph of an
+on-chain oracle, so the data is on chain by construction. The open question is shape rather than
+remit - whether the oracle's payload is decodable as events - and until that is answered they stay in
+the denominator. See `nuthatch#1083`.
 
 ## Supporting work
 
@@ -117,10 +154,19 @@ verified, but each line remains a separate cutover.
 - [ ] Keep fixed-block parity fixtures for each route in CI before its production switch.
 - [ ] Remove the corresponding Graph client query and Graph API-key requirement only after the route
       is Live.
-- [ ] Remove the Graph client, Graph environment variables and Graph dependencies once every route
-      above is Live.
+- [ ] Remove the Graph **Network subgraph** queries and the routes' dependence on them once every
+      route in the checklists above is Live. **Not** the Graph client, the environment variables or
+      the dependencies: the surfaces under "Intended Graph surfaces" keep needing all three, so
+      `GRAPH_API_KEY` remains configured after the migration completes. The defensible goal, per
+      `nuthatch#638`, is that the key is no longer load-bearing for Lodestar's own dashboard - not
+      that it disappears from the repository.
 - [ ] Expose `seal-direct` backfill progress through `/metrics` and the TUI. Tracked in
       [nuthatch#807](https://github.com/nightswatchhq/nuthatch/issues/807).
 
 The final checkbox is intentionally last. Deleting the Graph dependency before the individual data
 families are indexed would not be a migration. It would be an outage with excellent intentions.
+
+It is also deliberately narrower than it used to read. The previous wording promised to remove the
+Graph client "once every route above is Live", which was unreachable: five of the routes then listed
+as planned cannot be served by an indexer at all, so the condition could never be met and the
+checklist would have sat permanently one item short with no explanation of why.
