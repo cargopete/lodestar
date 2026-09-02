@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [dev]
+    # `main` is here so a merge produces a run of its own. Without it the only evidence CI
+    # ever worked lived on a pull request, and there was no green baseline on the default
+    # branch for anyone to point at (#26).
+    branches: [main, dev]
   pull_request:
     branches: [main]
 
@@ -17,7 +20,7 @@ jobs:
           version: 10
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -32,7 +35,7 @@ jobs:
           version: 10
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm type-check
@@ -47,7 +50,7 @@ jobs:
           version: 10
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:coverage
@@ -63,7 +66,7 @@ jobs:
           version: 10
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
