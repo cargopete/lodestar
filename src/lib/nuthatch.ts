@@ -7,6 +7,10 @@
 // `graph-staking-nest` on the Helsinki box (HorizonStaking delegation events). Everything is opt-in
 // and falls back to the subgraph, so an unconfigured or unreachable nest changes nothing.
 
+// Type-only, so it is erased at compile time and does not turn the deliberate dynamic
+// `import('./nest-health')` below into a static cycle.
+import type { NestHealth } from './nest-health';
+
 const NUTHATCH_URL = process.env.NUTHATCH_URL?.replace(/\/$/, '');
 const NUTHATCH_USER = process.env.NUTHATCH_USER;
 const NUTHATCH_PASSWORD = process.env.NUTHATCH_PASSWORD;
@@ -147,6 +151,36 @@ export async function nuthatchTables(
 }
 
 /**
+ * `/ready` probes currently in flight, keyed by nest.
+ *
+ * A route that asks one nest two questions in a `Promise.all` (the DIPS panel wants both the
+ * allocation and the timeline) would otherwise probe `/ready` twice to answer one request.
+ *
+ * This shares a probe that is *already running*; it does not cache the verdict. The entry is
+ * dropped the moment the probe settles, so a nest that dies between two requests is still
+ * caught by the next one. Caching the answer instead would reintroduce exactly the stale-but-
+ * confident reads that #1080 was about, only one layer higher up.
+ */
+const inflightProbes = new Map<string, Promise<NestHealth>>();
+
+function readinessProbe(basePath: string): Promise<NestHealth> {
+  const existing = inflightProbes.get(basePath);
+  if (existing) return existing;
+
+  const probe = (async () => {
+    try {
+      const { probeNest } = await import('./nest-health');
+      return await probeNest('serve', 'serve', basePath);
+    } finally {
+      inflightProbes.delete(basePath);
+    }
+  })();
+
+  inflightProbes.set(basePath, probe);
+  return probe;
+}
+
+/**
  * Query a nest only if it is ready to answer, and keep the provenance the rows came with.
  *
  * Serving routes must go through this rather than `nuthatchSql`. `nuthatchSql` throws the
@@ -168,8 +202,7 @@ export async function nuthatchSqlReady<T = Record<string, unknown>>(
 > {
   const requireReady = opts.requireReady !== false;
   if (requireReady) {
-    const { probeNest } = await import('./nest-health');
-    const health = await probeNest('serve', 'serve', basePath);
+    const health = await readinessProbe(basePath);
     if (!health.ready) {
       return {
         ok: false,
