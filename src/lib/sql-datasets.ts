@@ -1,6 +1,6 @@
 // The public SQL catalogue: which nuthatch nests Lodestar exposes to anyone, and what each one is.
 //
-// An **explicit allowlist**, not a passthrough. The Helsinki host fronts seven nests behind one
+// An **explicit allowlist**, not a passthrough. The Helsinki host fronts eight nests behind one
 // credential, and several exist to serve a single Lodestar panel. Proxying the lot because they
 // happen to share a hostname is how a private dataset becomes public by accident, so a nest appears
 // here only because someone decided it should.
@@ -65,6 +65,16 @@ export const SQL_DATASETS: SqlDataset[] = [
     description:
       'Direct Indexer Payments: the Issuance Allocator, Recurring Agreement Manager and Recurring Collector. Nothing else indexes these three contracts, which is why the panel on this dashboard exists.',
     sample: LIST_TABLES,
+  },
+  {
+    id: 'dips-sepolia',
+    label: 'DIPS (Arbitrum Sepolia)',
+    basePath: '/dips-sepolia',
+    chain: 'Arbitrum Sepolia',
+    description:
+      'The same three DIPS contracts on the testnet where they have actually been exercised. Mainnet has produced zero agreement events; this carries 1,440, including 1,099 collections, which is what anything reading the agreement lifecycle should be developed against before it is pointed at mainnet.',
+    sample:
+      'SELECT block_number, agreementId, tokens_dec\nFROM recurring_collector__r_c_a_collected\nORDER BY block_number DESC\nLIMIT 20',
   },
   {
     id: 'gns',

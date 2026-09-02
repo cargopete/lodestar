@@ -229,4 +229,41 @@ describe('forIndexer', () => {
     // The network-wide view still knows about two, which is the distinction that matters.
     expect(all.agreements).toHaveLength(2);
   });
+  /**
+   * `endsAt` arrives from the nest as a decimal string, because it is a uint64 and does not fit a
+   * double. 111 of the 113 real agreements on Arbitrum Sepolia carry `type(uint64).max`, which the
+   * collector uses to mean "no end date".
+   *
+   * Passed through `Number()` it became 18446744073709552000 — the nearest double — and any caller
+   * rendering it got a date in the year 584,542,046,090. The failure is quiet in the worst way: the
+   * field is populated, the type is right, and the value is confidently absurd. Found by pointing
+   * the route at a nest with rows for the first time (#41), which is what fixtures could not do.
+   */
+  it('reads the uint64 sentinel as no end date rather than a date in the year 584 billion', () => {
+    const s = buildAgreements({
+      accepted: [row({ block_number: 2, serviceProvider: INDEXER, endsAt: '18446744073709551615' })],
+    });
+    expect(s.agreements[0].endsAt).toBeNull();
+  });
+
+  it('keeps a real end date, string or number', () => {
+    const asString = buildAgreements({
+      accepted: [row({ block_number: 2, serviceProvider: INDEXER, endsAt: '1800000000' })],
+    });
+    expect(asString.agreements[0].endsAt).toBe(1_800_000_000);
+
+    const asNumber = buildAgreements({
+      accepted: [row({ block_number: 2, serviceProvider: INDEXER, endsAt: 1_800_000_000 })],
+    });
+    expect(asNumber.agreements[0].endsAt).toBe(1_800_000_000);
+  });
+
+  it('leaves endsAt null when the event omits it, rather than guessing zero', () => {
+    // Zero is a real unix timestamp — 1970 — and would render as an agreement that ended before
+    // the protocol existed.
+    const s = buildAgreements({
+      accepted: [row({ block_number: 2, serviceProvider: INDEXER })],
+    });
+    expect(s.agreements[0].endsAt).toBeNull();
+  });
 });

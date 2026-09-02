@@ -26,6 +26,29 @@ const GRT = 1e18;
 /** Decimal-string wei to GRT. Absent reads as zero, never as NaN. */
 const grt = (v: string | number | null | undefined) => (v == null || v === '' ? 0 : Number(v) / GRT);
 
+/** `type(uint64).max`, which the collector uses to mean "no end date". */
+const NO_END = '18446744073709551615';
+
+/**
+ * An agreement's end, or `null` where it has none.
+ *
+ * Two things here, both found by running this over Sepolia's real rows rather than fixtures.
+ * 111 of the 113 agreements there carry the sentinel above, and it had been passing straight
+ * through `Number()` into the response — where it becomes 18446744073709552000, because a u64 max
+ * does not survive a double, and renders as a date in the year 584,542,046,090. A field that
+ * exists to say "this never expires" was instead saying something absurd, confidently.
+ *
+ * Hence the comparison on the string. Converting first and then testing the number would depend on
+ * exactly the precision loss that is the problem.
+ */
+function endsAt(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  const raw = String(v);
+  if (raw === NO_END) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 /** A big-int column arrives as `<name>_dec`; fall back to the raw column if it is absent. */
 const big = (row: Record<string, unknown>, name: string) =>
   grt((row[`${name}_dec`] ?? row[name]) as string | number | null | undefined);
@@ -213,7 +236,7 @@ export function buildAgreements(rows: StageRows): AgreementsSummary {
       a.lastSeen = Math.max(a.lastSeen, ts);
 
       if (stage === 'accepted' || stage === 'updated') {
-        a.endsAt = r.endsAt != null ? Number(r.endsAt) : a.endsAt;
+        a.endsAt = endsAt(r.endsAt) ?? a.endsAt;
         a.maxInitialTokens = big(r, 'maxInitialTokens');
         a.maxOngoingTokensPerSecond = big(r, 'maxOngoingTokensPerSecond');
       }
