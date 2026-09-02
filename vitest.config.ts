@@ -38,6 +38,10 @@ export default defineConfig({
       // Ratchet history, newest first. These go UP and never down; #18 stays open for the
       // climb back to 84.
       //
+      //   2026-09-02  160 files / 2292 tests  79.53 / 72.90 / 79.72 / 80.70
+      //               the disassembly cluster (WASM parser, sandbox builder, manifest,
+      //               scorecard, orchestrator, IPFS, rate limiter), the Redis half of the
+      //               cache, and the disassembly + push routes.
       //   2026-09-02  149 files / 2076 tests  73.23 / 66.53 / 74.26 / 74.60
       //               foghorn, sql/receipt and developer-activity taken from 0%.
       //   2026-09-02  143 files / 1984 tests  71.13 / 64.68 / 72.05 / 72.41
@@ -48,10 +52,10 @@ export default defineConfig({
       // Set a little under each measurement, so the gate catches the next real regression
       // rather than flapping on rounding.
       thresholds: {
-        statements: 72,
-        branches: 66,
-        functions: 73,
-        lines: 74,
+        statements: 79,
+        branches: 72,
+        functions: 79,
+        lines: 80,
       },
     },
   },

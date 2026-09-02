@@ -16,9 +16,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const runCommand = vi.fn();
 const stop = vi.fn(async () => undefined);
-const create = vi.fn(async () => ({ runCommand, stop }));
+const create = vi.fn(async (_opts?: unknown) => ({ runCommand, stop }));
 
-vi.mock('@vercel/sandbox', () => ({ Sandbox: { create: (...a: unknown[]) => create(...a) } }));
+vi.mock('@vercel/sandbox', () => ({ Sandbox: { create: (opts: unknown) => create(opts) } }));
 vi.mock('@/lib/logger', () => ({ log: { api: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } } }));
 
 import { buildSubgraphInSandbox, pickPrepareScripts } from '../build-sandbox';
