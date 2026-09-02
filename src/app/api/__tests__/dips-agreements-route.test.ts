@@ -1,10 +1,16 @@
 /**
  * GET /api/dips/agreements.
  *
- * The route has no populated nest to answer it, on Arbitrum One or anywhere else, so these tests
- * are the only thing standing between it and its first contact with real data. What they pin is
- * mostly refusal and honesty: an unready nest must surface as an error rather than as an empty
- * lifecycle, and "nothing has ever happened" must arrive as `empty: true` rather than as silence.
+ * What these pin is mostly refusal and honesty: an unready nest must surface as an error rather
+ * than as an empty lifecycle, and "nothing has ever happened" must arrive as `empty: true` rather
+ * than as silence.
+ *
+ * They also now pin how the nest is asked, which they did not, and that gap cost the route its
+ * correctness for as long as it existed. Everything here mocks `nuthatchSqlReady`, so a mocked
+ * nest happily served nine simultaneous reads that a real one refuses — the guard admits two.
+ * Pointed at dips-nest-sepolia for the first time (#41), the route 503'd on every request. Hence
+ * the sequencing test below: it is not a style preference, it is the difference between the route
+ * working and not.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -150,5 +156,49 @@ describe('/api/dips/agreements', () => {
     expect(res.status).toBe(500);
     expect(json.error).toBe('Failed to load DIPS agreements');
     expect(JSON.stringify(json)).not.toContain('127.0.0.1');
+  });
+  /**
+   * The nest's `/sql` guard caps concurrent queries — measured at two against both dips nests on
+   * 2026-09-02 — and this route wants nine tables. Firing them together got seven 503s and the
+   * route returned one of them, every time, on a nest with data. One at a time costs one slot.
+   */
+  it('reads the nine stage tables one at a time, never concurrently', async () => {
+    let inFlight = 0;
+    let peak = 0;
+    mockSqlReady.mockImplementation(async () => {
+      peak = Math.max(peak, ++inFlight);
+      await new Promise((r) => setTimeout(r, 0));
+      inFlight--;
+      return { ok: true, data: { count: 0, rows: [] } };
+    });
+
+    await call();
+
+    expect(mockSqlReady).toHaveBeenCalledTimes(Object.keys(AGREEMENT_TABLES).length);
+    expect(peak).toBe(1);
+  });
+
+  it('stops at the first refusal rather than asking for the remaining eight', async () => {
+    mockSqlReady.mockResolvedValue({ ok: false, status: 503, error: 'server busy' });
+    const res = await call();
+
+    expect(res.status).toBe(503);
+    expect(mockSqlReady).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the nest named by NUTHATCH_DIPS_BASE_PATH, defaulting to mainnet', async () => {
+    // Which chain a production panel reports is not a caller's choice, so this is an environment
+    // variable and not a query parameter.
+    nest({});
+    await call();
+    expect(mockSqlReady).toHaveBeenCalledWith(expect.any(String), '/dips');
+
+    vi.resetModules();
+    vi.stubEnv('NUTHATCH_DIPS_BASE_PATH', '/dips-sepolia');
+    const { GET: sepoliaGET } = await import('../dips/agreements/route');
+    mockSqlReady.mockClear();
+    await sepoliaGET(new NextRequest('http://localhost/api/dips/agreements'));
+    expect(mockSqlReady).toHaveBeenCalledWith(expect.any(String), '/dips-sepolia');
+    vi.unstubAllEnvs();
   });
 });
