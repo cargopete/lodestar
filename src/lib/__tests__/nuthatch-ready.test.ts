@@ -87,6 +87,60 @@ describe('nuthatchSqlReady', () => {
     expect(r.data.provenance).toEqual({ as_of: 9, sealed_through: 5 });
   });
 
+  it('probes /ready once for two concurrent queries against the same nest', async () => {
+    const seen = stub((url) => {
+      if (url.endsWith('/ready')) return { status: 200, body: READY };
+      return { status: 200, body: ROWS };
+    });
+    const { nuthatchSqlReady } = await load();
+    const [a, b] = await Promise.all([
+      nuthatchSqlReady('SELECT 1', '/dips'),
+      nuthatchSqlReady('SELECT 2', '/dips'),
+    ]);
+    expect(a.ok).toBe(true);
+    expect(b.ok).toBe(true);
+    expect(seen.filter((u) => u.endsWith('/ready'))).toHaveLength(1);
+    expect(seen.filter((u) => u.includes('/sql'))).toHaveLength(2);
+  });
+
+  it('probes again on a later request rather than caching the verdict', async () => {
+    // The point of the in-flight map is to share a probe, not to remember one. A nest that
+    // falls over between two requests must still be caught by the second.
+    let ready = true;
+    const seen = stub((url) => {
+      if (url.endsWith('/ready')) {
+        return ready
+          ? { status: 200, body: READY }
+          : { status: 503, body: { ...READY, ready: false, stalled: true } };
+      }
+      return { status: 200, body: ROWS };
+    });
+    const { nuthatchSqlReady } = await load();
+
+    expect((await nuthatchSqlReady('SELECT 1', '/dips')).ok).toBe(true);
+    ready = false;
+    const second = await nuthatchSqlReady('SELECT 1', '/dips');
+
+    expect(second.ok).toBe(false);
+    expect(seen.filter((u) => u.endsWith('/ready'))).toHaveLength(2);
+  });
+
+  it('does not share a probe between different nests', async () => {
+    const seen = stub((url) => {
+      if (url.endsWith('/ready')) return { status: 200, body: READY };
+      return { status: 200, body: ROWS };
+    });
+    const { nuthatchSqlReady } = await load();
+    await Promise.all([
+      nuthatchSqlReady('SELECT 1', '/dips'),
+      nuthatchSqlReady('SELECT 1', '/gns'),
+    ]);
+    expect(seen.filter((u) => u.endsWith('/ready')).sort()).toEqual([
+      `${ORIGIN}/dips/ready`,
+      `${ORIGIN}/gns/ready`,
+    ]);
+  });
+
   it('skips /ready for an archival nest', async () => {
     const seen = stub((url) => {
       if (url.endsWith('/ready')) {

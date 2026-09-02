@@ -98,6 +98,7 @@ export function DipsStatus() {
                 <span className="font-mono text-[10px] text-[var(--text-faint)]">
                   {shortAddr(a.target)}
                   {!a.observed && ' · no allocation event; zero by absence'}
+                  {a.observed && a.selfMinting && ' · self-minting'}
                 </span>
               </span>
               <span className="font-mono text-[13px] font-semibold tabular-nums text-right text-[var(--text)]">

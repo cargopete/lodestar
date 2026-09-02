@@ -1,5 +1,37 @@
 packages:
   - '.'
-ignoredBuiltDependencies:
-  - sharp
+
+# Every dependency with an install script, classified deliberately.
+#
+# pnpm refuses to guess: it exits 1 and appends an `allowBuilds:` block of literal
+# "set this to true or false" strings to this file on *every* install until each package is
+# resolved. That is #19 — `pnpm build` did not build, and it dirtied a tracked file with
+# placeholder prose on its way out.
+#
+# The list is stated twice because the two pnpm generations read different keys. pnpm 11
+# (local) reads `allowBuilds`; pnpm 10 (CI, via pnpm/action-setup) reads the
+# onlyBuiltDependencies/ignoredBuiltDependencies pair and ignores `allowBuilds`. Both must
+# agree, so if you change a verdict, change it in both places.
+allowBuilds:
+  # Downloads the sentry-cli binary. next.config.ts wraps the build in withSentryConfig, which
+  # shells out to it for source-map upload.
+  '@sentry/cli': true
+  # Links the platform-native binary that vite and vitest compile through.
+  esbuild: true
+  # napi binary behind the eslint import resolver.
+  unrs-resolver: true
+  # Optional native accelerators for `ws`. The JS fallbacks are correct, only slower, and
+  # nothing here opens a websocket on a hot path.
+  bufferutil: false
+  utf-8-validate: false
+
+onlyBuiltDependencies:
+  - '@sentry/cli'
+  - esbuild
   - unrs-resolver
+
+ignoredBuiltDependencies:
+  # Next.js image optimisation. Vercel supplies its own build at deploy time.
+  - sharp
+  - bufferutil
+  - utf-8-validate
