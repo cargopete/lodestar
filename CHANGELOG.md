@@ -2,6 +2,124 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.28.0] - 2026-09-02
+
+Four days in which this dashboard stopped only reporting on other people's infrastructure and
+started publishing its own. `/sql` opens the nuthatch nests behind every panel here to anyone, with
+a schema catalogue, a playground, a named-query tier and answers stamped with the block they were
+true as of. `/verify` lets a stranger check one of those answers without being given the data.
+`/revert` and `/operate` turn the two things that actually stop somebody becoming an operator — an
+undecodable revert and an unknown price — into a table and a rehearsal.
+
+The other half is less presentable and more useful. The test suite had been failing its coverage
+gate on every run for months, which had trained everyone to merge through a red Test job; a check
+that always fails cannot tell you that you broke something. That is fixed, and the floor is now
+above where it was when the numbers were first written.
+
+And two DIPS routes turn out never to have worked against a nest with rows in it. Both were
+invisible: every test mocked the boundary, and mainnet's tables are empty, so an empty panel and a
+broken panel looked identical. Pointing them at Arbitrum Sepolia — where DIPS has produced 1,440
+lifecycle events against mainnet's zero — is what found them, which is the whole argument for that
+nest existing, made rather better than we made it.
+
+### Added
+
+- **A public SQL surface at `/sql`.** `GET /api/sql/catalog` lists every dataset and its tables;
+  `POST /api/sql/query` runs a read-only query against one. An **explicit allowlist**, not a
+  passthrough: a nest appears because someone decided it should, not because it shares a hostname.
+  Rationed to five queries a minute with a six-second timeout, over the nest's own row cap and
+  timeout. Five datasets today, one of them a frozen archive that says so on the page rather than
+  passing three-week-old data off as current.
+- **A named-query tier**, where the caller sends a name and typed arguments and never sends SQL.
+  A declared query has a shape and a cost chosen in advance, so it earns a better allowance than an
+  arbitrary `SELECT` — and it can be pinned to a block and carry a **signed receipt**
+  (`/api/sql/receipt`), which is the difference between a surface for exploring and one you could
+  depend on.
+- **`/verify`** — check a tattler receipt in the browser, including selective disclosure: one row
+  proved without handing over the answer.
+- **`/revert`** — the 63 custom errors these Horizon contracts declare, decoded into English and
+  wired into every write path in the Dock. Seconds become days, wei becomes GRT, and the four
+  documented traps are named as traps. Signatures are generated from the compiled ABIs rather than
+  transcribed, because a hand-copied selector that is one character out decodes nothing and looks
+  like an unknown error.
+- **`/operate`** and `GET /api/operator-preflight` — rehearse the whole provider sequence for any
+  pasted address against Arbitrum One, with no wallet, no signature and no gas. It reads what the
+  address holds, has staked and has provisioned, and names the step it would fail on. The first
+  check is the EIP-1967 slot, because calling an implementation instead of a proxy is the one trap
+  that produces no error to decode.
+- **Operator requirements read from chain**, per service, through `ProvisionManager`. Dispatch and
+  Seahorn ask 555 GRT against the Subgraph Service's 100,000 — the bar everybody assumes applies is
+  roughly a hundred and eighty times the real one.
+- **A provider census** (`GET /api/service-census`) that reads every service registry from chain and
+  calls what it advertises. Being registered is a promise; only a response is evidence.
+- **The DIPS agreement lifecycle** — `GET /api/dips/agreements`, offer through acceptance,
+  registration, collection and cancellation, with a per-indexer portfolio. POI presentation is
+  deliberately absent: POIs go to the data service, no event on either contract carries one, and
+  pretending otherwise would put a gap in the middle of a view that looks complete.
+- **`dips-nest-sepolia`**, deployed to Helsinki and on the public SQL surface. The same three DIPS
+  contracts on chain 421614, where the lifecycle has 1,440 events including 1,099 collections.
+- **A watch on the nests everything else stands on** — `check-nest-health` probes `/ready` rather
+  than `/health`, because a process that is running says nothing about whether it is still indexing,
+  and a nest answering instantly with three-week-old data is the quieter failure. Archival nests are
+  excluded: one that reports stalled for ever would fire on every run, and an alert that is always
+  on is an alert nobody reads.
+- **`check-dips-chain`**, cross-checking the nest against the allocator it indexes.
+
+### Changed
+
+- **The Project Catalyst tracker is rescored against evidence**, item by item, and the unweighted
+  mean moves from **45.75 to 60.0**. The lowest item went from 5 to 42. Four ceilings were re-cut
+  after they were found to assume an audit, an entity or a deployment that does not exist.
+- **The coverage gate is reachable again, and then some.** It had been set at 82/72/84/84 while
+  coverage sat around 69, so the Test job failed on every run and five PRs merged through the red.
+  Re-ratcheted to the true measurement and then climbed over four batches; the floor is now
+  **83/76/85/85** against 83.83/76.56/85.64/85.22 measured, with 171 files and 2,522 tests. The
+  four batches were picked for being real logic with real failure modes rather than for being cheap
+  lines, and `vitest.config.ts` now carries the ratchet history inline, so each step records what it
+  was measured against rather than asserting a number.
+- **The Intel Feed redirects to the Academy's Dispatches.**
+
+### Fixed
+
+- **`/api/dips` and `/api/dips/agreements` could not answer from a nest with rows.** A nest caps
+  concurrent `/sql` queries at two; the agreements route fired nine at once and the allocation panel
+  fires four, so both were refused with `server busy` and returned that 503. The cap is the node
+  protecting itself, so the fix is to ask for less: `nuthatch.ts` now gates `/sql` per nest, with a
+  bounded retry on the nest's own backpressure signal and none at all on an unready nest, which
+  answers 503 for an entirely different reason.
+- **`endsAt` was rendering as a date in the year 584,542,046,090.** 111 of the 113 real agreements
+  carry `type(uint64).max`, the collector's "no end date" sentinel, and a u64 max does not survive a
+  double. Populated field, correct type, confident nonsense. The comparison is now on the string,
+  because converting first would depend on precisely the precision loss that is the problem.
+- **The DIPS allocation panel understated issuance by a fifth.** A target's share is
+  `allocatorMintingRate + selfMintingRate`; the panel summed the self rates alone, which showed
+  `InnovationAllocation` at 0.00 and 0% while it drew 24.146 GRT/block through the allocator-minted
+  side, and reported the total as 96.584 against the real 120.73. The cheapest check this data has
+  is that the per-target sums equal `getIssuancePerBlock()`, and they now do, exactly.
+- **A nest that is not ready no longer serves (#1080).** Serving routes ask `/ready` before `/sql`
+  and fail closed with the nest's own reason. A 200 carrying stale rows is the failure this exists
+  to stop.
+- **Routes 503 instead of 500 when the gateway key is absent (#1097)** — `subgraph-names`, `ens` and
+  `token-metrics`. Missing configuration is not a server fault, and reporting it as one sends people
+  to read the wrong logs.
+- **An unknown data-services slug is a 404 again.** `REGISTRY[slug]` was a bare lookup on an object
+  literal, so `constructor`, `__proto__` and `toString` walked past the guard into the
+  receipt-signing path. Nothing useful was reachable that way, but an unknown slug should not cost a
+  keygen and an EIP-712 signature.
+
+### Notes
+
+- `NUTHATCH_DIPS_BASE_PATH` selects which DIPS nest `/api/dips/agreements` reads, defaulting to
+  `/dips` on Arbitrum One. It is an environment variable rather than a query parameter on purpose:
+  which chain a production panel reports is not a caller's choice.
+- `check-nest-health` now watches eight nests rather than seven, and the public SQL surface carries
+  a new dependency on the Helsinki box.
+- One failure mode in the new `/sql` gate is deliberately untested, and both the code and the test
+  file say so. Releasing the slot and letting the woken waiter re-check leaves a microtask window
+  that no test in the suite reaches; a test tuned to that exact depth would stop testing anything
+  the first time the call path gained an `await`, without saying so. The implementation removes the
+  window by construction instead.
+
 ## [4.27.0] - 2026-08-29
 
 Two histories had been running in parallel since 24 August. The 4.26.0 tag, carrying the
