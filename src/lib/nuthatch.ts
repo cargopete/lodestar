@@ -39,26 +39,15 @@ export async function nuthatchSql<T = Record<string, unknown>>(
   sql: string,
   basePath = ''
 ): Promise<T[]> {
-  if (!NUTHATCH_URL) throw new Error('NUTHATCH_URL not configured');
-  const headers: Record<string, string> = {};
-  if (NUTHATCH_USER && NUTHATCH_PASSWORD) {
-    const basic = Buffer.from(`${NUTHATCH_USER}:${NUTHATCH_PASSWORD}`).toString('base64');
-    headers.Authorization = `Basic ${basic}`;
+  // Built on `nuthatchSqlFull` rather than its own `fetch`, which is how it used to be. A second
+  // copy of the request was a second way to reach the nest, and it went round the concurrency gate
+  // and the request timeout that the copy below has. Two crons issuing two reads apiece at the top
+  // of the same minute is exactly the collision that gate exists for.
+  const result = await nuthatchSqlFull<T>(sql, basePath);
+  if (!result.ok) {
+    throw new Error(`nuthatch /sql error: ${result.error}`);
   }
-
-  const res = await fetch(`${NUTHATCH_URL}${basePath}/sql?q=${encodeURIComponent(sql)}`, {
-    headers,
-    // Server-side only; the nest is finality-gated, so a short cache is safe and cheap.
-    next: { revalidate: 0 },
-  });
-  if (!res.ok) {
-    throw new Error(`nuthatch /sql request failed: ${res.status}`);
-  }
-  const json = (await res.json()) as { rows?: T[]; error?: string };
-  if (json.error) {
-    throw new Error(`nuthatch /sql error: ${json.error}`);
-  }
-  return json.rows ?? [];
+  return result.data.rows ?? [];
 }
 
 /**
@@ -95,6 +84,89 @@ function nuthatchHeaders(): Record<string, string> {
 }
 
 /**
+ * A nest's `/sql` surface caps concurrent queries, and this is the gate that keeps us under it.
+ *
+ * The cap is real and small: measured against both dips nests on 2026-09-02, **two** queries are
+ * admitted and every further one is refused with `503 server busy: too many concurrent SQL
+ * queries`. It is the node protecting itself (nuthatch RFC-0013), so the answer is to ask for less,
+ * never to raise it.
+ *
+ * This lives here rather than at the call sites because the call sites cannot be trusted to
+ * remember, and the evidence is that they did not. `/api/dips/agreements` fired nine reads in one
+ * `Promise.all` and had therefore never once worked against a nest with rows — seven refusals, and
+ * the route returned one of them. `/api/dips` fires four, which is over the cap and survives only
+ * because the client happens to stagger them enough; that is not a property anyone chose.
+ * `delegation-flows` and the DIPS notification both fire exactly two, which is the whole budget.
+ * With the gate here, a `Promise.all` at a call site is correct again and nobody has to know this.
+ *
+ * **One slot, not two.** The cap is a shared resource: the public SQL playground, `check-nest-health`
+ * and every other Vercel instance draw on the same two. Taking one means our own composition can
+ * never be the cause of a refusal. The cost is that four tiny reads serialise, which behind a
+ * five-minute cache is worth roughly a hundred milliseconds once per TTL.
+ *
+ * **What it does not do.** This bounds one Node process. Serverless runs many, so three instances
+ * asking at once still exceed the cap — which is what the retry below is for. The gate makes us
+ * not the cause; it cannot make the cap larger, and nothing here should try to.
+ */
+const SQL_SLOTS = 1;
+
+interface SqlGate {
+  active: number;
+  waiting: (() => void)[];
+}
+
+const sqlGates = new Map<string, SqlGate>();
+
+async function withSqlSlot<T>(basePath: string, run: () => Promise<T>): Promise<T> {
+  let gate = sqlGates.get(basePath);
+  if (!gate) {
+    gate = { active: 0, waiting: [] };
+    sqlGates.set(basePath, gate);
+  }
+
+  if (gate.active >= SQL_SLOTS) {
+    await new Promise<void>((resolve) => gate!.waiting.push(resolve));
+    // Woken means the slot was handed over, not that it is free to take: see the release below.
+  } else {
+    gate.active++;
+  }
+
+  try {
+    return await run();
+  } finally {
+    // Hand the slot straight to the next waiter rather than releasing and letting it re-check.
+    // Releasing first leaves a microtask window: a continuation queued before this `finally` ran
+    // sees `active` back below the limit, takes the slot, and then the woken waiter takes it too —
+    // two in flight against a gate that promised one.
+    //
+    // Correct by construction rather than by test, and knowingly so. Mutating this to the
+    // release-then-recheck form leaves every test in `nuthatch-sql-slot.test.ts` passing, because
+    // reaching that window needs an arrival at one exact microtask depth; a test pinned to that
+    // depth would stop testing anything the moment this call path gained an `await`, silently.
+    // Handing the slot over removes the window instead of policing it.
+    const next = gate.waiting.shift();
+    if (next) next();
+    else gate.active--;
+  }
+}
+
+/** How long to wait before each retry of a query the nest refused for being busy. */
+const BUSY_BACKOFF_MS = [50, 150, 400];
+
+/**
+ * Whether a refusal is the nest telling us to slow down, as opposed to telling us something.
+ *
+ * Deliberately narrow. A 503 from `/sql` is *usually* not this — an unready or stalled nest is also
+ * a 503, and retrying that would sit in a loop while a page waits for an answer that is not coming.
+ * Only the concurrency guard's own wording is treated as backpressure.
+ */
+function isBusy(status: number, error: string): boolean {
+  return status === 503 && /too many concurrent/i.test(error);
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
  * Run one query and return the whole envelope, with the nest's own error text passed through.
  *
  * The nest sanitises its SQL errors before returning them (segment paths and content addresses
@@ -108,6 +180,33 @@ export async function nuthatchSqlFull<T = Record<string, unknown>>(
 ): Promise<{ ok: true; data: NuthatchSqlResult<T> } | { ok: false; status: number; error: string }> {
   if (!NUTHATCH_URL) throw new Error('NUTHATCH_URL not configured');
 
+  return withSqlSlot(basePath, async () => {
+    let last: { ok: false; status: number; error: string } | null = null;
+
+    // One attempt, plus up to three more if the nest says it is busy. Backing off is the correct
+    // response to backpressure from a node that is protecting itself; the slot gate above stops us
+    // being the cause, and this handles the case where somebody else is.
+    for (let attempt = 0; attempt <= BUSY_BACKOFF_MS.length; attempt++) {
+      if (attempt > 0) await sleep(BUSY_BACKOFF_MS[attempt - 1]);
+
+      const result = await sqlOnce<T>(sql, basePath, timeoutMs);
+      if (result.ok || !isBusy(result.status, result.error)) return result;
+      last = result;
+    }
+
+    // Still busy after the backoff. Return the nest's own words: "server busy" tells an operator
+    // something quite different from "nest is not ready", and flattening the two would cost the
+    // next person the diagnosis.
+    return last!;
+  });
+}
+
+/** One `/sql` request, no gate and no retry. Everything above composes this. */
+async function sqlOnce<T>(
+  sql: string,
+  basePath: string,
+  timeoutMs: number
+): Promise<{ ok: true; data: NuthatchSqlResult<T> } | { ok: false; status: number; error: string }> {
   const res = await fetch(`${NUTHATCH_URL}${basePath}/sql?q=${encodeURIComponent(sql)}`, {
     headers: nuthatchHeaders(),
     signal: AbortSignal.timeout(timeoutMs),

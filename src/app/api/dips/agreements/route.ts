@@ -58,18 +58,17 @@ export async function GET(request: NextRequest) {
     const summary = await cached(`dips:agreements:v1:${BASE_PATH}`, 300, async () => {
       const stages = Object.keys(AGREEMENT_TABLES) as AgreementStage[];
 
-      // Sequentially, one slot at a time, and this is not a preference.
+      // In series, and now for one reason rather than two.
       //
-      // These nine reads used to go out as one `Promise.all`. A nest caps concurrent `/sql`
-      // queries — measured against both dips nests on 2026-09-02, the cap admits two and 503s the
-      // rest with "server busy: too many concurrent SQL queries" — so seven of the nine were
-      // refused and the route returned that 503 to the caller. Every time. It went unnoticed
-      // because the tests mock `nuthatchSqlReady`, so nothing here had ever met the guard, and
-      // because mainnet's tables are all empty, so nobody was looking at this panel for data.
+      // These nine used to go out as one `Promise.all`, and a nest caps concurrent `/sql` queries
+      // at two — so seven were refused with "server busy" and this route returned that 503 on
+      // every request against a nest with rows. That half is no longer this route's problem:
+      // `nuthatch.ts` gates `/sql` per nest, so a `Promise.all` here would be admitted one at a
+      // time and would work.
       //
-      // The guard is the nest protecting itself, not an obstacle: the fix is to stop asking for
-      // nine slots. Nine tiny reads in series cost one slot and are cached for five minutes, and
-      // the in-flight probe coalescing in `nuthatch.ts` still makes it a single `/ready` probe.
+      // The loop stays for the other half. It stops at the first refusal instead of asking a nest
+      // that has just said no eight more times, which a `Promise.all` cannot do. Nine tiny reads
+      // behind a five-minute cache, sharing one `/ready` probe.
       const rows: StageRows = {};
       for (const stage of stages) {
         const result = await nuthatchSqlReady<Record<string, unknown>>(

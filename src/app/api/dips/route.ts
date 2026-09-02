@@ -150,6 +150,10 @@ export async function GET() {
         `JOIN (SELECT target AS t, max(block_number) AS bn FROM "${table}" GROUP BY target) l ` +
         `ON d.target = l.t AND d.block_number = l.bn`;
 
+      // Four at once is over the nest's concurrency cap of two, and was refused as such until
+      // `nuthatch.ts` grew a per-nest gate; these are now admitted one at a time. Left as a
+      // `Promise.all` because that is what it means — four independent reads — and composing it
+      // safely is the library's job now rather than this route's.
       const [alloc, timelineRes, sent, selfMinted] = await Promise.all([
         nuthatchSqlReady<AllocationRow>('SELECT * FROM dips_current_allocation', '/dips'),
         nuthatchSqlReady<TimelineRow>('SELECT * FROM dips_timeline ORDER BY block_number', '/dips'),
