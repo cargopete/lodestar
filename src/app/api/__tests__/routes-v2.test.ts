@@ -815,13 +815,32 @@ describe('/api/token-metrics', () => {
     GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
-  it('returns { data: [] } when DB not configured', async () => {
+  it('falls back to the subgraph when the DB is not configured', async () => {
+    // Previously this asserted a bare `200 { data: [] }`, which was the route answering
+    // successfully with nothing whatever went wrong (#36). It must actually reach the fallback.
+    //
+    // `mockReset` rather than `mockResolvedValueOnce` alone: the suite's `vi.clearAllMocks()`
+    // clears recorded calls but not queued one-shot implementations, so an unconsumed `Once`
+    // from an earlier test would be served here instead.
+    mockSubgraphQuery.mockReset().mockResolvedValue({ epoches: [] });
+
     const req = makeRequest('/api/token-metrics');
     const res = await GET(req);
     const json = await getJson(res);
 
     expect(res.status).toBe(200);
     expect(json.data).toEqual([]);
+    expect(mockSubgraphQuery).toHaveBeenCalled();
+  });
+
+  it('503s instead of an empty series when there is no gateway key either', async () => {
+    mockHasSubgraphAccess.mockReturnValue(false);
+
+    const res = await GET(makeRequest('/api/token-metrics'));
+    const json = await getJson(res);
+
+    expect(res.status).toBe(503);
+    expect(json.data).toBeUndefined();
   });
 
   it('returns computed token metrics from DB', async () => {
@@ -858,11 +877,13 @@ describe('/api/token-metrics', () => {
   it('only allows whitelisted count values', async () => {
     mockHasDbAccess.mockReturnValue(true);
     mockDb.mockResolvedValue([]);
+    mockSubgraphQuery.mockReset().mockResolvedValue({ epoches: [] });
 
     // Count 999 is not in the allowlist — should silently use 100
     const req = makeRequest('/api/token-metrics?count=999');
     const res = await GET(req);
     expect(res.status).toBe(200);
+    expect(mockSubgraphQuery.mock.calls[0][0]).toContain('first: 100');
   });
 });
 
