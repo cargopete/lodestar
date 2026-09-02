@@ -1178,8 +1178,27 @@ can be validated while the subject has not happened yet.
         off zero. Live on the homepage. `DefaultAllocation`'s zero is labelled *"no allocation
         event; zero by absence"* rather than rendered as a measured figure, because it has never
         emitted `TargetAllocationUpdated` and a confident zero would be a lie.
-  - [ ] Agreement lifecycle view: offer → acceptance → POI presentation → collection → cancellation.
-  - [ ] Per-indexer agreement portfolio: active agreements, revenue, compliance.
+  - [x] Agreement lifecycle view: offer → acceptance → registration → collection → cancellation.
+        `GET /api/dips/agreements`, folding nine event tables into agreements and one ordered event
+        stream, with `DipsAgreements` on the homepage. It renders nothing while the lifecycle is
+        empty, which is its state on mainnet: an empty table with headings would imply agreements
+        happen here and merely are not happening, a different and wronger claim than saying nothing.
+        **POI presentation is deliberately not in that list.** It was in the original bullet, and it
+        does not belong: POIs are presented to the data service, and no event on the
+        RecurringCollector or the RecurringAgreementManager carries one. `dips-nest` cannot answer
+        that leg at any effort. Answering it needs a second nest over the SubgraphService, which is
+        a separate piece of work and not part of this one.
+  - [x] Per-indexer agreement portfolio: `?indexer=0x…` on the same route. A narrowing of the same
+        data rather than a second read of nine tables.
+  - [x] Validated against real data rather than fixtures alone. Arbitrum Sepolia carries the whole
+        lifecycle (113 offers, 111 acceptances, 1,099 collections, 4 cancellations) and the
+        folding was checked against all 1,440 events. It produced 113 agreements, 109 active and 4
+        cancelled matching the 4 on chain, and 892.3282 GRT collected, agreeing exactly with an
+        independent raw sum of the collection logs.
+  - [ ] Deploy `dips-nest-sepolia` to Helsinki. Config authored in
+        [nightswatchhq/dips-nest#1](https://github.com/nightswatchhq/dips-nest/pull/1). It buys the
+        `/sql` path itself: exact table and column names, the `_dec` companions and the provenance
+        envelope, none of which the RPC validation above exercises.
   - [x] Alert on the split changing. It is the starting gun for the rest of this workstream.
         `/api/cron/check-dips` every 10 minutes, reading the nest directly so the API route's
         5-minute cache cannot mask the event. Two triggers: `dips_live` (allocation above zero,
