@@ -149,7 +149,7 @@ and its first contact with real data is the day the numbers matter most.
 
 ### 2. Cross-check the nest against the chain
 
-Tracked as issue #31. The allocator answers `getTargets()`, `getTargetAllocation(address)`,
+Done, in #33. `/api/cron/check-dips-chain` runs hourly. The allocator answers `getTargets()`, `getTargetAllocation(address)`,
 `getTotalAllocation()` and `getIssuancePerBlock()` directly, which is an independent oracle for an
 otherwise unopposed surface.
 
@@ -180,8 +180,12 @@ noticed because an unlabelled address at a plausible rate looks like noise.
 
 Ordered by what unblocks what.
 
-- [ ] Cross-check cron against the allocator over RPC (#31). Cheapest, catches the most, no
-      dependencies.
+- [x] Cross-check cron against the allocator over RPC (#31). Landed in #33 as
+      `/api/cron/check-dips-chain`, hourly. Reads `getTargets`, `getTargetAllocation` and
+      `getIssuancePerBlock`, compares against `dips_current_allocation` in exact wei, and
+      edge-triggers on a signature of the divergence set so a standing one does not become
+      wallpaper. A missing target counts as a divergence even at zero, because a zero the nest has
+      never recorded is a missed log rather than an empty allocation.
 - [ ] `dips-nest` on Arbitrum Sepolia, so the lifecycle views can be written against real rows.
 - [ ] Agreement lifecycle view, from the tables above. Redraw the roadmap bullet to drop the POI
       leg, or scope a second nest for it.
