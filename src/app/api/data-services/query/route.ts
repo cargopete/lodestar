@@ -129,7 +129,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'invalid request body' }, { status: 400 });
   }
 
-  const spec = REGISTRY[slug];
+  // `Object.hasOwn`, not a plain lookup: `REGISTRY['constructor']` is a truthy function on any
+  // object literal, so a bare `REGISTRY[slug]` lets a prototype key past this guard and on to the
+  // signing path with an undefined URL. Nothing useful is reachable that way, but an unknown slug
+  // should be a 404 rather than a 502 with a wasted keygen behind it.
+  const spec = Object.hasOwn(REGISTRY, slug) ? REGISTRY[slug] : undefined;
   if (!spec) {
     return NextResponse.json({ ok: false, error: `no live playground for "${slug}"` }, { status: 404 });
   }

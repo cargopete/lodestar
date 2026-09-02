@@ -165,3 +165,113 @@ describe('explainWriteError', () => {
     expect(explainWriteError(null)).toBe('null');
   });
 });
+
+/**
+ * The rest of the hand-written explainers.
+ *
+ * Each one exists because the raw error is actively misleading rather than merely terse, so the
+ * assertions are about the sentence saying the thing the selector does not: which of the two
+ * numbers is yours, which address is the one you are not, and what to do next. A wrong-but-fluent
+ * explanation is worse than a selector, which is why the fallback branch stays honest too.
+ */
+describe('decodeHorizonRevert — the remaining explained errors', () => {
+  it('says a missing provision is a missing provision, and why the check exists', () => {
+    const d = decodeHorizonRevert(
+      revert('ProvisionManagerProvisionNotFound', ['0x1111111111111111111111111111111111111111'])
+    );
+    expect(d.trap).toBe('no-provision');
+    expect(d.plain).toContain('0x1111111111111111111111111111111111111111');
+    expect(d.plain).toMatch(/stake first/i);
+  });
+
+  it('names caller and provider separately when the service refuses the caller', () => {
+    // Both are addresses and the order is the whole meaning: getting it backwards sends someone
+    // to authorise the wrong side.
+    const provider = '0x1111111111111111111111111111111111111111';
+    const caller = '0x2222222222222222222222222222222222222222';
+    const d = decodeHorizonRevert(revert('ProvisionManagerNotAuthorized', [provider, caller]));
+
+    expect(d.trap).toBe('not-you');
+    expect(d.plain.indexOf(caller)).toBeLessThan(d.plain.indexOf(provider));
+  });
+
+  it('explains an insufficient minimum in GRT', () => {
+    const d = decodeHorizonRevert(
+      revert('HorizonStakingInsufficientTokens', [parseEther('50'), parseEther('100000')])
+    );
+    expect(d.plain).toContain('50 GRT');
+    expect(d.plain).toContain('100,000 GRT');
+    expect(d.trap).toBeUndefined();
+  });
+
+  it('explains exceeding a maximum in GRT', () => {
+    const d = decodeHorizonRevert(
+      revert('HorizonStakingTooManyTokens', [parseEther('200'), parseEther('100')])
+    );
+    expect(d.plain).toContain('200 GRT');
+    expect(d.plain).toContain('100 GRT');
+  });
+
+  it('points an already-existing provision at addToProvision', () => {
+    const d = decodeHorizonRevert(revert('HorizonStakingProvisionAlreadyExists'));
+    expect(d.plain).toContain('addToProvision');
+    expect(d.args).toEqual([]);
+  });
+
+  it('says a verifier cut is parts per million, because the number looks absurd otherwise', () => {
+    // 5000000 reads as "five million percent" until somebody says the unit out loud.
+    const d = decodeHorizonRevert(revert('HorizonStakingInvalidMaxVerifierCut', [5_000_000]));
+    expect(d.plain).toContain('5000000');
+    expect(d.plain).toMatch(/parts per million/i);
+    expect(d.plain).toContain('500000 is 50%');
+  });
+
+  it('gives the thaw-request ceiling as a number rather than "too many"', () => {
+    const d = decodeHorizonRevert(revert('HorizonStakingTooManyThawRequests'));
+    expect(d.plain).toContain('1,000');
+  });
+
+  it('states the zero-token case plainly', () => {
+    const d = decodeHorizonRevert(revert('HorizonStakingInvalidZeroTokens'));
+    expect(d.name).toBe('HorizonStakingInvalidZeroTokens');
+    expect(d.plain).toMatch(/zero/i);
+  });
+
+  it('says whose problem an empty escrow is', () => {
+    // The collector cannot fix this; the payer has to deposit. Naming the wrong party here costs
+    // an afternoon of an indexer checking their own configuration.
+    const d = decodeHorizonRevert(
+      revert('PaymentsEscrowInsufficientBalance', [parseEther('1.5'), parseEther('10')])
+    );
+    expect(d.plain).toContain('1.5 GRT');
+    expect(d.plain).toContain('10 GRT');
+    expect(d.plain).toMatch(/payer must deposit/i);
+  });
+
+  it('names the address that is not a pause guardian', () => {
+    const d = decodeHorizonRevert(
+      revert('DataServicePausableNotPauseGuardian', ['0x3333333333333333333333333333333333333333'])
+    );
+    expect(d.plain).toContain('0x3333333333333333333333333333333333333333');
+  });
+
+  it('rounds a thawing period that is not a whole number of days', () => {
+    // 2.5 days as seconds. `${d} days` on a float would print 2.5 here but 2.4999999 elsewhere.
+    const d = decodeHorizonRevert(
+      revert('HorizonStakingInvalidThawingPeriod', [216_000n, 2_419_200n])
+    );
+    expect(d.plain).toContain('2.50 days');
+    expect(d.plain).toContain('28 days');
+  });
+
+  it('falls back to the parameter name being absent from ProvisionManagerInvalidValue', () => {
+    // The first field is `bytes`, and viem hands back a hex string either way — but the explainer
+    // guards for a non-string, and that branch must still produce a usable sentence.
+    const d = decodeHorizonRevert(
+      revert('ProvisionManagerInvalidValue', ['0x', 7n, 1n, 5n])
+    );
+    expect(d.trap).toBe('provision-range');
+    expect(d.plain).toContain('7');
+    expect(d.plain).toContain('between 1 and 5');
+  });
+});
