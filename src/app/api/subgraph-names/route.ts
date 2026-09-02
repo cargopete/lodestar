@@ -14,7 +14,9 @@ interface Row {
  * are unsignalled and so never appear in the top-N signalled list.
  */
 export async function POST(request: NextRequest) {
-  if (!hasSubgraphAccess()) return NextResponse.json({ data: {} });
+  if (!hasSubgraphAccess()) {
+    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
+  }
 
   let hashes: string[] = [];
   try {
