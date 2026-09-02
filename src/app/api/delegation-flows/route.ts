@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { hasNuthatch, nuthatchSql } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { log } from '@/lib/logger';
 
 export interface DelegationFlowPoint {
@@ -86,24 +86,37 @@ export async function GET(request: NextRequest) {
   const cacheKey = `lodestar:delegation-flows:nuthatch:v4:${days}`;
 
   try {
-    const data = await cached<DelegationFlowPoint[]>(cacheKey, 600, async () => {
+    const data = await cached<{
+      points: DelegationFlowPoint[];
+      provenance: { as_of?: number | null; sealed_through?: number | null } | null;
+    }>(cacheKey, 600, async () => {
       const startTimestamp = Math.floor((Date.now() - days * 86400_000) / 1000);
       const [historical, live] = await Promise.all([
         startTimestamp < LEGACY_HISTORY_END_EXCLUSIVE
-          ? nuthatchSql<DailyFlowRow>(
+          ? nuthatchSqlReady<DailyFlowRow>(
               dailyFlowSql(startTimestamp, LEGACY_HISTORY_END_EXCLUSIVE, true),
-              '/legacy-flows'
+              '/legacy-flows',
+              { requireReady: false },
             )
-          : Promise.resolve([]),
-        nuthatchSql<DailyFlowRow>(
-          dailyFlowSql(Math.max(startTimestamp, LEGACY_HISTORY_END_EXCLUSIVE), Number.MAX_SAFE_INTEGER, false)
+          : Promise.resolve({ ok: true as const, data: { rows: [] as DailyFlowRow[] } }),
+        nuthatchSqlReady<DailyFlowRow>(
+          dailyFlowSql(Math.max(startTimestamp, LEGACY_HISTORY_END_EXCLUSIVE), Number.MAX_SAFE_INTEGER, false),
         ),
       ]);
-      return mergeDailyFlows(historical, live);
+      if (!historical.ok) {
+        throw Object.assign(new Error(historical.error), { nest: historical });
+      }
+      if (!live.ok) {
+        throw Object.assign(new Error(live.error), { nest: live });
+      }
+      return {
+        points: mergeDailyFlows(historical.data.rows, live.data.rows),
+        provenance: live.data.provenance ?? null,
+      };
     });
 
     return NextResponse.json(
-      { data, source: 'nuthatch' },
+      { data: data.points, source: 'nuthatch', provenance: data.provenance },
       {
         headers: {
           'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
@@ -112,6 +125,13 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     log.api.error({ err: error }, 'Nuthatch delegation flows error');
+    const nest = (error as { nest?: { error: string; reason?: string; status?: number } }).nest;
+    if (nest) {
+      return NextResponse.json(
+        { error: nest.error, reason: nest.reason },
+        { status: nest.status ?? 503 },
+      );
+    }
     return NextResponse.json({ error: 'Failed to load delegation flows from Nuthatch' }, { status: 503 });
   }
 }

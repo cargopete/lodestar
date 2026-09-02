@@ -145,3 +145,39 @@ export async function nuthatchTables(
   const json = (await res.json()) as { tables?: NuthatchTable[] };
   return json.tables ?? [];
 }
+
+/**
+ * Query a nest only if it is ready to answer, and keep the provenance the rows came with.
+ *
+ * Serving routes must go through this rather than `nuthatchSql`. `nuthatchSql` throws the
+ * envelope away and never asks `/ready`, which is how a stalled nest still returned 200 with
+ * three-week-old rows (#1080). Alerting crons can keep using `nuthatchSql`; they are not the
+ * page the user sees.
+ *
+ * `requireReady: false` is for archival datasets (`nuthatch serve` with no cursor). Those
+ * report stalled forever and are right to; skipping the gate is the documented exception,
+ * not a fallback to The Graph.
+ */
+export async function nuthatchSqlReady<T = Record<string, unknown>>(
+  sql: string,
+  basePath = '',
+  opts: { timeoutMs?: number; requireReady?: boolean } = {},
+): Promise<
+  | { ok: true; data: NuthatchSqlResult<T> }
+  | { ok: false; status: number; error: string; reason?: string }
+> {
+  const requireReady = opts.requireReady !== false;
+  if (requireReady) {
+    const { probeNest } = await import('./nest-health');
+    const health = await probeNest('serve', 'serve', basePath);
+    if (!health.ready) {
+      return {
+        ok: false,
+        status: 503,
+        error: health.reason ? `nest is not ready: ${health.reason}` : 'nest is not ready',
+        reason: health.reason,
+      };
+    }
+  }
+  return nuthatchSqlFull<T>(sql, basePath, opts.timeoutMs ?? 15_000);
+}

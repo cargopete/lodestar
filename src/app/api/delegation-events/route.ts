@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { hasNuthatch, nuthatchSql } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { log } from '@/lib/logger';
 
 interface DelegationEvent {
@@ -58,12 +58,27 @@ export async function GET(request: NextRequest) {
       ? `lodestar:delegation-events:${indexer}`
       : 'lodestar:delegation-events:all';
 
-    const data = await cached(`${cacheKey}:nuthatch:v3`, 300, async () => {
-      const rows = await nuthatchSql<DelegationEvent>(delegationEventsSql(indexer, first, sevenDaysAgo));
-      return { delegationEvents: rows, source: 'nuthatch' as const };
+    const payload = await cached(`${cacheKey}:nuthatch:v4`, 300, async () => {
+      const result = await nuthatchSqlReady<DelegationEvent>(
+        delegationEventsSql(indexer, first, sevenDaysAgo),
+      );
+      if (!result.ok) {
+        return { error: result.error, reason: result.reason, status: result.status };
+      }
+      return {
+        data: { delegationEvents: result.data.rows, source: 'nuthatch' as const },
+        provenance: result.data.provenance ?? null,
+      };
     });
 
-    return NextResponse.json({ data }, {
+    if ('error' in payload && payload.error) {
+      return NextResponse.json(
+        { error: payload.error, reason: payload.reason },
+        { status: payload.status ?? 503 },
+      );
+    }
+
+    return NextResponse.json(payload, {
       headers: {
         'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
       },

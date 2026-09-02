@@ -22,6 +22,55 @@ Before changing a route to **Live**, record all of the following in the migratio
 4. Failure behaviour: Nuthatch outage returns an error and does not call The Graph.
 5. A rollback procedure that restores the previous release, not a hidden secondary data path.
 
+## What happens when a nest is down
+
+Decided, and the measurement that forced the decision is below. Tracked as `nuthatch#1080`.
+
+### The policy
+
+**Fail visibly. Never fall back to The Graph, and never serve data without saying how current it is.**
+
+That is already the stated rule at the top of this document, and it is already the de facto behaviour
+of the panels migrated in 4.26.0, which need a configured Nuthatch origin and have no alternate
+source. What follows makes it enforceable rather than conventional.
+
+1. **A serving route must consult `/ready` before answering**, not merely have someone alerting on it
+   elsewhere. `/ready` is the nest's own judgement: it 503s when quarantined or stalled and carries
+   `lag_blocks`, `sealed_through` and `cursorless` to explain itself.
+2. **An unready nest produces an error the caller can render**, with the nest's reason attached. A
+   panel saying "delegation data is 3 weeks behind" is useful. A panel quietly showing 3-week-old
+   numbers is worse than a blank one.
+3. **Every response carries its own freshness** - `as_of` and `sealed_through` from `/sql` provenance
+   - so a caller can decide for itself. This is *better* than the gateway, which cannot say.
+4. **No route may fall back to The Graph.** A dual-source route is two sources of truth and one of
+   them is wrong; the whole point of the migration is that we stop guessing which.
+
+### Why this needed deciding rather than assuming
+
+Measured 2026-09-01 across the five routes already served by a nest:
+
+| route | checks `/ready` before serving | reports data freshness |
+|---|---|---|
+| `/api/delegation-events` | yes | yes |
+| `/api/delegation-flows` | yes (live half) | yes |
+| `/api/developer-activity` | yes | via thrown nest error |
+| `/api/dips` | yes | via thrown nest error |
+| `/api/sql/query` | yes, except archival datasets | yes |
+
+Implemented in `nuthatchSqlReady`. Archival datasets (`nuthatch serve` with no cursor) skip the
+gate on purpose: they report stalled forever and are right to. Alerting crons still use
+`nuthatchSql`; they are not the page the user sees.
+
+A note on how that was almost missed: grepping these routes for `as_of|sealed_through|stale` returns
+a hit in four of five, which reads as freshness reporting. Every one of those hits is
+`stale-while-revalidate` in a `Cache-Control` header, which is HTTP caching and says nothing about
+the data. The right answer needed reading the lines rather than counting them.
+
+### What this blocks
+
+The gate is now on the five serving routes. Further surface switches still have to go through
+`nuthatchSqlReady`; adding a route that calls `nuthatchSql` directly is how this regresses.
+
 ## Running nests
 
 | Nest | Data | State | Notes |

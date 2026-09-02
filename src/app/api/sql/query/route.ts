@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { hasNuthatch, nuthatchSqlFull } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { findDataset } from '@/lib/sql-datasets';
 import { isReadOnlySql } from '@/lib/sql-guard';
 import { log } from '@/lib/logger';
@@ -58,13 +58,17 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await nuthatchSqlFull(q, dataset.basePath, QUERY_TIMEOUT_MS);
+    const result = await nuthatchSqlReady(q, dataset.basePath, {
+      timeoutMs: QUERY_TIMEOUT_MS,
+      requireReady: !dataset.archival,
+    });
     if (!result.ok) {
       // The nest sanitises its own SQL errors before returning them, so relaying the text is safe
       // and is the difference between "query failed" and "no such column: tokns".
+      // 503 is the readiness gate (#1080); do not collapse it into 502.
       return NextResponse.json(
-        { error: result.error },
-        { status: result.status === 400 ? 400 : 502 }
+        { error: result.error, reason: result.reason },
+        { status: result.status === 400 || result.status === 503 ? result.status : 502 }
       );
     }
     return NextResponse.json({

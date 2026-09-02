@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { nuthatchEnabled, nuthatchSql } from '@/lib/nuthatch';
+import { nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
 import { log } from '@/lib/logger';
 
 // No request argument, so Next would statically cache this at build time and freeze the data
@@ -95,10 +95,14 @@ export async function GET() {
 
   try {
     const data = await cached('dips:v1', 300, async () => {
-      const [allocRows, timelineRows] = await Promise.all([
-        nuthatchSql<AllocationRow>('SELECT * FROM dips_current_allocation', '/dips'),
-        nuthatchSql<TimelineRow>('SELECT * FROM dips_timeline ORDER BY block_number', '/dips'),
+      const [alloc, timelineRes] = await Promise.all([
+        nuthatchSqlReady<AllocationRow>('SELECT * FROM dips_current_allocation', '/dips'),
+        nuthatchSqlReady<TimelineRow>('SELECT * FROM dips_timeline ORDER BY block_number', '/dips'),
       ]);
+      if (!alloc.ok) throw Object.assign(new Error(alloc.error), { nest: alloc });
+      if (!timelineRes.ok) throw Object.assign(new Error(timelineRes.error), { nest: timelineRes });
+      const allocRows = alloc.data.rows;
+      const timelineRows = timelineRes.data.rows;
 
       const observed = new Map(allocRows.map((r) => [r.target.toLowerCase(), r]));
       const totalRate = allocRows.reduce((sum, r) => sum + Number(r.self_minting_rate_dec) / GRT, 0);
@@ -158,6 +162,13 @@ export async function GET() {
     );
   } catch (error) {
     log.api.error({ err: error }, 'DIPS route error');
+    const nest = (error as { nest?: { error: string; reason?: string; status?: number } }).nest;
+    if (nest) {
+      return NextResponse.json(
+        { error: nest.error, reason: nest.reason },
+        { status: nest.status ?? 503 },
+      );
+    }
     return NextResponse.json({ error: 'Failed to load DIPS state' }, { status: 500 });
   }
 }
