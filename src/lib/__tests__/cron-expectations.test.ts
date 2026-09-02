@@ -111,6 +111,7 @@ describe('assessCrons', () => {
     const real: CronRunRow[] = [
       row('allocations', 44),
       row('check-dips', 5),
+      row('check-dips-chain', 35),
       row('check-nest-health', 0),
       row('check-provider-liveness', 0),
       row('compute-scores', 40_000),
