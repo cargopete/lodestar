@@ -35,9 +35,18 @@ export default defineConfig({
       // everyone to merge through a failing Test job, which cost the suite whatever value it
       // had: a check that always fails cannot tell you that you broke something.
       //
-      // Ratchet history, newest first. These go UP and never down; #18 stays open for the
-      // climb back to 84.
+      // The climb is finished. As of the top entry below every metric is back above the gate
+      // those old numbers described — 82/72/84/84 — and past it, so the floor is now set from
+      // the measurement rather than from that target.
       //
+      // Ratchet history, newest first. These go UP and never down.
+      //
+      //   2026-09-02  170 files / 2503 tests  83.64 / 76.27 / 85.53 / 85.02
+      //               batch 4 (#18, the last one): the Foghorn hooks, useDismissible, the
+      //               remaining Horizon revert explainers, and six routes taken from 0% —
+      //               apr-provenance, disassembly/verify, scuttlebutt/stream,
+      //               data-services/query, indexer P&L, operator-preflight, network-health
+      //               and qos/capture, plus ingest-qos and ingest-rav in the cron matrix.
       //   2026-09-02  160 files / 2292 tests  79.53 / 72.90 / 79.72 / 80.70
       //               the disassembly cluster (WASM parser, sandbox builder, manifest,
       //               scorecard, orchestrator, IPFS, rate limiter), the Redis half of the
@@ -52,10 +61,10 @@ export default defineConfig({
       // Set a little under each measurement, so the gate catches the next real regression
       // rather than flapping on rounding.
       thresholds: {
-        statements: 79,
-        branches: 72,
-        functions: 79,
-        lines: 80,
+        statements: 83,
+        branches: 76,
+        functions: 85,
+        lines: 85,
       },
     },
   },
