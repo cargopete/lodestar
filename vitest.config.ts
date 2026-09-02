@@ -35,16 +35,21 @@ export default defineConfig({
       // everyone to merge through a failing Test job, which cost the suite whatever value it
       // had: a check that always fails cannot tell you that you broke something.
       //
-      // Measured on 138 files / 1896 tests: statements 68.90, branches 62.50, functions
-      // 69.76, lines 70.18. Set just under each, so the gate catches the next regression
-      // rather than flapping on rounding.
+      // Ratchet history, newest first. These go UP and never down; #18 stays open for the
+      // climb back to 84.
       //
-      // These go UP and never down. #18 stays open for the climb back to 84.
+      //   2026-09-02  143 files / 1984 tests  71.13 / 64.68 / 72.05 / 72.41
+      //               apns, ingest/rav and ingest/qos taken from 0% to ~98%.
+      //   2026-09-02  138 files / 1896 tests  68.90 / 62.50 / 69.76 / 70.18
+      //               the re-ratchet itself (#18), after four months of an unreachable gate.
+      //
+      // Set a little under each measurement, so the gate catches the next real regression
+      // rather than flapping on rounding.
       thresholds: {
-        statements: 68,
-        branches: 62,
-        functions: 69,
-        lines: 70,
+        statements: 70,
+        branches: 64,
+        functions: 71,
+        lines: 72,
       },
     },
   },
