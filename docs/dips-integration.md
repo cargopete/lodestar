@@ -252,11 +252,23 @@ noticed because an unlabelled address at a plausible rate looks like noise.
       fire for a newly registered target, and that path now has an explicit test. It had never been
       exercised, which is how "it would have been caught" stayed a theory while
       InnovationAllocation went unremarked.
-- [ ] **`dips-nest` on Arbitrum Sepolia.** The one item that needs the Helsinki box. Config above.
-      It buys the `/sql` path itself: exact table and column names, the `_dec` companions and the
-      provenance envelope, none of which an RPC log read exercises.
-- [ ] **POI presentation.** Not answerable from these three contracts at all. Either a second nest
-      over the SubgraphService, or the roadmap bullet redrawn to stop at what they see.
+- [ ] **Deploy `dips-nest-sepolia` to Helsinki.** The one item that needs the box. Config authored
+      in [nightswatchhq/dips-nest#1](https://github.com/nightswatchhq/dips-nest/pull/1), with
+      `start_block` values read over RPC rather than taken from a deployment record. It buys the
+      `/sql` path itself: exact table and column names, the `_dec` companions and the provenance
+      envelope, none of which an RPC log read exercises.
+
+### POI presentation: decided, and the answer is no
+
+The roadmap carried "offer → acceptance → **POI presentation** → collection → cancellation" as one
+bullet. That middle leg does not belong in it, and the reason is structural rather than a matter of
+effort: POIs are presented to the data service, and no event on the RecurringCollector or the
+RecurringAgreementManager carries one. `dips-nest` indexes those two contracts and the
+IssuanceAllocator, so it cannot answer that leg at any level of cleverness.
+
+The lifecycle view therefore stops where these contracts stop, and says so. Answering the POI leg
+means a second nest over the SubgraphService, which is a different piece of work with a different
+contract set, and folding it into this bullet only made this bullet permanently unfinishable.
 
 ## Related
 
