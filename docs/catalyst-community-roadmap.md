@@ -1159,6 +1159,10 @@ parity replacing the upgrade indexer. Fallback routing.
 
 ### Tasks
 
+The integration detail lives in [`docs/dips-integration.md`](./dips-integration.md): what Lodestar
+reads today, the lifecycle tables `dips-nest` already holds that nothing reads, and how any of it
+can be validated while the subject has not happened yet.
+
 - [x] **Confirm the protocol state rather than assuming it.** Done 2026-08-28: the contracts are on
       mainnet and the allocation is zero. See above.
 - [ ] **DIPS observability (`dips-nest` + Lodestar panel).** 🔑 *In progress. Unblocked, ours end to
