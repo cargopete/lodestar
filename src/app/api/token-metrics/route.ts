@@ -15,6 +15,9 @@ export interface TokenMetricPoint {
 
 const ALLOWED_COUNTS = new Set([50, 100, 200, 500]);
 
+/** Thrown from inside `cached()` so the handler can answer 503 rather than a hollow 200. */
+class NoSubgraphAccess extends Error {}
+
 async function fetchFromSubgraph(count: number): Promise<TokenMetricPoint[]> {
   const result = await subgraphQuery<{
     epoches: Array<{ id: string; totalRewards: string; taxedQueryFees: string }>;
@@ -97,8 +100,10 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // DB empty, unavailable, or failed — fall back to subgraph
-      if (!hasSubgraphAccess()) return [];
+      // DB empty, unavailable, or failed — fall back to subgraph. With no gateway key there is
+      // no fallback left, and an empty series here would draw a flat line that reads exactly like
+      // a real one (#36). `cached()` does not memoise a rejection, so throwing is safe.
+      if (!hasSubgraphAccess()) throw new NoSubgraphAccess();
       return fetchFromSubgraph(count);
     });
 
@@ -112,6 +117,11 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     log.api.error({ err: error }, 'Token metrics error');
-    return NextResponse.json({ data: [] });
+    // Never a successful empty series: a subgraph outage, a malformed response and a genuinely
+    // empty range would all have been one flat line on the chart.
+    if (error instanceof NoSubgraphAccess) {
+      return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
+    }
+    return NextResponse.json({ error: 'Failed to load token metrics' }, { status: 500 });
   }
 }

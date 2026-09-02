@@ -444,15 +444,17 @@ describe('/api/ens', () => {
     expect(json.ensName).toBeNull();
   });
 
-  it('returns null ensName when subgraph errors', async () => {
+  it('503s when the ENS lookup errors, rather than reporting no name', async () => {
+    // This previously asserted `200 { ensName: null }`, which made "the lookup failed" and
+    // "this address has no ENS name" the same answer (#36).
     mockEnsQuery.mockRejectedValueOnce(new Error('subgraph down'));
 
     const req = makeRequest('/api/ens?address=0xd8da6bf26964af9d7eed9e03e53415d37aa96045');
     const res = await GET(req);
     const json = await getJson(res);
 
-    expect(res.status).toBe(200);
-    expect(json.ensName).toBeNull();
+    expect(res.status).toBe(503);
+    expect(json.ensName).toBeUndefined();
   });
 });
 
