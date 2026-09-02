@@ -95,14 +95,14 @@ export async function GET() {
 
   try {
     const data = await cached('dips:v1', 300, async () => {
-      const [alloc, timeline] = await Promise.all([
+      const [alloc, timelineRes] = await Promise.all([
         nuthatchSqlReady<AllocationRow>('SELECT * FROM dips_current_allocation', '/dips'),
         nuthatchSqlReady<TimelineRow>('SELECT * FROM dips_timeline ORDER BY block_number', '/dips'),
       ]);
       if (!alloc.ok) throw Object.assign(new Error(alloc.error), { nest: alloc });
-      if (!timeline.ok) throw Object.assign(new Error(timeline.error), { nest: timeline });
+      if (!timelineRes.ok) throw Object.assign(new Error(timelineRes.error), { nest: timelineRes });
       const allocRows = alloc.data.rows;
-      const timelineRows = timeline.data.rows;
+      const timelineRows = timelineRes.data.rows;
 
       const observed = new Map(allocRows.map((r) => [r.target.toLowerCase(), r]));
       const totalRate = allocRows.reduce((sum, r) => sum + Number(r.self_minting_rate_dec) / GRT, 0);
