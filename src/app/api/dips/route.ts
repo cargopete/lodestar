@@ -69,6 +69,20 @@ interface AllocationRow {
   block_timestamp: number;
 }
 
+/**
+ * The most recent issuance actually delivered to a target.
+ *
+ * A configured rate and a delivered one are different claims. The panel has always shown the
+ * first; a rate set but never distributed would read as Live with nothing flowing, which is a
+ * quieter version of the failure this whole panel exists to catch.
+ */
+interface DistributionRow {
+  target: string;
+  block_number: number;
+  block_timestamp: number;
+  amount_dec: string | null;
+}
+
 interface TimelineRow {
   block_number: number;
   block_timestamp: number;
@@ -90,6 +104,17 @@ export interface DipsAllocation {
    * mechanism, not an amount: `rate` is the same either way.
    */
   selfMinting: boolean;
+  /**
+   * Unix seconds of the most recent issuance actually delivered to this target, by either
+   * mechanism. Null means a rate is configured and nothing has ever been seen to move under it,
+   * which is not the same as a rate of zero.
+   */
+  lastDistributedAt: number | null;
+  /**
+   * True when this target has a non-zero configured rate and no delivery has ever been observed.
+   * The gap between what governance set and what the chain did.
+   */
+  configuredNotDistributed: boolean;
   /**
    * True when the rate is read from an actual TargetAllocationUpdated event rather than inferred.
    * DefaultAllocation has never emitted one, so its zero is an absence, not a measurement — and an
@@ -116,14 +141,38 @@ export async function GET() {
 
   try {
     const data = await cached('dips:v1', 300, async () => {
-      const [alloc, timelineRes] = await Promise.all([
+      // Latest delivery per target, for each of the two mechanisms. The join is the same shape
+      // the nest's own `dips_current_allocation` view uses, so it is known to work on this engine
+      // rather than assumed to. All four reads share one `/ready` probe.
+      const latestPerTarget = (table: string) =>
+        `SELECT d.target, d.block_number, d.block_timestamp, d.amount_dec ` +
+        `FROM "${table}" d ` +
+        `JOIN (SELECT target AS t, max(block_number) AS bn FROM "${table}" GROUP BY target) l ` +
+        `ON d.target = l.t AND d.block_number = l.bn`;
+
+      const [alloc, timelineRes, sent, selfMinted] = await Promise.all([
         nuthatchSqlReady<AllocationRow>('SELECT * FROM dips_current_allocation', '/dips'),
         nuthatchSqlReady<TimelineRow>('SELECT * FROM dips_timeline ORDER BY block_number', '/dips'),
+        nuthatchSqlReady<DistributionRow>(
+          latestPerTarget('issuance_allocator__issuance_distributed'), '/dips'),
+        nuthatchSqlReady<DistributionRow>(
+          latestPerTarget('issuance_allocator__issuance_self_mint_allowance'), '/dips'),
       ]);
       if (!alloc.ok) throw Object.assign(new Error(alloc.error), { nest: alloc });
       if (!timelineRes.ok) throw Object.assign(new Error(timelineRes.error), { nest: timelineRes });
+      if (!sent.ok) throw Object.assign(new Error(sent.error), { nest: sent });
+      if (!selfMinted.ok) throw Object.assign(new Error(selfMinted.error), { nest: selfMinted });
       const allocRows = alloc.data.rows;
       const timelineRows = timelineRes.data.rows;
+
+      // Either mechanism counts as delivery; keep whichever happened later.
+      const deliveredAt = new Map<string, number>();
+      for (const r of [...sent.data.rows, ...selfMinted.data.rows]) {
+        const t = r.target?.toLowerCase();
+        if (!t) continue;
+        const ts = Number(r.block_timestamp ?? 0);
+        deliveredAt.set(t, Math.max(deliveredAt.get(t) ?? 0, ts));
+      }
 
       const observed = new Map(allocRows.map((r) => [r.target.toLowerCase(), r]));
 
@@ -156,12 +205,15 @@ export async function GET() {
         .map((target) => {
           const row = observed.get(target);
           const rate = row ? rateOf(row) : 0;
+          const lastDistributedAt = deliveredAt.get(target) ?? null;
           return {
             target,
             label: LABELS[target] ?? target,
             rate,
             sharePct: totalRate > 0 ? (rate / totalRate) * 100 : 0,
             selfMinting: row ? grt(row.self_minting_rate_dec) > 0 : false,
+            lastDistributedAt,
+            configuredNotDistributed: rate > 0 && lastDistributedAt == null,
             observed: Boolean(row),
           };
         })
@@ -191,6 +243,14 @@ export async function GET() {
         agreementRate,
         /** The whole point: has the switch been flipped? */
         live: agreementRate > 0,
+        /**
+         * Targets carrying a configured rate that nothing has ever been seen to deliver under.
+         * Empty is the healthy answer; a name here means governance set a rate and the chain has
+         * not acted on it, which no amount of staring at the rate itself would reveal.
+         */
+        configuredNotDistributed: allocations
+          .filter((a) => a.configuredNotDistributed)
+          .map((a) => a.target),
         allocations,
         timeline,
         lastConfiguredAt: timeline.length > 0 ? timeline[timeline.length - 1].timestamp : null,

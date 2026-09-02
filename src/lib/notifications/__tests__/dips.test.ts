@@ -135,6 +135,21 @@ describe('dispatchDipsNotifications', () => {
     expect(sendToAddress).not.toHaveBeenCalled();
   });
 
+  it('announces a NEW ALLOCATION TARGET, not just a changed rate', async () => {
+    // InnovationAllocation appeared on mainnet holding a fifth of all issuance and nothing said
+    // so. `target_allocation_set` does fire for a newly registered target, but that path had
+    // never been exercised, which is how "it would have been caught" stayed a theory.
+    nestReturns(ZERO_STATE, [{ block_number: 499_000_000, step: 'target_allocation_set' }]);
+    const r = await dispatchDipsNotifications(
+      makeSql([[], [{ block: 498_298_724 }], [{ address: '0xa' }], []])
+    );
+
+    expect(r.events).toEqual(['dips_config']);
+    expect(r.latestBlock).toBe(499_000_000);
+    expect(sendToAddress).toHaveBeenCalledTimes(1);
+    expect(sendToAddress.mock.calls[0][1].body).toContain('499000000');
+  });
+
   it('broadcasts dips_config when a new configuration step lands past the watermark', async () => {
     nestReturns(ZERO_STATE, [{ block_number: 499000000, step: 'target_allocation_set' }]);
     const r = await dispatchDipsNotifications(

@@ -14,6 +14,7 @@ import { HorizonParameters } from '@/components/ui/HorizonParameters';
 import { HorizonActivity } from '@/components/ui/HorizonActivity';
 import { CatalystCoverage } from '@/components/ui/CatalystCoverage';
 import { DipsStatus } from '@/components/ui/DipsStatus';
+import { DipsAgreements } from '@/components/ui/DipsAgreements';
 import dynamic from 'next/dynamic';
 
 const StakingTrendChart = dynamic(() => import('@/components/charts/StakingTrendChart').then(m => ({ default: m.StakingTrendChart })), { ssr: false });
@@ -129,6 +130,7 @@ export default function ProtocolOverview() {
           the one roadmap item where the protocol has already moved and nobody has noticed. Renders
           nothing when `dips-nest` is unconfigured. */}
       <DipsStatus />
+      <DipsAgreements />
 
       {/* Epoch progress */}
       <Card>
