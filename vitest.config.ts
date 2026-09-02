@@ -38,6 +38,8 @@ export default defineConfig({
       // Ratchet history, newest first. These go UP and never down; #18 stays open for the
       // climb back to 84.
       //
+      //   2026-09-02  149 files / 2076 tests  73.23 / 66.53 / 74.26 / 74.60
+      //               foghorn, sql/receipt and developer-activity taken from 0%.
       //   2026-09-02  143 files / 1984 tests  71.13 / 64.68 / 72.05 / 72.41
       //               apns, ingest/rav and ingest/qos taken from 0% to ~98%.
       //   2026-09-02  138 files / 1896 tests  68.90 / 62.50 / 69.76 / 70.18
@@ -46,10 +48,10 @@ export default defineConfig({
       // Set a little under each measurement, so the gate catches the next real regression
       // rather than flapping on rounding.
       thresholds: {
-        statements: 70,
-        branches: 64,
-        functions: 71,
-        lines: 72,
+        statements: 72,
+        branches: 66,
+        functions: 73,
+        lines: 74,
       },
     },
   },
