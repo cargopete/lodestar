@@ -139,13 +139,66 @@ Four things, roughly in order of how much they buy.
 
 ### 1. A Sepolia nest
 
-The highest-value move, and not yet done. Chain 421614 carries the full contract set, including its
-own `DefaultAllocation` and `InnovationAllocation`, and `weaver` has already exercised `accept()`
-there in fork tests. A `dips-nest` pointed at Arbitrum Sepolia would produce genuinely non-empty
-lifecycle data to build every view and query against.
+Still the highest-value move, and now measured rather than assumed. Read from Arbitrum Sepolia over
+RPC on 2 September 2026:
 
-Without it, every lifecycle view has to be written blind against tables that have never held a row,
-and its first contact with real data is the day the numbers matter most.
+```
+RecurringCollector 0x0b18befc60455121ad66ae6e4a647955fcde3900
+  OfferStored             113 logs
+  AgreementAccepted       111 logs
+  RCACollected           1099 logs
+  AgreementCanceled         4 logs
+
+RecurringAgreementManager 0x590dbbbdb1b6261e39bcc1fe88bffc21c847a68e
+  AgreementAdded          113 logs
+  AgreementRejected         0 logs
+```
+
+**The entire lifecycle has already been exercised on Sepolia.** Not a fixture, not a fork test:
+1,440 real events including 1,099 collections. That changes the argument for a Sepolia nest from
+"it would be nice to have data" to "the data is sitting there".
+
+The folding in `src/lib/dips-agreements.ts` has been validated against exactly that. Reading the
+logs directly and shaping them into the row form the nest produces:
+
+```
+events folded       : 1440
+agreements          : 113   (109 active, 4 cancelled)
+total collected GRT : 892.3282
+raw sum of RCACollected tokens: 892.3282 GRT   <- independent, agrees exactly
+cancelled on chain  : 4      folded as cancelled: 4
+```
+
+So the lifecycle view is not written blind. What a Sepolia **nest** would add on top is the
+`/sql` path itself: the exact table and column names, the `_dec` companions, and the provenance
+envelope, none of which an RPC log read exercises.
+
+Deploying it needs the Helsinki box, which is the only part of this document nobody can do from a
+laptop. The config is otherwise a copy of the mainnet nest with three addresses changed:
+
+```toml
+[nest]
+name = "dips-nest-sepolia"
+chain = "arbitrum-sepolia"
+chain_id = 421614
+block_timestamps = true
+
+[[contracts]]
+alias = "issuance_allocator"
+address = "0x76a0d75651d4db83f74ac502b86a0ae4e19ac38b"
+
+[[contracts]]
+alias = "recurring_agreement_manager"
+address = "0x590dbbbdb1b6261e39bcc1fe88bffc21c847a68e"
+
+[[contracts]]
+alias = "recurring_collector"
+address = "0x0b18befc60455121ad66ae6e4a647955fcde3900"
+```
+
+Addresses from `packages/issuance/addresses.json` and `packages/horizon/addresses.json` in
+graphprotocol/contracts, chain 421614. The ABIs and views carry over from the mainnet nest
+unchanged.
 
 ### 2. Cross-check the nest against the chain
 
@@ -178,22 +231,32 @@ noticed because an unlabelled address at a plausible rate looks like noise.
 
 ## Work
 
-Ordered by what unblocks what.
-
 - [x] Cross-check cron against the allocator over RPC (#31). Landed in #33 as
       `/api/cron/check-dips-chain`, hourly. Reads `getTargets`, `getTargetAllocation` and
       `getIssuancePerBlock`, compares against `dips_current_allocation` in exact wei, and
       edge-triggers on a signature of the divergence set so a standing one does not become
       wallpaper. A missing target counts as a divergence even at zero, because a zero the nest has
       never recorded is a missed log rather than an empty allocation.
-- [ ] `dips-nest` on Arbitrum Sepolia, so the lifecycle views can be written against real rows.
-- [ ] Agreement lifecycle view, from the tables above. Redraw the roadmap bullet to drop the POI
-      leg, or scope a second nest for it.
-- [ ] Per-indexer agreement portfolio, keyed on `serviceProvider`.
-- [ ] Distinguish configured from distributed issuance using `IssuanceDistributed` and
-      `IssuanceSelfMintAllowance`.
-- [ ] Alert on a new allocation *target*, not only a new rate. `target_allocation_set` does fire for
-      one, but nothing has ever tested that path and InnovationAllocation went unremarked.
+- [x] **Agreement lifecycle view.** `GET /api/dips/agreements`, folding nine event tables into
+      agreements and one ordered event stream, with `DipsAgreements` on the homepage. The panel
+      renders nothing while the lifecycle is empty, because an empty table with headings would
+      imply agreements happen here and simply are not happening, which is a different and wronger
+      claim than saying nothing. Validated against 1,440 real Sepolia events, above.
+- [x] **Per-indexer agreement portfolio.** `?indexer=0x…` on the same route. It is a narrowing of
+      the same data, so it does not warrant a second read of nine tables.
+- [x] **Configured versus distributed issuance.** `/api/dips` now reads the latest
+      `IssuanceDistributed` and `IssuanceSelfMintAllowance` per target and reports
+      `configuredNotDistributed`: a rate governance set that the chain has never acted on. Empty is
+      the healthy answer.
+- [x] **Alert on a new allocation _target_, not only a new rate.** `target_allocation_set` does
+      fire for a newly registered target, and that path now has an explicit test. It had never been
+      exercised, which is how "it would have been caught" stayed a theory while
+      InnovationAllocation went unremarked.
+- [ ] **`dips-nest` on Arbitrum Sepolia.** The one item that needs the Helsinki box. Config above.
+      It buys the `/sql` path itself: exact table and column names, the `_dec` companions and the
+      provenance envelope, none of which an RPC log read exercises.
+- [ ] **POI presentation.** Not answerable from these three contracts at all. Either a second nest
+      over the SubgraphService, or the roadmap bullet redrawn to stop at what they see.
 
 ## Related
 

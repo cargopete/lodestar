@@ -81,16 +81,32 @@ const TIMELINE = [
   },
 ];
 
-/** Answer the two queries the route makes, dispatching on which table they name. */
-function nest(allocations: unknown[], timeline: unknown[] = TIMELINE) {
-  mockSqlReady.mockImplementation(async (sql: string) => ({
-    ok: true,
-    data: {
-      count: 0,
-      rows: sql.includes('dips_current_allocation') ? allocations : timeline,
-    },
-  }));
+/**
+ * Answer the four queries the route makes, dispatching on which table each names: the allocation
+ * view, the timeline view, and the latest delivery per target under each minting mechanism.
+ */
+function nest(
+  allocations: unknown[],
+  timeline: unknown[] = TIMELINE,
+  delivered: { sent?: unknown[]; selfMinted?: unknown[] } = {},
+) {
+  mockSqlReady.mockImplementation(async (sql: string) => {
+    let rows: unknown[];
+    if (sql.includes('dips_current_allocation')) rows = allocations;
+    else if (sql.includes('dips_timeline')) rows = timeline;
+    else if (sql.includes('issuance_self_mint_allowance')) rows = delivered.selfMinted ?? [];
+    else rows = delivered.sent ?? [];
+    return { ok: true, data: { count: 0, rows } };
+  });
 }
+
+/** One row of "issuance actually reached this target, most recently, at this time". */
+const delivery = (target: string, timestamp: number) => ({
+  target,
+  block_number: 12_000_000,
+  block_timestamp: timestamp,
+  amount_dec: wei(1),
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -199,6 +215,53 @@ describe('/api/dips', () => {
     );
     expect(agreements.observed).toBe(true);
     expect(agreements.sharePct).toBeCloseTo(16.666_666, 4);
+  });
+
+  it('flags a configured rate that nothing has ever delivered under', async () => {
+    // A rate set but never acted on would otherwise read exactly like a rate that is flowing.
+    nest(MAINNET, TIMELINE, {});
+
+    const { data } = await (await GET()).json();
+
+    expect(data.configuredNotDistributed.sort()).toEqual(
+      [REWARDS_MANAGER, INNOVATION_ALLOCATION].sort(),
+    );
+    const rewards = data.allocations.find((a: { target: string }) => a.target === REWARDS_MANAGER);
+    expect(rewards.lastDistributedAt).toBeNull();
+    expect(rewards.configuredNotDistributed).toBe(true);
+  });
+
+  it('counts delivery by either mechanism, and keeps the later one', async () => {
+    nest(MAINNET, TIMELINE, {
+      sent: [delivery(INNOVATION_ALLOCATION, 1_756_000_000)],
+      selfMinted: [
+        delivery(REWARDS_MANAGER, 1_756_000_000),
+        delivery(REWARDS_MANAGER, 1_756_999_999),
+      ],
+    });
+
+    const { data } = await (await GET()).json();
+
+    expect(data.configuredNotDistributed).toEqual([]);
+    const rewards = data.allocations.find((a: { target: string }) => a.target === REWARDS_MANAGER);
+    expect(rewards.lastDistributedAt).toBe(1_756_999_999);
+    expect(rewards.configuredNotDistributed).toBe(false);
+  });
+
+  it('does not flag a zero-rate target as undelivered', async () => {
+    // DefaultAllocation draws nothing, so there is nothing for it to have failed to deliver.
+    nest(MAINNET, TIMELINE, {
+      sent: [delivery(INNOVATION_ALLOCATION, 1)],
+      selfMinted: [delivery(REWARDS_MANAGER, 1)],
+    });
+
+    const { data } = await (await GET()).json();
+
+    const agreements = data.allocations.find(
+      (a: { target: string }) => a.target === DEFAULT_ALLOCATION,
+    );
+    expect(agreements.rate).toBe(0);
+    expect(agreements.configuredNotDistributed).toBe(false);
   });
 
   it('labels the timeline and scales its rates out of wei', async () => {
