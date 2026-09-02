@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { hasNuthatch, nuthatchSql } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { log } from '@/lib/logger';
 
 // This handler takes no request argument, so Next would otherwise statically cache it at build time
@@ -21,12 +21,15 @@ interface SubgraphRow {
  * §2). See graph-gns-nest on the Helsinki box.
  */
 async function fetchNuthatchRows(cutoff: number): Promise<SubgraphRow[]> {
-  const rows = await nuthatchSql<{ createdAt: number }>(
+  const result = await nuthatchSqlReady<{ createdAt: number }>(
     `SELECT block_timestamp AS "createdAt" FROM "gns__subgraph_published" ` +
       `WHERE block_timestamp >= ${cutoff} ORDER BY block_timestamp`,
     '/gns' // the graph-gns-nest, reverse-proxied under /gns on the shared nuthatch host
   );
-  return rows.map((r) => ({ id: '', createdAt: Number(r.createdAt) }));
+  if (!result.ok) {
+    throw Object.assign(new Error(result.error), { nest: result });
+  }
+  return result.data.rows.map((r) => ({ id: '', createdAt: Number(r.createdAt) }));
 }
 
 interface WeekBucket {
@@ -128,6 +131,13 @@ export async function GET() {
     );
   } catch (error) {
     log.api.error({ err: error }, 'Developer activity error');
+    const nest = (error as { nest?: { error: string; reason?: string; status?: number } }).nest;
+    if (nest) {
+      return NextResponse.json(
+        { error: nest.error, reason: nest.reason },
+        { status: nest.status ?? 503 },
+      );
+    }
     return NextResponse.json({ error: 'Failed to load developer activity' }, { status: 500 });
   }
 }

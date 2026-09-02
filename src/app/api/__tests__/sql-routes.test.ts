@@ -23,6 +23,7 @@ vi.mock('@/lib/nuthatch', () => ({
   hasNuthatch: () => mockHasNuthatch(),
   nuthatchTables: (...args: unknown[]) => mockTables(...args),
   nuthatchSqlFull: (...args: unknown[]) => mockSqlFull(...args),
+  nuthatchSqlReady: (...args: unknown[]) => mockSqlFull(...args),
 }));
 
 import { GET as catalogGET } from '../sql/catalog/route';
@@ -126,7 +127,11 @@ describe('/api/sql/query', () => {
   it('routes to the dataset base path, not to whatever the caller fancies', async () => {
     mockSqlFull.mockResolvedValue(okResult);
     await post({ dataset: 'dips', q: 'SELECT 1' });
-    expect(mockSqlFull).toHaveBeenCalledWith('SELECT 1', '/dips', expect.any(Number));
+    expect(mockSqlFull).toHaveBeenCalledWith(
+      'SELECT 1',
+      '/dips',
+      expect.objectContaining({ timeoutMs: expect.any(Number), requireReady: true }),
+    );
   });
 
   it('refuses a dataset that is not on the allowlist, without calling the nest', async () => {

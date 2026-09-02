@@ -28,6 +28,10 @@ vi.mock('@/lib/nuthatch', () => ({
   hasNuthatch: () => mockHasNuthatch(),
   nuthatchEnabled: (flag: string) => mockHasNuthatch() && process.env[flag] === 'true',
   nuthatchSql: (...args: unknown[]) => mockNuthatchSql(...args),
+  nuthatchSqlReady: async (...args: unknown[]) => {
+    const rows = await mockNuthatchSql(...args);
+    return { ok: true, data: { rows, count: Array.isArray(rows) ? rows.length : 0 } };
+  },
 }));
 
 const mockHasSubgraphAccess = vi.fn(() => true);

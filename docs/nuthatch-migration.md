@@ -51,20 +51,15 @@ Measured 2026-09-01 across the five routes already served by a nest:
 
 | route | checks `/ready` before serving | reports data freshness |
 |---|---|---|
-| `/api/delegation-events` | no | no |
-| `/api/delegation-flows` | no | no |
-| `/api/developer-activity` | no | no |
-| `/api/dips` | no | no |
-| `/api/sql/query` | no | no |
+| `/api/delegation-events` | yes | yes |
+| `/api/delegation-flows` | yes (live half) | yes |
+| `/api/developer-activity` | yes | via thrown nest error |
+| `/api/dips` | yes | via thrown nest error |
+| `/api/sql/query` | yes, except archival datasets | yes |
 
-**Zero of five.** `src/lib/nest-health.ts` exists, probes `/ready` correctly, and reasons about why
-`/ready` beats `/health` - but its only three consumers are `cron/check-nest-health`,
-`lib/notifications/nest-health.ts` and `cron-expectations.ts`. Every one of them is **alerting**.
-Nothing gates serving.
-
-So today a stalled or quarantined nest still answers with 200 and stale rows, and the only signal is
-an out-of-band cron that alerts somebody separately. That is precisely the case this document's own
-opening rules out, and it is the current behaviour of every migrated panel.
+Implemented in `nuthatchSqlReady`. Archival datasets (`nuthatch serve` with no cursor) skip the
+gate on purpose: they report stalled forever and are right to. Alerting crons still use
+`nuthatchSql`; they are not the page the user sees.
 
 A note on how that was almost missed: grepping these routes for `as_of|sealed_through|stale` returns
 a hit in four of five, which reads as freshness reporting. Every one of those hits is
@@ -73,10 +68,8 @@ the data. The right answer needed reading the lines rather than counting them.
 
 ### What this blocks
 
-**No further surface switches to a nest until 1-3 are implemented.** #1078 moves several network-state
-surfaces at once; doing that on top of a serving path with no readiness gate multiplies a nest
-restart into a dashboard of confidently wrong numbers. #1078 is blocked on the nest deploying anyway,
-so this costs no time.
+The gate is now on the five serving routes. Further surface switches still have to go through
+`nuthatchSqlReady`; adding a route that calls `nuthatchSql` directly is how this regresses.
 
 ## Running nests
 
