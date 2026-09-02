@@ -39,8 +39,12 @@ export interface DipsDispatchResult {
 
 interface AllocationRow {
   target: string;
-  self_minting_rate_dec: string;
+  self_minting_rate_dec: string | null;
+  allocator_minting_rate_dec: string | null;
 }
+
+/** A big-int decimal string to GRT. A missing column reads as zero, never as NaN. */
+const grt = (v: string | null | undefined) => (v ? Number(v) / GRT : 0);
 
 interface TimelineRow {
   block_number: number;
@@ -59,8 +63,14 @@ async function readState(): Promise<{ agreementRate: number; latest: TimelineRow
   const agreement = allocations.find(
     (a) => a.target.toLowerCase() === DEFAULT_ALLOCATION
   );
+  // Both minting fields summed, for the reason spelled out in /api/dips: a target's share is
+  // `allocatorMintingRate + selfMintingRate`, and funding DefaultAllocation moves either one.
+  // Watching a single column would be a fifty-fifty chance of sleeping through the one event
+  // this dispatcher exists to wake somebody for.
   return {
-    agreementRate: agreement ? Number(agreement.self_minting_rate_dec) / GRT : 0,
+    agreementRate: agreement
+      ? grt(agreement.allocator_minting_rate_dec) + grt(agreement.self_minting_rate_dec)
+      : 0,
     latest: timeline[0] ?? null,
   };
 }

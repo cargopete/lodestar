@@ -1182,8 +1182,24 @@ parity replacing the upgrade indexer. Fallback routing.
         fires once ever) and `dips_config` (a new configuration step past the watermark). **The
         first run seeds silently** — the timeline already holds six steps from 23 July and 25
         August, and announcing those as news would be a false alarm about history.
-  - [ ] Watch for `InnovationAllocation` appearing in the mainnet address book (GIP-0089, due
-        2026-08-31); it is on Sepolia only today.
+  - [x] Watch for `InnovationAllocation` appearing in the mainnet address book (GIP-0089, due
+        2026-08-31). **It arrived, and on time.** Found 2026-09-02 at
+        `0x2ff06ba8086f37ba656a5b75405bf985f738b16e` in `packages/issuance/addresses.json`
+        (chain 42161), holding **24.146 GRT/block, a fifth of all issuance**: a `DirectAllocation`
+        proxy, sent its share by the allocator rather than self-minting it. Nothing alerted; it was
+        found by reading the allocator over RPC rather than by anything watching. The panel had
+        been rendering it as an unlabelled address at 0.00 and 0%, because it totalled only
+        self-minted rates. Both now fixed.
+  - [ ] **Alert on a new allocation target, not just a new rate.** `check-dips` watches
+        `dips_timeline` for configuration steps, and `target_allocation_set` does fire for a new
+        target, so this would have been caught had the cron been running against a seeded
+        watermark. Worth an explicit test, because the miss above proves nobody would have
+        looked otherwise.
+  - [ ] **Cross-check the nest against the chain.** The panel is event-derived; the allocator
+        also answers `getTargets()`, `getTargetAllocation(address)` and `getIssuancePerBlock()`
+        directly. A cron comparing the two, alerting on divergence, is the only thing that can
+        catch a missed event — and the invariant is exact: the allocator rates must sum to
+        `getIssuancePerBlock()`. That check is what found the totalling bug fixed on 2026-09-02.
 - [x] **Agreement tooling: [nightswatchhq/weaver](https://github.com/nightswatchhq/weaver).**
       13 Rust tests and 10 Foundry fork tests. Builds, hashes, signs and checks Recurring
       Collection Agreements — the actual

@@ -32,19 +32,35 @@ import { GET } from '../dips/route';
 
 const DEFAULT_ALLOCATION = '0x28cd50e9e02856908f4c1966ab035b1f6c4dde1e';
 const REWARDS_MANAGER = '0x971b9d3d0ae3eca029cab5ea1fb0f72c85e6a525';
+const INNOVATION_ALLOCATION = '0x2ff06ba8086f37ba656a5b75405bf985f738b16e';
 
 const GRT = 1e18;
 
-/** One `dips_current_allocation` row, rates given in whole GRT for legibility. */
-function alloc(target: string, grtPerBlock: number) {
+const wei = (grt: number) => String(BigInt(Math.round(grt * 1e6)) * BigInt(GRT / 1e6));
+
+/**
+ * One `dips_current_allocation` row. A target's share of issuance is `allocator + self`; which
+ * of the two carries it says only who does the minting.
+ */
+function alloc(target: string, allocator: number, self = 0) {
   return {
     target,
-    self_minting_rate_dec: String(BigInt(Math.round(grtPerBlock * 1e6)) * BigInt(GRT / 1e6)),
-    allocator_minting_rate_dec: '0',
+    self_minting_rate_dec: wei(self),
+    allocator_minting_rate_dec: wei(allocator),
     block_number: 12_000_000,
     block_timestamp: 1_756_000_000,
   };
 }
+
+/**
+ * Arbitrum One as it actually stood on 2026-09-02, read from the IssuanceAllocator over RPC:
+ * getIssuancePerBlock() = 120.73, split between a target that self-mints its whole share and one
+ * that is sent its share by the allocator. DefaultAllocation is registered nowhere and draws zero.
+ */
+const MAINNET = [
+  alloc(REWARDS_MANAGER, 0, 96.584),
+  alloc(INNOVATION_ALLOCATION, 24.146, 0),
+];
 
 const TIMELINE = [
   {
@@ -113,19 +129,65 @@ describe('/api/dips', () => {
   });
 
   it('reads as armed, not live, while the agreement allocation is zero', async () => {
-    nest([alloc(REWARDS_MANAGER, 120.73)]);
+    nest(MAINNET);
 
     const { data } = await (await GET()).json();
 
     expect(data.available).toBe(true);
     expect(data.agreementRate).toBe(0);
     expect(data.live).toBe(false);
+  });
+
+  it('counts a share whichever field carries it, and totals to issuance per block', async () => {
+    // The regression this pins: summing `selfMintingRate` alone rendered InnovationAllocation at
+    // 0.00 and 0% while it drew 24.146 GRT/block, and put the total at 96.584 against a real
+    // 120.73. Reading only the allocator field is the same bug reversed — it zeroes the
+    // RewardsManager. The invariant is that the shares sum to getIssuancePerBlock().
+    nest(MAINNET);
+
+    const { data } = await (await GET()).json();
+
     expect(data.totalRate).toBeCloseTo(120.73, 6);
+
+    const rewards = data.allocations.find((a: { target: string }) => a.target === REWARDS_MANAGER);
+    expect(rewards.rate).toBeCloseTo(96.584, 6);
+    expect(rewards.sharePct).toBeCloseTo(80, 4);
+    expect(rewards.selfMinting).toBe(true);
+
+    const innovation = data.allocations.find(
+      (a: { target: string }) => a.target === INNOVATION_ALLOCATION,
+    );
+    expect(innovation.rate).toBeCloseTo(24.146, 6);
+    expect(innovation.sharePct).toBeCloseTo(20, 4);
+    expect(innovation.selfMinting).toBe(false);
+  });
+
+  it('labels InnovationAllocation rather than showing a bare address', async () => {
+    // GIP-0089 landed on mainnet holding a fifth of all issuance. Unlabelled, it read as noise.
+    nest(MAINNET);
+
+    const { data } = await (await GET()).json();
+
+    const innovation = data.allocations.find(
+      (a: { target: string }) => a.target === INNOVATION_ALLOCATION,
+    );
+    expect(innovation.label).toBe('Innovation allocation (GIP-0089)');
+  });
+
+  it('goes live when the agreement allocation moves on the allocator-minted field alone', async () => {
+    // Governance can fund DefaultAllocation through either field. Watching only the self-minting
+    // column would be a coin-flip on noticing the single event this panel exists for.
+    nest([...MAINNET, alloc(DEFAULT_ALLOCATION, 12, 0)]);
+
+    const { data } = await (await GET()).json();
+
+    expect(data.live).toBe(true);
+    expect(data.agreementRate).toBeCloseTo(12, 6);
   });
 
   it('goes live the moment the agreement allocation is observed above zero', async () => {
     // The one state change this whole panel exists to catch.
-    nest([alloc(REWARDS_MANAGER, 100), alloc(DEFAULT_ALLOCATION, 20)]);
+    nest([alloc(REWARDS_MANAGER, 0, 100), alloc(DEFAULT_ALLOCATION, 20, 0)]);
 
     const { data } = await (await GET()).json();
 

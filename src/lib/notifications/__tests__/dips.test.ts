@@ -33,12 +33,31 @@ function nestReturns(allocations: unknown[], timeline: unknown[]) {
   nuthatchSql.mockResolvedValueOnce(allocations).mockResolvedValueOnce(timeline);
 }
 
+// Arbitrum One as read over RPC on 2026-09-02: the RewardsManager self-mints its whole 96.584
+// and is sent nothing by the allocator.
 const ZERO_STATE = [
-  { target: REWARDS_MANAGER, self_minting_rate_dec: '120730000000000000000' },
+  {
+    target: REWARDS_MANAGER,
+    self_minting_rate_dec: '96584000000000000000',
+    allocator_minting_rate_dec: '0',
+  },
 ];
 const LIVE_STATE = [
   ...ZERO_STATE,
-  { target: DEFAULT_ALLOCATION, self_minting_rate_dec: '6000000000000000000' },
+  {
+    target: DEFAULT_ALLOCATION,
+    self_minting_rate_dec: '6000000000000000000',
+    allocator_minting_rate_dec: '0',
+  },
+];
+/** Funded through the allocator alone, which is the case a self-rate-only watcher sleeps through. */
+const LIVE_VIA_ALLOCATOR = [
+  ...ZERO_STATE,
+  {
+    target: DEFAULT_ALLOCATION,
+    self_minting_rate_dec: '0',
+    allocator_minting_rate_dec: '6000000000000000000',
+  },
 ];
 const TIMELINE = [{ block_number: 498298724, step: 'target_allocation_set' }];
 
@@ -92,6 +111,19 @@ describe('dispatchDipsNotifications', () => {
     expect(sendToAddress).toHaveBeenCalledTimes(2);
     expect(sendToAddress.mock.calls[0][1]).toMatchObject({ title: 'DIPS is live' });
     expect(sendToAddress.mock.calls[0][1].body).toContain('6.00 GRT per block');
+  });
+
+  it('broadcasts dips_live when the allocation arrives on the allocator-minted field alone', async () => {
+    // Governance can fund DefaultAllocation through either minting field. This dispatcher read
+    // only the self-minting one, so a flip made the other way would have gone unannounced —
+    // a silent miss of the single event it exists for.
+    nestReturns(LIVE_VIA_ALLOCATOR, TIMELINE);
+    const r = await dispatchDipsNotifications(
+      makeSql([[], [{ block: 498298724 }], [{ address: '0xa' }], []])
+    );
+    expect(r.agreementRate).toBe(6);
+    expect(r.events).toEqual(['dips_live']);
+    expect(sendToAddress).toHaveBeenCalledTimes(1);
   });
 
   it('does not re-announce dips_live once it has fired', async () => {
