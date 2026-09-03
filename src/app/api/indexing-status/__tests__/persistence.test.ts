@@ -28,7 +28,16 @@ vi.mock('@/lib/indexing-status', () => ({
   })),
   reconcileToNetworkHead: vi.fn((xs: unknown[]) => xs),
   probeServing: (...a: unknown[]) => probeServing(...a),
-  withServeProbe: (r: Record<string, unknown>, probe: string) => ({ ...r, serveProbe: probe, servable: probe === 'serving' || probe === 'alive_paid' }),
+  // The route takes the detailed form; a `broken` here is a timed-out transport, everything else a 402.
+  probeServingDetailed: async (...a: unknown[]) => {
+    const probe = (await probeServing(...a)) as string;
+    const broken = probe === 'broken';
+    return { probe, cause: broken ? 'transport' : 'response', error: broken ? 'timeout' : null, status: broken ? null : 402, contentType: broken ? null : 'text/plain', paid: false, attempts: broken ? 2 : 1, elapsedMs: 7 };
+  },
+  withServeProbe: (r: Record<string, unknown>, probe: string | { probe: string }) => {
+    const verdict = typeof probe === 'string' ? probe : probe.probe;
+    return { ...r, serveProbe: verdict, ...(typeof probe === 'string' ? {} : { serveProbeDetail: probe }), servable: verdict === 'serving' || verdict === 'alive_paid' };
+  },
 }));
 let gatewayVerdict: string | null = 'bad-indexers';
 const probeGateway = vi.fn(async (hash: string, probedAt: string) => ({ hash, verdict: gatewayVerdict, servedBlock: gatewayVerdict === 'served' ? 123 : null, badIndexers: [], message: null, probedAt }));
@@ -37,7 +46,7 @@ vi.mock('@/lib/gateway-probe', () => ({
   probeGateway: (...a: unknown[]) => probeGateway(...(a as [string, string])),
 }));
 // An in-memory round store with the real module's contract: newest `limit` rows, oldest first.
-const rows: Array<{ deploymentHash: string; probedAt: string; servingOperators: number; servingIndexers: number; gatewayVerdict: string | null }> = [];
+const rows: Array<{ deploymentHash: string; probedAt: string; servingOperators: number; servingIndexers: number; gatewayVerdict: string | null; probes?: unknown[] }> = [];
 let dbUp = true;
 vi.mock('@/lib/db', () => ({
   hasDbAccess: () => dbUp,
@@ -132,5 +141,17 @@ describe('indexing-status route applies D5 persistence', () => {
     expect(probeGateway).not.toHaveBeenCalled();
     expect(r3.gatewayVerdict).toBeNull();
     expect(r3.servabilityRendered.state).toBe('dead');
+  });
+
+  it('lodestar#62: the record and the conflict log carry what each probe saw, not just the count', async () => {
+    const r = await round('broken', 'served');
+    expect(r.servabilityRendered.state).toBe('conflicting');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].probes).toEqual([
+      expect.objectContaining({ indexerId: '0xonlyindexer', url: 'https://indexer.example', probe: 'broken', cause: 'transport', error: 'timeout', attempts: 2 }),
+    ]);
+    const conflict = warn.mock.calls.find(([, msg]) => typeof msg === 'string' && msg.startsWith('servability conflict'));
+    expect(conflict).toBeDefined();
+    expect((conflict![0] as { probes: unknown[] }).probes).toEqual(rows[0].probes);
   });
 });

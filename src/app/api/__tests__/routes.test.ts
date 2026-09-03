@@ -76,11 +76,18 @@ vi.mock('@/lib/indexing-status', () => ({
   reconcileToNetworkHead: vi.fn((indexers: unknown[]) => indexers),
   // RFC-006 D1 serving probe. No network in tests, so report unreachable.
   probeServing: vi.fn(() => Promise.resolve('unreachable')),
-  withServeProbe: vi.fn((result: Record<string, unknown>, probe: string) => ({
-    ...result,
-    serveProbe: probe,
-    servable: probe === 'serving' || probe === 'alive_paid',
-  })),
+  probeServingDetailed: vi.fn(() =>
+    Promise.resolve({ probe: 'unreachable', cause: 'guard', error: null, status: null, contentType: null, paid: false, attempts: 0, elapsedMs: 0 }),
+  ),
+  withServeProbe: vi.fn((result: Record<string, unknown>, probe: string | { probe: string }) => {
+    const verdict = typeof probe === 'string' ? probe : probe.probe;
+    return {
+      ...result,
+      serveProbe: verdict,
+      ...(typeof probe === 'string' ? {} : { serveProbeDetail: probe }),
+      servable: verdict === 'serving' || verdict === 'alive_paid',
+    };
+  }),
 }));
 
 // Mock global fetch for routes that call external APIs directly
