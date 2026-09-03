@@ -41,6 +41,12 @@ export default defineConfig({
       //
       // Ratchet history, newest first. These go UP and never down.
       //
+      //   2026-09-03  175 files / 2581 tests  84.28 / 77.00 / 86.26 / 85.68
+      //               refresh selects lockedTokens so self-stake subtracts it (#54). One test that
+      //               the query carries the field and a 10,000 GRT lock makes a 200,000 GRT stake
+      //               read 190,000; red with the field dropped from the query. Branches read 0.01
+      //               lower because the two `?? '0'` fallbacks that hid the defect are gone, which
+      //               removes four never-taken branches from the denominator. Floors unchanged.
       //   2026-09-03  175 files / 2580 tests  84.28 / 77.01 / 86.26 / 85.68
       //               api/poi from the nest behind NUTHATCH_POI (nuthatch#1078). Nine tests: the
       //               bytes32-to-CIDv0 encoder round-trips a real deployment and refuses anything

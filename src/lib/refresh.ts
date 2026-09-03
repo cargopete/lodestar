@@ -24,7 +24,7 @@ interface SubgraphIndexer {
     metadata?: { displayName?: string | null; description?: string | null } | null;
   };
   stakedTokens: string;
-  lockedTokens?: string;
+  lockedTokens: string;
   delegatedTokens: string;
   allocatedTokens: string;
   allocationCount: number;
@@ -119,6 +119,7 @@ export async function refreshIndexers(opts: {
           }
         }
         stakedTokens
+        lockedTokens
         delegatedTokens
         allocatedTokens
         allocationCount
@@ -449,7 +450,7 @@ export async function refreshIndexers(opts: {
 
   // Step 6: Compute enriched data for each indexer
   const enriched: EnrichedIndexer[] = indexers.map((indexer) => {
-    const lockedTokens = weiToGRT(indexer.lockedTokens ?? '0');
+    const lockedTokens = weiToGRT(indexer.lockedTokens);
     const selfStake = weiToGRT(indexer.stakedTokens) - lockedTokens;
     const delegated = weiToGRT(indexer.delegatedTokens);
     const delegatedThawing = weiToGRT(indexer.delegatedThawingTokens ?? '0');
@@ -576,7 +577,7 @@ export async function refreshIndexers(opts: {
       name: displayName,
       ensName: ens,
       stakedTokens: indexer.stakedTokens,
-      lockedTokens: indexer.lockedTokens ?? '0',
+      lockedTokens: indexer.lockedTokens,
       delegatedTokens: indexer.delegatedTokens,
       allocatedTokens: indexer.allocatedTokens,
       allocationCount: indexer.allocationCount,
