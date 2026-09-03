@@ -42,8 +42,10 @@ export const CONTRACTS = {
   bountyBoard: getAddress((process.env.NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS ?? '0x0000000000000000000000000000000000000000').trim()),
 } as const;
 
-// Graph Network Subgraph ID on Arbitrum
-export const SUBGRAPH_ID = 'DZz4kDTdmzWLWsV373w2bSmoar3umKKH9y82SUKr5qmp';
+// Graph Network subgraph id: re-exported from the leaf module that owns it, so a wallet config is
+// not a second source of truth for a server-side constant. Nothing imported this; kept as a
+// re-export rather than deleted so an external consumer of `lib/wallet` is not broken silently.
+export { GRAPH_NETWORK_SUBGRAPH_ID as SUBGRAPH_ID } from './graph-network';
 
 declare module 'wagmi' {
   interface Register {

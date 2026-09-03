@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { log } from '@/lib/logger';
+import { gatewayUrl, GRAPH_NETWORK_SUBGRAPH_ID } from '@/lib/graph-network';
 
 // The Graph Network subgraph on Arbitrum One
 // Requires a Graph API key from https://thegraph.com/studio/apikeys/
 const SUBGRAPH_URL =
-  'https://gateway-arbitrum.network.thegraph.com/api/[api-key]/subgraphs/id/DZz4kDTdmzWLWsV373w2bSmoar3umKKH9y82SUKr5qmp';
+  gatewayUrl('[api-key]', GRAPH_NETWORK_SUBGRAPH_ID);
 
 // Mock data for development when no API key is available
 const MOCK_NETWORK_DATA = {
