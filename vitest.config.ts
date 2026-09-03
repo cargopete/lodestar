@@ -41,6 +41,12 @@ export default defineConfig({
       //
       // Ratchet history, newest first. These go UP and never down.
       //
+      //   2026-09-03  175 files / 2585 tests  84.30 / 77.00 / 86.30 / 85.70
+      //               the subgraph disputes path revisits every dispute Postgres still calls open
+      //               (#57). Four tests: open ids are re-fetched by id after the cursor walk and
+      //               reach the same upsert with the chain's status, nothing extra is asked when
+      //               none is open, revisited rows do not move the cursor, and the id list batches
+      //               at a hundred; two go red with the second pass skipped. Floors unchanged.
       //   2026-09-03  175 files / 2581 tests  84.28 / 77.00 / 86.26 / 85.68
       //               refresh selects lockedTokens so self-stake subtracts it (#54). One test that
       //               the query carries the field and a 10,000 GRT lock makes a 200,000 GRT stake
