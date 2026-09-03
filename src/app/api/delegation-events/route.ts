@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
+import { delegationEventsSql } from '@/lib/nest-queries';
 import { log } from '@/lib/logger';
 
 interface DelegationEvent {
@@ -14,34 +15,6 @@ interface DelegationEvent {
 }
 
 const ETH_ADDRESS_RE = /^0x[0-9a-f]{40}$/;
-
-/**
- * Reconstruct the community subgraph's `delegationEvents` feed from the `graph-staking-nest`
- * (RFC-0011 pilot): a UNION over the four HorizonStaking delegation-event tables, mapping each to the
- * subgraph's `eventType` vocabulary (TokensDelegated→"delegation", TokensUndelegated→"undelegation",
- * {DelegatedTokensWithdrawn, StakeDelegatedWithdrawn}→"withdrawal"). Same columns, same order, same
- * filters — a drop-in for the gateway query. `indexer`/`first`/`since` are pre-validated by the caller
- * (address regex, clamped int), so no injection surface reaches the SQL.
- */
-function delegationEventsSql(indexer: string | null, first: number, since: number): string {
-  const row = (evType: string, table: string, indexerCol: string) =>
-    `SELECT tx_hash || '-' || CAST(log_index AS VARCHAR) AS id, '${evType}' AS "eventType", ` +
-    `LOWER(${indexerCol}) AS indexer, LOWER(delegator) AS delegator, CAST(tokens AS VARCHAR) AS tokens, ` +
-    `block_timestamp AS ts, tx_hash AS "txHash" FROM "${table}"`;
-  const union = [
-    row('delegation', 'staking__tokens_delegated', '"serviceProvider"'),
-    row('undelegation', 'staking__tokens_undelegated', '"serviceProvider"'),
-    row('withdrawal', 'staking__delegated_tokens_withdrawn', '"serviceProvider"'),
-    row('withdrawal', 'staking__stake_delegated_withdrawn', 'indexer'),
-  ].join(' UNION ALL ');
-  const where = [`ts > ${since}`, indexer ? `indexer = '${indexer}'` : null]
-    .filter(Boolean)
-    .join(' AND ');
-  return (
-    `SELECT id, "eventType", indexer, delegator, tokens, CAST(ts AS VARCHAR) AS "timestamp", "txHash" ` +
-    `FROM (${union}) t WHERE ${where} ORDER BY ts DESC LIMIT ${first}`
-  );
-}
 
 export async function GET(request: NextRequest) {
   if (!hasNuthatch()) {
