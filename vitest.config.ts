@@ -41,6 +41,18 @@ export default defineConfig({
       //
       // Ratchet history, newest first. These go UP and never down.
       //
+      //   2026-09-03  179 files / 2614 tests  84.63 / 77.36 / 86.62 / 86.02
+      //               verdict_json stored as a JSON string inside the jsonb (#62, #64). Two tests on
+      //               the round store through a recording tag with the real `sql.json`: the insert
+      //               carries the verdict as an object parameter and never a string beginning with
+      //               `{`, and the read-back is oldest first with numeric counts.
+      //   2026-09-03  178 files / 2612 tests  84.59 / 77.29 / 86.43 / 85.97
+      //               a broken probe records what it saw (#62, #63). Four probe tests (two timeouts
+      //               are `transport` / `timeout` with both attempts and no status, a 403 HTML page
+      //               is `response` with the status kept, a reset then a 402 is alive by response
+      //               on the second attempt, `describeFetchError` digs the code out from under
+      //               `fetch failed` and an AggregateError) and one route test that the record and
+      //               the conflict log carry the probe records, not only the counts.
       //   2026-09-03  178 files / 2607 tests  84.51 / 77.17 / 86.39 / 85.94
       //               RFC-006 D5 persistence (#59). Twenty-two tests across three files: the pure
       //               `applyPersistence` table (a first dead round is rechecking, K in a row is

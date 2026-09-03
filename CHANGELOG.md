@@ -2,6 +2,124 @@
 
 All notable changes to Lodestar are documented here. Versions follow `MAJOR.MINOR.PATCH`.
 
+## [4.29.0] - 2026-09-03
+
+One day on from 4.28.0, and two threads that did not know about each other.
+
+The first is the nuthatch migration (nuthatch#1078) turning from a proposal into a seam. The Graph
+Network subgraph id had five homes, one of them a duplicate client in the feed route that nothing
+would have migrated; it now has one, and a test that fails if a second appears. Behind that seam
+six surfaces can now be served from the nests instead of the gateway, every one of them off by
+default, every one of them with parity measured row by row at a pinned block rather than asserted:
+13,771 allocations against 13,771, 70,542 fee aggregates against 70,542, a thousand POIs against a
+thousand. Where the two sides differ the difference is written down and, where it would mean
+under-reporting, the run fails rather than writing a zero.
+
+The second thread is an incident. A delegator saw uniswap-v4-base-3, one of the most queried
+subgraphs on the network, labelled "Effectively dead". It was one timed-out probe against a
+one-indexer deployment, rendered as a terminal verdict and cached for three minutes, by a caller
+that ignored the contract three comments had been stating for months. That label now needs three
+consecutive rounds, the gateway serving a live query overrules it outright, every round is
+persisted, and each probe records what it actually saw. Reading the first of those rows back is
+what found that the verdict JSON had been stored as a string all along.
+
+### Added
+
+- **One home for the Graph Network subgraph id** (`src/lib/graph-network.ts`), a leaf module holding
+  the id, the gateway origin and the explorer link. It had five, including a second client in the
+  feed route that did not import the shared one. A test asserts the literal appears nowhere else
+  under `src/`, so a migration made behind `subgraphQuery` cannot silently miss a surface again.
+- **Disputes from the nest** behind `NUTHATCH_DISPUTES`. Eight live disputes, sixty-four field
+  comparisons, zero mismatches. An accepted dispute fails the run rather than writing a zero burn,
+  because the nest cannot compute the burn until `StakeSlashed` is indexed (nuthatch#1125).
+- **The allocations cron from the nest** behind `NUTHATCH_ALLOCATIONS`, the heaviest gateway
+  consumer in the cron path. Zero mismatches across 68,855 comparisons at a pinned block. A
+  truncated read fails the run: a partial snapshot that reads as complete is the failure this
+  migration exists to avoid.
+- **The RAV cron from the nest** behind `NUTHATCH_RAV`. Ids are rebuilt in the subgraph's own
+  encoding (`txHash ‖ LE32(log_index + 1)`, nuthatch#1114) so the upsert dedupes instead of
+  double-counting revenue. Every one of 70,483 Postgres ids is present on the nest; the nest holds
+  nine self-collections the subgraph drops, and keeps them. Expect nine extra rows after the flag,
+  not a regression.
+- **The Horizon activity feed from two nests** behind `NUTHATCH_HORIZON_ACTIVITY`: delegation
+  events from the staking nest and provisions from the horizon nest. Provision cards gain the
+  transaction hash and block the gateway path never had, and report the tokens the creation event
+  said rather than the current total, since a feed is a record of things that happened.
+- **`api/payments` from two nests** behind `NUTHATCH_PAYMENTS`: escrow accounts, escrow
+  transactions and tally aggregates folded from events, 336 of 336 balances and 70,542 of 70,542
+  aggregates agreeing. Thaw, cancel-thaw and withdraw are reported under their own names, which
+  the subgraph does not model; two such rows exist in the whole history.
+- **`api/poi` from the nest** behind `NUTHATCH_POI`. A thousand of a thousand closed allocations
+  agree on every field but the deployment's signal, which was a view defect (gross deposits rather
+  than net of curation tax and fees) fixed upstream in graph-allocations-nest#10 and reconciling
+  after that nest's redeploy. The consensus computation does not use it.
+- **`servability_rounds`** (`migrations/016`), one row per probe round of `/api/indexing-status`
+  with the serving counts, the gateway's verdict and the verdict JSON. "Was it actually down at
+  1:34?" is a query now. The store is best-effort: a database that is down logs and renders the
+  round as `rechecking`, never the red banner.
+- **Each probe's working is kept beside its verdict.** A `broken` now says whether the SSRF guard
+  refused, whether a response ever arrived and what it was, or which transport error ended the
+  attempt, with attempt count and elapsed time. It goes into the round record, onto the indexer in
+  the API response, and into the conflict log line. A day of rounds can now say why Vercel's
+  probes disagree with the gateway, not merely how often (#62).
+
+### Changed
+
+- **The cron key gate applies only to the gateway path.** `ingest-disputes`, `ingest-allocations`
+  and `ingest-rav` refused to start without a gateway key they were not going to use when their
+  nest flag was on. The key is required exactly when the gateway path is the one that will run.
+- **"Effectively dead" renders from history, not from the round just probed.** Three consecutive
+  rounds with no serving operator (`SERVABILITY_DEAD_ROUNDS`, floored at two) before the label;
+  short of that the page says "Serving check failing, rechecking, n of K" in amber. Recovery is
+  instant. The banner carries how long ago the verdict was probed, so a cached verdict is visibly a
+  snapshot. A transport failure in the probe gets one retry inside a bounded budget before it
+  counts.
+- **The gateway is the stronger witness.** It is probed in the same round as the indexers, and a
+  round it served cannot be dead whatever the direct probes saw: the page shows "Conflicting
+  signals" in amber and the contradiction is logged, because it usually means our egress or our
+  probe path, not the network.
+
+### Fixed
+
+- **One five-second blip could label a healthy subgraph dead for three minutes (#59).** The
+  persistence RFC-006 D5 had specified was documented in three places and built in none; the route
+  rendered the instantaneous read as terminal. Fixed by the three changes above.
+- **Self-stake never subtracted locked tokens (#54).** `refreshIndexers` computed
+  `stakedTokens - lockedTokens` from a query that did not select `lockedTokens`, and an optional
+  field with a `?? '0'` fallback made that zero on every indexer. Any indexer with a thawing
+  withdrawal had its self-stake overstated by exactly that amount, in Redis, in Postgres and in the
+  score. The field is selected and required, and the fallbacks that hid it are gone.
+- **The subgraph disputes path never revisited a dispute (#57).** A `createdAt_gt` cursor meant a
+  dispute ingested while undecided kept that status forever; six sat undecided for up to three and
+  a half months after the chain had drawn them. A second pass re-fetches every id Postgres still
+  calls open, through the same row mapping as the walk.
+- **`verdict_json` was a JSON string inside the jsonb (#62).** The round store handed postgres.js a
+  pre-stringified value with a `::jsonb` cast, and postgres.js serialised it again, so
+  `verdict_json->'probes'` read null on every row. It now uses `sql.json`, like every other jsonb
+  write in the repository, and a test pins the parameter shape. The persistence rule was never
+  affected, since it reads the count columns.
+
+### Notes
+
+- Six nest flags exist after this release: `NUTHATCH_DISPUTES`, `NUTHATCH_ALLOCATIONS`,
+  `NUTHATCH_RAV`, `NUTHATCH_HORIZON_ACTIVITY`, `NUTHATCH_PAYMENTS`, `NUTHATCH_POI`. All default
+  off. Which are on in production is a deployment decision, the "approved as safe" one
+  nuthatch#1078 asks for, and each PR records the parity that decision rests on and what its first
+  flagged run against production should be checked for. None of those first runs is verified here.
+- Rows in `servability_rounds` written before the jsonb fix hold the verdict as a string. They are
+  repairable in place, idempotently, on the primary:
+  `update servability_rounds set verdict_json = (verdict_json #>> '{}')::jsonb where jsonb_typeof(verdict_json) = 'string';`
+- The four drills #59 lists (blip, sustained outage, conflict, freshness on a live page) need a
+  staging deployment with an indexer someone controls, and none has been run. What has been seen
+  live: a healthy round on the incident deployment persisting with `cause: response`, status 402,
+  from production.
+- The SSRF guard is ruled out as the cause of #62 by reading the code: its only exit is
+  `unreachable`, and the incident round said `broken`, which only the fetch path produces. The
+  remaining candidates are an edge rule on the indexer's side or dropped connections from cloud
+  ranges, and the probe record now distinguishes them.
+- Coverage stands at 84.63 / 77.36 / 86.62 / 86.02 (179 files, 2,614 tests) against a floor of
+  83 / 76 / 85 / 85; the floors are unchanged.
+
 ## [4.28.0] - 2026-09-02
 
 Four days in which this dashboard stopped only reporting on other people's infrastructure and
