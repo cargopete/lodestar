@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cacheSet } from '@/lib/cache';
 import { subgraphQuery, delegationEventsQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { delegationEventsSql, newestProvisionsSql } from '@/lib/nest-queries';
 import { log } from '@/lib/logger';
 import type { ActivityEvent } from '@/app/api/horizon/activity/route';
 
@@ -41,15 +43,94 @@ function mapDelegationType(eventType: string): ActivityEvent['type'] {
   return 'delegated';
 }
 
+/** The nest carrying `ProvisionCreated`. `/horizon` reverse-proxies to the horizon nest. */
+const HORIZON_BASE_PATH = process.env.NUTHATCH_HORIZON_BASE_PATH || '/horizon';
+
+interface NestProvision {
+  tx_hash: string;
+  log_index: number;
+  block_number: number;
+  block_timestamp: number;
+  indexer: string;
+  verifier: string;
+  tokens: string;
+}
+
+/**
+ * The same feed from two nests (nightswatchhq/nuthatch#1078): the twenty newest delegation events
+ * from `graph-staking-nest`, which already serves `/api/delegation-events` with this exact SQL, and
+ * the ten newest provisions from the horizon nest. Both are Horizon-era by definition, which is what
+ * the feed shows. A nest that is not ready refuses the run rather than caching a stale page.
+ *
+ * Two things the gateway path could not give the feed: a provision's transaction hash (it wrote an
+ * empty string, so the card had no explorer link) and its block.
+ */
+async function activityFromNests(): Promise<ActivityEvent[]> {
+  const [delegations, provisions] = await Promise.all([
+    nuthatchSqlReady<DelegationEventRaw>(delegationEventsSql(null, 20, 0)),
+    nuthatchSqlReady<NestProvision>(newestProvisionsSql(10), HORIZON_BASE_PATH),
+  ]);
+  if (!delegations.ok) {
+    throw Object.assign(new Error(`delegation events: ${delegations.error}`), { nest: delegations });
+  }
+  if (!provisions.ok) {
+    throw Object.assign(new Error(`provisions: ${provisions.error}`), { nest: provisions });
+  }
+
+  const delegationEvents: ActivityEvent[] = delegations.data.rows.map((e) => ({
+    id: `d-${e.id}`,
+    type: mapDelegationType(e.eventType),
+    block: 0,
+    txHash: e.txHash,
+    timestamp: parseInt(e.timestamp),
+    serviceProvider: e.indexer.toLowerCase(),
+    delegator: e.delegator.toLowerCase(),
+    tokensGRT: toGRT(e.tokens),
+  }));
+
+  const provisionEvents: ActivityEvent[] = provisions.data.rows.map((p) => ({
+    id: `p-${p.tx_hash}-${p.log_index}`,
+    type: 'provision' as const,
+    block: p.block_number,
+    txHash: p.tx_hash,
+    timestamp: p.block_timestamp,
+    serviceProvider: p.indexer.toLowerCase(),
+    verifier: p.verifier.toLowerCase(),
+    tokensGRT: toGRT(p.tokens),
+  }));
+
+  return [...delegationEvents, ...provisionEvents]
+    .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
+    .slice(0, 25);
+}
+
 export async function GET(request: NextRequest) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  const t0 = Date.now();
+
+  // Off by default. #1078 wants each surface switchable and revertible on its own. On the nest path
+  // the gateway key is not consulted at all - that is the point of the switch (lodestar#49).
+  if (nuthatchEnabled('NUTHATCH_HORIZON_ACTIVITY')) {
+    if (!hasNuthatch()) {
+      return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
+    }
+    try {
+      const events = await activityFromNests();
+      await cacheSet(CACHE_KEY, events, CACHE_TTL);
+      const durationMs = Date.now() - t0;
+      log.cron.info({ step: 'horizon-activity', count: events.length, durationMs, source: 'nuthatch' }, 'Horizon activity cached');
+      return NextResponse.json({ ok: true, count: events.length, durationMs, source: 'nuthatch' });
+    } catch (error) {
+      log.cron.error({ err: error, step: 'horizon-activity' }, 'Horizon activity from the nests failed');
+      return NextResponse.json({ error: 'Horizon activity from the nests failed' }, { status: 503 });
+    }
+  }
+
   if (!hasSubgraphAccess()) {
     return NextResponse.json({ error: 'Subgraph not configured' }, { status: 503 });
   }
-
-  const t0 = Date.now();
 
   const [delegationResult, provisionResult] = await Promise.all([
     delegationEventsQuery<{ delegationEvents: DelegationEventRaw[] }>(`{
