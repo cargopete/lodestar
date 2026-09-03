@@ -41,6 +41,21 @@ export default defineConfig({
       //
       // Ratchet history, newest first. These go UP and never down.
       //
+      //   2026-09-03  174 files / 2571 tests  84.20 / 76.96 / 86.15 / 85.59
+      //               api/payments from two nests behind NUTHATCH_PAYMENTS (nuthatch#1078). Eight
+      //               tests: the flag off leaves the gateway path and its key gate untouched, the
+      //               nest path never consults the key, a malformed receiver is still refused first,
+      //               escrow folds come from the allocations nest and the tally from the horizon
+      //               nest, every id is rebuilt in the subgraph's encoding and the aggregate matches
+      //               the gateway path's, the receiver filter reaches all three reads, an unready
+      //               nest is a 503 with its reason, and no nest origin means no fallback.
+      //   2026-09-03  173 files / 2563 tests  84.11 / 76.88 / 86.07 / 85.48
+      //               the three nest-switchable cron routes gate on the gateway key only for the
+      //               gateway path (lodestar#49, nuthatch#1078). Three tests, one per route, that
+      //               the route starts keyless when its flag is on, driven through the environment
+      //               with a module reset rather than a mock so the real `nuthatchEnabled` runs;
+      //               each goes red with the old gate restored. Floors unchanged: branches +0.04.
+      //               (Entry restored in the payments PR: it was lost in that PR's rebase.)
       //   2026-09-03  173 files / 2560 tests  84.11 / 76.84 / 86.07 / 85.48
       //               the Horizon activity feed from two nests behind NUTHATCH_HORIZON_ACTIVITY
       //               (nuthatch#1078). Seven tests: the flag off leaves the gateway path and its key
