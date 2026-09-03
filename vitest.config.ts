@@ -41,6 +41,14 @@ export default defineConfig({
       //
       // Ratchet history, newest first. These go UP and never down.
       //
+      //   2026-09-03  172 files / 2533 tests  83.89 / 76.64 / 85.70 / 85.27
+      //               disputes read from the nest behind NUTHATCH_DISPUTES (nuthatch#1078). Seven
+      //               tests: the flag off leaves the subgraph path untouched, the nest path maps
+      //               every field, `Drawn` translates to `draw`, an *accepted* dispute is refused
+      //               rather than written as a zero burn, an unavailable nest surfaces its own
+      //               reason, an empty result writes nothing, and the nullable fields carry through
+      //               as null. Branches dipped 0.04 on the first pass - the last two tests are what
+      //               took it back up rather than a re-baseline.
       //   2026-09-03  172 files / 2526 tests  83.85 / 76.57 / 85.66 / 85.24
       //               the Graph Network subgraph id given one home (nuthatch#1078). Four tests on
       //               the new leaf module, one of which asserts the deployment id appears as a
