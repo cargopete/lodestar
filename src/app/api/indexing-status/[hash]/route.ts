@@ -11,6 +11,10 @@ import {
   type IndexerStatusResult,
 } from '@/lib/indexing-status';
 import { assessServability } from '@/lib/servability';
+import { applyPersistence, deadRoundsThreshold, type RoundSummary } from '@/lib/servability-persistence';
+import { recordRound, recentRounds } from '@/lib/servability-rounds';
+import { probeGateway, hasGatewayAccess } from '@/lib/gateway-probe';
+import { db, hasDbAccess } from '@/lib/db';
 import { log } from '@/lib/logger';
 
 // probeServing resolves DNS (node:dns); this route must run on Node, not Edge.
@@ -153,6 +157,17 @@ export async function GET(
 
         // /status (is it indexing?) and the serving probe (does the paid path
         // answer right now? — RFC-006 D1) in parallel, per indexer.
+        // RFC-006 D5 (lodestar#59): the gateway is probed in the *same round* as the indexers, so
+        // its verdict can stand against theirs. Without a key there is no gateway witness and the
+        // persistence rule decides alone.
+        const probedAt = new Date().toISOString();
+        const gatewayPromise = hasGatewayAccess()
+          ? probeGateway(ipfsHash, probedAt).catch((err: unknown) => {
+              log.api.warn({ err, ipfsHash }, 'gateway probe failed inside the indexing-status round');
+              return null;
+            })
+          : Promise.resolve(null);
+
         const statusPromises = withUrl.map(async (alloc) => {
           const [raw, probe] = await Promise.all([
             queryIndexerStatus(alloc.indexer.url!, ipfsHash),
@@ -197,7 +212,7 @@ export async function GET(
 
         // RFC-006 D2 — live serving verdict over the allocated set. Each indexer
         // is its own operator for now; clustering (D4) can collapse identities
-        // later. This is the instantaneous read; persistence is a D5 concern.
+        // later. This is the instantaneous read; the rendered state below applies D5 persistence.
         const servability = assessServability(
           indexers.map((i) => ({
             indexerId: i.indexerId,
@@ -206,6 +221,37 @@ export async function GET(
             allocatedTokens: i.allocatedTokens,
           })),
         );
+
+        // RFC-006 D5: persist this round, read the last K back, and render from the history.
+        // The store is best-effort - a database that is down must not take the status page down -
+        // and with no history a dead round renders as `rechecking`, which is the safe direction.
+        const gateway = await gatewayPromise;
+        const gatewayVerdict = gateway?.verdict ?? null;
+        const k = deadRoundsThreshold();
+        const thisRound: RoundSummary = {
+          probedAt,
+          servingOperators: servability.effectiveServingOperators,
+          servingIndexers: servability.servingIndexerCount,
+          gatewayVerdict,
+        };
+        let history: RoundSummary[] = [thisRound];
+        if (hasDbAccess() && db) {
+          try {
+            await recordRound(db, { ...thisRound, deploymentHash: ipfsHash, verdict: servability });
+            history = await recentRounds(db, ipfsHash, k);
+            if (!history.some((r) => r.probedAt === probedAt)) history = [...history, thisRound].slice(-k);
+          } catch (err) {
+            log.api.warn({ err, ipfsHash }, 'servability round store unavailable; rendering without history');
+            history = [thisRound];
+          }
+        }
+        const servabilityRendered = applyPersistence(history, k);
+        if (servabilityRendered.state === 'conflicting') {
+          log.api.warn(
+            { ipfsHash, servedBlock: gateway?.servedBlock ?? null, probedAt },
+            'servability conflict: the gateway served an attested query while every direct indexer probe failed - suspect our probe path, not the network',
+          );
+        }
 
         return {
           deploymentId,
@@ -222,6 +268,8 @@ export async function GET(
           failedCount,
           unreachableCount,
           servability,
+          servabilityRendered,
+          gatewayVerdict,
         };
       },
     );

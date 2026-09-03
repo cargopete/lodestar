@@ -373,3 +373,19 @@ CREATE TABLE IF NOT EXISTS cron_runs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cron_runs_step_started ON cron_runs (step, started_at DESC);
+
+-- One row per probe round of /api/indexing-status/[hash] (RFC-006 D5). "Effectively dead" is
+-- derived from the last K rows per deployment, never from one round (lodestar#59).
+CREATE TABLE IF NOT EXISTS servability_rounds (
+  id                     BIGSERIAL PRIMARY KEY,
+  deployment_hash        TEXT NOT NULL,
+  probed_at              TIMESTAMPTZ NOT NULL,
+  serving_operator_count INTEGER NOT NULL,
+  serving_indexer_count  INTEGER NOT NULL,
+  gateway_verdict        TEXT,
+  verdict_json           JSONB NOT NULL,
+  created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_servability_rounds_hash_probed
+  ON servability_rounds (deployment_hash, probed_at DESC);

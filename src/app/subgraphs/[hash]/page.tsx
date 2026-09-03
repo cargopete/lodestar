@@ -20,6 +20,7 @@ import { useDeploymentQos } from '@/hooks/useFoghorn';
 import { FoghornAlertBanner } from '@/components/foghorn/FoghornAlertBanner';
 import { GatewayServingCard } from '@/components/subgraph/GatewayServingCard';
 import { badIndexerLabel } from '@/lib/gateway-probe';
+import { VerdictAge } from '@/components/subgraph/VerdictAge';
 import { SubgraphHistoryChart } from '@/components/charts/SubgraphHistoryChart';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -431,23 +432,43 @@ function IndexingHealthSection({ hash }: { hash: string }) {
   const syncingCount = data.totalIndexers - data.syncedCount - data.failedCount - data.unreachableCount;
 
   const servability = data.servability;
+  // RFC-006 D5 (lodestar#59): the banner renders the persisted state, never the instantaneous
+  // read. An older cached payload without it falls back to "nothing to say" rather than to the
+  // one-round verdict that produced the uniswap-v4-base-3 incident.
+  const rendered = data.servabilityRendered ?? null;
 
   return (
     <>
-      {servability?.effectivelyDead ? (
+      {rendered?.state === 'dead' && servability ? (
         <Card className="border-[var(--red-dim)]">
           <div className="flex items-start gap-2">
             <span aria-hidden>⛔</span>
             <div>
               <p className="text-sm font-semibold text-[var(--red-text)]">
                 {servability.recovering ? 'Effectively dead, rescue in flight' : 'Effectively dead'}
+                {' · '}
+                <VerdictAge probedAt={rendered.probedAt} />
               </p>
               <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
-                All allocated stake belongs to operators with no working serving path; queries will fail despite any
-                reported sync.{servability.recovering ? ' A syncing indexer is catching up.' : ''}
+                No operator has served a query in {rendered.deadStreak} consecutive checks; queries will fail despite
+                any reported sync.{servability.recovering ? ' A syncing indexer is catching up.' : ''}
               </p>
             </div>
           </div>
+        </Card>
+      ) : rendered?.state === 'conflicting' ? (
+        <Card className="border-[var(--amber)]">
+          <p className="text-[13px] text-[var(--amber)]">
+            ⚠ Conflicting signals · the gateway served a live query but direct indexer probes failed ·{' '}
+            <VerdictAge probedAt={rendered.probedAt} />. The gateway is the stronger witness; this is being looked at.
+          </p>
+        </Card>
+      ) : rendered?.state === 'rechecking' ? (
+        <Card className="border-[var(--amber)]">
+          <p className="text-[13px] text-[var(--amber)]">
+            ⚠ Serving check failing · rechecking ({rendered.deadStreak} of {rendered.k} consecutive checks failed,{' '}
+            <VerdictAge probedAt={rendered.probedAt} />). Not called dead until {rendered.k} in a row.
+          </p>
         </Card>
       ) : servability && servability.dominantOperatorShare >= 0.66 ? (
         <Card className="border-[var(--amber)]">
