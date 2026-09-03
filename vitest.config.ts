@@ -41,6 +41,14 @@ export default defineConfig({
       //
       // Ratchet history, newest first. These go UP and never down.
       //
+      //   2026-09-03  173 files / 2560 tests  84.11 / 76.84 / 86.07 / 85.48
+      //               the Horizon activity feed from two nests behind NUTHATCH_HORIZON_ACTIVITY
+      //               (nuthatch#1078). Seven tests: the flag off leaves the gateway path and its key
+      //               gate untouched, the nest path never consults the key, no nest origin means no
+      //               fallback, delegation events come from the staking nest and provisions from
+      //               the horizon nest, the cache holds the newest twenty-five across both with a
+      //               provision carrying its real transaction and block, an unready nest leaves the
+      //               cache alone, and the cron secret still gates the nest path.
       //   2026-09-03  172 files / 2553 tests  84.00 / 76.78 / 85.79 / 85.40
       //               RAV read from the nest behind NUTHATCH_RAV (nuthatch#1078). Eleven tests: the
       //               subgraph escrow id rebuilt as txHash || LE32(log_index + 1) on four real
