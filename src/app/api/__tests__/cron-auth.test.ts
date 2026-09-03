@@ -51,9 +51,11 @@ vi.mock('@/lib/amp', () => ({
 }));
 
 vi.mock('@/lib/ingest/epochs', () => ({ ingestEpochs: vi.fn().mockResolvedValue({ ingested: 0, durationMs: 0 }) }));
-vi.mock('@/lib/ingest/allocations', () => ({ ingestAllocations: vi.fn().mockResolvedValue({ ingested: 0, durationMs: 0 }) }));
+const mockIngestAllocations = vi.fn().mockResolvedValue({ ingested: 0, durationMs: 0 });
+vi.mock('@/lib/ingest/allocations', () => ({ ingestAllocations: (...a: unknown[]) => mockIngestAllocations(...a) }));
 vi.mock('@/lib/ingest/delegations', () => ({ ingestDelegationEvents: vi.fn().mockResolvedValue({ ingested: 0, durationMs: 0 }) }));
-vi.mock('@/lib/ingest/disputes', () => ({ ingestDisputes: vi.fn().mockResolvedValue({ ingested: 0, durationMs: 0 }) }));
+const mockIngestDisputes = vi.fn().mockResolvedValue({ ingested: 0, durationMs: 0 });
+vi.mock('@/lib/ingest/disputes', () => ({ ingestDisputes: (...a: unknown[]) => mockIngestDisputes(...a) }));
 vi.mock('@/lib/ingest/network-snapshot', () => ({ writeNetworkSnapshot: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/refresh', () => ({ refreshIndexers: vi.fn().mockResolvedValue({ count: 0, durationMs: 0 }) }));
 
@@ -208,6 +210,21 @@ describe('/api/cron/ingest-allocations', () => {
     expect(res.status).toBe(200);
     vi.unstubAllEnvs();
   });
+  it('starts without a gateway key when NUTHATCH_ALLOCATIONS points it at a nest (lodestar#49)', async () => {
+    // `@/lib/nuthatch` reads its origin from the environment at import, so the registry is reset
+    // and the origin stubbed before the route (and the real `nuthatchEnabled`) load.
+    vi.resetModules();
+    vi.stubEnv('CRON_SECRET', 'test-secret');
+    vi.stubEnv('NUTHATCH_URL', 'http://nest.test');
+    vi.stubEnv('NUTHATCH_ALLOCATIONS', 'true');
+    mockHasDbAccess.mockReturnValue(true);
+    mockHasSubgraphAccess.mockReturnValue(false);
+    const { GET } = await import('@/app/api/cron/ingest-allocations/route');
+    const res = await GET(authedRequest('/api/cron/ingest-allocations'));
+    expect(res.status).not.toBe(503);
+    expect(mockIngestAllocations).toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -257,6 +274,21 @@ describe('/api/cron/ingest-disputes', () => {
     const { GET } = await import('@/app/api/cron/ingest-disputes/route');
     const res = await GET(authedRequest('/api/cron/ingest-disputes'));
     expect(res.status).toBe(200);
+    vi.unstubAllEnvs();
+  });
+  it('starts without a gateway key when NUTHATCH_DISPUTES points it at a nest (lodestar#49)', async () => {
+    // `@/lib/nuthatch` reads its origin from the environment at import, so the registry is reset
+    // and the origin stubbed before the route (and the real `nuthatchEnabled`) load.
+    vi.resetModules();
+    vi.stubEnv('CRON_SECRET', 'test-secret');
+    vi.stubEnv('NUTHATCH_URL', 'http://nest.test');
+    vi.stubEnv('NUTHATCH_DISPUTES', 'true');
+    mockHasDbAccess.mockReturnValue(true);
+    mockHasSubgraphAccess.mockReturnValue(false);
+    const { GET } = await import('@/app/api/cron/ingest-disputes/route');
+    const res = await GET(authedRequest('/api/cron/ingest-disputes'));
+    expect(res.status).not.toBe(503);
+    expect(mockIngestDisputes).toHaveBeenCalled();
     vi.unstubAllEnvs();
   });
 });
@@ -470,6 +502,21 @@ describe('/api/cron/ingest-rav', () => {
     const res = await GET(authedRequest('/api/cron/ingest-rav'));
     expect(res.status).toBe(500);
     expect((await res.json()).error).toMatch(/RAV ingestion failed/);
+    vi.unstubAllEnvs();
+  });
+  it('starts without a gateway key when NUTHATCH_RAV points it at a nest (lodestar#49)', async () => {
+    // `@/lib/nuthatch` reads its origin from the environment at import, so the registry is reset
+    // and the origin stubbed before the route (and the real `nuthatchEnabled`) load.
+    vi.resetModules();
+    vi.stubEnv('CRON_SECRET', 'test-secret');
+    vi.stubEnv('NUTHATCH_URL', 'http://nest.test');
+    vi.stubEnv('NUTHATCH_RAV', 'true');
+    mockHasDbAccess.mockReturnValue(true);
+    mockHasSubgraphAccess.mockReturnValue(false);
+    const { GET } = await import('@/app/api/cron/ingest-rav/route');
+    const res = await GET(authedRequest('/api/cron/ingest-rav'));
+    expect(res.status).not.toBe(503);
+    expect(mockIngestRav).toHaveBeenCalled();
     vi.unstubAllEnvs();
   });
 });

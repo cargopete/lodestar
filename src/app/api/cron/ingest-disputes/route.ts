@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { hasSubgraphAccess } from '@/lib/subgraph';
+import { nuthatchEnabled } from '@/lib/nuthatch';
 import { ingestDisputes } from '@/lib/ingest/disputes';
 import { withCronTracking } from '@/lib/cron-runs';
 import { log } from '@/lib/logger';
@@ -20,7 +21,10 @@ export async function GET(request: NextRequest) {
   if (!hasDbAccess() || !db) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
-  if (!hasSubgraphAccess()) {
+  // The key gates only the path that uses it. With `NUTHATCH_DISPUTES` on, the ingest reads a nest and
+  // never the gateway, so refusing to start without the key would keep the key load-bearing for a
+  // surface that no longer needs it (lodestar#49, nuthatch#1078).
+  if (!nuthatchEnabled('NUTHATCH_DISPUTES') && !hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
 
