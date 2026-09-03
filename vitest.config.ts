@@ -41,6 +41,15 @@ export default defineConfig({
       //
       // Ratchet history, newest first. These go UP and never down.
       //
+      //   2026-09-03  172 files / 2553 tests  84.00 / 76.78 / 85.79 / 85.40
+      //               RAV read from the nest behind NUTHATCH_RAV (nuthatch#1078). Eleven tests: the
+      //               subgraph escrow id rebuilt as txHash || LE32(log_index + 1) on four real
+      //               vectors, the flag off leaves the subgraph path untouched, the nest path writes
+      //               the row the gateway path would have written, a self-collection with no fee
+      //               partner keeps a null allocation, a pair whose amounts differ is refused rather
+      //               than guessed, a truncated page is refused, an unready nest surfaces its own
+      //               reason, the overlap window and the cursor advance, the cursor is left alone
+      //               with nothing newer, and backfill pages by (timestamp, tx, log index).
       //   2026-09-03  172 files / 2542 tests  83.94 / 76.69 / 85.74 / 85.33
       //               allocations read from the nest behind NUTHATCH_ALLOCATIONS (nuthatch#1078).
       //               Nine tests: the flag off leaves the subgraph path untouched, the delta reads
