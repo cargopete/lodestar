@@ -41,6 +41,14 @@ export default defineConfig({
       //
       // Ratchet history, newest first. These go UP and never down.
       //
+      //   2026-09-03  175 files / 2580 tests  84.28 / 77.01 / 86.26 / 85.68
+      //               api/poi from the nest behind NUTHATCH_POI (nuthatch#1078). Nine tests: the
+      //               bytes32-to-CIDv0 encoder round-trips a real deployment and refuses anything
+      //               else, the flag off leaves the gateway path and its key gate untouched, the
+      //               nest path never consults the key, the overview reaches the consensus
+      //               computation in the shape it reads with the deployment hash rebuilt, a Qm
+      //               deployment resolves without a lookup, an empty or malformed deployment is a
+      //               404, an unready nest is a 503, and no nest origin means no fallback.
       //   2026-09-03  174 files / 2571 tests  84.20 / 76.96 / 86.15 / 85.59
       //               api/payments from two nests behind NUTHATCH_PAYMENTS (nuthatch#1078). Eight
       //               tests: the flag off leaves the gateway path and its key gate untouched, the
