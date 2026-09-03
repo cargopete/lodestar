@@ -11,6 +11,8 @@
 import { isSafeUrlResolved } from './ssrf';
 import { signTapReceipt, hasTapSigner } from './tap';
 import type { ServabilityVerdict } from './servability';
+import type { RenderedServability } from './servability-persistence';
+import type { GatewayVerdict } from './gateway-probe';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -84,6 +86,13 @@ export interface DeploymentIndexingStatus {
   unreachableCount: number;
   /** RFC-006 D2 — live serving verdict over the allocated set (null if not probed) */
   servability?: ServabilityVerdict | null;
+  /**
+   * RFC-006 D5 (lodestar#59): what the page may render, derived from the last K rounds rather
+   * than from `servability`, which is the instantaneous read. Absent on older cached payloads.
+   */
+  servabilityRendered?: RenderedServability | null;
+  /** The gateway's verdict in the same round, when a key allowed one; the stronger witness. */
+  gatewayVerdict?: GatewayVerdict | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -408,33 +417,52 @@ export async function probeServing(
     }
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ query: '{ _meta { block { number } } }' }),
-      signal: controller.signal,
-    });
-    const ct = res.headers.get('content-type') ?? '';
-    const body = await res.text();
+  // `broken` is load-bearing: with one allocated indexer it is the whole "effectively dead"
+  // verdict (lodestar#59). So a transport failure - timeout, reset, refused - gets exactly one
+  // retry after a short jitter, inside a bounded total budget, before it is called broken. A
+  // response of any kind is classified once; only the *absence* of a response is retried.
+  const started = Date.now();
+  const attempt = async (budgetMs: number): Promise<ServeProbe | null> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), budgetMs);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ query: '{ _meta { block { number } } }' }),
+        signal: controller.signal,
+      });
+      const ct = res.headers.get('content-type') ?? '';
+      const body = await res.text();
 
-    if (paid) {
-      const v = classifyPaidResponse(res.status, ct, body);
-      if (v === 'serving') return 'serving';
-      if (v === 'broken') return 'broken';
-      // payment_unfunded — gate is up, we just couldn't pay: unverified-but-alive.
-      return 'alive_paid';
+      if (paid) {
+        const v = classifyPaidResponse(res.status, ct, body);
+        if (v === 'serving') return 'serving';
+        if (v === 'broken') return 'broken';
+        // payment_unfunded — gate is up, we just couldn't pay: unverified-but-alive.
+        return 'alive_paid';
+      }
+      return classifyServeResponse(res.status, ct, body);
+    } catch {
+      // Refused / reset / timeout — DNS failures were already caught by the guard.
+      return null;
+    } finally {
+      clearTimeout(timer);
     }
-    return classifyServeResponse(res.status, ct, body);
-  } catch {
-    // Refused / reset / timeout — DNS failures were already caught by the guard.
-    return 'broken';
-  } finally {
-    clearTimeout(timer);
-  }
+  };
+
+  const first = await attempt(timeoutMs);
+  if (first !== null) return first;
+  const remaining = PROBE_TOTAL_BUDGET_MS(timeoutMs) - (Date.now() - started);
+  if (remaining <= 0) return 'broken';
+  await new Promise((r) => setTimeout(r, Math.min(remaining, Math.floor(Math.random() * PROBE_RETRY_JITTER_MS))));
+  const second = await attempt(Math.max(1, Math.min(timeoutMs, PROBE_TOTAL_BUDGET_MS(timeoutMs) - (Date.now() - started))));
+  return second ?? 'broken';
 }
+
+/** One retry fits inside 1.6× the single-attempt timeout: 5 s becomes 8 s, as RFC-006 D5 asks. */
+const PROBE_TOTAL_BUDGET_MS = (timeoutMs: number) => Math.round(timeoutMs * 1.6);
+const PROBE_RETRY_JITTER_MS = 300;
 
 /** Fold a probe into an existing status result. `serving` and `alive_paid` both count as servable. */
 export function withServeProbe(result: IndexerStatusResult, probe: ServeProbe): IndexerStatusResult {
