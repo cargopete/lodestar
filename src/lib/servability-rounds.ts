@@ -7,12 +7,24 @@
 // `rechecking`, which is the safe direction.
 
 import type { DbClient } from './db';
+import type { ServeProbeOutcome } from './indexing-status';
 import type { ServabilityVerdict } from './servability';
 import type { RoundSummary } from './servability-persistence';
+
+/**
+ * One indexer's serving probe as it went into the round, persisted under `verdict_json.probes`
+ * (lodestar#62). The counts say how often our probes disagree with the gateway; this says what
+ * each probe actually saw, which is what tells an edge block from a timeout after the fact.
+ */
+export interface ProbeRecord extends ServeProbeOutcome {
+  indexerId: string;
+  url: string;
+}
 
 export interface RoundRecord extends RoundSummary {
   deploymentHash: string;
   verdict: ServabilityVerdict;
+  probes: ProbeRecord[];
 }
 
 export async function recordRound(sql: DbClient, r: RoundRecord): Promise<void> {
@@ -20,7 +32,7 @@ export async function recordRound(sql: DbClient, r: RoundRecord): Promise<void> 
     INSERT INTO servability_rounds
       (deployment_hash, probed_at, serving_operator_count, serving_indexer_count, gateway_verdict, verdict_json)
     VALUES
-      (${r.deploymentHash}, ${r.probedAt}, ${r.servingOperators}, ${r.servingIndexers}, ${r.gatewayVerdict}, ${JSON.stringify(r.verdict)}::jsonb)
+      (${r.deploymentHash}, ${r.probedAt}, ${r.servingOperators}, ${r.servingIndexers}, ${r.gatewayVerdict}, ${JSON.stringify({ ...r.verdict, probes: r.probes })}::jsonb)
   `;
 }
 

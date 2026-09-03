@@ -5,14 +5,14 @@ import {
   queryIndexerStatus,
   buildIndexerStatus,
   reconcileToNetworkHead,
-  probeServing,
+  probeServingDetailed,
   withServeProbe,
   type DeploymentIndexingStatus,
   type IndexerStatusResult,
 } from '@/lib/indexing-status';
 import { assessServability } from '@/lib/servability';
 import { applyPersistence, deadRoundsThreshold, type RoundSummary } from '@/lib/servability-persistence';
-import { recordRound, recentRounds } from '@/lib/servability-rounds';
+import { recordRound, recentRounds, type ProbeRecord } from '@/lib/servability-rounds';
 import { probeGateway, hasGatewayAccess } from '@/lib/gateway-probe';
 import { db, hasDbAccess } from '@/lib/db';
 import { log } from '@/lib/logger';
@@ -173,7 +173,7 @@ export async function GET(
             queryIndexerStatus(alloc.indexer.url!, ipfsHash),
             // indexer.id is the on-chain address — enables a paid (receipt-backed)
             // probe where escrow is funded, else falls back to receipt-less.
-            probeServing(alloc.indexer.url!, ipfsHash, alloc.indexer.id),
+            probeServingDetailed(alloc.indexer.url!, ipfsHash, alloc.indexer.id),
           ]);
           const built = buildIndexerStatus(
             alloc.indexer.id,
@@ -234,10 +234,16 @@ export async function GET(
           servingIndexers: servability.servingIndexerCount,
           gatewayVerdict,
         };
+        // What each probe saw goes into the record with the counts (lodestar#62): a round in which
+        // our probes and the gateway disagree is only diagnosable if it says whether a response
+        // ever arrived, and what it was.
+        const probes: ProbeRecord[] = indexers.flatMap((i) =>
+          i.serveProbeDetail ? [{ indexerId: i.indexerId, url: i.url, ...i.serveProbeDetail }] : [],
+        );
         let history: RoundSummary[] = [thisRound];
         if (hasDbAccess() && db) {
           try {
-            await recordRound(db, { ...thisRound, deploymentHash: ipfsHash, verdict: servability });
+            await recordRound(db, { ...thisRound, deploymentHash: ipfsHash, verdict: servability, probes });
             history = await recentRounds(db, ipfsHash, k);
             if (!history.some((r) => r.probedAt === probedAt)) history = [...history, thisRound].slice(-k);
           } catch (err) {
@@ -248,7 +254,7 @@ export async function GET(
         const servabilityRendered = applyPersistence(history, k);
         if (servabilityRendered.state === 'conflicting') {
           log.api.warn(
-            { ipfsHash, servedBlock: gateway?.servedBlock ?? null, probedAt },
+            { ipfsHash, servedBlock: gateway?.servedBlock ?? null, probedAt, probes },
             'servability conflict: the gateway served an attested query while every direct indexer probe failed - suspect our probe path, not the network',
           );
         }

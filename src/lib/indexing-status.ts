@@ -29,6 +29,28 @@ import type { GatewayVerdict } from './gateway-probe';
  */
 export type ServeProbe = 'serving' | 'alive_paid' | 'broken' | 'unreachable';
 
+/**
+ * How a probe reached its verdict, kept beside the verdict so a `broken` can be told apart after
+ * the fact (lodestar#62): a transport failure that never got a response looks the same as an edge
+ * answering 403 HTML once both are collapsed to `broken`, and they point at different culprits.
+ *  - guard     — the SSRF guard refused the URL before any request was made
+ *  - transport — every attempt failed without a response: `error` is the deepest error code or
+ *                name (`timeout` when our own budget expired, else e.g. ECONNRESET,
+ *                UND_ERR_CONNECT_TIMEOUT, ERR_TLS_CERT_ALTNAME_INVALID)
+ *  - response  — a response arrived and was classified: `status` and `contentType` are its
+ */
+export interface ServeProbeOutcome {
+  probe: ServeProbe;
+  cause: 'guard' | 'transport' | 'response';
+  error: string | null;
+  status: number | null;
+  contentType: string | null;
+  /** whether a TAP receipt was attached, which decides which classifier read the response */
+  paid: boolean;
+  attempts: number;
+  elapsedMs: number;
+}
+
 export interface IndexerStatusResult {
   indexerId: string;
   indexerName: string | null;
@@ -37,6 +59,8 @@ export interface IndexerStatusResult {
   status: 'synced' | 'syncing' | 'failed' | 'unreachable';
   /** single-probe serving classification (RFC-006 D1); persistence is applied downstream */
   serveProbe?: ServeProbe;
+  /** how `serveProbe` was reached; what a `broken` actually saw (lodestar#62) */
+  serveProbeDetail?: ServeProbeOutcome;
   /** convenience: serveProbe === 'alive_paid' */
   servable?: boolean;
   health?: 'healthy' | 'unhealthy' | 'failed';
@@ -399,8 +423,26 @@ export async function probeServing(
   indexerAddress?: string,
   timeoutMs = 5000,
 ): Promise<ServeProbe> {
+  return (await probeServingDetailed(indexerUrl, ipfsHash, indexerAddress, timeoutMs)).probe;
+}
+
+/**
+ * `probeServing` with its working shown. The verdict is identical; the rest of the record says
+ * whether a response was ever seen and, if so, what it was. See `ServeProbeOutcome`.
+ */
+export async function probeServingDetailed(
+  indexerUrl: string,
+  ipfsHash: string,
+  indexerAddress?: string,
+  timeoutMs = 5000,
+): Promise<ServeProbeOutcome> {
+  const started = Date.now();
+  const outcome = (o: Omit<ServeProbeOutcome, 'elapsedMs'>): ServeProbeOutcome => ({ ...o, elapsedMs: Date.now() - started });
+
   const base = indexerUrl?.replace(/\/+$/, '');
-  if (!base || !(await isSafeUrlResolved(base))) return 'unreachable';
+  if (!base || !(await isSafeUrlResolved(base))) {
+    return outcome({ probe: 'unreachable', cause: 'guard', error: null, status: null, contentType: null, paid: false, attempts: 0 });
+  }
 
   const url = `${base}/subgraphs/id/${ipfsHash}`;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -421,8 +463,8 @@ export async function probeServing(
   // verdict (lodestar#59). So a transport failure - timeout, reset, refused - gets exactly one
   // retry after a short jitter, inside a bounded total budget, before it is called broken. A
   // response of any kind is classified once; only the *absence* of a response is retried.
-  const started = Date.now();
-  const attempt = async (budgetMs: number): Promise<ServeProbe | null> => {
+  type Attempt = { probe: ServeProbe; status: number; contentType: string } | { error: string };
+  const attempt = async (budgetMs: number): Promise<Attempt> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), budgetMs);
     try {
@@ -434,37 +476,72 @@ export async function probeServing(
       });
       const ct = res.headers.get('content-type') ?? '';
       const body = await res.text();
-
-      if (paid) {
+      const classified = (): ServeProbe => {
+        if (!paid) return classifyServeResponse(res.status, ct, body);
         const v = classifyPaidResponse(res.status, ct, body);
-        if (v === 'serving') return 'serving';
-        if (v === 'broken') return 'broken';
         // payment_unfunded — gate is up, we just couldn't pay: unverified-but-alive.
-        return 'alive_paid';
-      }
-      return classifyServeResponse(res.status, ct, body);
-    } catch {
+        return v === 'payment_unfunded' ? 'alive_paid' : v;
+      };
+      return { probe: classified(), status: res.status, contentType: ct };
+    } catch (err) {
       // Refused / reset / timeout — DNS failures were already caught by the guard.
-      return null;
+      // Only our own timer aborts that signal, so an abort is our budget expiring: a timeout.
+      const aborted = controller.signal.aborted || (err instanceof Error && err.name === 'AbortError');
+      return { error: aborted ? 'timeout' : describeFetchError(err) };
     } finally {
       clearTimeout(timer);
     }
   };
 
   const first = await attempt(timeoutMs);
-  if (first !== null) return first;
+  if (!('error' in first)) return outcome({ ...first, cause: 'response', error: null, paid, attempts: 1 });
   const remaining = PROBE_TOTAL_BUDGET_MS(timeoutMs) - (Date.now() - started);
-  if (remaining <= 0) return 'broken';
+  if (remaining <= 0) {
+    return outcome({ probe: 'broken', cause: 'transport', error: first.error, status: null, contentType: null, paid, attempts: 1 });
+  }
   await new Promise((r) => setTimeout(r, Math.min(remaining, Math.floor(Math.random() * PROBE_RETRY_JITTER_MS))));
   const second = await attempt(Math.max(1, Math.min(timeoutMs, PROBE_TOTAL_BUDGET_MS(timeoutMs) - (Date.now() - started))));
-  return second ?? 'broken';
+  if (!('error' in second)) return outcome({ ...second, cause: 'response', error: null, paid, attempts: 2 });
+  return outcome({ probe: 'broken', cause: 'transport', error: second.error, status: null, contentType: null, paid, attempts: 2 });
+}
+
+/**
+ * The most specific name a fetch failure carries. Node's fetch wraps the real fault as the
+ * `cause` of a bare `TypeError: fetch failed`, and a happy-eyeballs refusal arrives as an
+ * AggregateError, so this walks down to the deepest `code`, falls back to a non-generic error
+ * name, and only then to the message. Pure; exported for tests.
+ */
+export function describeFetchError(err: unknown): string {
+  let code: string | null = null;
+  let name: string | null = null;
+  let message: string | null = null;
+  const seen = new Set<unknown>();
+  let e: unknown = err;
+  while (e && typeof e === 'object' && !seen.has(e)) {
+    seen.add(e);
+    const x = e as { code?: unknown; name?: unknown; message?: unknown; cause?: unknown; errors?: unknown[] };
+    if (typeof x.code === 'string' && x.code) code = x.code;
+    if (typeof x.name === 'string' && !['Error', 'TypeError', 'AggregateError'].includes(x.name)) name ??= x.name;
+    if (typeof x.message === 'string' && x.message) message ??= x.message;
+    e = x.cause ?? (Array.isArray(x.errors) ? x.errors[0] : undefined);
+  }
+  return code ?? name ?? (message ? message.slice(0, 120) : String(err).slice(0, 120));
 }
 
 /** One retry fits inside 1.6× the single-attempt timeout: 5 s becomes 8 s, as RFC-006 D5 asks. */
 const PROBE_TOTAL_BUDGET_MS = (timeoutMs: number) => Math.round(timeoutMs * 1.6);
 const PROBE_RETRY_JITTER_MS = 300;
 
-/** Fold a probe into an existing status result. `serving` and `alive_paid` both count as servable. */
-export function withServeProbe(result: IndexerStatusResult, probe: ServeProbe): IndexerStatusResult {
-  return { ...result, serveProbe: probe, servable: probe === 'serving' || probe === 'alive_paid' };
+/**
+ * Fold a probe into an existing status result. `serving` and `alive_paid` both count as servable.
+ * Given the detailed outcome, the working is kept on the result too (lodestar#62).
+ */
+export function withServeProbe(result: IndexerStatusResult, probe: ServeProbe | ServeProbeOutcome): IndexerStatusResult {
+  const verdict = typeof probe === 'string' ? probe : probe.probe;
+  return {
+    ...result,
+    serveProbe: verdict,
+    ...(typeof probe === 'string' ? {} : { serveProbeDetail: probe }),
+    servable: verdict === 'serving' || verdict === 'alive_paid',
+  };
 }
