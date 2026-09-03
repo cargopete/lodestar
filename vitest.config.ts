@@ -41,6 +41,15 @@ export default defineConfig({
       //
       // Ratchet history, newest first. These go UP and never down.
       //
+      //   2026-09-03  172 files / 2542 tests  83.94 / 76.69 / 85.74 / 85.33
+      //               allocations read from the nest behind NUTHATCH_ALLOCATIONS (nuthatch#1078).
+      //               Nine tests: the flag off leaves the subgraph path untouched, the delta reads
+      //               active then closed-since-cursor and never the gateway, a first run skips the
+      //               closed read exactly like the gateway path, the row shape matches what the
+      //               gateway path writes with status folded to open/closed, the cursor advances to
+      //               the epoch the nest reports, a truncated read is refused rather than written
+      //               as a complete snapshot, an unready nest surfaces its own reason, a missing
+      //               epoch refuses to advance the cursor, and backfill pages by id.
       //   2026-09-03  172 files / 2533 tests  83.89 / 76.64 / 85.70 / 85.27
       //               disputes read from the nest behind NUTHATCH_DISPUTES (nuthatch#1078). Seven
       //               tests: the flag off leaves the subgraph path untouched, the nest path maps
