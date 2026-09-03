@@ -1,4 +1,4 @@
-import { decodeBase58, toBeHex } from 'ethers';
+import { decodeBase58, encodeBase58, toBeHex } from 'ethers';
 
 // The Graph's public IPFS endpoint — used as default when GRAPH_IPFS_URL is not set
 export const THEGRAPH_IPFS = 'https://api.thegraph.com/ipfs';
@@ -20,6 +20,17 @@ export function ipfsHashToBytes32(ipfsHash: string): `0x${string}` {
   const hex = toBeHex(n, 34);
   // Strip the 0x1220 multihash prefix (first 2 bytes = 4 hex chars after "0x")
   return `0x${hex.slice(6)}` as `0x${string}`;
+}
+
+/**
+ * The inverse: a deployment's bytes32 id back to its CIDv0 hash, which is what the subgraph
+ * exposes as `ipfsHash` and what every link and label in the app is built from. Round-trips with
+ * `ipfsHashToBytes32`; a real vector is pinned in the tests.
+ */
+export function bytes32ToIpfsHash(id: `0x${string}` | string): string {
+  const hex = id.toLowerCase().replace(/^0x/, '');
+  if (!/^[0-9a-f]{64}$/.test(hex)) throw new Error(`not a bytes32 id: ${id}`);
+  return encodeBase58(`0x1220${hex}`);
 }
 
 /**

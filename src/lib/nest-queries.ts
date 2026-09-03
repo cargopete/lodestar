@@ -135,3 +135,31 @@ export function tallyCollectedSql(receiver: string | null, first: number): strin
     `GROUP BY 1, 2, 3 ORDER BY SUM(CAST(tokens AS HUGEINT)) DESC LIMIT ${first}`
   );
 }
+
+// ---------------------------------------------------------------------------------------------
+// `api/poi` (nightswatchhq/nuthatch#1078).
+// ---------------------------------------------------------------------------------------------
+
+const ZERO_POI = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+/**
+ * The subgraph's `allocations(where: { status: Closed, poi_not: 0x0 }, orderBy: closedAt desc)`,
+ * as the POI consensus computation reads it: the allocation, its indexer, and its deployment's
+ * current signal and stake. Stake is the sum of the deployment's active allocations, which is what
+ * `subgraphDeployment.stakedTokens` is. Signal is the view's `signalled_tokens`, so it is only as
+ * right as the view: its first fold was gross of curation tax and blind to fees collected into the
+ * pool, and the correction (graph-allocations-nest#10) lands with the nest's redeploy.
+ */
+export function poiAllocationsSql(deployment: string | null, first: number): string {
+  if (deployment && !/^0x[0-9a-f]{64}$/.test(deployment)) throw new Error(`not a deployment id: ${deployment}`);
+  const dep = deployment ? ` AND a.subgraph_deployment = '${deployment}'` : '';
+  return (
+    `WITH staked AS (SELECT subgraph_deployment, CAST(SUM(CAST(allocated_tokens AS HUGEINT)) AS VARCHAR) AS staked ` +
+    `FROM lodestar_allocations WHERE status = 'Active' GROUP BY 1) ` +
+    `SELECT a.id, a.poi, a.indexer, CAST(a.allocated_tokens AS VARCHAR) AS allocated_tokens, a.closed_at_epoch, a.closed_at, ` +
+    `a.subgraph_deployment, CAST(a.signalled_tokens AS VARCHAR) AS signalled_tokens, COALESCE(s.staked, '0') AS staked_tokens ` +
+    `FROM lodestar_allocations a LEFT JOIN staked s ON s.subgraph_deployment = a.subgraph_deployment ` +
+    `WHERE a.status = 'Closed' AND a.poi IS NOT NULL AND a.poi <> '${ZERO_POI}'${dep} ` +
+    `ORDER BY a.closed_at DESC, a.id DESC LIMIT ${first}`
+  );
+}
