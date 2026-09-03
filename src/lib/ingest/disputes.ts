@@ -130,6 +130,68 @@ async function ingestDisputesFromNest(
   return { ingested: rows.length };
 }
 
+const DISPUTE_FIELDS = `
+        id
+        type
+        indexer { id }
+        fisherman { id }
+        allocation { id }
+        subgraphDeployment { id }
+        status
+        tokensSlashed
+        tokensBurned
+        createdAt
+        closedAt`;
+
+async function upsertSubgraphDisputes(sql: DbClient, disputes: SubgraphDispute[]): Promise<number> {
+  if (disputes.length === 0) return 0;
+  const rows = disputes.map((d) => ({
+    id: d.id,
+    dispute_type: d.type?.toLowerCase() ?? null,
+    indexer_address: d.indexer.id.toLowerCase(),
+    fisherman: d.fisherman.id.toLowerCase(),
+    allocation_id: d.allocation?.id ?? null,
+    deployment_id: d.subgraphDeployment.id,
+    status: d.status?.toLowerCase() ?? null,
+    tokens_slashed_grt: parseFloat(d.tokensSlashed) || 0,
+    tokens_burned_grt: parseFloat(d.tokensBurned) || 0,
+    created_at: d.createdAt ? new Date(d.createdAt * 1000).toISOString() : null,
+    closed_at: d.closedAt ? new Date(d.closedAt * 1000).toISOString() : null,
+  }));
+  await sql`
+    INSERT INTO disputes ${sql(rows)}
+    ON CONFLICT (id) DO UPDATE SET
+      status = EXCLUDED.status,
+      tokens_slashed_grt = EXCLUDED.tokens_slashed_grt,
+      tokens_burned_grt = EXCLUDED.tokens_burned_grt,
+      closed_at = EXCLUDED.closed_at
+  `;
+  return rows.length;
+}
+
+/**
+ * The second pass the cursor cannot do (lodestar#57). `createdAt_gt` only ever returns disputes
+ * newer than the newest already seen, so a dispute ingested while `undecided` is never fetched
+ * again and its status, close time and slash are frozen at first sight. Measured on the primary on
+ * 2026-09-03: six disputes sat `undecided` in Postgres for up to three and a half months after the
+ * chain had drawn them. So every dispute Postgres still calls undecided is re-fetched by id and
+ * re-upserted; the set is small (single digits), so one query in batches of 100 is the whole cost.
+ */
+async function revisitOpenDisputes(sql: DbClient): Promise<number> {
+  const open = await sql<{ id: string }[]>`SELECT id FROM disputes WHERE status = 'undecided'`;
+  const ids = open.map((r) => r.id);
+  let refreshed = 0;
+  for (let i = 0; i < ids.length; i += 100) {
+    const batch = ids.slice(i, i + 100);
+    const result = await subgraphQuery<{ disputes: SubgraphDispute[] }>(`{
+      disputes(first: ${batch.length}, where: { id_in: [${batch.map((id) => `"${id}"`).join(', ')}] }) {${DISPUTE_FIELDS}
+      }
+    }`);
+    refreshed += await upsertSubgraphDisputes(sql, result.disputes);
+  }
+  return refreshed;
+}
+
 /**
  * Ingest disputes from the network subgraph.
  * Uses id_gt cursor — disputes are infrequent.
@@ -159,52 +221,23 @@ export async function ingestDisputes(sql: DbClient): Promise<{ ingested: number 
         orderBy: createdAt
         orderDirection: asc
         ${cursor ? `where: { createdAt_gt: ${cursor} }` : ''}
-      ) {
-        id
-        type
-        indexer { id }
-        fisherman { id }
-        allocation { id }
-        subgraphDeployment { id }
-        status
-        tokensSlashed
-        tokensBurned
-        createdAt
-        closedAt
+      ) {${DISPUTE_FIELDS}
       }
     }`);
 
     const disputes = result.disputes;
     if (disputes.length === 0) break;
 
-    const rows = disputes.map((d) => ({
-      id: d.id,
-      dispute_type: d.type?.toLowerCase() ?? null,
-      indexer_address: d.indexer.id.toLowerCase(),
-      fisherman: d.fisherman.id.toLowerCase(),
-      allocation_id: d.allocation?.id ?? null,
-      deployment_id: d.subgraphDeployment.id,
-      status: d.status?.toLowerCase() ?? null,
-      tokens_slashed_grt: parseFloat(d.tokensSlashed) || 0,
-      tokens_burned_grt: parseFloat(d.tokensBurned) || 0,
-      created_at: d.createdAt ? new Date(d.createdAt * 1000).toISOString() : null,
-      closed_at: d.closedAt ? new Date(d.closedAt * 1000).toISOString() : null,
-    }));
-
-    await sql`
-      INSERT INTO disputes ${sql(rows)}
-      ON CONFLICT (id) DO UPDATE SET
-        status = EXCLUDED.status,
-        tokens_slashed_grt = EXCLUDED.tokens_slashed_grt,
-        tokens_burned_grt = EXCLUDED.tokens_burned_grt,
-        closed_at = EXCLUDED.closed_at
-    `;
-
-    totalIngested += rows.length;
+    totalIngested += await upsertSubgraphDisputes(sql, disputes);
     cursor = Math.max(...disputes.map((d) => d.createdAt));
 
     if (disputes.length < 1000) break;
   }
+
+  // Open disputes already in Postgres are outside the cursor's reach; refresh them by id. Counted
+  // separately from the cursor walk because they are re-reads, not new rows, and the cursor must
+  // not move on their account.
+  const revisited = await revisitOpenDisputes(sql);
 
   // Always update updated_at so health checks can distinguish "running idle" from "stuck".
   await updateIngestionState(
@@ -213,5 +246,5 @@ export async function ingestDisputes(sql: DbClient): Promise<{ ingested: number 
     totalIngested > 0 ? { last_block: cursor } : {},
   );
 
-  return { ingested: totalIngested };
+  return { ingested: totalIngested + revisited };
 }
