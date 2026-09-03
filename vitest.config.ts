@@ -41,6 +41,18 @@ export default defineConfig({
       //
       // Ratchet history, newest first. These go UP and never down.
       //
+      //   2026-09-03  178 files / 2607 tests  84.51 / 77.17 / 86.39 / 85.94
+      //               RFC-006 D5 persistence (#59). Twenty-two tests across three files: the pure
+      //               `applyPersistence` table (a first dead round is rechecking, K in a row is
+      //               dead, an alive round breaks the streak, recovery is instant, a gateway-served
+      //               round resets the streak and is `conflicting` in the same round, an empty
+      //               history is never dead, the K boundary, an agreeing gateway does not fire
+      //               the guard) plus the env threshold; the route driven through round sequences
+      //               with an in-memory store (never dead on blip-then-healthy, dead on round K,
+      //               rows persisted in order, conflict warns and resets, store down is
+      //               rechecking, no key decides alone); and `probeServing` retrying a transport
+      //               failure once inside its budget. Eight go red with the threshold ignored and
+      //               three with the retry removed.
       //   2026-09-03  175 files / 2585 tests  84.30 / 77.00 / 86.30 / 85.70
       //               the subgraph disputes path revisits every dispute Postgres still calls open
       //               (#57). Four tests: open ids are re-fetched by id after the cursor walk and
