@@ -27,12 +27,16 @@ export interface RoundRecord extends RoundSummary {
   probes: ProbeRecord[];
 }
 
+// `sql.json`, never a pre-stringified value with a `::jsonb` cast: postgres.js serialises a
+// json parameter itself, so a string handed to it lands as a JSON string inside the jsonb and
+// `verdict_json->'probes'` reads null on every row. That is what #61 shipped, found on the first
+// row lodestar#62 tried to read back.
 export async function recordRound(sql: DbClient, r: RoundRecord): Promise<void> {
   await sql`
     INSERT INTO servability_rounds
       (deployment_hash, probed_at, serving_operator_count, serving_indexer_count, gateway_verdict, verdict_json)
     VALUES
-      (${r.deploymentHash}, ${r.probedAt}, ${r.servingOperators}, ${r.servingIndexers}, ${r.gatewayVerdict}, ${JSON.stringify({ ...r.verdict, probes: r.probes })}::jsonb)
+      (${r.deploymentHash}, ${r.probedAt}, ${r.servingOperators}, ${r.servingIndexers}, ${r.gatewayVerdict}, ${sql.json({ ...r.verdict, probes: r.probes.map((p) => ({ ...p })) })})
   `;
 }
 
