@@ -63,6 +63,7 @@ const makeIndexer = (id = '0xabc', overrides: Record<string, unknown> = {}) => (
   id,
   account: { id, defaultDisplayName: null, metadata: null },
   stakedTokens: GRT(200_000),
+  lockedTokens: GRT(0),
   delegatedTokens: GRT(500_000),
   allocatedTokens: GRT(100_000),
   allocationCount: 3,
@@ -238,6 +239,16 @@ describe('refreshIndexers', () => {
     const result = await refreshIndexers({ writeToRedis: false });
     expect(result.count).toBe(1);
     expect(mockCalculateIndexerScore.mock.calls[0][0].reoStatus).toBe('unknown');
+  });
+
+  it('selects lockedTokens and subtracts it from self-stake (lodestar#54)', async () => {
+    // The query never selected the field, so `lockedTokens ?? '0'` was always zero and every
+    // indexer with a thawing withdrawal had its self-stake overstated by exactly that amount.
+    setupHappyPath(makeIndexer('0xabc', { stakedTokens: GRT(200_000), lockedTokens: GRT(10_000) }));
+    await refreshIndexers({ writeToRedis: false });
+    const query = String(mockSubgraphQuery.mock.calls.find((c) => String(c[0]).includes('indexers('))?.[0]);
+    expect(query).toMatch(/\blockedTokens\b/);
+    expect(mockCalculateIndexerScore.mock.calls[0][0].selfStakeGRT).toBeCloseTo(190_000, 6);
   });
 
   it('maps optional indexer fields when present', async () => {
