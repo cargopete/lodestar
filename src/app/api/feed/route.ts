@@ -4,6 +4,7 @@ import newsData from '@/data/news.json';
 
 import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
+import { graphNetworkUrl } from '@/lib/graph-network';
 
 // ── Forum config ─────────────────────────────────────────────────
 const FORUM_BASE = 'https://forum.thegraph.com';
@@ -34,9 +35,7 @@ const TRACKED_REPOS = [
 ];
 
 // ── Subgraph config ──────────────────────────────────────────────
-const SUBGRAPH_URL = process.env.GRAPH_API_KEY
-  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/DZz4kDTdmzWLWsV373w2bSmoar3umKKH9y82SUKr5qmp`
-  : null;
+const SUBGRAPH_URL = graphNetworkUrl(process.env.GRAPH_API_KEY);
 
 // ── External API response shapes (minimal — only fields we read) ──
 

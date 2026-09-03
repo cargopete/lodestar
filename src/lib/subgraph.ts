@@ -3,9 +3,9 @@
  * Used by API routes and cron jobs — NOT for client-side use.
  */
 
-const SUBGRAPH_URL = process.env.GRAPH_API_KEY
-  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/DZz4kDTdmzWLWsV373w2bSmoar3umKKH9y82SUKr5qmp`
-  : null;
+import { graphNetworkUrl } from './graph-network';
+
+const SUBGRAPH_URL = graphNetworkUrl(process.env.GRAPH_API_KEY);
 
 // Paolo Diomede's delegation events subgraph (discrete delegation/undelegation/withdrawal events)
 const DELEGATION_EVENTS_URL = process.env.GRAPH_API_KEY

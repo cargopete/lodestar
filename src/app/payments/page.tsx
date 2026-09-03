@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { weiToGRT, formatGRT, formatUSD, shortenAddress, formatRelativeTime, cn, GATEWAY_ALIASES, GATEWAY_CANONICAL } from '@/lib/utils';
 import type { PaymentsEscrowAccount, PaymentsEscrowTransaction, GraphTallyTokensCollected } from '@/lib/queries';
+import { GRAPH_NETWORK_EXPLORER_URL } from '@/lib/graph-network';
 
 const ARBISCAN = 'https://arbiscan.io/address/';
 
@@ -43,7 +44,7 @@ function PageHeader() {
         on-chain redemptions, and collection activity. Data sourced from the PaymentsEscrow and
         GraphTallyCollector contracts via the{' '}
         <a
-          href="https://thegraph.com/explorer/subgraphs/DZz4kDTdmzWLWsV373w2bSmoar3umKKH9y82SUKr5qmp"
+          href={GRAPH_NETWORK_EXPLORER_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="text-[var(--accent-text)] hover:underline"

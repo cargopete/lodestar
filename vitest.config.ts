@@ -41,6 +41,12 @@ export default defineConfig({
       //
       // Ratchet history, newest first. These go UP and never down.
       //
+      //   2026-09-03  172 files / 2526 tests  83.85 / 76.57 / 85.66 / 85.24
+      //               the Graph Network subgraph id given one home (nuthatch#1078). Four tests on
+      //               the new leaf module, one of which asserts the deployment id appears as a
+      //               literal nowhere else in `src/` — the seam #1078 depends on only works if it
+      //               is a seam. Floors unchanged: they are the whole-number floor of the
+      //               measurement and this moves none of them.
       //   2026-09-02  170 files / 2503 tests  83.64 / 76.27 / 85.53 / 85.02
       //               batch 4 (#18, the last one): the Foghorn hooks, useDismissible, the
       //               remaining Horizon revert explainers, and six routes taken from 0% —
