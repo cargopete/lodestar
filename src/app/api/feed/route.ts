@@ -5,6 +5,9 @@ import newsData from '@/data/news.json';
 import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
 import { graphNetworkUrl } from '@/lib/graph-network';
+import { nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { epochFeedItems, fromNestEpoch, fromSubgraphEpoch, nestEpochsSql } from '@/lib/feed-epochs';
+import type { NestEpoch, SubgraphEpoch } from '@/lib/feed-epochs';
 
 // ── Forum config ─────────────────────────────────────────────────
 const FORUM_BASE = 'https://forum.thegraph.com';
@@ -36,6 +39,8 @@ const TRACKED_REPOS = [
 
 // ── Subgraph config ──────────────────────────────────────────────
 const SUBGRAPH_URL = graphNetworkUrl(process.env.GRAPH_API_KEY);
+/** The nest carrying `lodestar_epochs`; `/alloc` fronts graph-allocations-nest. */
+const FEED_BASE_PATH = process.env.NUTHATCH_FEED_BASE_PATH || '/alloc';
 
 // ── External API response shapes (minimal — only fields we read) ──
 
@@ -374,7 +379,21 @@ async function fetchSnapshotProposals(): Promise<FeedItem[]> {
   }
 }
 
+/**
+ * Epoch summaries, from the nest behind `NUTHATCH_FEED` or from the Graph Network subgraph. Both
+ * sources are shaped by `feed-epochs.ts`, so the wording and the maths cannot differ between them
+ * (nightswatchhq/nuthatch#1078). Off by default; on the nest path the gateway key is not consulted.
+ */
 async function fetchEpochSummaries(): Promise<FeedItem[]> {
+  if (nuthatchEnabled('NUTHATCH_FEED')) {
+    const res = await nuthatchSqlReady<NestEpoch>(nestEpochsSql(5), FEED_BASE_PATH);
+    if (!res.ok) {
+      log.api.warn({ status: res.status, error: res.error }, 'Epoch summaries from the nest failed');
+      return [];
+    }
+    return epochFeedItems(res.data.rows.map(fromNestEpoch));
+  }
+
   if (!SUBGRAPH_URL) return [];
 
   try {
@@ -400,55 +419,8 @@ async function fetchEpochSummaries(): Promise<FeedItem[]> {
     if (!res.ok) return [];
 
     const json = await res.json();
-    const epochs = json?.data?.epoches ?? [];
-    if (epochs.length < 2) return [];
-
-    const items: FeedItem[] = [];
-
-    for (let i = 0; i < epochs.length - 1; i++) {
-      const current = epochs[i];
-      const previous = epochs[i + 1];
-
-      const currentRewards = Number(BigInt(current.totalRewards?.split('.')[0] || '0')) / 1e18;
-      const prevRewards = Number(BigInt(previous.totalRewards?.split('.')[0] || '0')) / 1e18;
-      const currentFees = Number(BigInt(current.totalQueryFees?.split('.')[0] || '0')) / 1e18;
-      const prevFees = Number(BigInt(previous.totalQueryFees?.split('.')[0] || '0')) / 1e18;
-
-      const rewardsDelta = prevRewards > 0
-        ? ((currentRewards - prevRewards) / prevRewards * 100).toFixed(1)
-        : '0';
-      const queryFeeDelta = prevFees > 0
-        ? ((currentFees - prevFees) / prevFees * 100).toFixed(1)
-        : '0';
-
-      const delegatorRewards = Number(BigInt(current.totalDelegatorRewards?.split('.')[0] || '0')) / 1e18;
-      const distributed = delegatorRewards > 1000
-        ? `${(delegatorRewards / 1000).toFixed(1)}K`
-        : delegatorRewards.toFixed(0);
-
-      const epochNum = parseInt(current.id);
-      const sign = parseFloat(rewardsDelta) >= 0 ? '+' : '';
-
-      items.push({
-        id: `epoch-${current.id}`,
-        type: 'epoch',
-        title: `Epoch ${epochNum}`,
-        summary: `${sign}${rewardsDelta}% rewards, ${parseFloat(queryFeeDelta) >= 0 ? '+' : ''}${queryFeeDelta}% query fees. ${distributed} GRT distributed to delegators.`,
-        url: '',
-        timestamp: new Date(
-          Date.now() - i * 6.4 * 60 * 60 * 1000 // ~6.4 hours per epoch
-        ).toISOString(),
-        tags: ['epoch'],
-        metadata: {
-          epochNumber: epochNum,
-          rewardsDelta,
-          queryFeeDelta,
-          totalDistributed: distributed,
-        },
-      });
-    }
-
-    return items;
+    const epochs: SubgraphEpoch[] = json?.data?.epoches ?? [];
+    return epochFeedItems(epochs.map(fromSubgraphEpoch));
   } catch {
     return [];
   }
