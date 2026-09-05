@@ -4,6 +4,17 @@ import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT } from '@/lib/utils';
 import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
+import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { delegatorStakesSql, type NestDelegatorStakeRow } from '@/lib/nest-queries';
+
+const PORTFOLIO_BASE_PATH = process.env.NUTHATCH_PORTFOLIO_BASE_PATH || '/alloc';
+
+/** The delegator's active positions from the nest, in the shape the gateway query returned. */
+async function stakesFromNest(address: string): Promise<DelegatorStake[]> {
+  const r = await nuthatchSqlReady<NestDelegatorStakeRow>(delegatorStakesSql(address, 100, true), PORTFOLIO_BASE_PATH);
+  if (!r.ok) throw Object.assign(new Error(r.error), { nest: r });
+  return r.data.rows.map((s) => ({ stakedTokens: s.staked_tokens, shareAmount: s.share_amount, indexer: { id: s.indexer } }));
+}
 
 interface DelegatorStake {
   stakedTokens: string;
@@ -36,7 +47,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
-  if (!hasSubgraphAccess()) {
+  // The positions come from the nest behind NUTHATCH_PORTFOLIO (nuthatch#1160); the key gates the gateway path only.
+  const useNest = nuthatchEnabled('NUTHATCH_PORTFOLIO') && hasNuthatch();
+  if (!useNest && !hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
 
@@ -45,7 +58,9 @@ export async function GET(request: NextRequest) {
   try {
     const result = await cached(`lodestar:rewards-history:${address}:${days}`, 300, async () => {
       // 1. Fetch delegator positions from subgraph
-      const data = await subgraphQuery<SubgraphResponse>(`{
+      const data: SubgraphResponse = useNest
+        ? { delegator: { stakes: await stakesFromNest(address) } }
+        : await subgraphQuery<SubgraphResponse>(`{
         delegator(id: "${address}") {
           stakes(first: 100, where: { stakedTokens_gt: "0" }) {
             stakedTokens

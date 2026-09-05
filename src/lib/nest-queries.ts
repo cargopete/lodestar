@@ -406,3 +406,44 @@ export interface NestProvisionRow {
   indexer_staked_tokens?: string | null; indexer_delegated_tokens?: string | null;
 }
 export interface NestDataServiceTotalsRow { data_service: string; total_tokens_provisioned: string; total_tokens_allocated: string }
+
+/**
+ * The delegator portfolio (nuthatch#1160): the subgraph's `Delegator` from `lodestar_delegators`, its
+ * `stakes` from `lodestar_delegator_stakes` with the indexer's figures beside each, and the curator
+ * portfolio from `lodestar_curators` and `lodestar_curator_signals`. `addr` is a validated address.
+ */
+export const delegatorSql = (addr: string) =>
+  `SELECT id, CAST(total_staked_tokens AS VARCHAR) AS total_staked_tokens, CAST(total_unstaked_tokens AS VARCHAR) AS total_unstaked_tokens, ` +
+  `CAST(total_realized_rewards AS VARCHAR) AS total_realized_rewards, stakes_count, active_stakes_count FROM lodestar_delegators WHERE id = '${addr}'`;
+export const delegatorStakesSql = (addr: string, first: number, activeOnly = false) =>
+  `SELECT s.id, s.indexer, CAST(s.staked_tokens AS VARCHAR) AS staked_tokens, CAST(s.share_amount AS VARCHAR) AS share_amount, ` +
+  `CAST(s.locked_tokens AS VARCHAR) AS locked_tokens, s.locked_until, CAST(s.realized_rewards AS VARCHAR) AS realized_rewards, ` +
+  `CAST(s.total_undelegated_tokens AS VARCHAR) AS unstaked_tokens, s.created_at, s.last_undelegated_at, s.active, ` +
+  `CAST(i.staked_tokens AS VARCHAR) AS indexer_staked_tokens, CAST(i.delegated_tokens AS VARCHAR) AS indexer_delegated_tokens, ` +
+  `CAST(i.delegated_thawing_tokens AS VARCHAR) AS indexer_delegated_thawing_tokens, CAST(i.delegator_shares AS VARCHAR) AS indexer_delegator_shares, ` +
+  `i.indexing_reward_cut, i.query_fee_cut, i.allocation_count, i.url, i.geohash ` +
+  `FROM lodestar_delegator_stakes s LEFT JOIN lodestar_indexers i ON i.id = s.indexer ` +
+  `WHERE s.delegator = '${addr}'${activeOnly ? ' AND s.active' : ''} ORDER BY s.staked_tokens DESC, s.indexer LIMIT ${first}`;
+export const curatorSql = (addr: string) =>
+  `SELECT id, CAST(total_signalled_tokens AS VARCHAR) AS total_signalled_tokens, CAST(total_unsignalled_tokens AS VARCHAR) AS total_unsignalled_tokens, ` +
+  `CAST(realized_rewards AS VARCHAR) AS realized_rewards, signal_count, active_signal_count FROM lodestar_curators WHERE id = '${addr}'`;
+export const curatorSignalsSql = (addr: string, first: number) =>
+  `SELECT id, subgraph_deployment, CAST(signalled_tokens AS VARCHAR) AS signalled_tokens, CAST(unsignalled_tokens AS VARCHAR) AS unsignalled_tokens, ` +
+  `CAST(signal AS VARCHAR) AS signal, last_signal_change, CAST(realized_rewards AS VARCHAR) AS realized_rewards, ` +
+  `CAST(deployment_signalled_tokens AS VARCHAR) AS deployment_signalled_tokens, CAST(deployment_query_fees_amount AS VARCHAR) AS deployment_query_fees_amount, ` +
+  `CAST(deployment_staked_tokens AS VARCHAR) AS deployment_staked_tokens ` +
+  `FROM lodestar_curator_signals WHERE curator = '${addr}' ORDER BY signalled_tokens DESC, subgraph_deployment LIMIT ${first}`;
+
+export interface NestDelegatorTotalsRow { id: string; total_staked_tokens: string; total_unstaked_tokens: string; total_realized_rewards: string; stakes_count: number; active_stakes_count: number }
+export interface NestDelegatorStakeRow {
+  id: string; indexer: string; staked_tokens: string; share_amount: string; locked_tokens: string; locked_until: number | string | null;
+  realized_rewards: string; unstaked_tokens: string; created_at: number | null; last_undelegated_at: number | null; active: boolean;
+  indexer_staked_tokens: string | null; indexer_delegated_tokens: string | null; indexer_delegated_thawing_tokens: string | null;
+  indexer_delegator_shares: string | null; indexing_reward_cut: number | string | null; query_fee_cut: number | string | null;
+  allocation_count: number | null; url: string | null; geohash: string | null;
+}
+export interface NestCuratorTotalsRow { id: string; total_signalled_tokens: string; total_unsignalled_tokens: string; realized_rewards: string; signal_count: number; active_signal_count: number }
+export interface NestCuratorSignalRow {
+  id: string; subgraph_deployment: string; signalled_tokens: string; unsignalled_tokens: string; signal: string; last_signal_change: number | null;
+  realized_rewards: string; deployment_signalled_tokens: string; deployment_query_fees_amount: string; deployment_staked_tokens: string;
+}
