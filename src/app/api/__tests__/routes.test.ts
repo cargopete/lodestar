@@ -36,6 +36,11 @@ vi.mock('@/lib/nuthatch', () => ({
 
 const mockHasSubgraphAccess = vi.fn(() => true);
 
+const mockResolveEnsName = vi.fn<(a: string) => Promise<string | null>>();
+vi.mock('@/lib/ens', () => ({
+  resolveEnsName: (a: string) => mockResolveEnsName(a),
+  resolveEnsNames: vi.fn(async () => ({})),
+}));
 vi.mock('@/lib/subgraph', () => ({
   subgraphQuery: (...args: unknown[]) => mockSubgraphQuery(...args),
   ensQuery: (...args: unknown[]) => mockEnsQuery(...args),
@@ -413,9 +418,7 @@ describe('/api/ens', () => {
   });
 
   it('returns { ensName } on success', async () => {
-    mockEnsQuery.mockResolvedValueOnce({
-      domains: [{ name: 'vitalik.eth' }],
-    });
+    mockResolveEnsName.mockResolvedValueOnce('vitalik.eth');
 
     const req = makeRequest('/api/ens?address=0xd8da6bf26964af9d7eed9e03e53415d37aa96045');
     const res = await GET(req);
@@ -441,8 +444,8 @@ describe('/api/ens', () => {
     expect(json.ensName).toBeNull();
   });
 
-  it('returns null ensName when no domains found', async () => {
-    mockEnsQuery.mockResolvedValueOnce({ domains: [] });
+  it('returns null ensName when the address has no primary name', async () => {
+    mockResolveEnsName.mockResolvedValueOnce(null);
 
     const req = makeRequest('/api/ens?address=0xd8da6bf26964af9d7eed9e03e53415d37aa96045');
     const res = await GET(req);
