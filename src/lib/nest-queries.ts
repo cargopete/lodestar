@@ -331,8 +331,9 @@ export function indexerOperatorsSql(addr: string): string {
 /** The indexer's delegators, largest first: the subgraph's `indexer.delegators(orderBy: stakedTokens)`. */
 export function indexerDelegatorsSql(addr: string, first: number): string {
   return (
-    `SELECT id, delegator, CAST(staked_tokens AS VARCHAR) AS staked_tokens, CAST(share_amount AS VARCHAR) AS share_amount ` +
-    `FROM lodestar_delegator_stakes s WHERE s.indexer = '${addr}' AND s.active ORDER BY s.staked_tokens DESC, s.delegator ASC LIMIT ${first}`
+    // `stakedTokens` is the subgraph's cumulative deposit figure, which is also what its ordering uses
+    `SELECT id, delegator, CAST(s.total_delegated_tokens AS VARCHAR) AS staked_tokens, CAST(share_amount AS VARCHAR) AS share_amount ` +
+    `FROM lodestar_delegator_stakes s WHERE s.indexer = '${addr}' AND s.active ORDER BY s.total_delegated_tokens DESC, s.delegator ASC LIMIT ${first}`
   );
 }
 /**
@@ -418,7 +419,10 @@ export const delegatorSql = (addr: string) =>
   `SELECT id, CAST(total_staked_tokens AS VARCHAR) AS total_staked_tokens, CAST(total_unstaked_tokens AS VARCHAR) AS total_unstaked_tokens, ` +
   `CAST(total_realized_rewards AS VARCHAR) AS total_realized_rewards, stakes_count, active_stakes_count FROM lodestar_delegators WHERE id = '${addr}'`;
 export const delegatorStakesSql = (addr: string, first: number, activeOnly = false) =>
-  `SELECT s.id, s.indexer, CAST(s.staked_tokens AS VARCHAR) AS staked_tokens, CAST(s.share_amount AS VARCHAR) AS share_amount, ` +
+  // the subgraph's `DelegatedStake.stakedTokens` / `unstakedTokens` are cumulative deposits and withdrawals,
+  // not the position's current value: 15 of 15 stakes matched production to the wei on the totals and none
+  // on the current value (nuthatch#1160). The current value stays available as `current_tokens`.
+  `SELECT s.id, s.indexer, CAST(s.total_delegated_tokens AS VARCHAR) AS staked_tokens, CAST(s.staked_tokens AS VARCHAR) AS current_tokens, CAST(s.share_amount AS VARCHAR) AS share_amount, ` +
   `CAST(s.locked_tokens AS VARCHAR) AS locked_tokens, s.locked_until, CAST(s.realized_rewards AS VARCHAR) AS realized_rewards, ` +
   `CAST(s.total_undelegated_tokens AS VARCHAR) AS unstaked_tokens, s.created_at, s.last_undelegated_at, s.active, ` +
   `CAST(i.staked_tokens AS VARCHAR) AS indexer_staked_tokens, CAST(i.delegated_tokens AS VARCHAR) AS indexer_delegated_tokens, ` +
