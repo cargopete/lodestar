@@ -26,7 +26,6 @@ import {
   fetchPayments,
   fetchIndexerPayments,
   fetchIndexerTrends,
-  fetchIndexerQoS,
   fetchIndexerStakeHistory,
   fetchDelegationFlows,
   fetchDeveloperActivity,
@@ -564,19 +563,6 @@ export function useIndexerTrends(indexer: string | null, days = 30) {
     refetchInterval: TEN_MINUTES,
     enabled: !!indexer,
     retry: 1, // supplementary — don't hammer it
-  });
-}
-
-/**
- * Hook for indexer QoS metrics (gateway quality of service oracle)
- */
-export function useIndexerQoS(address: string | null) {
-  return useQuery({
-    queryKey: ['indexerQoS', address],
-    queryFn: () => fetchIndexerQoS(address!),
-    staleTime: 60 * 60 * 1000, // 1h
-    enabled: !!address,
-    retry: 1,
   });
 }
 

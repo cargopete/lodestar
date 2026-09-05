@@ -91,13 +91,11 @@ describe('subgraph: with GRAPH_API_KEY configured', () => {
     );
   });
 
-  it('horizonPerfQuery and qosOracleQuery target their own endpoints', async () => {
+  it('horizonPerfQuery targets its own endpoint', async () => {
     mockFetch.mockImplementation(() => Promise.resolve(jsonResponse({ data: { ok: true } })));
     const mod = await import('@/lib/subgraph');
     await mod.horizonPerfQuery('{ a }');
-    await mod.qosOracleQuery('{ b }');
     expect(mockFetch.mock.calls[0][0]).toContain('eD1TVayj2NtmCjWFr4hZhc1APHQs9iR2Xah6KNE8Y4h');
-    expect(mockFetch.mock.calls[1][0]).toContain('CnfJ5tC5cfAmt2tUyUaM6vPrtmNYasavkDDn793FkbN3');
   });
 });
 

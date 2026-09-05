@@ -59,14 +59,8 @@ vi.mock('@/lib/ingest/disputes', () => ({ ingestDisputes: (...a: unknown[]) => m
 vi.mock('@/lib/ingest/network-snapshot', () => ({ writeNetworkSnapshot: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/refresh', () => ({ refreshIndexers: vi.fn().mockResolvedValue({ count: 0, durationMs: 0 }) }));
 
-const mockIngestQos = vi.fn().mockResolvedValue({ ingested: 0, durationMs: 0 });
 const mockIngestRav = vi.fn().mockResolvedValue({ ingested: 0, durationMs: 0 });
-const mockComputeQosScores = vi.fn().mockResolvedValue({ scored: 0 });
-vi.mock('@/lib/ingest/qos', () => ({ ingestQos: (...a: unknown[]) => mockIngestQos(...a) }));
 vi.mock('@/lib/ingest/rav', () => ({ ingestRav: (...a: unknown[]) => mockIngestRav(...a) }));
-vi.mock('@/lib/qos-aggregate', () => ({
-  computeAndStoreQosScores: (...a: unknown[]) => mockComputeQosScores(...a),
-}));
 
 vi.mock('@/lib/cron-runs', () => ({
   withCronTracking: vi.fn((_db: unknown, _step: string, fn: () => Promise<unknown>) => fn()),
@@ -94,9 +88,7 @@ beforeEach(() => {
   mockHasSubgraphAccess.mockReturnValue(false);
   mockHasAmpAccess.mockReturnValue(false);
   mockDb.mockResolvedValue([]);
-  mockIngestQos.mockResolvedValue({ ingested: 0, durationMs: 0 });
   mockIngestRav.mockResolvedValue({ ingested: 0, durationMs: 0 });
-  mockComputeQosScores.mockResolvedValue({ scored: 0 });
 });
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -365,83 +357,6 @@ describe('/api/cron/refresh-chain-health', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-
-describe('/api/cron/ingest-qos', () => {
-  it('enforces CRON_SECRET auth', async () => {
-    await assertCronAuth('/api/cron/ingest-qos', () => import('@/app/api/cron/ingest-qos/route'));
-  });
-
-  it('returns 503 when DB not configured', async () => {
-    vi.stubEnv('CRON_SECRET', 'test-secret');
-    const { GET } = await import('@/app/api/cron/ingest-qos/route');
-    const res = await GET(authedRequest('/api/cron/ingest-qos'));
-    expect(res.status).toBe(503);
-    expect(mockIngestQos).not.toHaveBeenCalled();
-    vi.unstubAllEnvs();
-  });
-
-  it('returns 503 when subgraph not configured', async () => {
-    vi.stubEnv('CRON_SECRET', 'test-secret');
-    mockHasDbAccess.mockReturnValue(true);
-    const { GET } = await import('@/app/api/cron/ingest-qos/route');
-    const res = await GET(authedRequest('/api/cron/ingest-qos'));
-    expect(res.status).toBe(503);
-    vi.unstubAllEnvs();
-  });
-
-  it('ingests, then rescores from the refreshed window', async () => {
-    // The scoring pass is the reason this route is not just `ingestQos`: scores computed
-    // before the ingest describe the previous window and look entirely plausible.
-    vi.stubEnv('CRON_SECRET', 'test-secret');
-    mockHasDbAccess.mockReturnValue(true);
-    mockHasSubgraphAccess.mockReturnValue(true);
-    mockIngestQos.mockResolvedValue({ ingested: 12, durationMs: 5 });
-    mockComputeQosScores.mockResolvedValue({ scored: 7 });
-
-    const { GET } = await import('@/app/api/cron/ingest-qos/route');
-    const res = await GET(authedRequest('/api/cron/ingest-qos'));
-
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json).toMatchObject({ ok: true, ingested: 12, scored: 7 });
-    expect(mockIngestQos.mock.invocationCallOrder[0])
-      .toBeLessThan(mockComputeQosScores.mock.invocationCallOrder[0]);
-    vi.unstubAllEnvs();
-  });
-
-  it('defaults to an incremental run and passes ?backfill=1 and ?days through', async () => {
-    vi.stubEnv('CRON_SECRET', 'test-secret');
-    mockHasDbAccess.mockReturnValue(true);
-    mockHasSubgraphAccess.mockReturnValue(true);
-    const { GET } = await import('@/app/api/cron/ingest-qos/route');
-
-    await GET(authedRequest('/api/cron/ingest-qos'));
-    expect(mockIngestQos).toHaveBeenLastCalledWith(expect.anything(), { backfill: false, days: undefined });
-
-    await GET(authedRequest('/api/cron/ingest-qos?backfill=1&days=30'));
-    expect(mockIngestQos).toHaveBeenLastCalledWith(expect.anything(), { backfill: true, days: 30 });
-
-    // Anything other than the literal 1 is not a backfill: a cron that quietly re-pulls all
-    // history on a typo is an expensive way to find out about the typo.
-    await GET(authedRequest('/api/cron/ingest-qos?backfill=true'));
-    expect(mockIngestQos).toHaveBeenLastCalledWith(expect.anything(), { backfill: false, days: undefined });
-    vi.unstubAllEnvs();
-  });
-
-  it('500s when the ingest throws', async () => {
-    vi.stubEnv('CRON_SECRET', 'test-secret');
-    mockHasDbAccess.mockReturnValue(true);
-    mockHasSubgraphAccess.mockReturnValue(true);
-    mockIngestQos.mockRejectedValue(new Error('gateway 500'));
-
-    const { GET } = await import('@/app/api/cron/ingest-qos/route');
-    const res = await GET(authedRequest('/api/cron/ingest-qos'));
-    expect(res.status).toBe(500);
-    // The scoring pass must not run over a failed ingest.
-    expect(mockComputeQosScores).not.toHaveBeenCalled();
-    vi.unstubAllEnvs();
-  });
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 

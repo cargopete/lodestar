@@ -26,7 +26,6 @@ import {
   fetchPayments,
   fetchIndexerPayments,
   fetchIndexerTrends,
-  fetchIndexerQoS,
   fetchIndexerStakeHistory,
   fetchParameterHistory,
   fetchSubgraphCuration,
@@ -346,17 +345,6 @@ describe('api: .data-envelope endpoints (happy + error)', () => {
     mockFetch.mockResolvedValue(jsonResponse({}, 500));
     await expect(fetchIndexerTrends('0xidx')).rejects.toThrow('Indexer trends failed: 500');
     expect(mockFetch.mock.calls[0][0]).toContain('days=30');
-  });
-
-  it('fetchIndexerQoS encodes the address into the path and unwraps .data', async () => {
-    mockFetch.mockResolvedValue(jsonResponse({ data: { qos: [] } }));
-    expect(await fetchIndexerQoS('0xQoS')).toEqual({ qos: [] });
-    expect(mockFetch.mock.calls[0][0]).toBe('/api/indexer-qos/0xQoS');
-  });
-
-  it('fetchIndexerQoS throws with status on failure', async () => {
-    mockFetch.mockResolvedValue(jsonResponse({}, 502));
-    await expect(fetchIndexerQoS('0xabc')).rejects.toThrow('QoS fetch failed: 502');
   });
 
   it('fetchIndexerStakeHistory unwraps .data from the path endpoint', async () => {

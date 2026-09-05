@@ -119,7 +119,6 @@ describe('assessCrons', () => {
       row('dispatch-notifications', 5),
       row('disputes', 42),
       row('epochs', 5),
-      row('qos', 45),
       row('rav', 25),
       row('refresh', 5),
       row('snapshot', 0),

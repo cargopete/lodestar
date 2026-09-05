@@ -21,8 +21,9 @@ interface AllocRow {
  * GET /api/qos/capture — how the network's allocated stake is distributed across quality bands,
  * scored by the Lodestar Oracle.
  *
- * This is the reward-distribution analysis that used to live on /indexer-qos. It moved because it
- * was computed from `indexer_qos_score`, which is derived from Edge & Node's gateway telemetry —
+ * This is the reward-distribution analysis that used to live on /indexer-qos (removed with the
+ * oracle ingest, nuthatch#1160). It moved because it was computed from `indexer_qos_score`, which
+ * was derived from Edge & Node's gateway telemetry —
  * a perfectly good instrument, but a different one from the oracle whose numbers the rest of /qos
  * reports. An analysis that says "this much stake sits behind poor service" should be able to say
  * which measurement it means, and it could not.

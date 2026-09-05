@@ -27,7 +27,6 @@ vi.mock('@/lib/api', () => ({
   fetchPayments: vi.fn(),
   fetchIndexerPayments: vi.fn(),
   fetchIndexerTrends: vi.fn(),
-  fetchIndexerQoS: vi.fn(),
   fetchIndexerStakeHistory: vi.fn(),
   fetchDelegationFlows: vi.fn(),
   fetchTokenMetrics: vi.fn(),
@@ -66,7 +65,6 @@ import {
   usePayments,
   useIndexerPayments,
   useIndexerTrends,
-  useIndexerQoS,
   useIndexerStakeHistory,
   useDelegationFlows,
   useTokenMetrics,
@@ -438,16 +436,6 @@ describe('enabled-gated query hooks (no arg → idle, arg → fetch)', () => {
     const on = renderHook(() => useIndexerTrends('0xidx', 14), { wrapper: wrapper() });
     await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
     expect(api.fetchIndexerTrends).toHaveBeenCalledWith('0xidx', 14);
-  });
-
-  it('useIndexerQoS is idle for null and fetches for an address', async () => {
-    const off = renderHook(() => useIndexerQoS(null), { wrapper: wrapper() });
-    expect(off.result.current.fetchStatus).toBe('idle');
-
-    vi.mocked(api.fetchIndexerQoS).mockResolvedValue({ qos: [] } as never);
-    const on = renderHook(() => useIndexerQoS('0xqos'), { wrapper: wrapper() });
-    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
-    expect(api.fetchIndexerQoS).toHaveBeenCalledWith('0xqos');
   });
 
   it('useIndexerStakeHistory is idle for null and fetches for an address', async () => {

@@ -3,7 +3,7 @@
  *
  * Covers routes not tested in routes.test.ts or routes-v2.test.ts:
  * horizon/activity, horizon/events, horizon/slashing,
- * delegation-flows, indexer-qos, indexer-trends, indexer-stake-history,
+ * delegation-flows, indexer-trends, indexer-stake-history,
  * subgraph-curation, subgraph-fees-30d, subgraph-history,
  * dropped-chains, chain-lag, indexer-node-health
  */
@@ -25,7 +25,6 @@ const mockSubgraphQuery = vi.fn();
 const mockHasSubgraphAccess = vi.fn(() => true);
 vi.mock('@/lib/subgraph', () => ({
   subgraphQuery: (...args: unknown[]) => mockSubgraphQuery(...args),
-  qosOracleQuery: (...args: unknown[]) => mockSubgraphQuery(...args),
   horizonPerfQuery: (...args: unknown[]) => mockSubgraphQuery(...args),
   hasSubgraphAccess: () => mockHasSubgraphAccess(),
   ensQuery: vi.fn(),
@@ -290,68 +289,6 @@ describe('/api/delegation-flows', () => {
     const res = await GET(req);
 
     expect(res.status).toBe(503);
-  });
-});
-
-// ============================================================
-// /api/indexer-qos/[address]
-// ============================================================
-
-describe('/api/indexer-qos/[address]', () => {
-  let GET: (req: NextRequest, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/indexer-qos/[address]/route');
-    GET = mod.GET as typeof GET;
-  });
-
-  it('returns 400 for invalid address format', async () => {
-    const req = makeRequest('/api/indexer-qos/0x1234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234' }) });
-    expect(res.status).toBe(400);
-  });
-
-  it('returns 503 when no API key (valid address)', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/indexer-qos/0x1234000000000000000000000000000000001234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
-    expect(res.status).toBe(503);
-  });
-
-  it('returns { data: { qos } } with QoS points', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      indexerDailyDataPoints: [
-        {
-          dayNumber: '19800',
-          query_count: '1000',
-          proportion_indexer_200_responses: '0.99',
-          avg_indexer_latency_ms: '120',
-          avg_indexer_blocks_behind: '2',
-          avg_query_fee: '0.001',
-          total_query_fees: '1.0',
-        },
-      ],
-    });
-
-    const req = makeRequest('/api/indexer-qos/0x1234000000000000000000000000000000001234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('qos');
-    expect(Array.isArray(json.data.qos)).toBe(true);
-  });
-
-  it('returns empty qos when oracle unavailable', async () => {
-    mockSubgraphQuery.mockRejectedValueOnce(new Error('oracle down'));
-
-    const req = makeRequest('/api/indexer-qos/0x1234000000000000000000000000000000001234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json.data.qos).toEqual([]);
   });
 });
 

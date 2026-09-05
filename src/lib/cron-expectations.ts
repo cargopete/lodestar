@@ -57,7 +57,6 @@ export const CRON_EXPECTATIONS: CronExpectation[] = [
   { step: 'disputes', staleAfterMinutes: 1080, where: 'droplet', what: 'disputes, every six hours' },
 
   // ── Vercel crons (vercel.json) ────────────────────────────────────────────
-  { step: 'qos', staleAfterMinutes: 1080, where: 'vercel', what: 'QoS oracle ingestion, every six hours' },
   { step: 'rav', staleAfterMinutes: 180, where: 'vercel', what: 'RAV ingestion' },
   { step: 'check-dips', staleAfterMinutes: 40, where: 'vercel', what: 'watches the DIPS allocation for the governance change that turns it on' },
   { step: 'check-dips-chain', staleAfterMinutes: 180, where: 'vercel', what: 'the DIPS nest against the allocator it indexes' },
