@@ -79,6 +79,10 @@
     {
       "path": "/api/cron/check-nest-health",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/warm-ipfs",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
