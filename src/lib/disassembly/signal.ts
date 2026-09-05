@@ -7,6 +7,9 @@
 // is simply absent and the static analysis stands on its own.
 
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { hasNuthatch, nuthatchEnabled, nuthatchSql } from '@/lib/nuthatch';
+import { deploymentSignalsSql, type NestDeploymentSignalRow } from '@/lib/nest-queries';
+import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import { weiToGRT } from '@/lib/utils';
 import type { FlagLevel, SignalContext, SignalExposure } from './types';
 
@@ -60,6 +63,23 @@ interface RawDeployment {
  * overlay, never load-bearing.
  */
 export async function fetchDeploymentSignal(deploymentId: string): Promise<SignalContext | null> {
+  // Behind NUTHATCH_SUBGRAPHS (nuthatch#1160) the signal comes from graph-allocations-nest.
+  if (nuthatchEnabled('NUTHATCH_SUBGRAPHS') && hasNuthatch()) {
+    try {
+      const id = ipfsHashToBytes32(deploymentId).toLowerCase();
+      const rows = await nuthatchSql<NestDeploymentSignalRow>(deploymentSignalsSql(id, SIGNAL_FIRST), process.env.NUTHATCH_ALLOCATIONS_BASE_PATH || '/alloc');
+      const d = rows[0];
+      if (!d) return null;
+      const signalledGRT = weiToGRT(d.deployment_signalled_tokens ?? '0');
+      const queryFeesGRT = weiToGRT(d.deployment_query_fees_amount ?? '0');
+      return {
+        signalledTokens: d.deployment_signalled_tokens ?? '0', queryFeesAmount: d.deployment_query_fees_amount ?? '0',
+        signalledGRT, queryFeesGRT, curatorCount: rows.length, curatorCountCapped: rows.length >= SIGNAL_FIRST, exposure: signalExposure(signalledGRT),
+      };
+    } catch {
+      return null;
+    }
+  }
   if (!hasSubgraphAccess()) return null;
 
   const query = `{

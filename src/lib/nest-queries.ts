@@ -505,3 +505,23 @@ export const allocationsByDeploymentSql = (depId: string, first: number) =>
   `WHERE LOWER(a.subgraph_deployment) = '${depId.toLowerCase()}' AND a.status = 'Active' ORDER BY a.allocated_tokens DESC, a.indexer LIMIT ${first}`;
 export interface NestDeploymentRow { subgraph_deployment: string; signalled_tokens: string | null; staked_tokens: string | null; allocations: number }
 export interface NestDeploymentAllocationRow { indexer: string; url: string | null; allocated_tokens: string }
+
+/** Group B (nuthatch#1160): a deployment's curation from graph-allocations-nest. `depId` is a lower-case bytes32. */
+export const deploymentSignalsSql = (depId: string, first: number) =>
+  `SELECT id, curator, CAST(signalled_tokens AS VARCHAR) AS signalled_tokens, CAST(unsignalled_tokens AS VARCHAR) AS unsignalled_tokens, ` +
+  `CAST(signal AS VARCHAR) AS signal, last_signal_change, CAST(realized_rewards AS VARCHAR) AS realized_rewards, ` +
+  `CAST(deployment_signalled_tokens AS VARCHAR) AS deployment_signalled_tokens, CAST(deployment_query_fees_amount AS VARCHAR) AS deployment_query_fees_amount ` +
+  `FROM lodestar_curator_signals WHERE LOWER(subgraph_deployment) = '${depId}' AND signal > 0 ORDER BY signalled_tokens DESC, curator LIMIT ${first}`;
+/** A deployment's signal transactions in time order: the subgraph's `signalTransactions` (MintSignal / BurnSignal). */
+export const deploymentSignalTransactionsSql = (depId: string, first: number) =>
+  `SELECT CAST(block_timestamp AS BIGINT) AS timestamp, 'MintSignal' AS type, CAST(CAST(tokens AS HUGEINT) - CAST("curationTax" AS HUGEINT) AS VARCHAR) AS tokens ` +
+  `FROM curation__signalled WHERE LOWER("subgraphDeploymentID") = '${depId}' ` +
+  `UNION ALL SELECT CAST(block_timestamp AS BIGINT), 'BurnSignal', CAST(tokens AS VARCHAR) FROM curation__burned WHERE LOWER("subgraphDeploymentID") = '${depId}' ` +
+  `ORDER BY timestamp LIMIT ${first}`;
+/** A deployment's allocations in creation order, for the stake-over-time series. */
+export const deploymentAllocationsHistorySql = (depId: string, first: number) =>
+  `SELECT CAST(allocated_tokens AS VARCHAR) AS allocated_tokens, created_at, closed_at FROM lodestar_allocations ` +
+  `WHERE LOWER(subgraph_deployment) = '${depId}' ORDER BY created_at LIMIT ${first}`;
+export interface NestDeploymentSignalRow { id: string; curator: string; signalled_tokens: string; unsignalled_tokens: string; signal: string; last_signal_change: number | null; realized_rewards: string; deployment_signalled_tokens: string; deployment_query_fees_amount: string }
+export interface NestSignalTxRow { timestamp: number | string; type: string; tokens: string }
+export interface NestAllocationHistoryRow { allocated_tokens: string; created_at: number; closed_at: number | null }

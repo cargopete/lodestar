@@ -3,6 +3,26 @@ import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT } from '@/lib/utils';
 import { log } from '@/lib/logger';
+import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { deploymentSignalTransactionsSql, deploymentAllocationsHistorySql, type NestSignalTxRow, type NestAllocationHistoryRow } from '@/lib/nest-queries';
+import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
+
+const ALLOC_BASE_PATH = process.env.NUTHATCH_ALLOCATIONS_BASE_PATH || '/alloc';
+
+/** The two series the history is folded from, in the gateway's shapes, from graph-allocations-nest (nuthatch#1160). */
+async function seriesFromNest(hash: string): Promise<{ signalTransactions: RawSignalTx[]; allocations: RawAllocation[] }> {
+  const id = ipfsHashToBytes32(hash).toLowerCase();
+  const [tx, al] = await Promise.all([
+    nuthatchSqlReady<NestSignalTxRow>(deploymentSignalTransactionsSql(id, 1000), ALLOC_BASE_PATH),
+    nuthatchSqlReady<NestAllocationHistoryRow>(deploymentAllocationsHistorySql(id, 1000), ALLOC_BASE_PATH),
+  ]);
+  if (!tx.ok) throw Object.assign(new Error(tx.error), { nest: tx });
+  if (!al.ok) throw Object.assign(new Error(al.error), { nest: al });
+  return {
+    signalTransactions: tx.data.rows.map((t) => ({ timestamp: Number(t.timestamp), type: t.type, tokens: t.tokens })),
+    allocations: al.data.rows.map((a) => ({ allocatedTokens: a.allocated_tokens, createdAt: Number(a.created_at), closedAt: a.closed_at === null ? null : Number(a.closed_at) })),
+  };
+}
 
 interface RawSignalTx {
   timestamp: number;
@@ -28,7 +48,9 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid deployment hash' }, { status: 400 });
   }
 
-  if (!hasSubgraphAccess()) {
+  // The key gates the gateway path only (nuthatch#1160).
+  const useNest = nuthatchEnabled('NUTHATCH_SUBGRAPHS') && hasNuthatch();
+  if (!useNest && !hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
 
@@ -55,11 +77,11 @@ export async function GET(
     }
   }`;
 
-  const cacheKey = `lodestar:subgraph-history-v4:${hash}`;
+  const cacheKey = `lodestar:subgraph-history-v4:${hash}${useNest ? ':nuthatch' : ''}`;
 
   try {
     const data = await cached(cacheKey, 3600, async () => {
-      const result = await subgraphQuery<{
+      const result = useNest ? await seriesFromNest(hash) : await subgraphQuery<{
         signalTransactions: RawSignalTx[];
         allocations: RawAllocation[];
       }>(query);
