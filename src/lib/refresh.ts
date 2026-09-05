@@ -1,6 +1,7 @@
 import { log } from './logger';
 import { cacheSet, cached } from './cache';
-import { subgraphQuery, delegationEventsQuery, ensQuery, hasSubgraphAccess } from './subgraph';
+import { subgraphQuery, delegationEventsQuery, hasSubgraphAccess } from './subgraph';
+import { resolveEnsNames } from './ens';
 import { weiToGRT, resolveIndexerName } from './utils';
 import { batchCheckEligibility, type OracleEligibility } from './reo-contract';
 import {
@@ -73,6 +74,18 @@ interface DelegationEventData {
   delegator: string;
   tokens: string;
   timestamp: string;
+}
+
+/** ENS for the whole indexer set; a failure costs the names and nothing else, as the subgraph step's did. */
+async function resolveEnsNamesForRefresh(ids: string[]): Promise<Record<string, string>> {
+  try {
+    const names = await resolveEnsNames(ids);
+    log.refresh.info({ count: Object.keys(names).length }, 'ENS names resolved');
+    return names;
+  } catch (e) {
+    log.refresh.warn({ err: e }, 'ENS lookup failed, continuing without');
+    return {};
+  }
 }
 
 /** Everything the enrichment needs, gathered from one source or the other. */
@@ -259,30 +272,8 @@ export async function gatherFromGateway(): Promise<RefreshInputs> {
     log.refresh.warn({ err: e }, 'Delegation events fetch failed, continuing without');
   }
 
-  // Step 4: Resolve ENS names
-  const ensNames: Record<string, string> = {};
-  try {
-    const ENS_BATCH = 20;
-    for (let i = 0; i < indexerIds.length; i += ENS_BATCH) {
-      const batch = indexerIds.slice(i, i + ENS_BATCH);
-      const idList = batch.map((id) => `"${id}"`).join(', ');
-      const ensResult = await ensQuery<{ domains: Array<{ name: string; resolvedAddress: { id: string } }> }>(`{
-        domains(first: 1000, where: { resolvedAddress_in: [${idList}], name_not: null }) {
-          name
-          resolvedAddress { id }
-        }
-      }`);
-      for (const domain of ensResult.domains) {
-        const addr = domain.resolvedAddress.id.toLowerCase();
-        if (!ensNames[addr] || domain.name.length < ensNames[addr].length) {
-          ensNames[addr] = domain.name;
-        }
-      }
-    }
-    log.refresh.info({ count: Object.keys(ensNames).length }, 'ENS names resolved');
-  } catch (e) {
-    log.refresh.warn({ err: e }, 'ENS lookup failed, continuing without');
-  }
+  // Step 4: Resolve ENS names - primary names over a mainnet RPC, never the ENS subgraph (nuthatch#1160).
+  const ensNames = await resolveEnsNamesForRefresh(indexerIds);
 
   // Step 5b: Fetch closed allocations (last 90d) for rolling APY
   const closedAllocsByIndexer = new Map<string, Array<{ delegator_rewards_grt: number; closed_at: number }>>();
@@ -446,7 +437,7 @@ export async function gatherFromGateway(): Promise<RefreshInputs> {
 /**
  * The nest gatherer (nuthatch#1160): the same eight inputs from `graph-allocations-nest`, none of them
  * through the gateway key. Differences from the gateway path, each deliberate:
- *   - names are null (ENS and IPFS are group B work), so `ensNames` is empty until then;
+ *   - display names from IPFS metadata are null (group B work); ENS names come from a mainnet RPC as on the gateway path;
  *   - the derived ratios are computed here from the subgraph's own formulas rather than read;
  *   - the 30- and 90-day exchange rates are the ledger summed up to real Unix times instead of
  *     block numbers estimated from an average block time;
@@ -501,7 +492,8 @@ export async function gatherFromNest(): Promise<RefreshInputs> {
   for (const r of r90) { const rate = calculatePoolExchangeRate(r.pool_tokens, '0', r.pool_shares); if (rate > 0) { const e = exchangeRateHistory.get(r.indexer) ?? { rate30d: null, rate90d: null }; e.rate90d = rate; exchangeRateHistory.set(r.indexer, e); } }
   const dataServiceCountMap = new Map<string, number>(dsc.map((d) => [d.indexer, Number(d.n)]));
   log.refresh.info({ indexers: indexers.length, allocations: allocs.length, events: events.length, closed: closed.length }, 'refresh inputs gathered from the nest');
-  return { network, indexers, allocationMap, delegationActivity, ensNames: {}, closedAllocsByIndexer, exchangeRateHistory, dataServiceCountMap };
+  const ensNames = await resolveEnsNamesForRefresh(indexers.map((i) => i.id));
+  return { network, indexers, allocationMap, delegationActivity, ensNames, closedAllocsByIndexer, exchangeRateHistory, dataServiceCountMap };
 }
 
 /**
