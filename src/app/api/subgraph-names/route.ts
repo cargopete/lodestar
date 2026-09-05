@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { hasNuthatch, nuthatchEnabled } from '@/lib/nuthatch';
+import { displayNamesForDeployments } from '@/lib/subgraph-metadata';
 import { log } from '@/lib/logger';
 
 interface Row {
@@ -14,7 +16,10 @@ interface Row {
  * are unsignalled and so never appear in the top-N signalled list.
  */
 export async function POST(request: NextRequest) {
-  if (!hasSubgraphAccess()) {
+  // Behind NUTHATCH_SUBGRAPHS (nuthatch#1160, group B) the names come from graph-gns-nest's metadata
+  // hashes and the IPFS documents behind them, cached in Postgres; the gateway is not consulted.
+  const useNest = nuthatchEnabled('NUTHATCH_SUBGRAPHS') && hasNuthatch();
+  if (!useNest && !hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
 
@@ -32,6 +37,17 @@ export async function POST(request: NextRequest) {
     new Set(hashes.filter((h) => h.startsWith('Qm') || h.startsWith('baf'))),
   ).slice(0, 500);
   if (unique.length === 0) return NextResponse.json({ data: {} });
+  if (useNest) {
+    try {
+      const names = await displayNamesForDeployments(unique);
+      const map: Record<string, string> = {};
+      for (const [h, n] of Object.entries(names)) if (n) map[h] = n;
+      return NextResponse.json({ data: map, source: 'nuthatch' });
+    } catch (error) {
+      log.api.error({ err: error }, 'Subgraph names from the nest failed');
+      return NextResponse.json({ data: {} });
+    }
+  }
 
   const list = unique.map((h) => `"${h}"`).join(',');
   const query = `{
