@@ -25,13 +25,13 @@ import { log } from '@/lib/logger';
 const BOUNTY_BOARD = (process.env.NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS ?? '').trim() as `0x${string}`;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const ALLOC_BASE_PATH = process.env.NUTHATCH_INDEXERS_BASE_PATH || '/alloc';
-const useNest = () => nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch();
+const nestEnabled = () => nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch();
 
 // Behind NUTHATCH_INDEXERS (nuthatch#1160) both lookups read graph-allocations-nest instead of the
 // network subgraph: an indexer's registered URL from `lodestar_indexers`, and the indexers with an
 // active allocation on the deployment from `lodestar_allocations`. Same fall-through as before.
 async function indexerUrl(indexer: string): Promise<string | null> {
-  if (useNest()) {
+  if (nestEnabled()) {
     const rows = await nuthatchSql<NestIndexerUrlRow>(indexerUrlSql(indexer), ALLOC_BASE_PATH);
     return rows[0]?.url ?? null;
   }
@@ -39,7 +39,7 @@ async function indexerUrl(indexer: string): Promise<string | null> {
   return data.indexer?.url ?? null;
 }
 async function servingIndexers(deploymentHex: string): Promise<Array<{ id: string; url: string | null }>> {
-  if (useNest()) {
+  if (nestEnabled()) {
     const rows = await nuthatchSql<NestIndexerUrlRow>(deploymentServingIndexersSql(deploymentHex, 10), ALLOC_BASE_PATH);
     return rows.map((r) => ({ id: r.id ?? '', url: r.url }));
   }
