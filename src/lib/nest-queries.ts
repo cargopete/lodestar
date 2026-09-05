@@ -303,3 +303,68 @@ export interface NestEpochRow {
 export function epochTotalQueryFees(r: NestEpochRow): string {
   return (BigInt(r.query_fees_collected) + BigInt(r.curator_query_fees) + BigInt(r.taxed_query_fees)).toString();
 }
+
+/** `api/indexer/[address]`: the indexer's own row (nuthatch#1160). `addr` is a validated lower-case address. */
+export function indexerDetailSql(addr: string): string {
+  return (
+    `SELECT id, CAST(staked_tokens AS VARCHAR) AS staked_tokens, CAST(locked_tokens AS VARCHAR) AS locked_tokens, locked_until, ` +
+    `CAST(delegated_tokens AS VARCHAR) AS delegated_tokens, CAST(delegated_thawing_tokens AS VARCHAR) AS delegated_thawing_tokens, ` +
+    `CAST(allocated_tokens AS VARCHAR) AS allocated_tokens, allocation_count, indexing_reward_cut, query_fee_cut, ` +
+    `last_delegation_parameter_update, CAST(rewards_earned AS VARCHAR) AS rewards_earned, ` +
+    `CAST(query_fees_collected AS VARCHAR) AS query_fees_collected, CAST(delegator_shares AS VARCHAR) AS delegator_shares, ` +
+    `CAST(provisioned_tokens AS VARCHAR) AS provisioned_tokens, url, geohash, created_at ` +
+    `FROM lodestar_indexers WHERE id = '${addr}'`
+  );
+}
+/** Operators the indexer currently allows: the newest `allowed` per operator across both eras' events. */
+export function indexerOperatorsSql(addr: string): string {
+  return (
+    `SELECT operator FROM (SELECT LOWER(operator) AS operator, allowed, ` +
+    `ROW_NUMBER() OVER (PARTITION BY LOWER(operator) ORDER BY block_number DESC, log_index DESC) AS rn FROM (` +
+    `SELECT operator, allowed, block_number, log_index FROM staking__operator_set WHERE LOWER("serviceProvider") = '${addr}' ` +
+    `UNION ALL SELECT operator, allowed, block_number, log_index FROM staking_legacy__set_operator WHERE LOWER(indexer) = '${addr}')) ` +
+    `WHERE rn = 1 AND allowed ORDER BY operator`
+  );
+}
+/** The indexer's delegators, largest first: the subgraph's `indexer.delegators(orderBy: stakedTokens)`. */
+export function indexerDelegatorsSql(addr: string, first: number): string {
+  return (
+    `SELECT id, delegator, CAST(staked_tokens AS VARCHAR) AS staked_tokens, CAST(share_amount AS VARCHAR) AS share_amount ` +
+    `FROM lodestar_delegator_stakes WHERE indexer = '${addr}' AND active ORDER BY share_amount DESC, delegator ASC LIMIT ${first}`
+  );
+}
+/**
+ * Active allocations with the deployment's live signal and total active stake beside each, which is
+ * what the subgraph's `subgraphDeployment { signalledTokens stakedTokens }` carried.
+ */
+export function indexerActiveAllocationsSql(addr: string): string {
+  return (
+    `SELECT a.id, CAST(a.allocated_tokens AS VARCHAR) AS allocated_tokens, a.created_at_epoch, a.subgraph_deployment, ` +
+    `CAST(a.signalled_tokens AS VARCHAR) AS signalled_tokens, ` +
+    `CAST((SELECT SUM(allocated_tokens) FROM lodestar_allocations d WHERE d.subgraph_deployment = a.subgraph_deployment AND d.status = 'Active') AS VARCHAR) AS deployment_staked_tokens ` +
+    `FROM lodestar_allocations a WHERE LOWER(a.indexer) = '${addr}' AND a.status = 'Active' ORDER BY a.id`
+  );
+}
+/** The newest closed allocations, capped as the gateway path caps them. */
+export function indexerClosedAllocationsSql(addr: string, first: number): string {
+  return (
+    `SELECT id, CAST(allocated_tokens AS VARCHAR) AS allocated_tokens, created_at_epoch, closed_at_epoch, closed_at, ` +
+    `CAST(indexing_rewards AS VARCHAR) AS indexing_rewards, CAST(query_fees_collected AS VARCHAR) AS query_fees_collected, poi, force_closed, subgraph_deployment ` +
+    `FROM lodestar_allocations WHERE LOWER(indexer) = '${addr}' AND status = 'Closed' ORDER BY closed_at DESC, id LIMIT ${first}`
+  );
+}
+export const delegationRatioSql = () => `SELECT delegation_ratio FROM lodestar_network_params`;
+
+export interface NestIndexerDetailRow extends NestIndexerRow {
+  locked_until: number | string | null; delegated_thawing_tokens: string; provisioned_tokens: string;
+}
+export interface NestDelegatorRow { id: string; delegator: string; staked_tokens: string; share_amount: string }
+export interface NestActiveAllocationRow {
+  id: string; allocated_tokens: string; created_at_epoch: number | string; subgraph_deployment: string;
+  signalled_tokens: string; deployment_staked_tokens: string | null;
+}
+export interface NestClosedAllocationRow {
+  id: string; allocated_tokens: string; created_at_epoch: number | string; closed_at_epoch: number | string | null;
+  closed_at: number | null; indexing_rewards: string; query_fees_collected: string; poi: string | null;
+  force_closed: boolean | null; subgraph_deployment: string;
+}
