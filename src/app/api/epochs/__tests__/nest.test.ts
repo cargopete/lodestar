@@ -1,7 +1,7 @@
 /**
  * `api/epochs` from `lodestar_epochs` (nightswatchhq/nuthatch#1160). Pinned here: the flag off
  * changes nothing; the nest path never consults the gateway key; rows arrive in the `Epoch` shape
- * newest first with wei as strings; `totalQueryFees` is the gross figure rebuilt from the view's
+ * newest first with wei as strings; `totalQueryFees` is gross less the protocol cut, rebuilt from the view's
  * three parts; `count` reaches the SQL; and an unready nest is a 503.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -69,7 +69,7 @@ describe('api/epochs from the nest', () => {
       {
         id: '1370', startBlock: 500973867, endBlock: 501318401,
         signalledTokens: row.signalled_tokens, stakeDeposited: row.stake_deposited,
-        totalQueryFees: (BigInt(row.query_fees_collected) + BigInt(row.curator_query_fees) + BigInt(row.taxed_query_fees)).toString(),
+        totalQueryFees: (BigInt(row.query_fees_collected) + BigInt(row.curator_query_fees)).toString(),
         totalRewards: row.total_rewards, totalIndexerRewards: row.total_indexer_rewards, totalDelegatorRewards: row.total_delegator_rewards,
       },
     ]);
@@ -79,9 +79,9 @@ describe('api/epochs from the nest', () => {
     expect(nuthatchSqlReady.mock.calls[0][1]).toBe('/alloc');
   });
 
-  it('gross fees are the sum of the three parts, in wei, not through a double', () => {
+  it('fees are the indexers\' net plus the curators\' share (gross less the protocol cut), in wei, not through a double', () => {
     const e = epochFromNest(row as never);
-    expect(BigInt(e.totalQueryFees)).toBe(BigInt(row.query_fees_collected) + BigInt(row.curator_query_fees) + BigInt(row.taxed_query_fees));
+    expect(BigInt(e.totalQueryFees)).toBe(BigInt(row.query_fees_collected) + BigInt(row.curator_query_fees));
   });
 
   it('an unready nest is a 503 with no fallback to the gateway', async () => {
