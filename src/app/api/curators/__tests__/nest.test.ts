@@ -79,8 +79,8 @@ describe('api/curators from the nest', () => {
     ]);
     const sql = nuthatchSqlReady.mock.calls[0][0] as string;
     expect(sql).toContain('FROM lodestar_curators');
-    expect(sql).toContain('NOT is_gns');
-    expect(sql).toContain('total_signalled_tokens > 0 AND active_signal_count > 0');
+    expect(sql).toContain('NOT c.is_gns');
+    expect(sql).toContain('c.total_signalled_tokens > 0 AND c.active_signal_count > 0');
     expect(sql).toContain('LIMIT 20 OFFSET 40');
     expect(nuthatchSqlReady.mock.calls[0][1]).toBe('/alloc');
   });

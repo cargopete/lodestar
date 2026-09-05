@@ -192,8 +192,8 @@ export function indexersSql(first: number, skip: number, orderBy: string, orderD
     `allocation_count, indexing_reward_cut, query_fee_cut, last_delegation_parameter_update, ` +
     `CAST(rewards_earned AS VARCHAR) AS rewards_earned, CAST(query_fees_collected AS VARCHAR) AS query_fees_collected, ` +
     `CAST(delegator_shares AS VARCHAR) AS delegator_shares, url, geohash, created_at ` +
-    `FROM lodestar_indexers WHERE staked_tokens > 0 AND id <> '${INDEXERS_EXCLUDED}' ` +
-    `ORDER BY ${col} ${orderDirection === 'asc' ? 'ASC' : 'DESC'}, id ASC LIMIT ${first} OFFSET ${skip}`
+    `FROM lodestar_indexers i WHERE i.staked_tokens > 0 AND i.id <> '${INDEXERS_EXCLUDED}' ` +
+    `ORDER BY i.${col} ${orderDirection === 'asc' ? 'ASC' : 'DESC'}, i.id ASC LIMIT ${first} OFFSET ${skip}`
   );
 }
 
@@ -228,8 +228,8 @@ export function curatorsSql(first: number, skip: number): string {
     `SELECT id, CAST(total_signalled_tokens AS VARCHAR) AS total_signalled_tokens, ` +
     `CAST(total_unsignalled_tokens AS VARCHAR) AS total_unsignalled_tokens, ` +
     `CAST(realized_rewards AS VARCHAR) AS realized_rewards, signal_count, active_signal_count ` +
-    `FROM lodestar_curators WHERE total_signalled_tokens > 0 AND active_signal_count > 0 AND NOT is_gns ` +
-    `ORDER BY total_signalled_tokens DESC, id ASC LIMIT ${first} OFFSET ${skip}`
+    `FROM lodestar_curators c WHERE c.total_signalled_tokens > 0 AND c.active_signal_count > 0 AND NOT c.is_gns ` +
+    `ORDER BY c.total_signalled_tokens DESC, c.id ASC LIMIT ${first} OFFSET ${skip}`
   );
 }
 
@@ -330,7 +330,7 @@ export function indexerOperatorsSql(addr: string): string {
 export function indexerDelegatorsSql(addr: string, first: number): string {
   return (
     `SELECT id, delegator, CAST(staked_tokens AS VARCHAR) AS staked_tokens, CAST(share_amount AS VARCHAR) AS share_amount ` +
-    `FROM lodestar_delegator_stakes WHERE indexer = '${addr}' AND active ORDER BY share_amount DESC, delegator ASC LIMIT ${first}`
+    `FROM lodestar_delegator_stakes s WHERE s.indexer = '${addr}' AND s.active ORDER BY s.share_amount DESC, s.delegator ASC LIMIT ${first}`
   );
 }
 /**
@@ -432,7 +432,7 @@ export const curatorSignalsSql = (addr: string, first: number) =>
   `CAST(signal AS VARCHAR) AS signal, last_signal_change, CAST(realized_rewards AS VARCHAR) AS realized_rewards, ` +
   `CAST(deployment_signalled_tokens AS VARCHAR) AS deployment_signalled_tokens, CAST(deployment_query_fees_amount AS VARCHAR) AS deployment_query_fees_amount, ` +
   `CAST(deployment_staked_tokens AS VARCHAR) AS deployment_staked_tokens ` +
-  `FROM lodestar_curator_signals WHERE curator = '${addr}' ORDER BY signalled_tokens DESC, subgraph_deployment LIMIT ${first}`;
+  `FROM lodestar_curator_signals s WHERE s.curator = '${addr}' ORDER BY s.signalled_tokens DESC, s.subgraph_deployment LIMIT ${first}`;
 
 export interface NestDelegatorTotalsRow { id: string; total_staked_tokens: string; total_unstaked_tokens: string; total_realized_rewards: string; stakes_count: number; active_stakes_count: number }
 export interface NestDelegatorStakeRow {
@@ -511,7 +511,7 @@ export const deploymentSignalsSql = (depId: string, first: number) =>
   `SELECT id, curator, CAST(signalled_tokens AS VARCHAR) AS signalled_tokens, CAST(unsignalled_tokens AS VARCHAR) AS unsignalled_tokens, ` +
   `CAST(signal AS VARCHAR) AS signal, last_signal_change, CAST(realized_rewards AS VARCHAR) AS realized_rewards, ` +
   `CAST(deployment_signalled_tokens AS VARCHAR) AS deployment_signalled_tokens, CAST(deployment_query_fees_amount AS VARCHAR) AS deployment_query_fees_amount ` +
-  `FROM lodestar_curator_signals WHERE LOWER(subgraph_deployment) = '${depId}' AND signal > 0 ORDER BY signalled_tokens DESC, curator LIMIT ${first}`;
+  `FROM lodestar_curator_signals s WHERE LOWER(s.subgraph_deployment) = '${depId}' AND s.signal > 0 ORDER BY s.signalled_tokens DESC, s.curator LIMIT ${first}`;
 /** A deployment's signal transactions in time order: the subgraph's `signalTransactions` (MintSignal / BurnSignal). */
 export const deploymentSignalTransactionsSql = (depId: string, first: number) =>
   `SELECT CAST(block_timestamp AS BIGINT) AS timestamp, 'MintSignal' AS type, CAST(CAST(tokens AS HUGEINT) - CAST("curationTax" AS HUGEINT) AS VARCHAR) AS tokens ` +
@@ -526,11 +526,16 @@ export interface NestDeploymentSignalRow { id: string; curator: string; signalle
 export interface NestSignalTxRow { timestamp: number | string; type: string; tokens: string }
 export interface NestAllocationHistoryRow { allocated_tokens: string; created_at: number; closed_at: number | null }
 
+// ORDER BY and the VARCHAR casts. Every list here casts its wei columns to VARCHAR under the column's own
+// name, and DuckDB, like the standard, binds an unqualified ORDER BY name to that output alias first: the
+// deployments list came back with a 99.99 GRT deployment on top because "99999…" sorts above "349857…" as
+// text. So a list's FROM carries an alias and its ORDER BY names the table column through it. The test in
+// nest-queries-order.test.ts fails any builder that orders by a bare name it also casts.
 /** Group B lists (nuthatch#1160): the deployment figures from `lodestar_deployments`. */
 export const DEPLOYMENTS_ORDER_BY: Record<string, string> = { signalledTokens: 'signalled_tokens', stakedTokens: 'staked_tokens', queryFeesAmount: 'query_fees_amount', createdAt: 'created_at' };
 const DEPLOYMENT_COLS = `id, CAST(signalled_tokens AS VARCHAR) AS signalled_tokens, CAST(staked_tokens AS VARCHAR) AS staked_tokens, CAST(query_fees_amount AS VARCHAR) AS query_fees_amount, created_at, active_allocation_count, curator_count`;
 export const deploymentsListSql = (first: number, skip: number, orderBy: string, dir: 'asc' | 'desc') =>
-  `SELECT ${DEPLOYMENT_COLS} FROM lodestar_deployments WHERE signalled_tokens > 1000000000000000000 ORDER BY ${DEPLOYMENTS_ORDER_BY[orderBy] ?? 'signalled_tokens'} ${dir === 'asc' ? 'ASC' : 'DESC'}, id LIMIT ${first} OFFSET ${skip}`;
+  `SELECT ${DEPLOYMENT_COLS} FROM lodestar_deployments d WHERE d.signalled_tokens > 1000000000000000000 ORDER BY d.${DEPLOYMENTS_ORDER_BY[orderBy] ?? 'signalled_tokens'} ${dir === 'asc' ? 'ASC' : 'DESC'}, d.id LIMIT ${first} OFFSET ${skip}`;
 export const deploymentsByIdSql = (ids: string[]) =>
   `SELECT ${DEPLOYMENT_COLS} FROM lodestar_deployments WHERE id IN (${ids.map((i) => `'${i.toLowerCase()}'`).join(', ')})`;
 export const deploymentIdsSql = () => `SELECT id FROM lodestar_deployments WHERE signalled_tokens > 0 OR staked_tokens > 0`;

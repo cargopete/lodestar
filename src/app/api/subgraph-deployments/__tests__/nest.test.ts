@@ -86,7 +86,7 @@ describe('group B lists and search from the nests', () => {
     expect(d.curatorSignals).toHaveLength(7);
     const sql = nuthatchSqlReady.mock.calls[0][0] as string;
     expect(sql).toContain('FROM lodestar_deployments');
-    expect(sql).toContain('ORDER BY query_fees_amount ASC');
+    expect(sql).toContain('ORDER BY d.query_fees_amount ASC');
     expect(sql).toContain('LIMIT 50 OFFSET 100');
     expect(sql).toContain('signalled_tokens > 1000000000000000000');
     expect(nuthatchSqlReady.mock.calls[0][1]).toBe('/alloc');
