@@ -368,3 +368,41 @@ export interface NestClosedAllocationRow {
   closed_at: number | null; indexing_rewards: string; query_fees_collected: string; poi: string | null;
   force_closed: boolean | null; subgraph_deployment: string;
 }
+
+/**
+ * `api/provisions` (nuthatch#1160): an indexer's provisions across every data service, or a data
+ * service's provisions with the indexer's stake beside each, from `lodestar_provisions` and
+ * `lodestar_indexers`. Allocation figures are null in the view for any verifier but the subgraph
+ * service and read as 0 here, which is also what the subgraph reports for them.
+ */
+const PROVISION_COLS =
+  `p.id, p.indexer, p.data_service, CAST(p.tokens_provisioned AS VARCHAR) AS tokens_provisioned, ` +
+  `CAST(COALESCE(p.tokens_allocated, 0) AS VARCHAR) AS tokens_allocated, CAST(p.tokens_thawing AS VARCHAR) AS tokens_thawing, ` +
+  `p.max_verifier_cut, p.thawing_period, p.created_at, COALESCE(p.allocation_count, 0) AS allocation_count, ` +
+  `CAST(COALESCE(p.rewards_earned, 0) AS VARCHAR) AS rewards_earned, CAST(COALESCE(p.query_fees_collected, 0) AS VARCHAR) AS query_fees_collected`;
+export function provisionsByIndexerSql(addr: string): string {
+  return `SELECT ${PROVISION_COLS} FROM lodestar_provisions p WHERE p.indexer = '${addr}' AND p.tokens_provisioned > 0 ORDER BY p.tokens_provisioned DESC, p.data_service`;
+}
+export function provisionsByServiceSql(addr: string, first: number, skip: number): string {
+  return (
+    `SELECT ${PROVISION_COLS}, CAST(i.staked_tokens AS VARCHAR) AS indexer_staked_tokens, CAST(i.delegated_tokens AS VARCHAR) AS indexer_delegated_tokens ` +
+    `FROM lodestar_provisions p LEFT JOIN lodestar_indexers i ON i.id = p.indexer ` +
+    `WHERE p.data_service = '${addr}' AND p.tokens_provisioned > 0 ORDER BY p.tokens_provisioned DESC, p.indexer LIMIT ${first} OFFSET ${skip}`
+  );
+}
+/** The data service's totals the subgraph carried on `dataService { totalTokensProvisioned totalTokensAllocated }`. */
+export function dataServiceTotalsSql(addrs: string[]): string {
+  const list = addrs.map((a) => `'${a}'`).join(', ');
+  return (
+    `SELECT data_service, CAST(SUM(tokens_provisioned) AS VARCHAR) AS total_tokens_provisioned, ` +
+    `CAST(SUM(COALESCE(tokens_allocated, 0)) AS VARCHAR) AS total_tokens_allocated FROM lodestar_provisions ` +
+    `WHERE data_service IN (${list}) GROUP BY 1`
+  );
+}
+export interface NestProvisionRow {
+  id: string; indexer: string; data_service: string; tokens_provisioned: string; tokens_allocated: string; tokens_thawing: string;
+  max_verifier_cut: number | string | null; thawing_period: number | string | null; created_at: number | null;
+  allocation_count: number; rewards_earned: string; query_fees_collected: string;
+  indexer_staked_tokens?: string | null; indexer_delegated_tokens?: string | null;
+}
+export interface NestDataServiceTotalsRow { data_service: string; total_tokens_provisioned: string; total_tokens_allocated: string }
