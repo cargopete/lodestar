@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { deploymentSql, allocationsByDeploymentSql, type NestDeploymentRow, type NestDeploymentAllocationRow } from '@/lib/nest-queries';
+import { ipfsHashToBytes32, bytes32ToIpfsHash } from '@/lib/studio/ipfs';
+
+const INDEXERS_BASE_PATH = process.env.NUTHATCH_INDEXERS_BASE_PATH || '/alloc';
 import {
   queryIndexerStatus,
   buildIndexerStatus,
@@ -109,7 +114,8 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ hash: string }> },
 ) {
-  if (!hasSubgraphAccess()) {
+  // The key gates the gateway path only (nuthatch#1160).
+  if (!(nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch()) && !hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
 
@@ -127,7 +133,21 @@ export async function GET(
         let stakedTokens = '0';
         let displayName: string | null = null;
 
-        if (hash.startsWith('Qm') || hash.startsWith('bafy')) {
+        // Behind NUTHATCH_INDEXERS (nuthatch#1160) the deployment and its allocations come from the nest;
+        // the id is the hash's own bytes32, so no lookup is needed to resolve it, and the display name is
+        // null (IPFS metadata, group B). The gateway is not consulted on this path.
+        const useNest = nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch();
+        if (useNest) {
+          if (hash.startsWith('Qm')) { deploymentId = ipfsHashToBytes32(hash); }
+          else if (hash.startsWith('0x')) { deploymentId = hash.toLowerCase(); try { ipfsHash = bytes32ToIpfsHash(hash); } catch { /* keep */ } }
+          else { throw new Error('Deployment not found'); }
+          const dep = await nuthatchSqlReady<NestDeploymentRow>(deploymentSql(deploymentId), INDEXERS_BASE_PATH);
+          if (!dep.ok) throw Object.assign(new Error(dep.error), { nest: dep });
+          const row = dep.data.rows[0];
+          if (!row) throw new Error('Deployment not found');
+          signalledTokens = row.signalled_tokens ?? '0';
+          stakedTokens = row.staked_tokens ?? '0';
+        } else if (hash.startsWith('Qm') || hash.startsWith('bafy')) {
           const resolved = await subgraphQuery<{
             subgraphDeployments: DeploymentRow[];
           }>(resolveDeploymentQuery(hash));
@@ -145,11 +165,17 @@ export async function GET(
         }
 
         // 2. Fetch indexers with active allocations on this deployment
-        const allocResult = await subgraphQuery<{
-          allocations: AllocationRow[];
-        }>(allocationsQuery(deploymentId));
-
-        const allocations = allocResult.allocations;
+        let allocations: AllocationRow[];
+        if (useNest) {
+          const r = await nuthatchSqlReady<NestDeploymentAllocationRow>(allocationsByDeploymentSql(deploymentId, 100), INDEXERS_BASE_PATH);
+          if (!r.ok) throw Object.assign(new Error(r.error), { nest: r });
+          allocations = r.data.rows.map((a) => ({ indexer: { id: a.indexer, url: a.url, account: { defaultDisplayName: null, metadata: null } }, allocatedTokens: a.allocated_tokens }));
+        } else {
+          const allocResult = await subgraphQuery<{
+            allocations: AllocationRow[];
+          }>(allocationsQuery(deploymentId));
+          allocations = allocResult.allocations;
+        }
 
         // 3. Query each indexer's /status endpoint in parallel (with timeout)
         const withUrl = allocations.filter((a) => a.indexer.url);

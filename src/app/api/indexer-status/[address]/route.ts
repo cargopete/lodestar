@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { indexerDetailSql, indexerActiveAllocationsSql, type NestIndexerDetailRow, type NestActiveAllocationRow } from '@/lib/nest-queries';
+import { bytes32ToIpfsHash } from '@/lib/studio/ipfs';
+
+const INDEXERS_BASE_PATH = process.env.NUTHATCH_INDEXERS_BASE_PATH || '/alloc';
 import { log } from '@/lib/logger';
 import { isSafeUrlString } from '@/lib/ssrf';
 
@@ -131,7 +136,8 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ address: string }> },
 ) {
-  if (!hasSubgraphAccess()) {
+  // The key gates the gateway path only (nuthatch#1160).
+  if (!(nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch()) && !hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
 
@@ -151,9 +157,29 @@ export async function GET(
         let allAllocations: Allocation[] = [];
         let indexerUrl: string | null = null;
         let lastId = '';
+        // Behind NUTHATCH_INDEXERS (nuthatch#1160) the URL and the allocations come from the nest and the
+        // gateway is not consulted; the indexers' own /status endpoints are then probed as before.
+        const useNest = nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch();
+        if (useNest) {
+          const [me, active] = await Promise.all([
+            nuthatchSqlReady<NestIndexerDetailRow>(indexerDetailSql(addr), INDEXERS_BASE_PATH),
+            nuthatchSqlReady<NestActiveAllocationRow>(indexerActiveAllocationsSql(addr), INDEXERS_BASE_PATH),
+          ]);
+          if (!me.ok) throw Object.assign(new Error(me.error), { nest: me });
+          if (!active.ok) throw Object.assign(new Error(active.error), { nest: active });
+          indexerUrl = me.data.rows[0]?.url ?? null;
+          allAllocations = active.data.rows.map((a) => {
+            let ipfsHash = a.subgraph_deployment;
+            try { ipfsHash = bytes32ToIpfsHash(a.subgraph_deployment); } catch { /* keep the id */ }
+            return {
+              id: a.id, allocatedTokens: a.allocated_tokens, createdAtEpoch: Number(a.created_at_epoch),
+              subgraphDeployment: { id: a.subgraph_deployment, ipfsHash, signalledTokens: a.signalled_tokens, stakedTokens: a.deployment_staked_tokens ?? '0', versions: [] },
+            };
+          });
+        }
 
         // First batch also grabs the indexer URL
-        while (true) {
+        while (!useNest) {
           const result = await subgraphQuery<{
             indexer: { url: string | null } | null;
             allocations: Allocation[];
