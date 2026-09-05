@@ -22,7 +22,7 @@
     },
     {
       "path": "/api/cron/ingest-rav",
-      "schedule": "20 * * * *"
+      "schedule": "23 * * * *"
     },
     {
       "path": "/api/cron/snapshot-network",
@@ -38,7 +38,7 @@
     },
     {
       "path": "/api/cron/tap-provision",
-      "schedule": "*/5 * * * *"
+      "schedule": "1-59/5 * * * *"
     },
     {
       "path": "/api/cron/reconcile-bounties",
