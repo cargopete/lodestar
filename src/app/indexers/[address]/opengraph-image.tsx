@@ -1,6 +1,8 @@
 import { ImageResponse } from 'next/og';
 import { cacheGet } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { indexerDetailSql, type NestIndexerDetailRow } from '@/lib/nest-queries';
 import type { EnrichedIndexer } from '@/lib/enriched';
 
 export const runtime = 'edge';
@@ -83,6 +85,18 @@ export default async function OGImage({ params }: { params: Promise<{ address: s
       reoStatus = enriched.reoStatus;
       scoreGrade = enriched.scoreGrade;
       if (enriched.delegatorAPR > 0) apr = `${enriched.delegatorAPR.toFixed(1)}%`;
+    } else if (nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch()) {
+      // Fallback from the nest (nuthatch#1160): the figures are the indexer's; the name is the address,
+      // since ENS and IPFS names are group B work.
+      const r = await nuthatchSqlReady<NestIndexerDetailRow>(indexerDetailSql(addr), process.env.NUTHATCH_INDEXERS_BASE_PATH || '/alloc');
+      const ix = r.ok ? r.data.rows[0] : undefined;
+      if (ix) {
+        name = shortenAddress(addr);
+        selfStake = weiToGRT(ix.staked_tokens);
+        delegated = weiToGRT(ix.delegated_tokens);
+        allocations = Number(ix.allocation_count);
+        totalRewards = weiToGRT(ix.rewards_earned);
+      }
     } else if (hasSubgraphAccess()) {
       // Fallback: query subgraph directly
       const result = await subgraphQuery<{ indexer: { id: string; account: { defaultDisplayName: string | null; metadata?: { displayName?: string | null } | null }; stakedTokens: string; delegatedTokens: string; allocationCount: number; rewardsEarned: string } | null }>(`{

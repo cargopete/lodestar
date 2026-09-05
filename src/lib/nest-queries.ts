@@ -464,3 +464,15 @@ export function indexerStakeHistorySql(addr: string, cutoffs: number[]): string 
   );
 }
 export interface NestStakeHistoryRow { cutoff: number | string; staked_tokens: string; delegated_tokens: string }
+
+/** `api/indexing-status` (nuthatch#1160): a deployment's live figures and its active allocations, largest first. `depId` is a bytes32 id. */
+export const deploymentSql = (depId: string) =>
+  `SELECT subgraph_deployment, CAST(MAX(signalled_tokens) AS VARCHAR) AS signalled_tokens, ` +
+  `CAST(SUM(allocated_tokens) FILTER (WHERE status = 'Active') AS VARCHAR) AS staked_tokens, COUNT(*) AS allocations ` +
+  `FROM lodestar_allocations WHERE LOWER(subgraph_deployment) = '${depId.toLowerCase()}' GROUP BY 1`;
+export const allocationsByDeploymentSql = (depId: string, first: number) =>
+  `SELECT LOWER(a.indexer) AS indexer, i.url, CAST(a.allocated_tokens AS VARCHAR) AS allocated_tokens ` +
+  `FROM lodestar_allocations a LEFT JOIN lodestar_indexers i ON i.id = LOWER(a.indexer) ` +
+  `WHERE LOWER(a.subgraph_deployment) = '${depId.toLowerCase()}' AND a.status = 'Active' ORDER BY a.allocated_tokens DESC, a.indexer LIMIT ${first}`;
+export interface NestDeploymentRow { subgraph_deployment: string; signalled_tokens: string | null; staked_tokens: string | null; allocations: number }
+export interface NestDeploymentAllocationRow { indexer: string; url: string | null; allocated_tokens: string }
