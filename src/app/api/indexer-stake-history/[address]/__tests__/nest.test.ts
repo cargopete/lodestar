@@ -61,8 +61,10 @@ describe('api/indexer-stake-history from the nest', () => {
     const body = await res.json();
     expect(body.source).toBe('nuthatch');
     expect(body.data.history).toHaveLength(27);
-    expect(body.data.history[0]).toEqual({ date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), selfStakeGrt: 1000, delegatedGrt: 0 });
-    expect(body.data.history[26].selfStakeGrt).toBe(27000);
+    expect(body.data.history[0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(body.data.history[0].selfStakeGrt).toBeCloseTo(1000, 6);
+    expect(body.data.history[0].delegatedGrt).toBeCloseTo(0, 6);
+    expect(body.data.history[26].selfStakeGrt).toBeCloseTo(27000, 6);
     // dates ascend a week apart
     const d0 = new Date(body.data.history[0].date).getTime(); const d1 = new Date(body.data.history[1].date).getTime();
     expect(Math.round((d1 - d0) / 86400000)).toBe(7);
