@@ -540,3 +540,10 @@ export const deploymentFeesSinceSql = (since: number, first: number) =>
   `WHERE status = 'Closed' AND closed_at >= ${Math.floor(since)} GROUP BY 1 HAVING SUM(query_fees_collected) > 0 ORDER BY SUM(query_fees_collected) DESC LIMIT ${first}`;
 export interface NestDeploymentListRow { id: string; signalled_tokens: string; staked_tokens: string; query_fees_amount: string; created_at: number | string; active_allocation_count: number | string; curator_count: number | string }
 export interface NestDeploymentFeesRow { id: string; query_fees: string }
+
+/** TAP provisioning (nuthatch#1160): an indexer's registered URL, and the indexers serving a deployment, largest allocation first. */
+export const indexerUrlSql = (indexer: string) => `SELECT url FROM lodestar_indexers WHERE id = '${indexer.toLowerCase()}'`;
+export const deploymentServingIndexersSql = (deploymentId: string, first = 10) =>
+  `SELECT a.indexer AS id, i.url FROM lodestar_allocations a JOIN lodestar_indexers i ON i.id = a.indexer ` +
+  `WHERE a.status = 'Active' AND LOWER(a.subgraph_deployment) = '${deploymentId.toLowerCase()}' ORDER BY a.allocated_tokens DESC LIMIT ${first}`;
+export interface NestIndexerUrlRow { id?: string; url: string | null }

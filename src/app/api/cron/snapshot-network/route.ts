@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { hasSubgraphAccess } from '@/lib/subgraph';
+import { nuthatchEnabled } from '@/lib/nuthatch';
 import { writeNetworkSnapshot } from '@/lib/ingest/network-snapshot';
 import { withCronTracking } from '@/lib/cron-runs';
 import { log } from '@/lib/logger';
@@ -20,7 +21,8 @@ export async function GET(request: NextRequest) {
   if (!hasDbAccess() || !db) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
-  if (!hasSubgraphAccess()) {
+  // The key gates the gateway path only; on the nest path (nuthatch#1160) it is not consulted.
+  if (!nuthatchEnabled('NUTHATCH_NETWORK') && !hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
 

@@ -17,11 +17,42 @@ import { arbitrumClient } from '@/lib/reo-contract';
 import { BOUNTY_BOARD_ABI } from '@/lib/bountyBoard';
 import { hasTapSigner, ensureEscrow, getEscrowBalance, MIN_ESCROW_WEI } from '@/lib/tap';
 import { subgraphQuery } from '@/lib/subgraph';
+import { hasNuthatch, nuthatchEnabled, nuthatchSql } from '@/lib/nuthatch';
+import { indexerUrlSql, deploymentServingIndexersSql, type NestIndexerUrlRow } from '@/lib/nest-queries';
 import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import { log } from '@/lib/logger';
 
 const BOUNTY_BOARD = (process.env.NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS ?? '').trim() as `0x${string}`;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+const ALLOC_BASE_PATH = process.env.NUTHATCH_INDEXERS_BASE_PATH || '/alloc';
+const useNest = () => nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch();
+
+// Behind NUTHATCH_INDEXERS (nuthatch#1160) both lookups read graph-allocations-nest instead of the
+// network subgraph: an indexer's registered URL from `lodestar_indexers`, and the indexers with an
+// active allocation on the deployment from `lodestar_allocations`. Same fall-through as before.
+async function indexerUrl(indexer: string): Promise<string | null> {
+  if (useNest()) {
+    const rows = await nuthatchSql<NestIndexerUrlRow>(indexerUrlSql(indexer), ALLOC_BASE_PATH);
+    return rows[0]?.url ?? null;
+  }
+  const data = await subgraphQuery<{ indexer: { url: string | null } | null }>(`{ indexer(id: "${indexer}") { url } }`);
+  return data.indexer?.url ?? null;
+}
+async function servingIndexers(deploymentHex: string): Promise<Array<{ id: string; url: string | null }>> {
+  if (useNest()) {
+    const rows = await nuthatchSql<NestIndexerUrlRow>(deploymentServingIndexersSql(deploymentHex, 10), ALLOC_BASE_PATH);
+    return rows.map((r) => ({ id: r.id ?? '', url: r.url }));
+  }
+  const allocData = await subgraphQuery<{ allocations: Array<{ indexer: { id: string; url: string | null } }> }>(`{
+    allocations(
+      where: { subgraphDeployment: "${deploymentHex}", status: Active }
+      first: 10
+      orderBy: allocatedTokens
+      orderDirection: desc
+    ) { indexer { id url } }
+  }`);
+  return (allocData.allocations ?? []).map((a) => a.indexer);
+}
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -53,10 +84,7 @@ async function resolveIndexers(chainBountyId: string, deploymentId: string): Pro
 
   // Check if the winner has a URL in the network subgraph.
   try {
-    const data = await subgraphQuery<{ indexer: { url: string | null } | null }>(
-      `{ indexer(id: "${winner}") { url } }`,
-    );
-    if (data.indexer?.url) return [winner];
+    if (await indexerUrl(winner)) return [winner];
   } catch {
     // fall through to active allocation scan
   }
@@ -64,19 +92,9 @@ async function resolveIndexers(chainBountyId: string, deploymentId: string): Pro
   // Winner has no URL — scan active allocations for any indexer serving this deployment.
   try {
     const deploymentHex = ipfsHashToBytes32(deploymentId);
-    const allocData = await subgraphQuery<{
-      allocations: Array<{ indexer: { id: string; url: string | null } }>;
-    }>(`{
-      allocations(
-        where: { subgraphDeployment: "${deploymentHex}", status: Active }
-        first: 10
-        orderBy: allocatedTokens
-        orderDirection: desc
-      ) { indexer { id url } }
-    }`);
-    const addresses = (allocData.allocations ?? [])
-      .filter((a) => a.indexer?.url)
-      .map((a) => a.indexer.id.toLowerCase());
+    const addresses = (await servingIndexers(deploymentHex))
+      .filter((a) => a?.url)
+      .map((a) => a.id.toLowerCase());
     if (addresses.length > 0) return addresses;
   } catch {
     // ignore
