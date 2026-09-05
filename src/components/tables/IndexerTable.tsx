@@ -14,7 +14,6 @@ import {
   type RowSelectionState,
   type FilterFn,
 } from '@tanstack/react-table';
-import { useQuery } from '@tanstack/react-query';
 import { useEnrichedIndexers, useIndexers, useNetworkStats } from '@/hooks/useNetworkStats';
 import { useFoghornGrades } from '@/hooks/useFoghorn';
 import { gradeVariant } from '@/lib/foghorn';
