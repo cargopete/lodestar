@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/ingest-delegations",
-      "schedule": "7-59/15 * * * *"
+      "schedule": "8-59/15 * * * *"
     },
     {
       "path": "/api/cron/ingest-allocations",
