@@ -25,18 +25,6 @@ export interface DeployKey {
   last_used_at: string | null;
 }
 
-export interface StudioApiKey {
-  id: number;
-  owner_address: string;
-  label: string | null;
-  key_hash: string;
-  key_prefix: string;
-  status: 'active' | 'revoked';
-  created_at: string;
-  last_used_at: string | null;
-  revoked_at: string | null;
-}
-
 export interface SyncBounty {
   id: number;
   deployment_id: string;
@@ -51,20 +39,6 @@ export interface SyncBounty {
   expires_at: string | null;
   chain_bounty_id: string | null;
   post_tx_hash: string | null;
-}
-
-export interface SubgraphAlert {
-  id: number;
-  owner_address: string;
-  deployment_id: string;
-  label: string | null;
-  webhook_url: string;
-  channel: string; // 'discord' | 'slack' | 'webhook'
-  lag_threshold_blocks: string; // BIGINT comes back as string
-  enabled: boolean;
-  created_at: string;
-  last_alerted_at: string | null;
-  last_status: string | null; // 'ok' | 'lagging' | 'failed' | null
 }
 
 // ---------------------------------------------------------------------------
@@ -205,53 +179,6 @@ export async function findOwnerByKeyHash(keyHash: string): Promise<string | null
 // Metered gateway API keys (RFC-004 Phase A — free-tier only, NO billing)
 // ---------------------------------------------------------------------------
 
-export async function listApiKeys(owner: string): Promise<StudioApiKey[]> {
-  return db!<StudioApiKey[]>`
-    SELECT * FROM studio_api_keys
-    WHERE owner_address = ${owner.toLowerCase()}
-    ORDER BY created_at DESC
-  `;
-}
-
-export async function createApiKey(
-  owner: string,
-  label: string | null,
-  keyHash: string,
-  keyPrefix: string,
-): Promise<StudioApiKey> {
-  const [row] = await db!<StudioApiKey[]>`
-    INSERT INTO studio_api_keys (owner_address, label, key_hash, key_prefix)
-    VALUES (${owner.toLowerCase()}, ${label}, ${keyHash}, ${keyPrefix})
-    RETURNING *
-  `;
-  return row;
-}
-
-export async function revokeApiKey(id: number, owner: string): Promise<void> {
-  await db!`
-    UPDATE studio_api_keys
-    SET status = 'revoked', revoked_at = NOW()
-    WHERE id = ${id} AND owner_address = ${owner.toLowerCase()}
-  `;
-}
-
-/**
- * Look up a key by its hash for proxy auth, bumping last_used_at.
- * Returns the id/owner/status (caller checks status === 'active').
- */
-export async function findApiKeyByHash(
-  keyHash: string,
-): Promise<{ id: number; owner_address: string; status: string } | null> {
-  const rows = await db!<{ id: number; owner_address: string; status: string }[]>`
-    SELECT id, owner_address, status
-    FROM studio_api_keys
-    WHERE key_hash = ${keyHash}
-  `;
-  if (!rows[0]) return null;
-  await db!`UPDATE studio_api_keys SET last_used_at = NOW() WHERE key_hash = ${keyHash}`;
-  return rows[0];
-}
-
 /** Upsert the per-key, per-month meter by +1. */
 export async function incrementKeyUsage(keyId: number, period: string): Promise<void> {
   await db!`
@@ -382,110 +309,5 @@ export async function updateBountyStatus(
 // Subgraph health alerts (Tier 3 — webhook alerting for subgraph devs)
 // ---------------------------------------------------------------------------
 
-export async function listAlerts(owner: string): Promise<SubgraphAlert[]> {
-  return db!<SubgraphAlert[]>`
-    SELECT * FROM subgraph_alerts
-    WHERE owner_address = ${owner.toLowerCase()}
-    ORDER BY created_at DESC
-  `;
-}
-
-/**
- * Insert an alert, or — if the owner already has one for this deployment —
- * edit it in place (re-adding acts as an update). Returns the row.
- */
-export async function createAlert(
-  owner: string,
-  deploymentId: string,
-  label: string | null,
-  webhookUrl: string,
-  channel: string,
-  lagThreshold: number,
-): Promise<SubgraphAlert> {
-  const [row] = await db!<SubgraphAlert[]>`
-    INSERT INTO subgraph_alerts
-      (owner_address, deployment_id, label, webhook_url, channel, lag_threshold_blocks)
-    VALUES (
-      ${owner.toLowerCase()},
-      ${deploymentId},
-      ${label},
-      ${webhookUrl},
-      ${channel},
-      ${lagThreshold}
-    )
-    ON CONFLICT (owner_address, deployment_id)
-    DO UPDATE SET
-      label                = EXCLUDED.label,
-      webhook_url          = EXCLUDED.webhook_url,
-      channel              = EXCLUDED.channel,
-      lag_threshold_blocks = EXCLUDED.lag_threshold_blocks,
-      enabled              = true
-    RETURNING *
-  `;
-  return row;
-}
-
-export async function deleteAlert(id: number, owner: string): Promise<void> {
-  await db!`
-    DELETE FROM subgraph_alerts
-    WHERE id = ${id} AND owner_address = ${owner.toLowerCase()}
-  `;
-}
-
-export async function setAlertEnabled(
-  id: number,
-  owner: string,
-  enabled: boolean,
-): Promise<void> {
-  await db!`
-    UPDATE subgraph_alerts
-    SET enabled = ${enabled}
-    WHERE id = ${id} AND owner_address = ${owner.toLowerCase()}
-  `;
-}
-
-export async function getAlert(id: number, owner: string): Promise<SubgraphAlert | null> {
-  const rows = await db!<SubgraphAlert[]>`
-    SELECT * FROM subgraph_alerts
-    WHERE id = ${id} AND owner_address = ${owner.toLowerCase()}
-  `;
-  return rows[0] ?? null;
-}
-
 /** ALL enabled alerts across every owner — for the cron scan (not owner-scoped). */
-export async function listEnabledAlerts(): Promise<SubgraphAlert[]> {
-  return db!<SubgraphAlert[]>`
-    SELECT * FROM subgraph_alerts
-    WHERE enabled = true
-    ORDER BY id ASC
-  `;
-}
-
-/**
- * Record that we actually fired a webhook: bump last_alerted_at / last_status
- * on the config row AND append a log entry. Used for lagging/failed/recovered.
- */
-export async function recordAlertFire(
-  id: number,
-  status: string,
-  detail: string | null,
-): Promise<void> {
-  await db!`
-    UPDATE subgraph_alerts
-    SET last_alerted_at = NOW(), last_status = ${status}
-    WHERE id = ${id}
-  `;
-  await db!`
-    INSERT INTO subgraph_alert_log (alert_id, status, detail)
-    VALUES (${id}, ${status}, ${detail})
-  `;
-}
-
 /** Update last_status WITHOUT firing — for no-op / unchanged transitions. */
-export async function updateAlertStatus(id: number, status: string): Promise<void> {
-  await db!`
-    UPDATE subgraph_alerts
-    SET last_status = ${status}
-    WHERE id = ${id}
-  `;
-}

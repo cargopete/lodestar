@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { applyPersistence, deadRoundsThreshold, type RoundSummary } from '../servability-persistence';
-import type { GatewayVerdict } from '../gateway-probe';
+import type { GatewayVerdict } from '../servability-persistence';
 
 let t = 1_700_000_000;
 const round = (servingOperators: number, gatewayVerdict: GatewayVerdict | null = 'bad-indexers'): RoundSummary => ({

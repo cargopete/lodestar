@@ -15,8 +15,6 @@ import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import { CONTRACTS } from '@/lib/wallet';
 import { BOUNTY_BOARD_ABI, GRT_ABI, SUBGRAPH_SERVICE_ABI, extractBountyId } from '@/lib/bountyBoard';
 import { SubgraphLifecyclePanel } from '@/components/studio/SubgraphLifecyclePanel';
-import ApiKeysPanel from '@/components/studio/ApiKeysPanel';
-import SubgraphAlertsPanel from '@/components/studio/SubgraphAlertsPanel';
 import type { StudioSubgraph, SyncBounty } from '@/lib/studio/db';
 
 // ---------------------------------------------------------------------------
@@ -1648,16 +1646,6 @@ function SubgraphDetailModal({
                   <DeployKeyPanel />
                 </div>
 
-                {/* Query API keys (RFC-004 Phase A — metered gateway, free-tier) */}
-                <ApiKeysPanel />
-
-                {sg.deployment_id && (
-                  <SubgraphAlertsPanel
-                    deploymentId={sg.deployment_id}
-                    label={displayName || sg.display_name}
-                  />
-                )}
-
                 <SubgraphLifecyclePanel
                   sg={sg}
                   displayName={displayName}
@@ -1855,150 +1843,6 @@ function MySubgraphsTab({ sessionAddress }: { sessionAddress: string }) {
 // ---------------------------------------------------------------------------
 // Bounty query playground
 // ---------------------------------------------------------------------------
-
-const STARTER_QUERY = `{
-  _meta {
-    block { number hash }
-    deployment
-  }
-}`;
-
-function BountyQueryPanel({ bounty }: { bounty: SyncBounty }) {
-  const [tab, setTab] = useState<'playground' | 'gateway'>('playground');
-  const [query, setQuery] = useState(STARTER_QUERY);
-  const [running, setRunning] = useState(false);
-  const [response, setResponse] = useState<string | null>(null);
-  const [responseError, setResponseError] = useState<string | null>(null);
-  const endpointUrl = `https://www.lodestar-dashboard.com/api/bounty-query/${bounty.id}`;
-
-  const run = async () => {
-    setRunning(true);
-    setResponse(null);
-    setResponseError(null);
-    try {
-      const res = await fetch(`/api/bounty-query/${bounty.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setResponseError(data.error ?? `HTTP ${res.status}`);
-      } else if (Array.isArray(data.errors) && data.errors.length > 0) {
-        const msg: string = data.errors[0]?.message ?? 'GraphQL error';
-        if (msg.includes('not found') || msg.includes('not available')) {
-          setResponseError(
-            'Subgraph not available via gateway. The indexer who claimed this bounty may have closed their allocation after syncing. Try querying the indexer directly, or wait for another indexer to pick it up.',
-          );
-        } else {
-          setResponseError(msg);
-        }
-      } else {
-        setResponse(JSON.stringify(data, null, 2));
-      }
-    } catch (e) {
-      setResponseError(String(e));
-    } finally {
-      setRunning(false);
-    }
-  };
-
-  return (
-    <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] overflow-hidden">
-      {/* Tabs */}
-      <div className="flex border-b border-[var(--border)]">
-        {(['playground', 'gateway'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              'px-3 py-2 text-xs font-medium capitalize transition-colors',
-              tab === t
-                ? 'text-[var(--accent-text)] border-b-2 border-[var(--accent)] -mb-px'
-                : 'text-[var(--text-muted)] hover:text-[var(--text)]',
-            )}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      <div className="p-3 space-y-2">
-        {tab === 'playground' && (
-          <>
-            {/* Endpoint */}
-            <div className="flex items-center gap-2">
-              <code className="flex-1 text-[10px] font-mono text-[var(--text-faint)] truncate">{endpointUrl}</code>
-              <CopyButton text={endpointUrl} />
-            </div>
-            {/* Query textarea */}
-            <textarea
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              rows={5}
-              spellCheck={false}
-              className={cn(
-                'w-full px-3 py-2 text-xs font-mono rounded-[var(--radius-button)] resize-y',
-                'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text)]',
-                'placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]',
-              )}
-            />
-            <button
-              onClick={run}
-              disabled={running || !query.trim()}
-              className="px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] bg-[var(--accent)] text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
-            >
-              {running ? 'Running…' : 'Run →'}
-            </button>
-            {responseError && (
-              <div className="p-2 rounded-[var(--radius-button)] bg-[var(--red-dim)] text-[var(--red-text)] text-xs font-mono">
-                {responseError}
-              </div>
-            )}
-            {response && (
-              <pre className="p-2 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] text-[10px] font-mono text-[var(--text-muted)] overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
-                {response}
-              </pre>
-            )}
-          </>
-        )}
-
-        {tab === 'gateway' && (
-          <div className="space-y-3 text-xs text-[var(--text-muted)]">
-            <p>
-              If this subgraph has been published to The Graph Network, you can query it via the decentralised gateway
-              using your own API key:
-            </p>
-            <div className="p-2 rounded-[var(--radius-button)] bg-[var(--bg-elevated)] font-mono text-[10px] text-[var(--text-faint)] break-all">
-              {`https://gateway-arbitrum.network.thegraph.com/api/<YOUR_API_KEY>/subgraphs/id/<SUBGRAPH_NFT_ID>`}
-            </div>
-            <p className="text-[var(--text-faint)]">
-              The <strong className="text-[var(--text-muted)]">subgraph NFT ID</strong> is assigned when you call{' '}
-              <code>GNS.publishNewSubgraph</code>. If you published via the Dock above, it appears in your subgraph
-              details.
-            </p>
-            <div className="flex gap-3 flex-wrap">
-              <Link
-                href={`/subgraphs/${bounty.deployment_id}`}
-                className="text-[var(--accent-text)] hover:underline"
-              >
-                Check indexing status →
-              </Link>
-              <a
-                href="https://thegraph.com/studio"
-                target="_blank"
-                rel="noreferrer"
-                className="text-[var(--accent-text)] hover:underline"
-              >
-                Get API key at The Graph Studio →
-              </a>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Bounty board tab
@@ -2316,7 +2160,6 @@ function BountyBoardTab({ sessionAddress }: { sessionAddress: string }) {
                       ) : null}
                     </div>
                   </div>
-                  {isClaimed && queryOpen && <BountyQueryPanel bounty={b} />}
                 </div>
               );
             })}
