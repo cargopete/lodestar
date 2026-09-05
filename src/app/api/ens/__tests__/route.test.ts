@@ -1,5 +1,6 @@
 /**
- * GET /api/ens — the access guard and the catch-all must 503, not 200 { ensName: null }.
+ * GET /api/ens — the primary name over a mainnet RPC (nuthatch#1160), and the catch-all must 503,
+ * not 200 { ensName: null }.
  *
  * "We could not look this up" and "this address has no ENS name" are different answers, and a
  * successful null makes them the same one (#36, following #28 next door). `useENSName` already
@@ -9,11 +10,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const ensQuery = vi.fn();
+const resolveEnsName = vi.fn();
+vi.mock('@/lib/ens', () => ({
+  resolveEnsName: (...a: unknown[]) => resolveEnsName(...a),
+}));
 const hasSubgraphAccess = vi.fn(() => true);
 vi.mock('@/lib/subgraph', () => ({
-  ensQuery: (...a: unknown[]) => ensQuery(...a),
   hasSubgraphAccess: () => hasSubgraphAccess(),
+  ensQuery: vi.fn(),
 }));
 vi.mock('@/lib/cache', () => ({
   cached: (_k: string, _t: number, f: () => Promise<unknown>) => f(),
@@ -42,42 +46,32 @@ describe('/api/ens', () => {
     expect((await res.json()).error).toMatch(/address required/i);
   });
 
-  it('503s when there is no gateway key, without querying', async () => {
+  it('never consults the gateway key: the name comes from a mainnet RPC (nuthatch#1160)', async () => {
     hasSubgraphAccess.mockReturnValue(false);
+    resolveEnsName.mockResolvedValue('pete.eth');
     const res = await call(ADDR);
-
-    expect(res.status).toBe(503);
-    const json = await res.json();
-    expect(json.error).toMatch(/No API key/i);
-    expect(json.ensName).toBeUndefined();
-    expect(ensQuery).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ensName: 'pete.eth' });
+    expect(hasSubgraphAccess).not.toHaveBeenCalled();
   });
 
   it('503s when the lookup itself fails', async () => {
-    ensQuery.mockRejectedValue(new Error('gateway down'));
+    resolveEnsName.mockRejectedValue(new Error('rpc down'));
     const res = await call(ADDR);
     expect(res.status).toBe(503);
     expect((await res.json()).error).toMatch(/lookup failed/i);
   });
 
-  it('returns the name when one resolves', async () => {
-    ensQuery.mockResolvedValue({ domains: [{ name: 'vitalik.eth' }] });
+  it('returns the primary name when one is set', async () => {
+    resolveEnsName.mockResolvedValue('vitalik.eth');
     const res = await call(ADDR);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ensName: 'vitalik.eth' });
   });
 
-  it('prefers the shortest name, so a primary beats its subdomains', async () => {
-    ensQuery.mockResolvedValue({
-      domains: [{ name: 'wallet.pete.eth' }, { name: 'pete.eth' }, { name: 'a.b.pete.eth' }],
-    });
-    const res = await call(ADDR);
-    expect((await res.json()).ensName).toBe('pete.eth');
-  });
-
   it('reports a genuine absence as a successful null', async () => {
-    // The case the 503s above exist to stay distinguishable from.
-    ensQuery.mockResolvedValue({ domains: [] });
+    // The case the 503 above exists to stay distinguishable from.
+    resolveEnsName.mockResolvedValue(null);
     const res = await call(ADDR);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ensName: null });
@@ -87,12 +81,12 @@ describe('/api/ens', () => {
     const res = await call('not-an-address');
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ensName: null });
-    expect(ensQuery).not.toHaveBeenCalled();
+    expect(resolveEnsName).not.toHaveBeenCalled();
   });
 
-  it('lower-cases the address before querying', async () => {
-    ensQuery.mockResolvedValue({ domains: [] });
+  it('lower-cases the address before resolving', async () => {
+    resolveEnsName.mockResolvedValue(null);
     await call('0xABCDEF7890ABCDEF1234567890ABCDEF12345678');
-    expect(ensQuery.mock.calls[0][0]).toContain('0xabcdef7890abcdef1234567890abcdef12345678');
+    expect(resolveEnsName.mock.calls[0][0]).toBe('0xabcdef7890abcdef1234567890abcdef12345678');
   });
 });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { resolveEnsName } from '@/lib/ens';
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get('address')?.toLowerCase();
@@ -11,23 +11,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ensName: null });
   }
 
-  // Not "this address has no ENS name" — we could not look. `ensName: null` at 200 is
-  // indistinguishable from a genuine absence, which is the fault #28 fixed next door (#36).
-  // useENSName already falls back to null on a non-OK response, so nothing on screen changes.
-  if (!hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
-  }
-
   try {
     const data = await cached(`ens:${address}`, 86400, async () => {
-      const result = await ensQuery<{ domains: Array<{ name: string }> }>(`{
-        domains(first: 5, where: { resolvedAddress: "${address}", name_not: null }) {
-          name
-        }
-      }`);
-      // Prefer shortest .eth name (primary over subdomains)
-      const names = result.domains.map((d) => d.name).sort((a, b) => a.length - b.length);
-      return { ensName: names[0] ?? null };
+      // The primary (reverse) name over a mainnet RPC; no Graph key involved (nuthatch#1160).
+      return { ensName: await resolveEnsName(address) };
     });
 
     return NextResponse.json(data, {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { db, hasDbAccess } from '@/lib/db';
-import { subgraphQuery, ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { resolveEnsNames } from '@/lib/ens';
 import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
 import { indexerDetailSql, type NestIndexerDetailRow } from '@/lib/nest-queries';
 
@@ -145,20 +146,11 @@ export async function GET(
       const delegators = Array.from(
         new Set(events.map((e) => e.delegator).filter((d): d is string => !!d)),
       );
-      if (delegators.length > 0 && hasSubgraphAccess()) {
+      // Names over a mainnet RPC, never the gateway (nuthatch#1160); a failed lookup leaves the
+      // address as it was, which is the same non-critical degradation as before.
+      if (delegators.length > 0) {
         try {
-          const idList = delegators.map((d) => `"${d}"`).join(', ');
-          const ensResult = await ensQuery<{ domains: Array<{ name: string; resolvedAddress: { id: string } }> }>(`{
-            domains(first: 1000, where: { resolvedAddress_in: [${idList}], name_not: null }) {
-              name
-              resolvedAddress { id }
-            }
-          }`);
-          const names: Record<string, string> = {};
-          for (const dom of ensResult.domains) {
-            const a = dom.resolvedAddress.id.toLowerCase();
-            if (!names[a] || dom.name.length < names[a].length) names[a] = dom.name;
-          }
+          const names = await resolveEnsNames(delegators);
           for (const e of events) {
             if (e.delegator && names[e.delegator]) e.delegatorName = names[e.delegator];
           }
