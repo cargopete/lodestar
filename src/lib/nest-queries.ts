@@ -488,7 +488,9 @@ export function indexerStakeHistorySql(addr: string, cutoffs: number[]): string 
   return (
     `SELECT c.cutoff, ` +
     `CAST(COALESCE((SELECT SUM(stake_delta) FROM lodestar_indexer_ledger l WHERE l.indexer = '${addr}' AND l.ts <= c.cutoff), 0) AS VARCHAR) AS staked_tokens, ` +
-    `CAST(COALESCE((SELECT SUM(pool_delta) FROM lodestar_indexer_ledger l WHERE l.indexer = '${addr}' AND l.ts <= c.cutoff), 0) AS VARCHAR) AS delegated_tokens ` +
+    // pool plus thawing: the subgraph's per-indexer `delegatedTokens` includes tokens still thawing, and
+    // the ledger keeps them in `thawing_delta` beside `pool_delta` (graph-allocations-nest#19)
+    `CAST(COALESCE((SELECT SUM(pool_delta) + SUM(thawing_delta) FROM lodestar_indexer_ledger l WHERE l.indexer = '${addr}' AND l.ts <= c.cutoff), 0) AS VARCHAR) AS delegated_tokens ` +
     `FROM (VALUES ${values}) AS c(cutoff) ORDER BY c.cutoff`
   );
 }
