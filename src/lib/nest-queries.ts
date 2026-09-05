@@ -332,7 +332,7 @@ export function indexerOperatorsSql(addr: string): string {
 export function indexerDelegatorsSql(addr: string, first: number): string {
   return (
     `SELECT id, delegator, CAST(staked_tokens AS VARCHAR) AS staked_tokens, CAST(share_amount AS VARCHAR) AS share_amount ` +
-    `FROM lodestar_delegator_stakes s WHERE s.indexer = '${addr}' AND s.active ORDER BY s.share_amount DESC, s.delegator ASC LIMIT ${first}`
+    `FROM lodestar_delegator_stakes s WHERE s.indexer = '${addr}' AND s.active ORDER BY s.staked_tokens DESC, s.delegator ASC LIMIT ${first}`
   );
 }
 /**
