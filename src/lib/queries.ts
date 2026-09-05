@@ -423,8 +423,9 @@ export interface GraphNetwork {
   delegationRatio: number;
   protocolFeePercentage: number;
   delegationTaxPercentage: number;
-  maxAllocationEpochs: number;
-  thawingPeriod: number;
+  /** Legacy parameters with no Horizon equivalent: null on the nest path, a frozen value on the gateway path. */
+  maxAllocationEpochs: number | null;
+  thawingPeriod: number | null;
   totalSupply?: string;
   networkGRTIssuancePerBlock?: string;
   // Optional fields for display compatibility
