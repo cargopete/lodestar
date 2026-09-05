@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { log } from '@/lib/logger';
+import { hasNuthatch, nuthatchEnabled } from '@/lib/nuthatch';
+import { searchDeploymentsByHashPrefix, searchDeploymentsByManifestAddress, searchSubgraphsByName } from '@/lib/subgraph-metadata';
 
 interface SubgraphResult {
   id: string;
@@ -16,10 +18,6 @@ interface SubgraphResult {
 }
 
 export async function GET(request: NextRequest) {
-  if (!hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
-  }
-
   const q = request.nextUrl.searchParams.get('q')?.trim();
   if (!q || q.length < 2) {
     return NextResponse.json({ data: [] });
@@ -33,6 +31,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: [] });
   }
   const safe = q;
+
+  // Behind NUTHATCH_SUBGRAPHS (nuthatch#1160, group B): the three searches without the gateway. A
+  // hash prefix is matched against every deployment with signal or stake; a name against the IPFS
+  // metadata documents cached in Postgres, resolved to live subgraphs through graph-gns-nest; an
+  // address against the cached manifests. The cache is what `api/cron/warm-ipfs` fills.
+  if (nuthatchEnabled('NUTHATCH_SUBGRAPHS') && hasNuthatch()) {
+    try {
+      const data = await cached(`lodestar:subgraph-search:${safe.toLowerCase()}:nuthatch:v1`, 300, async () => {
+        if (/^0x[a-fA-F0-9]{40}$/.test(safe)) return searchDeploymentsByManifestAddress(safe, 20);
+        if (safe.startsWith('Qm') && safe.length >= 8) return searchDeploymentsByHashPrefix(safe, 10);
+        return searchSubgraphsByName(safe, 10);
+      });
+      return NextResponse.json({ data, source: 'nuthatch' }, {
+        headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+      });
+    } catch (error) {
+      log.api.error({ err: error }, 'Subgraph search from the nest failed');
+      return NextResponse.json({ error: 'Search failed' }, { status: 503 });
+    }
+  }
+  if (!hasSubgraphAccess()) {
+    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
+  }
 
   try {
     const isHash = safe.startsWith('Qm') && safe.length >= 8;
