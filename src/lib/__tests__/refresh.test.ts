@@ -21,6 +21,8 @@ vi.mock('../subgraph', () => ({
   ensQuery: (...args: unknown[]) => mockEnsQuery(...args),
 }));
 
+const resolveEnsNames = vi.fn<(addrs: string[]) => Promise<Record<string, string>>>(async () => ({}));
+vi.mock('../ens', () => ({ resolveEnsNames: (addrs: string[]) => resolveEnsNames(addrs) }));
 vi.mock('../cache', () => ({
   cacheSet: (...args: unknown[]) => mockCacheSet(...args),
 }));

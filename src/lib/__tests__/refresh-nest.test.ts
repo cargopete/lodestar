@@ -25,6 +25,8 @@ vi.mock('../nuthatch', () => ({
   nuthatchEnabled: (flag: string) => nuthatchConfigured && process.env[flag] === 'true',
   nuthatchSql: (...a: unknown[]) => mockNuthatchSql(...a),
 }));
+const resolveEnsNames = vi.fn<(addrs: string[]) => Promise<Record<string, string>>>(async () => ({}));
+vi.mock('../ens', () => ({ resolveEnsNames: (addrs: string[]) => resolveEnsNames(addrs) }));
 vi.mock('../cache', () => ({ cacheSet: vi.fn(async () => undefined), cached: vi.fn((_k: string, _t: number, f: () => Promise<unknown>) => f()) }));
 vi.mock('../reo-contract', () => ({ batchCheckEligibility: vi.fn(async () => new Map()) }));
 vi.mock('../ingest/indexers', () => ({ writeIndexers: vi.fn(async () => ({ upserted: 0, snapshots: 0, paramChanges: 0 })) }));
