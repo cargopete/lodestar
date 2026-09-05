@@ -109,7 +109,7 @@ describe('api/indexers from the nest', () => {
     await GET(req('?first=50&skip=100&orderBy=delegatedTokens&orderDirection=asc'));
     const sql = nuthatchSqlReady.mock.calls[0][0] as string;
     expect(sql).toContain('FROM lodestar_indexers');
-    expect(sql).toContain('ORDER BY delegated_tokens ASC');
+    expect(sql).toContain('ORDER BY i.delegated_tokens ASC');
     expect(sql).toContain('LIMIT 50 OFFSET 100');
     expect(sql).toContain("id <> '0xb43b2cccceada5292732a8c58ae134adefce09bb'");
     expect(nuthatchSqlReady.mock.calls[0][1]).toBe('/alloc');
@@ -118,7 +118,7 @@ describe('api/indexers from the nest', () => {
     nuthatchSqlReady.mockClear();
     await GET(req("?orderBy=id;DROP&orderDirection=up"));
     const sql2 = nuthatchSqlReady.mock.calls[0][0] as string;
-    expect(sql2).toContain('ORDER BY staked_tokens DESC');
+    expect(sql2).toContain('ORDER BY i.staked_tokens DESC');
     expect(sql2).not.toContain('DROP');
   });
 
