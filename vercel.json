@@ -45,10 +45,6 @@
       "schedule": "*/10 * * * *"
     },
     {
-      "path": "/api/cron/check-subgraph-health",
-      "schedule": "*/15 * * * *"
-    },
-    {
       "path": "/api/cron/dispatch-notifications",
       "schedule": "*/10 * * * *"
     },
