@@ -447,3 +447,20 @@ export interface NestCuratorSignalRow {
   id: string; subgraph_deployment: string; signalled_tokens: string; unsignalled_tokens: string; signal: string; last_signal_change: number | null;
   realized_rewards: string; deployment_signalled_tokens: string; deployment_query_fees_amount: string; deployment_staked_tokens: string;
 }
+
+/**
+ * `api/indexer-stake-history` (nuthatch#1160): own stake and delegation pool as of each of a list of
+ * Unix times, summed from `lodestar_indexer_ledger`. The gateway path asked the subgraph for 27
+ * block-pinned snapshots; here the ledger is summed up to each cutoff in one query. `cutoffs` are
+ * integers the caller computed; `addr` is a validated address.
+ */
+export function indexerStakeHistorySql(addr: string, cutoffs: number[]): string {
+  const values = cutoffs.map((c) => `(${Math.floor(c)})`).join(', ');
+  return (
+    `SELECT c.cutoff, ` +
+    `CAST(COALESCE((SELECT SUM(stake_delta) FROM lodestar_indexer_ledger l WHERE l.indexer = '${addr}' AND l.ts <= c.cutoff), 0) AS VARCHAR) AS staked_tokens, ` +
+    `CAST(COALESCE((SELECT SUM(pool_delta) FROM lodestar_indexer_ledger l WHERE l.indexer = '${addr}' AND l.ts <= c.cutoff), 0) AS VARCHAR) AS delegated_tokens ` +
+    `FROM (VALUES ${values}) AS c(cutoff) ORDER BY c.cutoff`
+  );
+}
+export interface NestStakeHistoryRow { cutoff: number | string; staked_tokens: string; delegated_tokens: string }
