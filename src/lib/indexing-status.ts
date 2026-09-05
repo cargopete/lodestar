@@ -12,7 +12,7 @@ import { isSafeUrlResolved } from './ssrf';
 import { signTapReceipt, hasTapSigner } from './tap';
 import type { ServabilityVerdict } from './servability';
 import type { RenderedServability } from './servability-persistence';
-import type { GatewayVerdict } from './gateway-probe';
+import type { GatewayVerdict } from './servability-persistence';
 
 // ---------------------------------------------------------------------------
 // Types

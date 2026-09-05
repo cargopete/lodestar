@@ -39,12 +39,6 @@ vi.mock('@/lib/indexing-status', () => ({
     return { ...r, serveProbe: verdict, ...(typeof probe === 'string' ? {} : { serveProbeDetail: probe }), servable: verdict === 'serving' || verdict === 'alive_paid' };
   },
 }));
-let gatewayVerdict: string | null = 'bad-indexers';
-const probeGateway = vi.fn(async (hash: string, probedAt: string) => ({ hash, verdict: gatewayVerdict, servedBlock: gatewayVerdict === 'served' ? 123 : null, badIndexers: [], message: null, probedAt }));
-vi.mock('@/lib/gateway-probe', () => ({
-  hasGatewayAccess: () => gatewayVerdict !== null,
-  probeGateway: (...a: unknown[]) => probeGateway(...(a as [string, string])),
-}));
 // An in-memory round store with the real module's contract: newest `limit` rows, oldest first.
 const rows: Array<{ deploymentHash: string; probedAt: string; servingOperators: number; servingIndexers: number; gatewayVerdict: string | null; probes?: unknown[] }> = [];
 let dbUp = true;
@@ -62,9 +56,8 @@ vi.mock('@/lib/logger', () => ({ log: { api: { info: vi.fn(), warn: (...a: unkno
 
 import { GET } from '../[hash]/route';
 
-async function round(probe: 'broken' | 'alive_paid' | 'serving', gateway: string | null = 'bad-indexers') {
+async function round(probe: 'broken' | 'alive_paid' | 'serving') {
   probeServing.mockResolvedValueOnce(probe);
-  gatewayVerdict = gateway;
   const res = await GET(new NextRequest('http://localhost/api/indexing-status/0xdeployment'), { params: Promise.resolve({ hash: '0xdeployment' }) });
   expect(res.status).toBe(200);
   const { data } = await res.json();
@@ -92,9 +85,9 @@ describe('indexing-status route applies D5 persistence', () => {
   });
 
   it('14. three refused rounds with the gateway agreeing: round three is the first rendered dead', async () => {
-    const r1 = await round('broken', 'bad-indexers');
-    const r2 = await round('broken', 'bad-indexers');
-    const r3 = await round('broken', 'bad-indexers');
+    const r1 = await round('broken');
+    const r2 = await round('broken');
+    const r3 = await round('broken');
     expect([r1, r2].map((r) => r.servabilityRendered.state)).toEqual(['rechecking', 'rechecking']);
     expect(r3.servabilityRendered).toMatchObject({ state: 'dead', effectivelyDead: true, deadStreak: 3 });
   });
@@ -106,18 +99,17 @@ describe('indexing-status route applies D5 persistence', () => {
     const ts = rows.map((r) => Date.parse(r.probedAt));
     expect(ts[0] <= ts[1] && ts[1] <= ts[2]).toBe(true);
     expect(rows.map((r) => r.servingOperators)).toEqual([0, 1, 0]);
-    expect(rows.map((r) => r.gatewayVerdict)).toEqual(['bad-indexers', 'bad-indexers', 'bad-indexers']);
+    expect(rows.map((r) => r.gatewayVerdict)).toEqual([null, null, null]);
   });
 
-  it('8. a same-round gateway serve makes dead unreachable, renders conflicting, and warns', async () => {
-    await round('broken', 'bad-indexers');
-    await round('broken', 'bad-indexers');
-    const r3 = await round('broken', 'served');
-    expect(r3.servabilityRendered).toMatchObject({ state: 'conflicting', effectivelyDead: false, deadStreak: 0 });
-    expect(r3.gatewayVerdict).toBe('served');
-    expect(warn).toHaveBeenCalledWith(expect.objectContaining({ ipfsHash: '0xdeployment', servedBlock: 123 }), expect.stringMatching(/servability conflict/));
-    // and it reset the streak: one more dead round is rechecking, not dead
-    const r4 = await round('broken', 'bad-indexers');
+  it('8. a persisted gateway-served round still resets the streak, though no new round records one', async () => {
+    // The gateway is no longer probed (nuthatch#1160); rounds recorded while it was keep their verdict
+    // and the persistence rule still reads a served round as the stronger witness.
+    await round('broken');
+    await round('broken');
+    rows.push({ deploymentHash: '0xdeployment', probedAt: new Date().toISOString(), servingOperators: 0, servingIndexers: 0, gatewayVerdict: 'served' });
+    const r4 = await round('broken');
+    expect(r4.gatewayVerdict).toBeNull();
     expect(r4.servabilityRendered).toMatchObject({ state: 'rechecking', deadStreak: 1 });
   });
 
@@ -135,23 +127,18 @@ describe('indexing-status route applies D5 persistence', () => {
     expect(rows).toHaveLength(0);
   });
 
-  it('decides on persistence alone when no gateway key allows a gateway witness', async () => {
-    await round('broken', null); await round('broken', null);
-    const r3 = await round('broken', null);
-    expect(probeGateway).not.toHaveBeenCalled();
+  it('decides on persistence alone: three dead rounds are dead, and no gateway is asked', async () => {
+    await round('broken'); await round('broken');
+    const r3 = await round('broken');
     expect(r3.gatewayVerdict).toBeNull();
     expect(r3.servabilityRendered.state).toBe('dead');
   });
 
-  it('lodestar#62: the record and the conflict log carry what each probe saw, not just the count', async () => {
-    const r = await round('broken', 'served');
-    expect(r.servabilityRendered.state).toBe('conflicting');
+  it('lodestar#62: the record carries what each probe saw, not just the count', async () => {
+    await round('broken');
     expect(rows).toHaveLength(1);
     expect(rows[0].probes).toEqual([
       expect.objectContaining({ indexerId: '0xonlyindexer', url: 'https://indexer.example', probe: 'broken', cause: 'transport', error: 'timeout', attempts: 2 }),
     ]);
-    const conflict = warn.mock.calls.find(([, msg]) => typeof msg === 'string' && msg.startsWith('servability conflict'));
-    expect(conflict).toBeDefined();
-    expect((conflict![0] as { probes: unknown[] }).probes).toEqual(rows[0].probes);
   });
 });

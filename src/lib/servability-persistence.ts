@@ -15,7 +15,19 @@
 //
 // No IO. The store that feeds `history` lives in `servability-rounds.ts`; the route glues them.
 
-import type { GatewayVerdict } from './gateway-probe';
+/**
+ * What the gateway said in a round. Persisted rounds carry it, so the type outlives the probe that
+ * produced it: the gateway is no longer asked (nuthatch#1160), and new rounds record null.
+ */
+export type GatewayVerdict =
+  | 'served' // gateway returned attested data
+  | 'bad-indexers' // every tried indexer was rejected
+  | 'no-indexers' // no indexers available to try
+  | 'not-found' // deployment/subgraph unknown to the gateway
+  | 'error'; // some other gateway error
+
+/** Normalised reason bucket, for colour + copy. */
+export type BadIndexerCategory = 'stale' | 'errored' | 'unavailable' | 'timeout' | 'other';
 
 /** One probe round, as persisted. `gatewayVerdict` is null when no gateway probe ran. */
 export interface RoundSummary {
