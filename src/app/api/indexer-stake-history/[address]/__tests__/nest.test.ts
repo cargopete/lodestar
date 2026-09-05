@@ -70,6 +70,8 @@ describe('api/indexer-stake-history from the nest', () => {
     expect(Math.round((d1 - d0) / 86400000)).toBe(7);
     const sql = nuthatchSqlReady.mock.calls[0][0] as string;
     expect(sql).toContain('FROM lodestar_indexer_ledger');
+    // the delegated series is pool plus thawing, the subgraph's per-indexer figure
+    expect(sql).toContain('SUM(pool_delta) + SUM(thawing_delta)');
     expect(sql).toContain(`l.indexer = '${ADDR}'`);
     expect((sql.match(/\(\d{9,}\)/g) ?? []).length).toBe(27);
     expect(nuthatchSqlReady.mock.calls[0][1]).toBe('/alloc');
