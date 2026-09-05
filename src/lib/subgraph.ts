@@ -125,38 +125,6 @@ export async function dispatchRegistryQuery<T = Record<string, unknown>>(query: 
   return json.data as T;
 }
 
-// Gateway QoS Oracle subgraph (indexer quality of service timeseries).
-// Ellipfra's fork of the E&N/GraphOps oracle: adds the missing oracle sender + optimisations,
-// and (unlike the original, which stalled ~2026-07-02) stays current. Data starts 2026-07-01.
-// Schema is a strict superset of the original, so queries are unchanged.
-// https://thegraph.com/explorer/subgraphs/CnfJ5tC5cfAmt2tUyUaM6vPrtmNYasavkDDn793FkbN3
-const QOS_ORACLE_URL = process.env.GRAPH_API_KEY
-  ? `https://gateway-arbitrum.network.thegraph.com/api/${process.env.GRAPH_API_KEY}/subgraphs/id/CnfJ5tC5cfAmt2tUyUaM6vPrtmNYasavkDDn793FkbN3`
-  : null;
-
-export async function qosOracleQuery<T = Record<string, unknown>>(query: string): Promise<T> {
-  if (!QOS_ORACLE_URL) {
-    throw new Error('GRAPH_API_KEY not configured');
-  }
-
-  const res = await fetch(QOS_ORACLE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`QoS oracle subgraph request failed: ${res.status}`);
-  }
-
-  const json = await res.json();
-  if (json.errors) {
-    throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
-  }
-
-  return json.data as T;
-}
-
 export async function delegationEventsQuery<T = Record<string, unknown>>(query: string): Promise<T> {
   if (!DELEGATION_EVENTS_URL) {
     throw new Error('GRAPH_API_KEY not configured');

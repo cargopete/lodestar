@@ -14,11 +14,9 @@ import {
   type RowSelectionState,
   type FilterFn,
 } from '@tanstack/react-table';
-import { useQuery } from '@tanstack/react-query';
 import { useEnrichedIndexers, useIndexers, useNetworkStats } from '@/hooks/useNetworkStats';
 import { useFoghornGrades } from '@/hooks/useFoghorn';
 import { gradeVariant } from '@/lib/foghorn';
-import { qosGrade } from '@/lib/qos-score';
 import {
   weiToGRT,
   formatGRT,
@@ -70,7 +68,6 @@ interface IndexerRow {
   rollingAPY90d: number | null;
   score: number | null;
   scoreGrade: 'A' | 'B' | 'C' | 'D' | 'F' | null;
-  qScore: number | null;
   foghornGrade: string | null;
   foghornFlags: { verdicts: number; needsAttention: boolean; sybil: boolean } | null;
   raw: Indexer;
@@ -240,22 +237,6 @@ export function IndexerTable() {
   const { data: foghornMap } = useFoghornGrades();
   const delegationRatio = networkData?.graphNetwork?.delegationRatio ?? 16;
 
-  // QoS quality scores (address → Q-score), from the network-health leaderboard.
-  const { data: qosResp } = useQuery<Record<string, number>>({
-    queryKey: ['qosScoreMap'],
-    queryFn: async () => {
-      const r = await fetch('/api/network-health');
-      if (!r.ok) return {};
-      const j = await r.json();
-      const m: Record<string, number> = {};
-      for (const it of j?.data?.indexers ?? []) {
-        if (it.q_score != null && it.address) m[String(it.address).toLowerCase()] = it.q_score;
-      }
-      return m;
-    },
-    staleTime: 30 * 60 * 1000,
-  });
-
   const hasEnriched = !!enrichedData?.indexers?.length;
   const isLoading = hasEnriched ? false : (enrichedLoading || indexersLoading);
 
@@ -295,7 +276,6 @@ export function IndexerTable() {
           rollingAPY90d: e.rollingAPY90d ?? null,
           score: e.score ?? null,
           scoreGrade: e.scoreGrade ?? null,
-          qScore: (qosResp ?? {})[e.id.toLowerCase()] ?? null,
           foghornGrade: foghornMap?.get(e.id.toLowerCase())?.grade ?? null,
           foghornFlags: foghornFlagsFor(foghornMap, e.id),
           // Reconstruct raw Indexer shape for comparison panel
@@ -362,14 +342,13 @@ export function IndexerTable() {
           rollingAPY90d: null,
           score: null,
           scoreGrade: null,
-          qScore: (qosResp ?? {})[indexer.id.toLowerCase()] ?? null,
           foghornGrade: foghornMap?.get(indexer.id.toLowerCase())?.grade ?? null,
           foghornFlags: foghornFlagsFor(foghornMap, indexer.id),
           raw: indexer,
         };
       })
       .filter((row) => row.selfStake >= minStake);
-  }, [enrichedData, hasEnriched, indexersData, delegationRatio, minStake, qosResp, foghornMap]);
+  }, [enrichedData, hasEnriched, indexersData, delegationRatio, minStake, foghornMap]);
 
   const columns = useMemo(
     () => [
@@ -484,22 +463,6 @@ export function IndexerTable() {
               {row.scoreGrade && (
                 <span className="ml-1 text-[11px] font-medium opacity-70">{row.scoreGrade}</span>
               )}
-            </span>
-          );
-        },
-        sortUndefined: 'last',
-      }),
-      columnHelper.accessor('qScore', {
-        header: () => <HeaderTip label="QoS" tip="Selection-bias-aware service-quality score (0–100): Wilson-reliability × latency × freshness, normalised per-deployment. Measures actual served quality, not raw volume. See Indexer QoS." />,
-        cell: (info) => {
-          const q = info.getValue();
-          if (q === null) return <span className="text-[var(--text-faint)]">—</span>;
-          const g = qosGrade(q);
-          const color = q >= 75 ? 'var(--green)' : q >= 45 ? 'var(--amber)' : 'var(--red-text)';
-          return (
-            <span className="font-mono font-semibold" style={{ color }}>
-              {q.toFixed(0)}
-              <span className="ml-1 text-[11px] font-medium opacity-70">{g.grade}</span>
             </span>
           );
         },

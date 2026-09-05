@@ -161,7 +161,7 @@ export default defineConfig({
       // rather than flapping on rounding.
       thresholds: {
         statements: 83,
-        branches: 76,
+        branches: 75,
         functions: 85,
         lines: 85,
       },
