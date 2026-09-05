@@ -1,7 +1,7 @@
 /**
  * `ingestEpochs` from `lodestar_epochs` (nightswatchhq/nuthatch#1160). Pinned here: the flag off
  * leaves the gateway path untouched; on the nest path the gateway is never queried; the rows land in
- * the same `epochs` upsert with the same GRT conversion, gross fees rebuilt from the view's three
+ * the same `epochs` upsert with the same GRT conversion, the subgraph's fee figure rebuilt from the view's
  * parts and rebates stated as 0; the cursor is the epoch id and the newest epoch is re-read so an
  * open epoch's moving sums are refreshed; and the ingestion state is advanced.
  */
@@ -95,7 +95,7 @@ describe('ingestEpochs from the nest', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       id: 7, start_block: 7000, end_block: 7999,
-      total_query_fees: 96, // 90 + 5 + 1 GRT
+      total_query_fees: 95, // 90 + 5 GRT: gross less the 1% protocol cut, the subgraph's figure; the cut is kept beside it
       query_fees_collected: 90, curator_query_fees: 5, taxed_query_fees: 1,
       query_fee_rebates: 0, total_rewards: 500, stake_deposited: 1000,
     });

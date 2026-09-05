@@ -301,7 +301,9 @@ export interface NestEpochRow {
 }
 /** Gross query fees, the subgraph's `totalQueryFees`: the view's collected figure is net of curators and the protocol cut. */
 export function epochTotalQueryFees(r: NestEpochRow): string {
-  return (BigInt(r.query_fees_collected) + BigInt(r.curator_query_fees) + BigInt(r.taxed_query_fees)).toString();
+  // the subgraph's `Epoch.totalQueryFees` is gross less the 1% protocol cut: the indexers' net plus the
+  // curators' share, and not the cut. Adding the cut back read 0.9% high on every epoch (nuthatch#1160).
+  return (BigInt(r.query_fees_collected) + BigInt(r.curator_query_fees)).toString();
 }
 
 /** `api/indexer/[address]`: the indexer's own row (nuthatch#1160). `addr` is a validated lower-case address. */
