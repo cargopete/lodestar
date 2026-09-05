@@ -9,44 +9,10 @@ import {
   type NestIndexerDetailRow, type NestDelegatorRow, type NestActiveAllocationRow, type NestClosedAllocationRow,
 } from '@/lib/nest-queries';
 import { bytes32ToIpfsHash } from '@/lib/studio/ipfs';
+import { derivedIndexerMetrics } from '@/lib/nest-indexers';
+export { derivedIndexerMetrics };
 
 const INDEXERS_BASE_PATH = process.env.NUTHATCH_INDEXERS_BASE_PATH || '/alloc';
-
-/**
- * The subgraph's derived indexer metrics, ported from its `helpers.ts` (`calculateOwnStakeRatio`,
- * `calculateDelegatedStakeRatio`, `calculateIndexingRewardEffectiveCut`,
- * `calculateOverdelegationDilution`, `calculateIndexerRewardOwnGenerationRatio`) so the page's
- * numbers mean what they meant, and `tokenCapacity`, which the contracts define as own stake plus
- * delegation up to the ratio. Ratios as decimal strings like the subgraph's BigDecimals.
- */
-export function derivedIndexerMetrics(r: NestIndexerDetailRow, delegationRatio: number) {
-  const staked = Number(r.staked_tokens) / 1e18;
-  const locked = Number(r.locked_tokens) / 1e18;
-  const delegated = Number(r.delegated_tokens) / 1e18;
-  const usableOwn = staked - locked;
-  const maxUsable = usableOwn + usableOwn * delegationRatio;
-  const totalUsable = Math.min(maxUsable, usableOwn + delegated);
-  const ownStakeRatio = totalUsable === 0 ? 0 : usableOwn / totalUsable;
-  const delegatedStakeRatio = ownStakeRatio === 0 ? 0 : 1 - ownStakeRatio;
-  const cut = Number(r.indexing_reward_cut ?? 0);
-  const delegatorCut = (1_000_000 - cut) / 1_000_000;
-  const indexingRewardEffectiveCut = delegatedStakeRatio === 0 ? 0 : 1 - delegatorCut / delegatedStakeRatio;
-  const maxDelegated = staked * delegationRatio;
-  const dilutionDenom = Math.max(maxDelegated, delegated);
-  const overDelegationDilution = dilutionDenom === 0 ? 0 : 1 - maxDelegated / dilutionDenom;
-  const indexerRewardsOwnGenerationRatio = ownStakeRatio === 0 ? 0 : cut / 1_000_000 / ownStakeRatio;
-  const stakedWei = BigInt(r.staked_tokens); const delegatedWei = BigInt(r.delegated_tokens);
-  const maxDelegatedWei = stakedWei * BigInt(delegationRatio);
-  const capacity = stakedWei + (delegatedWei < maxDelegatedWei ? delegatedWei : maxDelegatedWei);
-  return {
-    tokenCapacity: capacity.toString(),
-    ownStakeRatio: String(ownStakeRatio),
-    delegatedStakeRatio: String(delegatedStakeRatio),
-    indexingRewardEffectiveCut: String(indexingRewardEffectiveCut),
-    overDelegationDilution: String(overDelegationDilution),
-    indexerRewardsOwnGenerationRatio: String(indexerRewardsOwnGenerationRatio),
-  };
-}
 
 /** Everything the page reads, in the subgraph's shape, from six nest queries (nuthatch#1160). */
 export async function indexerFromNest(addr: string): Promise<{ indexer: Record<string, unknown> | null }> {
