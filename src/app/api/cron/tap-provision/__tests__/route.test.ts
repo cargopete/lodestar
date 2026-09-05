@@ -20,6 +20,13 @@ vi.mock('@/lib/bountyBoard', () => ({ BOUNTY_BOARD_ABI: [] }));
 
 const subgraphQuery = vi.fn();
 vi.mock('@/lib/subgraph', () => ({ subgraphQuery: (...a: unknown[]) => subgraphQuery(...a) }));
+const nuthatchSql = vi.fn();
+let nuthatchConfigured = false;
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => nuthatchConfigured,
+  nuthatchEnabled: (flag: string) => nuthatchConfigured && process.env[flag] === 'true',
+  nuthatchSql: (...a: unknown[]) => nuthatchSql(...a),
+}));
 
 vi.mock('@/lib/studio/ipfs', () => ({ ipfsHashToBytes32: (h: string) => `0x${h}` }));
 
@@ -210,5 +217,31 @@ describe('main path', () => {
     const GET = await load();
     await GET(req(`Bearer ${SECRET}`));
     expect(getEscrowBalance).toHaveBeenCalledTimes(1);
+  });
+
+  it('behind NUTHATCH_INDEXERS both lookups read the nest and the gateway is never asked (nuthatch#1160)', async () => {
+    nuthatchConfigured = true;
+    process.env.NUTHATCH_INDEXERS = 'true';
+    try {
+      mockSql.mockResolvedValueOnce([{ chain_bounty_id: '1', deployment_id: 'Qm1' }]);
+      readContract.mockResolvedValueOnce({ winner: '0x00000000000000000000000000000000000000a1' });
+      nuthatchSql
+        .mockResolvedValueOnce([{ url: null }]) // the winner has no URL on the nest
+        .mockResolvedValueOnce([{ id: '0x00000000000000000000000000000000000000B2', url: 'https://b2.example.com' }]);
+      getEscrowBalance.mockResolvedValue(5_000_000_000_000_000_000n);
+      const GET = await load();
+      const res = await GET(req(`Bearer ${SECRET}`));
+      const json = await res.json();
+      expect(subgraphQuery).not.toHaveBeenCalled();
+      expect(nuthatchSql).toHaveBeenCalledTimes(2);
+      expect(nuthatchSql.mock.calls[0][0]).toBe("SELECT url FROM lodestar_indexers WHERE id = '0x00000000000000000000000000000000000000a1'");
+      expect(nuthatchSql.mock.calls[1][0]).toContain("LOWER(a.subgraph_deployment) = '0xqm1'");
+      expect(nuthatchSql.mock.calls.every((c) => c[1] === '/alloc')).toBe(true);
+      expect(json.provisioned['0x00000000000000000000000000000000000000b2']).toBe('sufficient');
+      expect(json.provisioned['0x00000000000000000000000000000000000000a1']).toBeUndefined();
+    } finally {
+      nuthatchConfigured = false;
+      delete process.env.NUTHATCH_INDEXERS;
+    }
   });
 });

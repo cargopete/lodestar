@@ -1,5 +1,7 @@
 import type { DbClient } from '../db';
 import { subgraphQuery } from '../subgraph';
+import { hasNuthatch, nuthatchEnabled } from '../nuthatch';
+import { networkFromNest } from '@/app/api/network-stats/route';
 import { weiToGRT } from '../utils';
 
 interface SubgraphNetworkStats {
@@ -29,7 +31,19 @@ export async function writeNetworkSnapshot(
   sql: DbClient,
   opts: { grtPriceUsd?: number; networkTvlUsd?: number } = {}
 ): Promise<void> {
-  const result = await subgraphQuery<SubgraphNetworkStats>(`{
+  // Behind NUTHATCH_NETWORK (nuthatch#1160): the same figures off `lodestar_network`, through the
+  // shaping `api/network-stats` already does, so the snapshot and the page cannot disagree.
+  const result = nuthatchEnabled('NUTHATCH_NETWORK') && hasNuthatch()
+    ? await (async (): Promise<SubgraphNetworkStats> => {
+        const { graphNetwork: g } = await networkFromNest();
+        return { graphNetwork: {
+          totalTokensStaked: g.totalTokensStaked, totalDelegatedTokens: g.totalDelegatedTokens, totalTokensSignalled: g.totalTokensSignalled,
+          totalTokensAllocated: g.totalTokensAllocated, totalSupply: g.totalSupply ?? '0', indexerCount: g.indexerCount, stakedIndexersCount: g.stakedIndexersCount,
+          delegatorCount: g.delegatorCount, activeDelegatorCount: g.activeDelegatorCount, curatorCount: g.curatorCount, activeCuratorCount: g.activeCuratorCount,
+          subgraphCount: g.subgraphCount, activeSubgraphCount: g.activeSubgraphCount, currentEpoch: g.currentEpoch,
+        } };
+      })()
+    : await subgraphQuery<SubgraphNetworkStats>(`{
     graphNetwork(id: "1") {
       totalTokensStaked
       totalDelegatedTokens
