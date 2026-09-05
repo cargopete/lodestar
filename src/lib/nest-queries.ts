@@ -241,3 +241,65 @@ export interface NestCuratorRow {
   signal_count: number;
   active_signal_count: number;
 }
+
+/**
+ * The `graphNetwork` singleton from `lodestar_network` (one row) and the parameters beside it from
+ * `lodestar_network_params` (one row; nuthatch#1160). Two queries because they are two views with
+ * two cadences: the aggregates fold every event, the parameters are pinned samples and the epoch
+ * manager's last update.
+ */
+export const networkSql = () =>
+  `SELECT CAST(total_tokens_staked AS VARCHAR) AS total_tokens_staked, CAST(total_delegated_tokens AS VARCHAR) AS total_delegated_tokens, ` +
+  `CAST(total_tokens_signalled AS VARCHAR) AS total_tokens_signalled, CAST(total_tokens_allocated AS VARCHAR) AS total_tokens_allocated, ` +
+  `CAST(total_indexing_rewards AS VARCHAR) AS total_indexing_rewards, CAST(total_query_fees AS VARCHAR) AS total_query_fees, ` +
+  `CAST(total_supply AS VARCHAR) AS total_supply, CAST(issuance_per_block AS VARCHAR) AS issuance_per_block, ` +
+  `CAST(bridge_minted AS VARCHAR) AS bridge_minted, CAST(bridge_burned AS VARCHAR) AS bridge_burned, ` +
+  `indexer_count, staked_indexers_count, delegator_count, active_delegator_count, curator_count, active_curator_count, ` +
+  `subgraph_count, active_subgraph_count, current_epoch FROM lodestar_network`;
+
+export const networkParamsSql = () =>
+  `SELECT delegation_ratio, curation_tax_percentage, protocol_payment_cut, max_thawing_period_seconds, ` +
+  `epoch_length, last_length_update_epoch, last_length_update_block, ` +
+  `CAST(total_curation_tax AS VARCHAR) AS total_curation_tax, CAST(total_protocol_tax AS VARCHAR) AS total_protocol_tax ` +
+  `FROM lodestar_network_params`;
+
+export interface NestNetworkRow {
+  total_tokens_staked: string; total_delegated_tokens: string; total_tokens_signalled: string; total_tokens_allocated: string;
+  total_indexing_rewards: string; total_query_fees: string; total_supply: string | null; issuance_per_block: string | null;
+  bridge_minted: string | null; bridge_burned: string | null;
+  indexer_count: number; staked_indexers_count: number; delegator_count: number; active_delegator_count: number;
+  curator_count: number; active_curator_count: number; subgraph_count: number; active_subgraph_count: number; current_epoch: number;
+}
+export interface NestNetworkParamsRow {
+  delegation_ratio: number | string | null; curation_tax_percentage: number | string | null; protocol_payment_cut: number | string | null;
+  max_thawing_period_seconds: number | string | null; epoch_length: number | string | null;
+  last_length_update_epoch: number | string | null; last_length_update_block: number | null;
+  total_curation_tax: string | null; total_protocol_tax: string | null;
+}
+
+/**
+ * The subgraph's `epoches(orderBy: startBlock, orderDirection: desc)` from `lodestar_epochs`, newest
+ * first, with the columns both `api/epochs` and `lib/ingest/epochs.ts` read. `since_epoch` is the
+ * ingest cursor (epochs strictly after it, ascending); `first` is a clamped int.
+ */
+export function epochsSql(first: number, sinceEpoch: number | null = null): string {
+  const where = sinceEpoch === null ? '' : `WHERE id > ${sinceEpoch} `;
+  const order = sinceEpoch === null ? 'ORDER BY id DESC' : 'ORDER BY id ASC';
+  return (
+    `SELECT id, start_block, end_block, CAST(signalled_tokens AS VARCHAR) AS signalled_tokens, ` +
+    `CAST(stake_deposited AS VARCHAR) AS stake_deposited, CAST(total_rewards AS VARCHAR) AS total_rewards, ` +
+    `CAST(total_indexer_rewards AS VARCHAR) AS total_indexer_rewards, CAST(total_delegator_rewards AS VARCHAR) AS total_delegator_rewards, ` +
+    `CAST(query_fees_collected AS VARCHAR) AS query_fees_collected, CAST(curator_query_fees AS VARCHAR) AS curator_query_fees, ` +
+    `CAST(taxed_query_fees AS VARCHAR) AS taxed_query_fees ` +
+    `FROM lodestar_epochs ${where}${order} LIMIT ${first}`
+  );
+}
+export interface NestEpochRow {
+  id: number | string; start_block: number; end_block: number | string;
+  signalled_tokens: string; stake_deposited: string; total_rewards: string; total_indexer_rewards: string;
+  total_delegator_rewards: string; query_fees_collected: string; curator_query_fees: string; taxed_query_fees: string;
+}
+/** Gross query fees, the subgraph's `totalQueryFees`: the view's collected figure is net of curators and the protocol cut. */
+export function epochTotalQueryFees(r: NestEpochRow): string {
+  return (BigInt(r.query_fees_collected) + BigInt(r.curator_query_fees) + BigInt(r.taxed_query_fees)).toString();
+}

@@ -3,6 +3,10 @@ import { db, hasDbAccess } from '@/lib/db';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { log } from '@/lib/logger';
+import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { epochsSql, type NestEpochRow } from '@/lib/nest-queries';
+
+const EPOCHS_BASE_PATH = process.env.NUTHATCH_EPOCHS_BASE_PATH || '/alloc';
 
 export interface TokenMetricPoint {
   epoch: number;
@@ -17,6 +21,22 @@ const ALLOWED_COUNTS = new Set([50, 100, 200, 500]);
 
 /** Thrown from inside `cached()` so the handler can answer 503 rather than a hollow 200. */
 class NoSubgraphAccess extends Error {}
+
+/**
+ * The fallback when Postgres has nothing, from `lodestar_epochs` instead of the gateway (nuthatch#1160).
+ * `disputeBurn` is 0 here as it is on the gateway path: only the Postgres path joins disputes.
+ */
+async function fetchFromNest(count: number): Promise<TokenMetricPoint[]> {
+  const r = await nuthatchSqlReady<NestEpochRow>(epochsSql(count), EPOCHS_BASE_PATH);
+  if (!r.ok) throw Object.assign(new Error(r.error), { nest: r });
+  return r.data.rows
+    .map((e) => {
+      const issuance = parseFloat(e.total_rewards) / 1e18;
+      const queryFeeTaxBurn = parseFloat(e.taxed_query_fees) / 1e18;
+      return { epoch: Number(e.id), issuance, queryFeeTaxBurn, disputeBurn: 0, totalBurn: queryFeeTaxBurn, net: issuance - queryFeeTaxBurn };
+    })
+    .reverse();
+}
 
 async function fetchFromSubgraph(count: number): Promise<TokenMetricPoint[]> {
   const result = await subgraphQuery<{
@@ -103,6 +123,8 @@ export async function GET(request: NextRequest) {
       // DB empty, unavailable, or failed — fall back to subgraph. With no gateway key there is
       // no fallback left, and an empty series here would draw a flat line that reads exactly like
       // a real one (#36). `cached()` does not memoise a rejection, so throwing is safe.
+      // On the nest path (nuthatch#1160) the fallback is the nest, and the key is not consulted.
+      if (nuthatchEnabled('NUTHATCH_EPOCHS') && hasNuthatch()) return fetchFromNest(count);
       if (!hasSubgraphAccess()) throw new NoSubgraphAccess();
       return fetchFromSubgraph(count);
     });
