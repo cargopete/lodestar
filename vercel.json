@@ -37,14 +37,6 @@
       "schedule": "*/2 * * * *"
     },
     {
-      "path": "/api/cron/check-conversions",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/warm-protocols",
-      "schedule": "*/45 * * * *"
-    },
-    {
       "path": "/api/cron/tap-provision",
       "schedule": "*/5 * * * *"
     },

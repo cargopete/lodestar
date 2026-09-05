@@ -3,7 +3,7 @@
  *
  * Covers routes not tested in routes.test.ts or routes-v2.test.ts:
  * horizon/activity, horizon/events, horizon/slashing,
- * delegation-flows, indexer-trends, indexer-stake-history,
+ * delegation-flows, indexer-stake-history,
  * subgraph-curation, subgraph-fees-30d, subgraph-history,
  * dropped-chains, chain-lag, indexer-node-health
  */
@@ -25,7 +25,6 @@ const mockSubgraphQuery = vi.fn();
 const mockHasSubgraphAccess = vi.fn(() => true);
 vi.mock('@/lib/subgraph', () => ({
   subgraphQuery: (...args: unknown[]) => mockSubgraphQuery(...args),
-  horizonPerfQuery: (...args: unknown[]) => mockSubgraphQuery(...args),
   hasSubgraphAccess: () => mockHasSubgraphAccess(),
   ensQuery: vi.fn(),
   delegationEventsQuery: vi.fn(),
@@ -289,65 +288,6 @@ describe('/api/delegation-flows', () => {
     const res = await GET(req);
 
     expect(res.status).toBe(503);
-  });
-});
-
-// ============================================================
-// /api/indexer-trends
-// ============================================================
-
-describe('/api/indexer-trends', () => {
-  let GET: (req: NextRequest) => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/indexer-trends/route');
-    GET = mod.GET as (req: NextRequest) => Promise<Response>;
-  });
-
-  it('returns 400 when indexer param is missing', async () => {
-    const req = makeRequest('/api/indexer-trends');
-    const res = await GET(req);
-    expect(res.status).toBe(400);
-  });
-
-  it('returns 400 for invalid indexer address', async () => {
-    const req = makeRequest('/api/indexer-trends?indexer=notanaddress');
-    const res = await GET(req);
-    expect(res.status).toBe(400);
-  });
-
-  it('returns 503 when no API key (valid address)', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/indexer-trends?indexer=0x1234000000000000000000000000000000001234');
-    const res = await GET(req);
-    expect(res.status).toBe(503);
-  });
-
-  it('returns { data } with trends', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      rewardDailyAggs: [],
-      queryFeeDailyAggs: [],
-    });
-
-    const req = makeRequest('/api/indexer-trends?indexer=0x1234000000000000000000000000000000001234');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('rewards');
-    expect(json.data).toHaveProperty('queryFees');
-  });
-
-  it('returns empty data on subgraph error (non-critical)', async () => {
-    mockSubgraphQuery.mockRejectedValueOnce(new Error('unavailable'));
-
-    const req = makeRequest('/api/indexer-trends?indexer=0x1234000000000000000000000000000000001234');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json.data).toEqual({ rewards: [], queryFees: [] });
   });
 });
 

@@ -21,7 +21,6 @@
     "@capacitor/push-notifications": "^8.1.2",
     "@graphiql/toolkit": "^0.12.1",
     "@logtail/pino": "^0.5.8",
-    "@pinax/graph-networks-registry": "^0.7.1",
     "@rainbow-me/rainbowkit": "^2.2.11",
     "@sentry/nextjs": "^10.69.0",
     "@tailwindcss/typography": "^0.5.20",

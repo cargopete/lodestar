@@ -61,20 +61,6 @@ describe('subgraph: with GRAPH_API_KEY configured', () => {
     await expect(mod.subgraphQuery('{ x }')).rejects.toThrow(/bad field/);
   });
 
-  it('ensQuery hits a distinct ENS subgraph endpoint and unwraps data', async () => {
-    mockFetch.mockResolvedValue(jsonResponse({ data: { domains: [{ name: 'foo.eth' }] } }));
-    const mod = await import('@/lib/subgraph');
-    const res = await mod.ensQuery<{ domains: { name: string }[] }>('{ domains { name } }');
-    expect(res.domains[0].name).toBe('foo.eth');
-    expect(mockFetch.mock.calls[0][0]).toContain('5XqPmWe6gjyrJtFn9cLy237i4cWw2j9HcUJEXsP5qGtH');
-  });
-
-  it('ensQuery surfaces GraphQL errors', async () => {
-    mockFetch.mockResolvedValue(jsonResponse({ errors: [{ message: 'ens boom' }] }));
-    const mod = await import('@/lib/subgraph');
-    await expect(mod.ensQuery('{ x }')).rejects.toThrow(/ens boom/);
-  });
-
   it('delegationEventsQuery hits the delegation-events endpoint', async () => {
     mockFetch.mockResolvedValue(jsonResponse({ data: { delegationEvents: [] } }));
     const mod = await import('@/lib/subgraph');
@@ -91,12 +77,6 @@ describe('subgraph: with GRAPH_API_KEY configured', () => {
     );
   });
 
-  it('horizonPerfQuery targets its own endpoint', async () => {
-    mockFetch.mockImplementation(() => Promise.resolve(jsonResponse({ data: { ok: true } })));
-    const mod = await import('@/lib/subgraph');
-    await mod.horizonPerfQuery('{ a }');
-    expect(mockFetch.mock.calls[0][0]).toContain('eD1TVayj2NtmCjWFr4hZhc1APHQs9iR2Xah6KNE8Y4h');
-  });
 });
 
 describe('subgraph: without GRAPH_API_KEY', () => {
@@ -117,11 +97,9 @@ describe('subgraph: without GRAPH_API_KEY', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it('ensQuery / delegationEventsQuery / dispatchRegistryQuery all fail closed', async () => {
+  it('delegationEventsQuery fails closed', async () => {
     const mod = await import('@/lib/subgraph');
-    await expect(mod.ensQuery('{ x }')).rejects.toThrow('GRAPH_API_KEY not configured');
     await expect(mod.delegationEventsQuery('{ x }')).rejects.toThrow('GRAPH_API_KEY not configured');
-    await expect(mod.dispatchRegistryQuery('{ x }')).rejects.toThrow('GRAPH_API_KEY not configured');
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });

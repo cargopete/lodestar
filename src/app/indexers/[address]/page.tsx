@@ -32,7 +32,6 @@ import { DelegationFeed } from '@/components/feed/DelegationFeed';
 import { AprProvenancePanel } from '@/components/indexer/AprProvenancePanel';
 import dynamic from 'next/dynamic';
 
-const IndexerTrendsChart = dynamic(() => import('@/components/charts/IndexerTrendsChart').then(m => ({ default: m.IndexerTrendsChart })), { ssr: false });
 const StakeHistoryChart = dynamic(() => import('@/components/charts/StakeHistoryChart').then(m => ({ default: m.StakeHistoryChart })), { ssr: false });
 const PnlPanel = dynamic(() => import('@/components/indexer/PnlPanel').then(m => ({ default: m.PnlPanel })), { ssr: false });
 import { ParameterHistory } from '@/components/ParameterHistory';
@@ -705,9 +704,6 @@ export default function IndexerDetailPage({
 
           {/* Stake History — self-stake vs delegated over 6 months */}
           <StakeHistoryChart indexer={address} />
-
-          {/* Daily Reward & Query Fee Trends (supplementary — community subgraph) */}
-          <IndexerTrendsChart indexer={address} />
 
           {/* Parameters */}
           <Card>

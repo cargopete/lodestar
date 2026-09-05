@@ -13,7 +13,6 @@ describe('rateLimit — tier limits', () => {
     ['/api/portfolio', 30],
     ['/api/vote', 60],
     ['/api/indexer-status/0xabc', 20],
-    ['/api/subgraph-playground/QmFoo', 20],
     ['/api/epochs', 200], // fallback
   ])('reports the right limit for %s', async (path, limit) => {
     const r = await rateLimit(freshIp(), path);

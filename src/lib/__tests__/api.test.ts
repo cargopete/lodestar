@@ -21,11 +21,9 @@ import {
   fetchPOIDeployment,
   fetchIndexingStatus,
   fetchIndexerStatus,
-  fetchNetworksRegistry,
   fetchRewardsHistory,
   fetchPayments,
   fetchIndexerPayments,
-  fetchIndexerTrends,
   fetchIndexerStakeHistory,
   fetchParameterHistory,
   fetchSubgraphCuration,
@@ -222,17 +220,6 @@ describe('api: raw-json (no envelope) endpoints', () => {
     await expect(fetchTVL()).rejects.toThrow('Failed to fetch TVL');
   });
 
-  it('fetchNetworksRegistry returns the raw json on success', async () => {
-    mockFetch.mockResolvedValue(jsonResponse({ networks: [{ chainId: 1 }] }));
-    expect(await fetchNetworksRegistry()).toEqual({ networks: [{ chainId: 1 }] });
-    expect(mockFetch).toHaveBeenCalledWith('/api/networks');
-  });
-
-  it('fetchNetworksRegistry throws the static message on failure', async () => {
-    mockFetch.mockResolvedValue(jsonResponse({}, 503));
-    await expect(fetchNetworksRegistry()).rejects.toThrow('Failed to fetch networks registry');
-  });
-
   it('fetchRewardsHistory builds the address+days query and returns raw json', async () => {
     mockFetch.mockResolvedValue(jsonResponse({ history: [] }));
     expect(await fetchRewardsHistory('0xDeL', 45)).toEqual({ history: [] });
@@ -331,20 +318,6 @@ describe('api: .data-envelope endpoints (happy + error)', () => {
   it('fetchIndexerPayments throws with status on failure', async () => {
     mockFetch.mockResolvedValue(jsonResponse({}, 404));
     await expect(fetchIndexerPayments('0xabc')).rejects.toThrow('Indexer payments failed: 404');
-  });
-
-  it('fetchIndexerTrends builds indexer+days query and unwraps .data', async () => {
-    mockFetch.mockResolvedValue(jsonResponse({ data: { points: [] } }));
-    expect(await fetchIndexerTrends('0xidx', 14)).toEqual({ points: [] });
-    const url = mockFetch.mock.calls[0][0] as string;
-    expect(url).toContain('indexer=0xidx');
-    expect(url).toContain('days=14');
-  });
-
-  it('fetchIndexerTrends defaults days to 30 and throws with status on failure', async () => {
-    mockFetch.mockResolvedValue(jsonResponse({}, 500));
-    await expect(fetchIndexerTrends('0xidx')).rejects.toThrow('Indexer trends failed: 500');
-    expect(mockFetch.mock.calls[0][0]).toContain('days=30');
   });
 
   it('fetchIndexerStakeHistory unwraps .data from the path endpoint', async () => {

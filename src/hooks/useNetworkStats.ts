@@ -18,14 +18,12 @@ import {
   fetchIndexingStatus,
   fetchGatewayProbe,
   fetchIndexerStatus,
-  fetchNetworksRegistry,
   fetchChainLag,
   fetchDelegatorPortfolio,
   fetchCuratorPortfolio,
   fetchRewardsHistory,
   fetchPayments,
   fetchIndexerPayments,
-  fetchIndexerTrends,
   fetchIndexerStakeHistory,
   fetchDelegationFlows,
   fetchDeveloperActivity,
@@ -206,18 +204,6 @@ export function useSubgraphDeployments30d(enabled = true) {
     staleTime: FIVE_MINUTES,
     refetchInterval: FIVE_MINUTES,
     enabled,
-  });
-}
-
-/**
- * Hook for Graph Networks Registry (display names + icons for chains)
- */
-export function useNetworksRegistry() {
-  return useQuery({
-    queryKey: ['networksRegistry'],
-    queryFn: fetchNetworksRegistry,
-    staleTime: ONE_HOUR,
-    refetchInterval: ONE_HOUR,
   });
 }
 
@@ -550,21 +536,6 @@ export function useIndexerPayments(receiver: string) {
   });
 }
 
-
-/**
- * Hook for indexer daily reward & query fee trends
- * (supplementary data from community Horizon Performance subgraph)
- */
-export function useIndexerTrends(indexer: string | null, days = 30) {
-  return useQuery({
-    queryKey: ['indexerTrends', indexer, days],
-    queryFn: () => fetchIndexerTrends(indexer!, days),
-    staleTime: TEN_MINUTES,
-    refetchInterval: TEN_MINUTES,
-    enabled: !!indexer,
-    retry: 1, // supplementary — don't hammer it
-  });
-}
 
 /**
  * Hook for indexer stake history (26-week time-travel snapshots)

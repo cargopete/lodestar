@@ -878,8 +878,3 @@ export interface QueryFeeDailyAgg {
   feeCount: string;
 }
 
-/** Combined response from indexer trends API */
-export interface IndexerTrendsResponse {
-  rewards: RewardDailyAgg[];
-  queryFees: QueryFeeDailyAgg[];
-}
