@@ -25,8 +25,8 @@ vi.mock('@/lib/db', () => ({
 const hasSubgraphAccess = vi.fn(() => true);
 const subgraphQuery = vi.fn();
 const ensQuery = vi.fn();
-const resolveEnsNames = vi.fn(async () => ({}));
-vi.mock('@/lib/ens', () => ({ resolveEnsNames: (...a: unknown[]) => resolveEnsNames(...a) }));
+const resolveEnsNames = vi.fn<(addrs: string[]) => Promise<Record<string, string>>>();
+vi.mock('@/lib/ens', () => ({ resolveEnsNames: (addrs: string[]) => resolveEnsNames(addrs) }));
 vi.mock('@/lib/subgraph', () => ({
   hasSubgraphAccess: () => hasSubgraphAccess(),
   subgraphQuery: (...a: unknown[]) => subgraphQuery(...a),
