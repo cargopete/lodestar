@@ -163,3 +163,55 @@ export function poiAllocationsSql(deployment: string | null, first: number): str
     `ORDER BY a.closed_at DESC, a.id DESC LIMIT ${first}`
   );
 }
+
+/**
+ * The subgraph's `indexers(...)` list from `graph-allocations-nest`'s `lodestar_indexers` view
+ * (nuthatch#1160). The view folds stake, the delegation pool, cuts, rewards, fees and the service
+ * registry from events, and was measured exact against `HorizonStaking.getServiceProvider` and
+ * `getDelegationPool` on every indexer with stake. `orderBy` is one of the subgraph's field names and
+ * is mapped here to a column; the caller validates it against `INDEXERS_ORDER_BY` first, so nothing
+ * unvalidated reaches the SQL. `first`/`skip` are clamped ints. The one excluded address is the one
+ * the gateway query excludes today, kept so the two lists agree.
+ */
+export const INDEXERS_ORDER_BY: Record<string, string> = {
+  stakedTokens: 'staked_tokens',
+  delegatedTokens: 'delegated_tokens',
+  allocatedTokens: 'allocated_tokens',
+  id: 'id',
+  createdAt: 'created_at',
+  queryFeesCollected: 'query_fees_collected',
+  rewardsEarned: 'rewards_earned',
+};
+export const INDEXERS_EXCLUDED = '0xb43b2cccceada5292732a8c58ae134adefce09bb';
+
+export function indexersSql(first: number, skip: number, orderBy: string, orderDirection: 'asc' | 'desc'): string {
+  const col = INDEXERS_ORDER_BY[orderBy] ?? 'staked_tokens';
+  return (
+    `SELECT id, CAST(staked_tokens AS VARCHAR) AS staked_tokens, CAST(locked_tokens AS VARCHAR) AS locked_tokens, ` +
+    `CAST(delegated_tokens AS VARCHAR) AS delegated_tokens, CAST(allocated_tokens AS VARCHAR) AS allocated_tokens, ` +
+    `allocation_count, indexing_reward_cut, query_fee_cut, last_delegation_parameter_update, ` +
+    `CAST(rewards_earned AS VARCHAR) AS rewards_earned, CAST(query_fees_collected AS VARCHAR) AS query_fees_collected, ` +
+    `CAST(delegator_shares AS VARCHAR) AS delegator_shares, url, geohash, created_at ` +
+    `FROM lodestar_indexers WHERE staked_tokens > 0 AND id <> '${INDEXERS_EXCLUDED}' ` +
+    `ORDER BY ${col} ${orderDirection === 'asc' ? 'ASC' : 'DESC'}, id ASC LIMIT ${first} OFFSET ${skip}`
+  );
+}
+
+/** One row of `indexersSql`, as the nest returns it: wei as decimal strings, counts as numbers. */
+export interface NestIndexerRow {
+  id: string;
+  staked_tokens: string;
+  locked_tokens: string;
+  delegated_tokens: string;
+  allocated_tokens: string;
+  allocation_count: number;
+  indexing_reward_cut: number | string | null;
+  query_fee_cut: number | string | null;
+  last_delegation_parameter_update: number | null;
+  rewards_earned: string;
+  query_fees_collected: string;
+  delegator_shares: string;
+  url: string | null;
+  geohash: string | null;
+  created_at: number;
+}
