@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { resolveEnsNames } from '@/lib/ens';
 import type { IndexerProvisionsResponse, ServiceProvisionsResponse, Provision, ProvisionWithIndexer } from '@/lib/queries';
 import { log } from '@/lib/logger';
 import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
@@ -202,18 +203,8 @@ export async function GET(request: NextRequest) {
 
       if (missing.length > 0) {
         try {
-          const idList = missing.map((id) => `"${id}"`).join(', ');
-          const ensResult = await ensQuery<{ domains: Array<{ name: string; resolvedAddress: { id: string } }> }>(`{
-            domains(first: 100, where: { resolvedAddress_in: [${idList}], name_not: null }) {
-              name
-              resolvedAddress { id }
-            }
-          }`);
-          const ensMap: Record<string, string> = {};
-          for (const d of ensResult.domains) {
-            const a = d.resolvedAddress.id.toLowerCase();
-            if (!ensMap[a] || d.name.length < ensMap[a].length) ensMap[a] = d.name;
-          }
+          // Primary names over a mainnet RPC (nuthatch#1160), not the ENS subgraph.
+          const ensMap = await resolveEnsNames(missing);
           for (const p of result.provisions) {
             const ens = ensMap[p.indexer.id.toLowerCase()];
             if (ens) {
@@ -225,7 +216,6 @@ export async function GET(request: NextRequest) {
           // ENS lookup failed — names just won't resolve, not fatal
         }
       }
-
       return result;
     });
 

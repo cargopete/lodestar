@@ -25,6 +25,8 @@ vi.mock('@/lib/db', () => ({
 const hasSubgraphAccess = vi.fn(() => true);
 const subgraphQuery = vi.fn();
 const ensQuery = vi.fn();
+const resolveEnsNames = vi.fn(async () => ({}));
+vi.mock('@/lib/ens', () => ({ resolveEnsNames: (...a: unknown[]) => resolveEnsNames(...a) }));
 vi.mock('@/lib/subgraph', () => ({
   hasSubgraphAccess: () => hasSubgraphAccess(),
   subgraphQuery: (...a: unknown[]) => subgraphQuery(...a),
@@ -67,6 +69,7 @@ beforeEach(() => {
   subgraphQuery.mockResolvedValue({ indexer: { delegatedTokens: '1', delegatedThawingTokens: '0' } });
   reconcileDelegationPool.mockResolvedValue(RECONCILE);
   ensQuery.mockResolvedValue({ domains: [] });
+  resolveEnsNames.mockResolvedValue({});
   cached.mockImplementation((_k: string, _t: number, f: () => Promise<unknown>) => f());
   // The standing default: both reads return nothing. `rows()` queues ahead of it.
   db.mockResolvedValue([]);
@@ -234,7 +237,7 @@ describe('the ENS pass', () => {
   it('is not attempted when the trail has no delegators', async () => {
     rows([], [{ param_name: 'reward_cut', old_value: 1, new_value: 2, created_at: '2026-01-01T00:00:00Z' }]);
     await body();
-    expect(ensQuery).not.toHaveBeenCalled();
+    expect(resolveEnsNames).not.toHaveBeenCalled();
   });
 
   it('asks once for the distinct delegators, not once per event', async () => {
@@ -244,20 +247,13 @@ describe('the ENS pass', () => {
     ]);
 
     await body();
-    expect(ensQuery).toHaveBeenCalledTimes(1);
-    const q = ensQuery.mock.calls[0][0] as string;
-    expect(q.match(/"0xa"/g)).toHaveLength(1);
+    expect(resolveEnsNames).toHaveBeenCalledTimes(1);
+    expect(resolveEnsNames.mock.calls[0][0]).toEqual(['0xa']);
   });
 
-  it('prefers the shortest name when one address resolves several', async () => {
-    // ENS lets many names point at one address; the shortest is the one a human recognises.
+  it('names the delegator with the primary name the resolver returns (nuthatch#1160)', async () => {
     rows([{ event_type: 'delegation', delegator: '0xa', tokens_grt: '1', timestamp: '2026-01-01T00:00:00Z' }]);
-    ensQuery.mockResolvedValue({
-      domains: [
-        { name: 'a-very-long-name.eth', resolvedAddress: { id: '0xA' } },
-        { name: 'short.eth', resolvedAddress: { id: '0xA' } },
-      ],
-    });
+    resolveEnsNames.mockResolvedValue({ '0xa': 'short.eth' });
 
     const { data } = await body();
     expect(data.events[0].delegatorName).toBe('short.eth');
@@ -265,19 +261,22 @@ describe('the ENS pass', () => {
 
   it('leaves the delegator unnamed when the lookup fails', async () => {
     rows([{ event_type: 'delegation', delegator: '0xa', tokens_grt: '1', timestamp: '2026-01-01T00:00:00Z' }]);
-    ensQuery.mockRejectedValue(new Error('ens down'));
+    resolveEnsNames.mockRejectedValue(new Error('rpc down'));
 
     const { data } = await body();
     expect(data.events).toHaveLength(1);
     expect(data.events[0].delegatorName).toBeNull();
   });
 
-  it('is skipped when there is no subgraph access', async () => {
+  it('runs without any subgraph access: names come from a mainnet RPC, never the gateway', async () => {
     hasSubgraphAccess.mockReturnValue(false);
     rows([{ event_type: 'delegation', delegator: '0xa', tokens_grt: '1', timestamp: '2026-01-01T00:00:00Z' }]);
+    resolveEnsNames.mockResolvedValue({ '0xa': 'pete.eth' });
 
-    await body();
+    const { data } = await body();
+    expect(resolveEnsNames).toHaveBeenCalledTimes(1);
     expect(ensQuery).not.toHaveBeenCalled();
+    expect(data.events[0].delegatorName).toBe('pete.eth');
   });
 });
 

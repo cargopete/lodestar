@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, ensQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { resolveEnsNames } from '@/lib/ens';
 import type { DelegatorPortfolioResponse, CuratorPortfolioResponse, DelegatedStake, Signal } from '@/lib/queries';
 import { log } from '@/lib/logger';
 import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
@@ -185,27 +186,15 @@ export async function GET(request: NextRequest) {
         .filter((ix) => !ix.account?.defaultDisplayName && !ix.account?.metadata?.displayName);
 
       if (nameless.length > 0) {
-        const ensResults = await Promise.allSettled(
-          nameless.map((ix) =>
-            cached(`ens:${ix.id}`, 86400, async () => {
-              const result = await ensQuery<{ domains: Array<{ name: string }> }>(`{
-                domains(first: 5, where: { resolvedAddress: "${ix.id}", name_not: null }) {
-                  name
-                }
-              }`);
-              const names = result.domains.map((d) => d.name).sort((a, b) => a.length - b.length);
-              return { ensName: names[0] ?? null };
-            })
-          )
-        );
-
-        nameless.forEach((ix, i) => {
-          const result = ensResults[i];
-          if (result.status === 'fulfilled' && result.value?.ensName) {
+        // Primary names over a mainnet RPC (nuthatch#1160); a failed lookup leaves the address.
+        const names = await resolveEnsNames(nameless.map((ix) => ix.id));
+        for (const ix of nameless) {
+          const ens = names[ix.id.toLowerCase()];
+          if (ens) {
             if (!ix.account) ix.account = { id: ix.id, defaultDisplayName: null };
-            ix.account.defaultDisplayName = result.value.ensName;
+            ix.account.defaultDisplayName = ens;
           }
-        });
+        }
       }
 
       return NextResponse.json({ data }, {
