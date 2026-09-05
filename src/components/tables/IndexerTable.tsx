@@ -349,7 +349,7 @@ export function IndexerTable() {
         };
       })
       .filter((row) => row.selfStake >= minStake);
-  }, [enrichedData, hasEnriched, indexersData, delegationRatio, minStake, qosResp, foghornMap]);
+  }, [enrichedData, hasEnriched, indexersData, delegationRatio, minStake, foghornMap]);
 
   const columns = useMemo(
     () => [
