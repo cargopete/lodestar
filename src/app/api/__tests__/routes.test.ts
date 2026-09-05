@@ -1148,64 +1148,6 @@ describe('/api/delegation-events', () => {
 });
 
 // ============================================================
-// /api/subgraph (proxy with mock fallback)
-// ============================================================
-
-describe('/api/subgraph', () => {
-  let POST: (req: NextRequest) => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/subgraph/route');
-    POST = mod.POST as (req: NextRequest) => Promise<Response>;
-  });
-
-  it('returns mock network data when no API key', async () => {
-    const req = makeRequest('/api/subgraph', {
-      method: 'POST',
-      body: JSON.stringify({ query: '{ graphNetwork(id: "1") { currentEpoch } }' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const res = await POST(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('graphNetwork');
-  });
-
-  it('returns mock indexer data for indexer queries', async () => {
-    const req = makeRequest('/api/subgraph', {
-      method: 'POST',
-      body: JSON.stringify({ query: '{ indexers(first: 10) { id } }' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const res = await POST(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json.data).toHaveProperty('indexers');
-    expect(Array.isArray(json.data.indexers)).toBe(true);
-    expect(json.data.indexers.length).toBeGreaterThan(0);
-  });
-
-  it('returns mock epoch data for epoch queries', async () => {
-    const req = makeRequest('/api/subgraph', {
-      method: 'POST',
-      body: JSON.stringify({ query: '{ epoches(first: 10) { id } }' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const res = await POST(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json.data).toHaveProperty('epoches');
-  });
-});
-
-// ============================================================
 // Security: input validation across routes
 // ============================================================
 

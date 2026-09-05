@@ -20,13 +20,11 @@ vi.mock('@/lib/api', () => ({
   fetchPOIDeployment: vi.fn(),
   fetchIndexingStatus: vi.fn(),
   fetchIndexerStatus: vi.fn(),
-  fetchNetworksRegistry: vi.fn(),
   fetchDelegatorPortfolio: vi.fn(),
   fetchCuratorPortfolio: vi.fn(),
   fetchRewardsHistory: vi.fn(),
   fetchPayments: vi.fn(),
   fetchIndexerPayments: vi.fn(),
-  fetchIndexerTrends: vi.fn(),
   fetchIndexerStakeHistory: vi.fn(),
   fetchDelegationFlows: vi.fn(),
   fetchTokenMetrics: vi.fn(),
@@ -52,7 +50,6 @@ import {
   useTVL,
   useIndexers,
   useSubgraphDeployments30d,
-  useNetworksRegistry,
   useManifestAnalysis,
   usePOIOverview,
   usePOIDeployment,
@@ -64,7 +61,6 @@ import {
   useIndexerStatus,
   usePayments,
   useIndexerPayments,
-  useIndexerTrends,
   useIndexerStakeHistory,
   useDelegationFlows,
   useTokenMetrics,
@@ -280,13 +276,6 @@ describe('always-on (un-gated) query hooks', () => {
     expect(api.fetchIndexers).toHaveBeenCalledWith(params);
   });
 
-  it('useNetworksRegistry returns the registry payload', async () => {
-    vi.mocked(api.fetchNetworksRegistry).mockResolvedValue({ networks: [{ chainId: 1 }] } as never);
-    const { result } = renderHook(() => useNetworksRegistry(), { wrapper: wrapper() });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual({ networks: [{ chainId: 1 }] });
-  });
-
   it('usePOIOverview returns overview data', async () => {
     vi.mocked(api.fetchPOIOverview).mockResolvedValue({ deployments: [] } as never);
     const { result } = renderHook(() => usePOIOverview(), { wrapper: wrapper() });
@@ -426,16 +415,6 @@ describe('enabled-gated query hooks (no arg → idle, arg → fetch)', () => {
     const on = renderHook(() => useIndexerPayments('0xrecv'), { wrapper: wrapper() });
     await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
     expect(api.fetchIndexerPayments).toHaveBeenCalledWith('0xrecv');
-  });
-
-  it('useIndexerTrends is idle for null and forwards indexer+days', async () => {
-    const off = renderHook(() => useIndexerTrends(null), { wrapper: wrapper() });
-    expect(off.result.current.fetchStatus).toBe('idle');
-
-    vi.mocked(api.fetchIndexerTrends).mockResolvedValue({ points: [] } as never);
-    const on = renderHook(() => useIndexerTrends('0xidx', 14), { wrapper: wrapper() });
-    await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
-    expect(api.fetchIndexerTrends).toHaveBeenCalledWith('0xidx', 14);
   });
 
   it('useIndexerStakeHistory is idle for null and fetches for an address', async () => {

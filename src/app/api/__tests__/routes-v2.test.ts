@@ -79,32 +79,6 @@ vi.mock('@/lib/logger', () => ({
   default: { child: vi.fn().mockReturnThis(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-// @pinax/graph-networks-registry
-vi.mock('@pinax/graph-networks-registry', () => ({
-  NetworksRegistry: {
-    fromLatestVersion: vi.fn().mockResolvedValue({
-      networks: [
-        {
-          id: 'mainnet',
-          shortName: 'ETH',
-          fullName: 'Ethereum Mainnet',
-          networkType: 'mainnet',
-          icon: { web3Icons: { name: 'ethereum' } },
-          aliases: ['ethereum'],
-        },
-        {
-          id: 'arbitrum-one',
-          shortName: 'ARB',
-          fullName: 'Arbitrum One',
-          networkType: 'mainnet',
-          icon: null,
-          aliases: [],
-        },
-      ],
-    }),
-  },
-}));
-
 // global fetch
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -435,49 +409,6 @@ describe('/api/feed', () => {
 
     expect(res.status).toBe(200);
     expect(Array.isArray(json.items)).toBe(true);
-  });
-});
-
-// ============================================================
-// /api/networks
-// ============================================================
-
-describe('/api/networks', () => {
-  let GET: () => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/networks/route');
-    GET = mod.GET;
-  });
-
-  it('returns { networks } with transformed network data', async () => {
-    const res = await GET();
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('networks');
-    expect(Array.isArray(json.networks)).toBe(true);
-    expect(json.networks[0]).toHaveProperty('id');
-    expect(json.networks[0]).toHaveProperty('shortName');
-    expect(json.networks[0]).toHaveProperty('networkType');
-    expect(json.networks[0]).toHaveProperty('iconUrl');
-  });
-
-  it('builds iconUrl from web3Icons name', async () => {
-    const res = await GET();
-    const json = await getJson(res);
-
-    // mainnet has icon.web3Icons.name = 'ethereum'
-    const mainnet = json.networks.find((n: { id: string }) => n.id === 'mainnet');
-    expect(mainnet?.iconUrl).toContain('ethereum.svg');
-  });
-
-  it('sets iconUrl to null when no icon defined', async () => {
-    const res = await GET();
-    const json = await getJson(res);
-
-    const arb = json.networks.find((n: { id: string }) => n.id === 'arbitrum-one');
-    expect(arb?.iconUrl).toBeNull();
   });
 });
 

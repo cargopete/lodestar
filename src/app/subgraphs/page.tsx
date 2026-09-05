@@ -7,10 +7,9 @@ import { Card } from '@/components/ui/Card';
 import { ChartSkeleton } from '@/components/ui/ChartSkeleton';
 import { Badge } from '@/components/ui/Badge';
 import { Pagination } from '@/components/ui/Pagination';
-import { useSubgraphDeployments, useSubgraphDeployments30d, useManifestAnalysis, useNetworksRegistry } from '@/hooks/useNetworkStats';
+import { useSubgraphDeployments, useSubgraphDeployments30d, useManifestAnalysis } from '@/hooks/useNetworkStats';
 import { weiToGRT, formatGRT, cn } from '@/lib/utils';
 import type { ComplexityCategory } from '@/lib/manifest';
-import type { NetworkInfo } from '@/app/api/networks/route';
 
 // ---------- constants ----------
 
@@ -57,7 +56,7 @@ function ComplexityCell({ hash, onComplexity }: { hash: string; onComplexity?: (
   );
 }
 
-function NetworkCell({ hash, onNetwork, networkMap }: { hash: string; onNetwork?: (hash: string, network: string) => void; networkMap: Map<string, NetworkInfo> }) {
+function NetworkCell({ hash, onNetwork }: { hash: string; onNetwork?: (hash: string, network: string) => void }) {
   const { data, isLoading, isError } = useManifestAnalysis(hash);
 
   useEffect(() => {
@@ -69,16 +68,10 @@ function NetworkCell({ hash, onNetwork, networkMap }: { hash: string; onNetwork?
 
   if (!data.network) return <span className="text-[var(--text-faint)]">--</span>;
 
-  const info = networkMap.get(data.network);
-  const displayName = info?.shortName ?? data.network;
-  const iconUrl = info?.iconUrl;
+  const displayName = data.network;
 
   return (
     <Badge variant="accent" className="inline-flex items-center gap-1 whitespace-nowrap">
-      {iconUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={iconUrl} alt="" className="w-3 h-3 rounded-full shrink-0" />
-      )}
       <span className="truncate max-w-[80px]">{displayName}</span>
     </Badge>
   );
@@ -158,21 +151,6 @@ function SubgraphDirectory() {
     const target = qs ? `/subgraphs?${qs}` : '/subgraphs';
     router.replace(target, { scroll: false });
   }, [page, sortKey, sortDesc, searchQuery, feeWindow, eliteOnly, networkFilter, complexityFilter, categoryFilter, router]);
-
-  // Networks registry for display names and icons
-  const { data: registryData } = useNetworksRegistry();
-  const networkMap = useMemo(() => {
-    const map = new Map<string, NetworkInfo>();
-    if (!registryData?.networks) return map;
-    for (const n of registryData.networks) {
-      map.set(n.id, n);
-      // Also index by aliases so manifest network IDs like "xdai" resolve
-      for (const alias of n.aliases) {
-        if (!map.has(alias)) map.set(alias, n);
-      }
-    }
-    return map;
-  }, [registryData]);
 
   const handleNetwork = useCallback((hash: string, network: string) => {
     setKnownNetworks((prev) => {
@@ -479,7 +457,7 @@ function SubgraphDirectory() {
             ))}
           </select>
         )}
-        {(knownNetworks.size > 0 || registryData?.networks) && (
+        {knownNetworks.size > 0 && (
           <select
             aria-label="Filter by network"
             value={networkFilter}
@@ -492,52 +470,11 @@ function SubgraphDirectory() {
             )}
           >
             <option value="all">All Networks</option>
-            {(() => {
-              // Build deduplicated network list: discovered networks + all registry networks
-              const seen = new Set<string>();       // by canonical ID
-              const seenLabels = new Set<string>(); // by display label to avoid visual duplicates
-              const options: { value: string; label: string }[] = [];
-
-              // Discovered networks first (these have subgraphs on the current page)
-              for (const n of [...knownNetworks].sort()) {
-                const info = networkMap.get(n);
-                const canonicalId = info?.id ?? n;
-                const label = info?.shortName ?? n;
-                if (!seen.has(canonicalId) && !seenLabels.has(label)) {
-                  seen.add(canonicalId);
-                  seenLabels.add(label);
-                  options.push({ value: n, label });
-                }
-              }
-
-              // All registry mainnet networks
-              const registryNets = (registryData?.networks ?? [])
-                .filter(n => n.networkType === 'mainnet')
-                .sort((a, b) => a.shortName.localeCompare(b.shortName));
-
-              const registryOptions: { value: string; label: string }[] = [];
-              for (const n of registryNets) {
-                if (!seen.has(n.id) && !seenLabels.has(n.shortName)) {
-                  seen.add(n.id);
-                  seenLabels.add(n.shortName);
-                  registryOptions.push({ value: n.id, label: n.shortName });
-                }
-              }
-
-              return (
-                <>
-                  {options.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                  {options.length > 0 && registryOptions.length > 0 && (
-                    <option disabled>{'─'.repeat(20)}</option>
-                  )}
-                  {registryOptions.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </>
-              );
-            })()}
+            {/* The networks discovered on this page, by their manifest ids. The Pinax registry that used to
+                append every mainnet and pretty-print the ids is gone (nuthatch#1160). */}
+            {[...knownNetworks].sort().map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
           </select>
         )}
       </div>
@@ -662,7 +599,7 @@ function SubgraphDirectory() {
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <ComplexityCell hash={row.ipfsHash} onComplexity={handleComplexity} />
-                    <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} networkMap={networkMap} />
+                    <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} />
                     {row.indexerCount <= 1 && (
                       <span className="relative group/lowidx">
                         <Badge variant="warning" className="text-[10px] px-1.5">1 idx</Badge>
@@ -824,7 +761,7 @@ function SubgraphDirectory() {
                       <ComplexityCell hash={row.ipfsHash} onComplexity={handleComplexity} />
                     </td>
                     <td className={`px-4 py-3 text-center ${tdBorder}`}>
-                      <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} networkMap={networkMap} />
+                      <NetworkCell hash={row.ipfsHash} onNetwork={handleNetwork} />
                     </td>
                     <td className={`px-4 py-3 text-right font-mono text-sm text-[var(--text)] ${tdBorder}`}>
                       {formatGRT(row.signal)}

@@ -40,7 +40,7 @@ describe('the Graph Network subgraph id has exactly one home', () => {
     expect(gatewayUrl('KEY', GRAPH_NETWORK_SUBGRAPH_ID)).toBe(
       `https://gateway-arbitrum.network.thegraph.com/api/KEY/subgraphs/id/${GRAPH_NETWORK_SUBGRAPH_ID}`
     );
-    // The dev-only proxy template in api/subgraph/route.ts keeps its placeholder verbatim.
+    // A placeholder key is kept verbatim, for documentation that shows the shape of the url.
     expect(gatewayUrl('[api-key]', GRAPH_NETWORK_SUBGRAPH_ID)).toContain('/api/[api-key]/');
   });
 

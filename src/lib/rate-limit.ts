@@ -17,7 +17,6 @@ const LIMITS: Array<[RegExp, number]> = [
   [/^\/api\/portfolio/, 30],
   [/^\/api\/feed/, 20],
   [/^\/api\/vote/, 60],
-  [/^\/api\/subgraph-playground\//, 20],
   // Source verification spins a sandbox microVM + full build per call — very
   // expensive. Keep it tight; the route also enforces a global Redis-backed cap.
   [/^\/api\/disassembly\/verify/, 4],

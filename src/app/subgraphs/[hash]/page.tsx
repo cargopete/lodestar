@@ -8,7 +8,6 @@ import {
   useIndexingStatus,
   useGatewayProbe,
   useManifestAnalysis,
-  useNetworksRegistry,
   useSubgraphCuration,
   useSubgraphHistory,
   useSubgraphVersions,
@@ -33,13 +32,12 @@ import { SYNC_TOLERANCE_BLOCKS } from '@/lib/indexing-status';
 import { formatStallDuration } from '@/lib/chain-liveness';
 import type { IndexerStatusResult } from '@/lib/indexing-status';
 import type { ComplexityCategory, DataSourceSignal, TemplateSignal } from '@/lib/manifest';
-import type { NetworkInfo } from '@/app/api/networks/route';
 
 // ---------------------------------------------------------------------------
 // Tab configuration
 // ---------------------------------------------------------------------------
 
-type Tab = 'overview' | 'schema' | 'curators' | 'history' | 'versions' | 'activity' | 'manifest' | 'playground';
+type Tab = 'overview' | 'schema' | 'curators' | 'history' | 'versions' | 'activity' | 'manifest';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'schema', label: 'Schema' },
@@ -48,7 +46,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'versions', label: 'Versions' },
   { id: 'activity', label: 'Activity' },
   { id: 'manifest', label: 'Manifest' },
-  { id: 'playground', label: 'Playground' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1089,68 +1086,6 @@ function ManifestSection({ hash }: { hash: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Playground tab — full GraphiQL IDE (schema browser, autocomplete, highlighting)
-// ---------------------------------------------------------------------------
-
-const GraphiQLIDE = dynamic(() => import('@/components/SubgraphPlaygroundPanel'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center h-[640px] rounded-[var(--radius-card)] border border-[var(--border)]">
-      <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-      <span className="ml-3 text-sm text-[var(--text-muted)]">Loading playground…</span>
-    </div>
-  ),
-});
-
-function PlaygroundSection({ hash }: { hash: string }) {
-  const endpointPath = `/api/subgraph-playground/${hash}`;
-  // The real decentralised-network gateway endpoint for this deployment. Users
-  // substitute their own Subgraph Studio API key for <api-key>.
-  const gatewayUrl = `https://gateway.thegraph.com/api/<api-key>/deployments/id/${hash}`;
-
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle>GraphQL Playground</CardTitle>
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-xs text-[var(--text-faint)] font-mono truncate hidden sm:block">{endpointPath}</span>
-              <button
-                onClick={() => navigator.clipboard.writeText(`${window.location.origin}${endpointPath}`)}
-                className="text-[var(--accent-text)] hover:text-[var(--text)] transition-colors flex-shrink-0"
-                title="Copy Lodestar proxy URL"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Real decentralised-network gateway endpoint (bring your own API key) */}
-          <div className="mb-3 flex items-center gap-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2">
-            <span className="text-[10px] uppercase tracking-wide text-[var(--text-faint)] shrink-0">Gateway URL</span>
-            <code className="text-xs font-mono text-[var(--text-muted)] truncate flex-1">{gatewayUrl}</code>
-            <button
-              onClick={() => navigator.clipboard.writeText(gatewayUrl)}
-              className="text-[var(--accent-text)] hover:text-[var(--text)] transition-colors flex-shrink-0"
-              title="Copy gateway query URL"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            </button>
-          </div>
-          <GraphiQLIDE hash={hash} />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Inner page (needs useSearchParams — wrapped in Suspense by outer component)
 // ---------------------------------------------------------------------------
 
@@ -1162,7 +1097,6 @@ function DeploymentPageInner({ hash }: { hash: string }) {
 
   const { data: statusData } = useIndexingStatus(hash);
   const { data: manifestData } = useManifestAnalysis(hash);
-  const { data: registryData } = useNetworksRegistry();
   const { data: chainLagData } = useChainLag();
 
   // Which chain this deployment indexes. The manifest is authoritative; fall
@@ -1175,19 +1109,9 @@ function DeploymentPageInner({ hash }: { hash: string }) {
     : null;
   const chainNotLive = chainVerdict?.liveness === 'halted' || chainVerdict?.liveness === 'stalled';
 
-  let networkInfo: NetworkInfo | null = null;
-  if (manifestData?.network && registryData?.networks) {
-    for (const n of registryData.networks) {
-      if (n.id === manifestData.network || n.aliases.includes(manifestData.network)) {
-        networkInfo = n;
-        break;
-      }
-    }
-  }
-
   const displayName = statusData?.displayName ?? null;
-  const networkLabel = networkInfo?.fullName ?? manifestData?.network ?? null;
-  const networkIcon = networkInfo?.iconUrl ?? null;
+  // The manifest's network id, as written. The Pinax registry that used to pretty-print it is gone (nuthatch#1160).
+  const networkLabel = manifestData?.network ?? null;
 
   useEffect(() => {
     const parts = [displayName, networkLabel].filter(Boolean);
@@ -1217,7 +1141,6 @@ function DeploymentPageInner({ hash }: { hash: string }) {
                 {networkLabel && (
                   <Badge variant="accent">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {networkIcon && <img src={networkIcon} alt="" className="w-3.5 h-3.5 inline-block mr-1 -mt-px" />}
                     {networkLabel}
                   </Badge>
                 )}
@@ -1317,7 +1240,6 @@ function DeploymentPageInner({ hash }: { hash: string }) {
         {activeTab === 'versions' && <VersionsSection hash={hash} />}
         {activeTab === 'activity' && <ActivitySection hash={hash} />}
         {activeTab === 'manifest' && <ManifestSection hash={hash} />}
-        {activeTab === 'playground' && <PlaygroundSection hash={hash} />}
       </div>
     </div>
   );
