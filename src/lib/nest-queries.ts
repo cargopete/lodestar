@@ -525,3 +525,18 @@ export const deploymentAllocationsHistorySql = (depId: string, first: number) =>
 export interface NestDeploymentSignalRow { id: string; curator: string; signalled_tokens: string; unsignalled_tokens: string; signal: string; last_signal_change: number | null; realized_rewards: string; deployment_signalled_tokens: string; deployment_query_fees_amount: string }
 export interface NestSignalTxRow { timestamp: number | string; type: string; tokens: string }
 export interface NestAllocationHistoryRow { allocated_tokens: string; created_at: number; closed_at: number | null }
+
+/** Group B lists (nuthatch#1160): the deployment figures from `lodestar_deployments`. */
+export const DEPLOYMENTS_ORDER_BY: Record<string, string> = { signalledTokens: 'signalled_tokens', stakedTokens: 'staked_tokens', queryFeesAmount: 'query_fees_amount', createdAt: 'created_at' };
+const DEPLOYMENT_COLS = `id, CAST(signalled_tokens AS VARCHAR) AS signalled_tokens, CAST(staked_tokens AS VARCHAR) AS staked_tokens, CAST(query_fees_amount AS VARCHAR) AS query_fees_amount, created_at, active_allocation_count, curator_count`;
+export const deploymentsListSql = (first: number, skip: number, orderBy: string, dir: 'asc' | 'desc') =>
+  `SELECT ${DEPLOYMENT_COLS} FROM lodestar_deployments WHERE signalled_tokens > 1000000000000000000 ORDER BY ${DEPLOYMENTS_ORDER_BY[orderBy] ?? 'signalled_tokens'} ${dir === 'asc' ? 'ASC' : 'DESC'}, id LIMIT ${first} OFFSET ${skip}`;
+export const deploymentsByIdSql = (ids: string[]) =>
+  `SELECT ${DEPLOYMENT_COLS} FROM lodestar_deployments WHERE id IN (${ids.map((i) => `'${i.toLowerCase()}'`).join(', ')})`;
+export const deploymentIdsSql = () => `SELECT id FROM lodestar_deployments WHERE signalled_tokens > 0 OR staked_tokens > 0`;
+/** Query fees collected on allocations closed since `since`, per deployment, largest first. */
+export const deploymentFeesSinceSql = (since: number, first: number) =>
+  `SELECT LOWER(subgraph_deployment) AS id, CAST(SUM(query_fees_collected) AS VARCHAR) AS query_fees FROM lodestar_allocations ` +
+  `WHERE status = 'Closed' AND closed_at >= ${Math.floor(since)} GROUP BY 1 HAVING SUM(query_fees_collected) > 0 ORDER BY SUM(query_fees_collected) DESC LIMIT ${first}`;
+export interface NestDeploymentListRow { id: string; signalled_tokens: string; staked_tokens: string; query_fees_amount: string; created_at: number | string; active_allocation_count: number | string; curator_count: number | string }
+export interface NestDeploymentFeesRow { id: string; query_fees: string }

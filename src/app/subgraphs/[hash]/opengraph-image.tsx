@@ -1,7 +1,11 @@
 import { ImageResponse } from 'next/og';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
+import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { deploymentsByIdSql, type NestDeploymentListRow } from '@/lib/nest-queries';
+import { ipfsText, manifestFacts, subgraphMetadataForDeployments } from '@/lib/subgraph-metadata';
+import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 
-export const runtime = 'edge';
+// Node runtime rather than edge: the nest path reads the IPFS cache through Postgres (nuthatch#1160).
 export const alt = 'Subgraph Deployment | Lodestar';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
@@ -132,7 +136,31 @@ export default async function OGImage({
   let found = false;
 
   try {
-    if (hasSubgraphAccess()) {
+    if (nuthatchEnabled('NUTHATCH_SUBGRAPHS') && hasNuthatch()) {
+      // From the nests (nuthatch#1160, group B). `deniedAt` is the rewards-eligibility oracle's
+      // verdict and is not on chain in any event the nests carry, so the "Rewards denied" chip is
+      // never shown on this path; network and substreams come off the manifest on IPFS.
+      let id: string | null = null;
+      try { id = ipfsHashToBytes32(hash).toLowerCase(); } catch { id = null; }
+      if (id) {
+        const r = await nuthatchSqlReady<NestDeploymentListRow>(deploymentsByIdSql([id]), process.env.NUTHATCH_ALLOCATIONS_BASE_PATH || '/alloc');
+        const dep = r.ok ? r.data.rows[0] : undefined;
+        if (dep) {
+          found = true;
+          const [meta, manifest] = await Promise.all([subgraphMetadataForDeployments([id]), ipfsText(hash)]);
+          name = meta.get(id)?.metadata?.displayName ?? shortenHash(hash);
+          signal = weiToGRT(String(dep.signalled_tokens));
+          allocated = weiToGRT(String(dep.staked_tokens));
+          queryFees = weiToGRT(String(dep.query_fees_amount));
+          activeIndexers = Number(dep.active_allocation_count);
+          curators = Number(dep.curator_count);
+          const facts = manifestFacts(manifest);
+          network = facts.network;
+          substreams = facts.poweredBySubstreams;
+          createdAt = Number(dep.created_at);
+        }
+      }
+    } else if (hasSubgraphAccess()) {
       const data = await subgraphQuery<{
         subgraphDeployments: Array<{
           ipfsHash: string;

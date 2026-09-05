@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { log } from '@/lib/logger';
+import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { deploymentFeesSinceSql, deploymentsByIdSql, type NestDeploymentFeesRow, type NestDeploymentListRow } from '@/lib/nest-queries';
+import { deploymentRowToApi, subgraphMetadataForDeployments } from '@/lib/subgraph-metadata';
+
+const ALLOC_BASE_PATH = process.env.NUTHATCH_ALLOCATIONS_BASE_PATH || '/alloc';
 
 interface AllocationSlim {
   id: string;
@@ -48,6 +53,40 @@ interface AggregatedDeployment {
  *   2. Targeted deployment detail fetch for the top results
  */
 export async function GET() {
+  // Behind NUTHATCH_SUBGRAPHS (nuthatch#1160, group B): the same two passes against the nest. Pass 1
+  // is one GROUP BY over `lodestar_allocations` closed in the window, top 200; pass 2 reads those
+  // deployments off `lodestar_deployments` and names them off graph-gns-nest + IPFS.
+  if (nuthatchEnabled('NUTHATCH_SUBGRAPHS') && hasNuthatch()) {
+    try {
+      const data = await cached('lodestar:deployments-fees-30d:nuthatch:v1', 300, async () => {
+        const since = Math.floor(Date.now() / 1000) - 30 * 86400;
+        const fees = await nuthatchSqlReady<NestDeploymentFeesRow>(deploymentFeesSinceSql(since, 200), ALLOC_BASE_PATH);
+        if (!fees.ok) throw Object.assign(new Error(fees.error), { nest: fees });
+        if (fees.data.rows.length === 0) return [] as AggregatedDeployment[];
+        const ids = fees.data.rows.map((r) => r.id);
+        const deps = await nuthatchSqlReady<NestDeploymentListRow>(deploymentsByIdSql(ids), ALLOC_BASE_PATH);
+        if (!deps.ok) throw Object.assign(new Error(deps.error), { nest: deps });
+        const byId = new Map(deps.data.rows.map((d) => [d.id.toLowerCase(), d]));
+        const meta = await subgraphMetadataForDeployments(ids);
+        const out: AggregatedDeployment[] = [];
+        for (const f of fees.data.rows) {
+          const d = byId.get(f.id.toLowerCase());
+          if (!d) continue;
+          if (BigInt(d.signalled_tokens) <= BigInt('1000000000000000000')) continue; // dust signal, as before
+          const m = meta.get(f.id.toLowerCase());
+          out.push({ ...deploymentRowToApi(d, { displayName: m?.metadata?.displayName ?? null, categories: m?.metadata?.categories ?? [] }), queryFees30d: f.query_fees });
+        }
+        return out;
+      });
+      return NextResponse.json({ data, source: 'nuthatch' }, {
+        headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+      });
+    } catch (error) {
+      log.api.error({ err: error }, '30-day fees from the nest failed');
+      return NextResponse.json({ error: 'Failed to load 30-day fees from Nuthatch' }, { status: 503 });
+    }
+  }
+
   if (!hasSubgraphAccess()) {
     return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
   }
