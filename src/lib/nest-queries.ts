@@ -215,3 +215,29 @@ export interface NestIndexerRow {
   geohash: string | null;
   created_at: number;
 }
+
+/**
+ * The subgraph's `curators(orderBy: totalSignalledTokens, where: {totalSignalledTokens_gt: 0,
+ * activeSignalCount_gt: 0})` from `lodestar_curators` (nuthatch#1160). The GNS contract appears as a
+ * Curation-level curator on L2 because name signal is routed through it; the view flags that row and
+ * this query drops it, which is what the gateway list effectively shows. `realized_rewards` is the
+ * subgraph's own unimplemented zero, carried so the page's column keeps its meaning.
+ */
+export function curatorsSql(first: number, skip: number): string {
+  return (
+    `SELECT id, CAST(total_signalled_tokens AS VARCHAR) AS total_signalled_tokens, ` +
+    `CAST(total_unsignalled_tokens AS VARCHAR) AS total_unsignalled_tokens, ` +
+    `CAST(realized_rewards AS VARCHAR) AS realized_rewards, signal_count, active_signal_count ` +
+    `FROM lodestar_curators WHERE total_signalled_tokens > 0 AND active_signal_count > 0 AND NOT is_gns ` +
+    `ORDER BY total_signalled_tokens DESC, id ASC LIMIT ${first} OFFSET ${skip}`
+  );
+}
+
+export interface NestCuratorRow {
+  id: string;
+  total_signalled_tokens: string;
+  total_unsignalled_tokens: string;
+  realized_rewards: string;
+  signal_count: number;
+  active_signal_count: number;
+}
