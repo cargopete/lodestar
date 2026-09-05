@@ -448,6 +448,35 @@ export interface NestCuratorSignalRow {
   realized_rewards: string; deployment_signalled_tokens: string; deployment_query_fees_amount: string; deployment_staked_tokens: string;
 }
 
+/** The refresh cron's inputs from the nest (nuthatch#1160); `since`/`cutoff` are Unix seconds the caller computed. */
+export const indexersAllSql = () =>
+  `SELECT id, CAST(staked_tokens AS VARCHAR) AS staked_tokens, CAST(locked_tokens AS VARCHAR) AS locked_tokens, locked_until, ` +
+  `CAST(delegated_tokens AS VARCHAR) AS delegated_tokens, CAST(delegated_thawing_tokens AS VARCHAR) AS delegated_thawing_tokens, ` +
+  `CAST(allocated_tokens AS VARCHAR) AS allocated_tokens, allocation_count, indexing_reward_cut, query_fee_cut, last_delegation_parameter_update, ` +
+  `CAST(rewards_earned AS VARCHAR) AS rewards_earned, CAST(query_fees_collected AS VARCHAR) AS query_fees_collected, ` +
+  `CAST(delegator_shares AS VARCHAR) AS delegator_shares, CAST(provisioned_tokens AS VARCHAR) AS provisioned_tokens, url, geohash, created_at ` +
+  `FROM lodestar_indexers WHERE staked_tokens > 0 AND id <> '${INDEXERS_EXCLUDED}' ORDER BY id`;
+export const activeAllocationsAllSql = () =>
+  `SELECT a.id, LOWER(a.indexer) AS indexer, CAST(a.allocated_tokens AS VARCHAR) AS allocated_tokens, CAST(a.signalled_tokens AS VARCHAR) AS signalled_tokens, ` +
+  `CAST(d.staked AS VARCHAR) AS deployment_staked_tokens FROM lodestar_allocations a ` +
+  `JOIN (SELECT subgraph_deployment, SUM(allocated_tokens) AS staked FROM lodestar_allocations WHERE status = 'Active' GROUP BY 1) d ON d.subgraph_deployment = a.subgraph_deployment ` +
+  `WHERE a.status = 'Active'`;
+export const delegationEventsSinceSql = (since: number) =>
+  `SELECT event_type, indexer, CAST(tokens AS VARCHAR) AS tokens FROM lodestar_delegations WHERE timestamp > ${Math.floor(since)} AND event_type IN ('delegation', 'undelegation')`;
+export const closedAllocationsSinceSql = (since: number) =>
+  `SELECT LOWER(indexer) AS indexer, CAST(indexing_delegator_rewards AS VARCHAR) AS indexing_delegator_rewards, closed_at ` +
+  `FROM lodestar_allocations WHERE status = 'Closed' AND closed_at >= ${Math.floor(since)} AND indexing_delegator_rewards > 0`;
+/** Pool tokens over shares per indexer as of a Unix time, from the ledger: the pool's exchange rate then. */
+export const exchangeRatesAsOfSql = (cutoff: number) =>
+  `SELECT indexer, CAST(SUM(pool_delta) AS VARCHAR) AS pool_tokens, CAST(SUM(shares_delta) AS VARCHAR) AS pool_shares ` +
+  `FROM lodestar_indexer_ledger WHERE ts <= ${Math.floor(cutoff)} GROUP BY 1 HAVING SUM(shares_delta) > 0`;
+export const dataServiceCountsSql = () =>
+  `SELECT indexer, COUNT(DISTINCT data_service) AS n FROM lodestar_provisions WHERE tokens_provisioned > 0 GROUP BY 1`;
+export interface NestActiveAllocationAllRow { id: string; indexer: string; allocated_tokens: string; signalled_tokens: string; deployment_staked_tokens: string | null }
+export interface NestDelegationEventRow { event_type: string; indexer: string; tokens: string }
+export interface NestClosedAllocationRewardRow { indexer: string; indexing_delegator_rewards: string; closed_at: number | null }
+export interface NestExchangeRateRow { indexer: string; pool_tokens: string; pool_shares: string }
+export interface NestDataServiceCountRow { indexer: string; n: number | string }
 /**
  * `api/indexer-stake-history` (nuthatch#1160): own stake and delegation pool as of each of a list of
  * Unix times, summed from `lodestar_indexer_ledger`. The gateway path asked the subgraph for 27
