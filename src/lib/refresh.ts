@@ -15,6 +15,16 @@ import type { EnrichedIndexer } from './enriched';
 import type { DbClient } from './db';
 import { updateIngestionState } from './db';
 import { writeIndexers } from './ingest/indexers';
+import { hasNuthatch, nuthatchEnabled, nuthatchSql } from './nuthatch';
+import {
+  indexersAllSql, activeAllocationsAllSql, delegationEventsSinceSql, closedAllocationsSinceSql, exchangeRatesAsOfSql,
+  dataServiceCountsSql, networkSql, networkParamsSql,
+  type NestIndexerDetailRow, type NestActiveAllocationAllRow, type NestDelegationEventRow, type NestClosedAllocationRewardRow,
+  type NestExchangeRateRow, type NestDataServiceCountRow, type NestNetworkRow, type NestNetworkParamsRow,
+} from './nest-queries';
+import { refreshIndexerFromNest } from './nest-indexers';
+
+const REFRESH_BASE_PATH = process.env.NUTHATCH_REFRESH_BASE_PATH || '/alloc';
 
 interface SubgraphIndexer {
   id: string;
@@ -65,23 +75,25 @@ interface DelegationEventData {
   timestamp: string;
 }
 
-/**
- * Core indexer enrichment pipeline.
- * Fetches from subgraphs, computes scores, writes to Redis + Postgres.
- * Extracted so it can be called from both the Next.js route and the standalone cron runner.
- */
-export async function refreshIndexers(opts: {
-  sql?: DbClient | null;
-  writeToRedis?: boolean;
-}): Promise<{ count: number; durationMs: number }> {
-  const { sql, writeToRedis = true } = opts;
+/** Everything the enrichment needs, gathered from one source or the other. */
+export interface RefreshInputs {
+  network: { totalTokensSignalled: string; networkGRTIssuancePerBlock?: string; delegationRatio: number; currentEpoch: number };
+  indexers: SubgraphIndexer[];
+  allocationMap: Map<string, AllocationData[]>;
+  delegationActivity: Record<string, { delegations: number; undelegations: number; netFlowGRT: number }>;
+  ensNames: Record<string, string>;
+  closedAllocsByIndexer: Map<string, Array<{ delegator_rewards_grt: number; closed_at: number }>>;
+  exchangeRateHistory: Map<string, { rate30d: number | null; rate90d: number | null }>;
+  dataServiceCountMap: Map<string, number>;
+}
 
+/**
+ * The gateway gatherer: three subgraphs through the key, as it has always worked. Steps 1 to 5d.
+ */
+export async function gatherFromGateway(): Promise<RefreshInputs> {
   if (!hasSubgraphAccess()) {
     throw new Error('No GRAPH_API_KEY configured');
   }
-
-  const startTime = Date.now();
-
   // Step 1: Fetch ALL indexers (paginated) + network stats
   const networkResult = await subgraphQuery<{
     graphNetwork: {
@@ -147,14 +159,6 @@ export async function refreshIndexers(opts: {
     lastId = page.indexers[page.indexers.length - 1].id;
   }
   const network = networkResult.graphNetwork;
-  const totalNetworkSignal = weiToGRT(network.totalTokensSignalled);
-  const delegationRatio = network.delegationRatio;
-
-  const issuancePerBlock = network.networkGRTIssuancePerBlock
-    ? weiToGRT(network.networkGRTIssuancePerBlock)
-    : 0;
-  const L1_BLOCKS_PER_YEAR = 2_628_000;
-  const annualIssuance = issuancePerBlock * L1_BLOCKS_PER_YEAR;
 
   // Step 2: Fetch allocations in batches of 10 indexer IDs
   const indexerIds = indexers.map((i) => i.id);
@@ -278,18 +282,6 @@ export async function refreshIndexers(opts: {
     log.refresh.info({ count: Object.keys(ensNames).length }, 'ENS names resolved');
   } catch (e) {
     log.refresh.warn({ err: e }, 'ENS lookup failed, continuing without');
-  }
-
-  // Step 5: Batch-read REO oracle. The oracle is the sole source of truth —
-  // if the batch read fails, every indexer is left 'unknown' rather than
-  // guessed at from on-chain heuristics.
-  let reoMap = new Map<string, OracleEligibility>();
-  const reoSource: 'oracle' | 'heuristic' = 'oracle';
-  try {
-    reoMap = await batchCheckEligibility(indexerIds);
-    log.refresh.info({ count: reoMap.size }, 'REO oracle checked');
-  } catch (e) {
-    log.refresh.warn({ err: e }, 'REO oracle batch call failed, indexers left unknown (no heuristic fallback)');
   }
 
   // Step 5b: Fetch closed allocations (last 90d) for rolling APY
@@ -446,6 +438,106 @@ export async function refreshIndexers(opts: {
     log.refresh.info({ count: dataServiceCountMap.size }, 'Data service counts loaded');
   } catch (e) {
     log.refresh.warn({ err: e }, 'Provisions fetch failed (non-fatal), data service counts will be 0');
+  }
+
+  return { network, indexers, allocationMap, delegationActivity, ensNames, closedAllocsByIndexer, exchangeRateHistory, dataServiceCountMap };
+}
+
+/**
+ * The nest gatherer (nuthatch#1160): the same eight inputs from `graph-allocations-nest`, none of them
+ * through the gateway key. Differences from the gateway path, each deliberate:
+ *   - names are null (ENS and IPFS are group B work), so `ensNames` is empty until then;
+ *   - the derived ratios are computed here from the subgraph's own formulas rather than read;
+ *   - the 30- and 90-day exchange rates are the ledger summed up to real Unix times instead of
+ *     block numbers estimated from an average block time;
+ *   - the pool figure excludes thawing already, so the thawing argument to the rate is 0.
+ * Every read is `nuthatchSql`: this is a cron, not the page the user sees, and a stalled nest is a
+ * stale Redis entry that the readiness probe on the pages reports rather than a 503 here.
+ */
+export async function gatherFromNest(): Promise<RefreshInputs> {
+  const now = Math.floor(Date.now() / 1000);
+  const q = <T,>(sql: string) => nuthatchSql<T>(sql, REFRESH_BASE_PATH);
+  const [net, params, rows, allocs, events, closed, r30, r90, dsc] = await Promise.all([
+    q<NestNetworkRow>(networkSql()), q<NestNetworkParamsRow>(networkParamsSql()), q<NestIndexerDetailRow>(indexersAllSql()),
+    q<NestActiveAllocationAllRow>(activeAllocationsAllSql()), q<NestDelegationEventRow>(delegationEventsSinceSql(now - 7 * 86400)),
+    q<NestClosedAllocationRewardRow>(closedAllocationsSinceSql(now - 90 * 86400)),
+    q<NestExchangeRateRow>(exchangeRatesAsOfSql(now - 30 * 86400)), q<NestExchangeRateRow>(exchangeRatesAsOfSql(now - 90 * 86400)),
+    q<NestDataServiceCountRow>(dataServiceCountsSql()),
+  ]);
+  const n = net[0]; const p = params[0];
+  if (!n || !p) throw new Error('lodestar_network or lodestar_network_params returned no row');
+  const delegationRatio = Number(p.delegation_ratio ?? 16);
+  const network = {
+    totalTokensSignalled: n.total_tokens_signalled,
+    networkGRTIssuancePerBlock: n.issuance_per_block ?? undefined,
+    delegationRatio,
+    currentEpoch: Number(n.current_epoch),
+  };
+  const indexers: SubgraphIndexer[] = rows.map((r) => refreshIndexerFromNest(r, delegationRatio));
+  const allocationMap = new Map<string, AllocationData[]>();
+  for (const a of allocs) {
+    const list = allocationMap.get(a.indexer) ?? [];
+    list.push({ id: a.id, allocatedTokens: a.allocated_tokens, indexer: { id: a.indexer }, subgraphDeployment: { signalledTokens: a.signalled_tokens, stakedTokens: a.deployment_staked_tokens ?? '0' } });
+    allocationMap.set(a.indexer, list);
+  }
+  const delegationActivity: RefreshInputs['delegationActivity'] = {};
+  for (const e of events) {
+    const id = e.indexer.toLowerCase();
+    if (!delegationActivity[id]) delegationActivity[id] = { delegations: 0, undelegations: 0, netFlowGRT: 0 };
+    const tokens = weiToGRT(e.tokens);
+    if (e.event_type === 'delegation') { delegationActivity[id].delegations++; delegationActivity[id].netFlowGRT += tokens; }
+    else if (e.event_type === 'undelegation') { delegationActivity[id].undelegations++; delegationActivity[id].netFlowGRT -= tokens; }
+  }
+  const closedAllocsByIndexer = new Map<string, Array<{ delegator_rewards_grt: number; closed_at: number }>>();
+  for (const c of closed) {
+    const rewards = weiToGRT(c.indexing_delegator_rewards);
+    if (rewards <= 0 || c.closed_at == null) continue;
+    const list = closedAllocsByIndexer.get(c.indexer) ?? [];
+    list.push({ delegator_rewards_grt: rewards, closed_at: Number(c.closed_at) });
+    closedAllocsByIndexer.set(c.indexer, list);
+  }
+  const exchangeRateHistory = new Map<string, { rate30d: number | null; rate90d: number | null }>();
+  for (const r of r30) { const rate = calculatePoolExchangeRate(r.pool_tokens, '0', r.pool_shares); if (rate > 0) exchangeRateHistory.set(r.indexer, { rate30d: rate, rate90d: null }); }
+  for (const r of r90) { const rate = calculatePoolExchangeRate(r.pool_tokens, '0', r.pool_shares); if (rate > 0) { const e = exchangeRateHistory.get(r.indexer) ?? { rate30d: null, rate90d: null }; e.rate90d = rate; exchangeRateHistory.set(r.indexer, e); } }
+  const dataServiceCountMap = new Map<string, number>(dsc.map((d) => [d.indexer, Number(d.n)]));
+  log.refresh.info({ indexers: indexers.length, allocations: allocs.length, events: events.length, closed: closed.length }, 'refresh inputs gathered from the nest');
+  return { network, indexers, allocationMap, delegationActivity, ensNames: {}, closedAllocsByIndexer, exchangeRateHistory, dataServiceCountMap };
+}
+
+/**
+ * Core indexer enrichment pipeline.
+ * Gathers from the nest behind NUTHATCH_REFRESH (nuthatch#1160) or from the subgraphs, computes
+ * scores, writes to Redis + Postgres. Extracted so it can be called from both the Next.js route and
+ * the standalone cron runner.
+ */
+export async function refreshIndexers(opts: {
+  sql?: DbClient | null;
+  writeToRedis?: boolean;
+}): Promise<{ count: number; durationMs: number }> {
+  const { sql, writeToRedis = true } = opts;
+  const startTime = Date.now();
+
+  const inputs = nuthatchEnabled('NUTHATCH_REFRESH') && hasNuthatch() ? await gatherFromNest() : await gatherFromGateway();
+  const { network, indexers, allocationMap, delegationActivity, ensNames, closedAllocsByIndexer, exchangeRateHistory, dataServiceCountMap } = inputs;
+  const indexerIds = indexers.map((i) => i.id);
+  const totalNetworkSignal = weiToGRT(network.totalTokensSignalled);
+  const delegationRatio = network.delegationRatio;
+  const issuancePerBlock = network.networkGRTIssuancePerBlock
+    ? weiToGRT(network.networkGRTIssuancePerBlock)
+    : 0;
+  const L1_BLOCKS_PER_YEAR = 2_628_000;
+  const annualIssuance = issuancePerBlock * L1_BLOCKS_PER_YEAR;
+
+  // Step 5: Batch-read REO oracle. The oracle is the sole source of truth —
+  // if the batch read fails, every indexer is left 'unknown' rather than
+  // guessed at from on-chain heuristics.
+  let reoMap = new Map<string, OracleEligibility>();
+  const reoSource: 'oracle' | 'heuristic' = 'oracle';
+  try {
+    reoMap = await batchCheckEligibility(indexerIds);
+    log.refresh.info({ count: reoMap.size }, 'REO oracle checked');
+  } catch (e) {
+    log.refresh.warn({ err: e }, 'REO oracle batch call failed, indexers left unknown (no heuristic fallback)');
   }
 
   // Step 6: Compute enriched data for each indexer
