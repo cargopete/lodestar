@@ -148,9 +148,13 @@ function aggregateOverview(
   };
 }
 
-/** The nests carrying the folds. `/alloc` fronts graph-allocations-nest; `/horizon` the horizon nest. */
+/**
+ * The nests carrying the folds. `/alloc` fronts graph-allocations-nest, which has carried the tally
+ * tables as well since the separate horizon nest retired (2026-09-06). The second knob stays for an
+ * operator who keeps the collector on its own nest.
+ */
 const ALLOC_BASE_PATH = process.env.NUTHATCH_PAYMENTS_BASE_PATH || '/alloc';
-const HORIZON_BASE_PATH = process.env.NUTHATCH_HORIZON_BASE_PATH || '/horizon';
+const HORIZON_BASE_PATH = process.env.NUTHATCH_HORIZON_BASE_PATH || '/alloc';
 
 interface NestEscrowAccount { payer: string; collector: string; receiver: string; balance: string; thawing: string; thaw_end: string }
 interface NestEscrowTx { tx_hash: string; log_index: number; block_timestamp: number; payer: string; receiver: string; amount: string; type: string; allocation_id: string | null }

@@ -70,12 +70,12 @@ describe('api/payments from the nests', () => {
     expect(nuthatchSqlReady).not.toHaveBeenCalled();
   });
 
-  it('reads the escrow folds from the allocations nest and the tally from the horizon nest', async () => {
+  it('reads the escrow folds and the tally from the allocations nest', async () => {
     nuthatchSqlReady.mockResolvedValueOnce(ok([account])).mockResolvedValueOnce(ok([tx])).mockResolvedValueOnce(ok([tally]));
     const res = await GET(req());
     expect(res.status).toBe(200);
     const paths = nuthatchSqlReady.mock.calls.map((c) => c[1]);
-    expect(paths).toEqual(['/alloc', '/alloc', '/horizon']);
+    expect(paths).toEqual(['/alloc', '/alloc', '/alloc']);
     const sqls = nuthatchSqlReady.mock.calls.map((c) => String(c[0]));
     expect(sqls[0]).toMatch(/escrow__deposit/);
     expect(sqls[0]).toMatch(/HAVING SUM\(mv\.d\) > 0/);
