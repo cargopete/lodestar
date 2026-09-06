@@ -14,18 +14,6 @@ export interface EpochSummary {
   totalQueryFees: string;
 }
 
-/** The subgraph's row shape, as `epoches(...)` returns it. */
-export interface SubgraphEpoch {
-  id: string;
-  startBlock: string;
-  endBlock: string;
-  totalRewards: string;
-  totalIndexerRewards?: string;
-  totalDelegatorRewards: string;
-  totalQueryFees: string;
-  queryFeeRebates?: string;
-}
-
 /** The nest's row shape, as `lodestar_epochs` on graph-allocations-nest returns it. */
 export interface NestEpoch {
   id: number | string;
@@ -34,17 +22,6 @@ export interface NestEpoch {
   total_rewards: string | number;
   total_delegator_rewards: string | number;
   query_fees_collected: string | number;
-}
-
-export function fromSubgraphEpoch(e: SubgraphEpoch): EpochSummary {
-  return {
-    id: String(e.id),
-    startBlock: String(e.startBlock),
-    endBlock: String(e.endBlock),
-    totalRewards: e.totalRewards ?? '0',
-    totalDelegatorRewards: e.totalDelegatorRewards ?? '0',
-    totalQueryFees: e.totalQueryFees ?? '0',
-  };
 }
 
 /**

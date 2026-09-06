@@ -200,7 +200,6 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Description | Required |
 |---|---|---|
-| `GRAPH_API_KEY` | API key from [The Graph Studio](https://thegraph.com/studio/apikeys/) | Yes |
 | `DATABASE_URL` | Postgres connection string (`postgresql://user:pass@host:port/db?sslmode=require`) | Yes |
 | `REDIS_URL` | Redis connection string (`rediss://` for TLS — self-hosted or managed). Falls back to a process-local in-memory cache when unset | No |
 | `CRON_SECRET` | Random string to protect cron endpoints (auth fails closed if unset) | Yes |

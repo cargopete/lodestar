@@ -203,12 +203,12 @@ the denominator. See `nuthatch#1083`.
 - [ ] Keep fixed-block parity fixtures for each route in CI before its production switch.
 - [ ] Remove the corresponding Graph client query and Graph API-key requirement only after the route
       is Live.
-- [ ] Remove the Graph **Network subgraph** queries and the routes' dependence on them once every
-      route in the checklists above is Live. **Not** the Graph client, the environment variables or
-      the dependencies: the surfaces under "Intended Graph surfaces" keep needing all three, so
-      `GRAPH_API_KEY` remains configured after the migration completes. The defensible goal, per
-      `nuthatch#638`, is that the key is no longer load-bearing for Lodestar's own dashboard - not
-      that it disappears from the repository.
+- [x] Remove the Graph **Network subgraph** queries and the routes' dependence on them. Done
+      2026-09-06 (nuthatch#1160): the gateway client `lib/subgraph.ts` is gone, no route or cron
+      reads `GRAPH_API_KEY`, and the per-surface `NUTHATCH_*` flags are gone with the fallbacks they
+      gated. The board's decision superseded the earlier "key stays configured" position: the
+      features that only existed to relay someone else's query through the gateway were removed
+      rather than kept on an exception, and the key is deleted from Vercel.
 - [ ] Expose `seal-direct` backfill progress through `/metrics` and the TUI. Tracked in
       [nuthatch#807](https://github.com/nightswatchhq/nuthatch/issues/807).
 
