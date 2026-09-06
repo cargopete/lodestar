@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT } from '@/lib/utils';
 import { log } from '@/lib/logger';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { deploymentSignalTransactionsSql, deploymentAllocationsHistorySql, type NestSignalTxRow, type NestAllocationHistoryRow } from '@/lib/nest-queries';
 import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 
@@ -48,43 +47,16 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid deployment hash' }, { status: 400 });
   }
 
-  // The key gates the gateway path only (nuthatch#1160).
-  const useNest = nuthatchEnabled('NUTHATCH_SUBGRAPHS') && hasNuthatch();
-  if (!useNest && !hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
+  // From the nest (nuthatch#1160); the gateway path this once fell back to left with the key.
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
 
-  const query = `{
-    signalTransactions(
-      where: { subgraphDeployment_: { ipfsHash: "${hash}" } }
-      orderBy: timestamp
-      orderDirection: asc
-      first: 1000
-    ) {
-      timestamp
-      type
-      tokens
-    }
-    allocations(
-      where: { subgraphDeployment_: { ipfsHash: "${hash}" } }
-      orderBy: createdAt
-      orderDirection: asc
-      first: 1000
-    ) {
-      allocatedTokens
-      createdAt
-      closedAt
-    }
-  }`;
-
-  const cacheKey = `lodestar:subgraph-history-v4:${hash}${useNest ? ':nuthatch' : ''}`;
+  const cacheKey = `lodestar:subgraph-history-v4:${hash}:nuthatch`;
 
   try {
     const data = await cached(cacheKey, 3600, async () => {
-      const result = useNest ? await seriesFromNest(hash) : await subgraphQuery<{
-        signalTransactions: RawSignalTx[];
-        allocations: RawAllocation[];
-      }>(query);
+      const result = await seriesFromNest(hash);
 
       const { signalTransactions, allocations } = result;
 

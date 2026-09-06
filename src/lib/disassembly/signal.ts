@@ -6,8 +6,7 @@
 // priority. It's a best-effort overlay — if the gateway is unreachable, signal
 // is simply absent and the static analysis stands on its own.
 
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
-import { hasNuthatch, nuthatchEnabled, nuthatchSql } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSql } from '@/lib/nuthatch';
 import { deploymentSignalsSql, type NestDeploymentSignalRow } from '@/lib/nest-queries';
 import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import { weiToGRT } from '@/lib/utils';
@@ -51,62 +50,24 @@ export function worstFlagLevel(levels: FlagLevel[]): FlagLevel | 'none' {
   return 'none';
 }
 
-interface RawDeployment {
-  signalledTokens: string;
-  queryFeesAmount: string | null;
-  curatorSignals: { id: string }[];
-}
-
 /**
  * Best-effort current curation signal for a deployment ID (Qm…). Returns null
  * when no gateway access is configured or the query fails — signal is an
  * overlay, never load-bearing.
  */
 export async function fetchDeploymentSignal(deploymentId: string): Promise<SignalContext | null> {
-  // Behind NUTHATCH_SUBGRAPHS (nuthatch#1160) the signal comes from graph-allocations-nest.
-  if (nuthatchEnabled('NUTHATCH_SUBGRAPHS') && hasNuthatch()) {
-    try {
-      const id = ipfsHashToBytes32(deploymentId).toLowerCase();
-      const rows = await nuthatchSql<NestDeploymentSignalRow>(deploymentSignalsSql(id, SIGNAL_FIRST), process.env.NUTHATCH_ALLOCATIONS_BASE_PATH || '/alloc');
-      const d = rows[0];
-      if (!d) return null;
-      const signalledGRT = weiToGRT(d.deployment_signalled_tokens ?? '0');
-      const queryFeesGRT = weiToGRT(d.deployment_query_fees_amount ?? '0');
-      return {
-        signalledTokens: d.deployment_signalled_tokens ?? '0', queryFeesAmount: d.deployment_query_fees_amount ?? '0',
-        signalledGRT, queryFeesGRT, curatorCount: rows.length, curatorCountCapped: rows.length >= SIGNAL_FIRST, exposure: signalExposure(signalledGRT),
-      };
-    } catch {
-      return null;
-    }
-  }
-  if (!hasSubgraphAccess()) return null;
-
-  const query = `{
-    subgraphDeployments(where: { ipfsHash: "${deploymentId}" }, first: 1) {
-      signalledTokens
-      queryFeesAmount
-      curatorSignals(first: ${SIGNAL_FIRST}, where: { signalledTokens_gt: 0 }) { id }
-    }
-  }`;
-
+  // From the nest, always (nuthatch#1160); the gateway path this once fell back to left with the key.
+  if (!hasNuthatch()) return null;
   try {
-    const res = await subgraphQuery<{ subgraphDeployments: RawDeployment[] }>(query);
-    const d = res.subgraphDeployments?.[0];
+    const id = ipfsHashToBytes32(deploymentId).toLowerCase();
+    const rows = await nuthatchSql<NestDeploymentSignalRow>(deploymentSignalsSql(id, SIGNAL_FIRST), process.env.NUTHATCH_ALLOCATIONS_BASE_PATH || '/alloc');
+    const d = rows[0];
     if (!d) return null;
-
-    const signalledGRT = weiToGRT(d.signalledTokens ?? '0');
-    const queryFeesGRT = weiToGRT(d.queryFeesAmount ?? '0');
-    const curatorCount = d.curatorSignals?.length ?? 0;
-
+    const signalledGRT = weiToGRT(d.deployment_signalled_tokens ?? '0');
+    const queryFeesGRT = weiToGRT(d.deployment_query_fees_amount ?? '0');
     return {
-      signalledTokens: d.signalledTokens ?? '0',
-      queryFeesAmount: d.queryFeesAmount ?? '0',
-      signalledGRT,
-      queryFeesGRT,
-      curatorCount,
-      curatorCountCapped: curatorCount >= SIGNAL_FIRST,
-      exposure: signalExposure(signalledGRT),
+      signalledTokens: d.deployment_signalled_tokens ?? '0', queryFeesAmount: d.deployment_query_fees_amount ?? '0',
+      signalledGRT, queryFeesGRT, curatorCount: rows.length, curatorCountCapped: rows.length >= SIGNAL_FIRST, exposure: signalExposure(signalledGRT),
     };
   } catch {
     return null;

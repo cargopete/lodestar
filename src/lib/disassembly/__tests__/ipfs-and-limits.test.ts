@@ -16,12 +16,13 @@ vi.mock('@/lib/cache', () => ({
   cacheSet: (...a: unknown[]) => cacheSet(...a),
 }));
 
-const subgraphQuery = vi.fn();
-const hasSubgraphAccess = vi.fn(() => true);
-vi.mock('@/lib/subgraph', () => ({
-  subgraphQuery: (...a: unknown[]) => subgraphQuery(...a),
-  hasSubgraphAccess: () => hasSubgraphAccess(),
+const hasNuthatch = vi.fn(() => true);
+vi.mock('@/lib/nuthatch', () => ({ hasNuthatch: () => hasNuthatch() }));
+const metadataFor = vi.fn<(ids: string[]) => Promise<Map<string, unknown>>>();
+vi.mock('@/lib/subgraph-metadata', () => ({
+  subgraphMetadataForDeployments: (ids: string[]) => metadataFor(ids),
 }));
+import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 
 import { IPFS_HASH_RE, ipfsCatText, ipfsCatBytes } from '../ipfs';
 import { fetchSourceHint } from '../source-hint';
@@ -32,7 +33,8 @@ const fetchMock = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
-  hasSubgraphAccess.mockReturnValue(true);
+  hasNuthatch.mockReturnValue(true);
+  metadataFor.mockResolvedValue(new Map());
   cacheGet.mockResolvedValue(null);
   cacheSet.mockResolvedValue(undefined);
   fetchMock.mockReset();
@@ -99,37 +101,27 @@ describe('ipfsCatBytes', () => {
 });
 
 describe('fetchSourceHint', () => {
-  it('returns null without querying when there is no gateway key', async () => {
-    hasSubgraphAccess.mockReturnValue(false);
+  // The hint reads the gns nest's metadata hash and the IPFS document behind it (nuthatch#1160).
+  const ID = ipfsHashToBytes32(HASH).toLowerCase();
+  const withMeta = (metadata: unknown) => new Map([[ID, { subgraphId: 's', metadata }]]);
+
+  it('returns null without querying when no nest is configured', async () => {
+    hasNuthatch.mockReturnValue(false);
     await expect(fetchSourceHint(HASH)).resolves.toBeNull();
-    expect(subgraphQuery).not.toHaveBeenCalled();
+    expect(metadataFor).not.toHaveBeenCalled();
   });
 
   it('returns the repository and website when metadata carries them', async () => {
-    subgraphQuery.mockResolvedValue({
-      subgraphDeployments: [
-        {
-          versions: [
-            {
-              subgraph: {
-                metadata: { codeRepository: 'https://github.com/x/y', website: 'https://y.io' },
-              },
-            },
-          ],
-        },
-      ],
-    });
-
+    metadataFor.mockResolvedValue(withMeta({ codeRepository: 'https://github.com/x/y', website: 'https://y.io' }));
     await expect(fetchSourceHint(HASH)).resolves.toEqual({
       codeRepository: 'https://github.com/x/y',
       website: 'https://y.io',
     });
+    expect(metadataFor).toHaveBeenCalledWith([ID]);
   });
 
   it('normalises absent fields to null rather than undefined', async () => {
-    subgraphQuery.mockResolvedValue({
-      subgraphDeployments: [{ versions: [{ subgraph: { metadata: {} } }] }],
-    });
+    metadataFor.mockResolvedValue(withMeta({}));
     await expect(fetchSourceHint(HASH)).resolves.toEqual({
       codeRepository: null,
       website: null,
@@ -137,18 +129,15 @@ describe('fetchSourceHint', () => {
   });
 
   it.each([
-    ['no deployments', { subgraphDeployments: [] }],
-    ['no versions', { subgraphDeployments: [{ versions: [] }] }],
-    ['no subgraph', { subgraphDeployments: [{ versions: [{ subgraph: null }] }] }],
-    ['no metadata', { subgraphDeployments: [{ versions: [{ subgraph: { metadata: null } }] }] }],
-    ['nothing at all', {}],
-  ])('returns null when the response has %s', async (_label, response) => {
-    subgraphQuery.mockResolvedValue(response);
+    ['no entry for the deployment', new Map()],
+    ['an entry with no metadata', withMeta(null)],
+  ])('returns null when the nest has %s', async (_label, map) => {
+    metadataFor.mockResolvedValue(map as Map<string, unknown>);
     await expect(fetchSourceHint(HASH)).resolves.toBeNull();
   });
 
-  it('swallows a gateway failure, because this is a nicety on a share surface', async () => {
-    subgraphQuery.mockRejectedValue(new Error('gateway down'));
+  it('swallows a nest failure, because this is a nicety on a share surface', async () => {
+    metadataFor.mockRejectedValue(new Error('nest down'));
     await expect(fetchSourceHint(HASH)).resolves.toBeNull();
   });
 });

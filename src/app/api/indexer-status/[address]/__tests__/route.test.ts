@@ -1,16 +1,42 @@
 /**
- * Tests for /api/indexer-status/[address] — address validation, allocation
- * fetch + status merge, and SSRF-gated status query. Mocks isolated to file.
+ * Tests for /api/indexer-status/[address] - address validation, allocation fetch (from the nest,
+ * nuthatch#1160) + status merge, and SSRF-gated status query. Mocks isolated to file.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const subgraphQuery = vi.fn();
-const hasSubgraphAccess = vi.fn(() => true);
-vi.mock('@/lib/subgraph', () => ({
-  subgraphQuery: (...a: unknown[]) => subgraphQuery(...a),
-  hasSubgraphAccess: () => hasSubgraphAccess(),
+const nuthatchSql = vi.fn();
+const hasNuthatch = vi.fn(() => true);
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => hasNuthatch(),
+  nuthatchSqlReady: async (...a: unknown[]) => {
+    const rows = await nuthatchSql(...a);
+    return { ok: true, data: { rows, count: rows.length } };
+  },
 }));
+/**
+ * Feed the route's two nest queries from a gateway-shaped fixture: the indexer's URL from
+ * `lodestar_indexers`, the active allocations from `lodestar_allocations`. A deployment's
+ * `subgraph_deployment` is handed over as the Qm hash so the route's bytes32 decode falls back to it,
+ * which is how the fixture's hash reaches the indexer's /status matching unchanged.
+ */
+function indexerStatusNest(gw: {
+  indexer: { url: string | null } | null;
+  allocations: Array<{ id: string; allocatedTokens: string; createdAtEpoch: number; subgraphDeployment: { id: string; ipfsHash: string; signalledTokens: string; stakedTokens: string; versions?: unknown } }>;
+}) {
+  nuthatchSql.mockImplementation(async (sql: string) => {
+    if (sql.includes('FROM lodestar_indexers WHERE id')) return gw.indexer ? [{ url: gw.indexer.url }] : [];
+    if (sql.includes('FROM lodestar_allocations')) {
+      return gw.allocations.map((a) => ({
+        id: a.id, allocated_tokens: a.allocatedTokens, created_at_epoch: a.createdAtEpoch,
+        subgraph_deployment: a.subgraphDeployment.ipfsHash, signalled_tokens: a.subgraphDeployment.signalledTokens,
+        deployment_staked_tokens: a.subgraphDeployment.stakedTokens,
+      }));
+    }
+    return [];
+  });
+}
+
 vi.mock('@/lib/cache', () => ({
   cached: vi.fn((_k: string, _t: number, f: () => unknown) => f()),
 }));
@@ -37,12 +63,12 @@ function call(GET: Awaited<ReturnType<typeof load>>, address: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  hasSubgraphAccess.mockReturnValue(true);
+  hasNuthatch.mockReturnValue(true);
 });
 
 describe('/api/indexer-status/[address] guards', () => {
-  it('503 when no subgraph access', async () => {
-    hasSubgraphAccess.mockReturnValue(false);
+  it('503 when no nest is configured', async () => {
+    hasNuthatch.mockReturnValue(false);
     const GET = await load();
     const res = await call(GET, VALID);
     expect(res.status).toBe(503);
@@ -62,7 +88,7 @@ describe('/api/indexer-status/[address] guards', () => {
   });
 
   it('accepts and lowercases an uppercase address', async () => {
-    subgraphQuery.mockResolvedValueOnce({ indexer: { url: null }, allocations: [] });
+    indexerStatusNest({ indexer: { url: null }, allocations: [] });
     const GET = await load();
     const upper = '0xABCD000000000000000000000000000000001234';
     const res = await call(GET, upper);
@@ -74,7 +100,7 @@ describe('/api/indexer-status/[address] guards', () => {
 
 describe('/api/indexer-status/[address] data path', () => {
   it('returns empty shape when indexer has no allocations', async () => {
-    subgraphQuery.mockResolvedValueOnce({ indexer: { url: 'https://idx.example.com' }, allocations: [] });
+    indexerStatusNest({ indexer: { url: 'https://idx.example.com' }, allocations: [] });
     const GET = await load();
     const res = await call(GET, VALID);
     const json = await res.json();
@@ -86,7 +112,7 @@ describe('/api/indexer-status/[address] data path', () => {
   });
 
   it('marks deployment unreachable when status map has no entry', async () => {
-    subgraphQuery.mockResolvedValueOnce({
+    indexerStatusNest({
       indexer: { url: 'https://idx.example.com' },
       allocations: [
         {
@@ -113,11 +139,12 @@ describe('/api/indexer-status/[address] data path', () => {
     expect(json.data.totalAllocations).toBe(1);
     expect(json.data.unreachableCount).toBe(1);
     expect(json.data.deployments[0].status).toBe('unreachable');
-    expect(json.data.deployments[0].displayName).toBe('Foo');
+    // The nest path carries no display name on this route (IPFS metadata is group B work).
+    expect(json.data.deployments[0].displayName).toBeNull();
   });
 
   it('merges status: synced/syncing/failed classification', async () => {
-    subgraphQuery.mockResolvedValueOnce({
+    indexerStatusNest({
       indexer: { url: 'https://idx.example.com' },
       allocations: [
         { id: 'a1', allocatedTokens: '1', createdAtEpoch: 1, subgraphDeployment: { id: 'd1', ipfsHash: 'QmSynced', signalledTokens: '1', stakedTokens: '1', versions: [] } },
@@ -158,7 +185,7 @@ describe('/api/indexer-status/[address] data path', () => {
   });
 
   it('skips node status query for an unsafe (private) indexer url', async () => {
-    subgraphQuery.mockResolvedValueOnce({
+    indexerStatusNest({
       indexer: { url: 'http://127.0.0.1:8030' },
       allocations: [
         { id: 'a1', allocatedTokens: '1', createdAtEpoch: 1, subgraphDeployment: { id: 'd1', ipfsHash: 'Qm1', signalledTokens: '1', stakedTokens: '1', versions: [] } },
@@ -172,8 +199,8 @@ describe('/api/indexer-status/[address] data path', () => {
     expect(json.data.deployments[0].status).toBe('unreachable');
   });
 
-  it('500s when the subgraph query throws', async () => {
-    subgraphQuery.mockRejectedValueOnce(new Error('subgraph down'));
+  it('500s when the nest query throws', async () => {
+    nuthatchSql.mockRejectedValueOnce(new Error('nest down'));
     const GET = await load();
     const res = await call(GET, VALID);
     expect(res.status).toBe(500);

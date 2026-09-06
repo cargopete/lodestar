@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { deploymentSql, allocationsByDeploymentSql, type NestDeploymentRow, type NestDeploymentAllocationRow } from '@/lib/nest-queries';
 import { ipfsHashToBytes32, bytes32ToIpfsHash } from '@/lib/studio/ipfs';
 
@@ -44,55 +43,6 @@ interface AllocationRow {
   allocatedTokens: string;
 }
 
-interface DeploymentRow {
-  id: string;
-  ipfsHash: string;
-  signalledTokens: string;
-  stakedTokens: string;
-  versions: { subgraph: { metadata: { displayName: string } | null } }[];
-}
-
-// ---------------------------------------------------------------------------
-// GraphQL queries
-// ---------------------------------------------------------------------------
-
-function resolveDeploymentQuery(ipfsHash: string) {
-  return `{
-    subgraphDeployments(first: 1, where: { ipfsHash: "${ipfsHash}" }) {
-      id
-      ipfsHash
-      signalledTokens
-      stakedTokens
-      versions(first: 1, orderBy: createdAt, orderDirection: desc) {
-        subgraph { metadata { displayName } }
-      }
-    }
-  }`;
-}
-
-function allocationsQuery(deploymentId: string) {
-  return `{
-    allocations(
-      first: 100
-      where: { subgraphDeployment: "${deploymentId}", status: Active }
-      orderBy: allocatedTokens
-      orderDirection: desc
-    ) {
-      indexer {
-        id
-        url
-        account {
-          defaultDisplayName
-          metadata {
-            displayName
-          }
-        }
-      }
-      allocatedTokens
-    }
-  }`;
-}
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -113,9 +63,10 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ hash: string }> },
 ) {
-  // The key gates the gateway path only (nuthatch#1160).
-  if (!(nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch()) && !hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
+  // The deployment and its allocations come from the nest (nuthatch#1160); the gateway path this
+  // once fell back to left with the key. The indexers' own /status endpoints are probed as before.
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
 
   const { hash } = await params;
@@ -130,13 +81,11 @@ export async function GET(
         let ipfsHash = hash;
         let signalledTokens = '0';
         let stakedTokens = '0';
-        let displayName: string | null = null;
+        const displayName: string | null = null;
 
-        // Behind NUTHATCH_INDEXERS (nuthatch#1160) the deployment and its allocations come from the nest;
-        // the id is the hash's own bytes32, so no lookup is needed to resolve it, and the display name is
-        // null (IPFS metadata, group B). The gateway is not consulted on this path.
-        const useNest = nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch();
-        if (useNest) {
+        // The id is the hash's own bytes32, so no lookup is needed to resolve it, and the display name
+        // is null (IPFS metadata, group B).
+        {
           if (hash.startsWith('Qm')) { deploymentId = ipfsHashToBytes32(hash); }
           else if (hash.startsWith('0x')) { deploymentId = hash.toLowerCase(); try { ipfsHash = bytes32ToIpfsHash(hash); } catch { /* keep */ } }
           else { throw new Error('Deployment not found'); }
@@ -146,34 +95,14 @@ export async function GET(
           if (!row) throw new Error('Deployment not found');
           signalledTokens = row.signalled_tokens ?? '0';
           stakedTokens = row.staked_tokens ?? '0';
-        } else if (hash.startsWith('Qm') || hash.startsWith('bafy')) {
-          const resolved = await subgraphQuery<{
-            subgraphDeployments: DeploymentRow[];
-          }>(resolveDeploymentQuery(hash));
-
-          if (!resolved.subgraphDeployments.length) {
-            throw new Error('Deployment not found');
-          }
-
-          const dep = resolved.subgraphDeployments[0];
-          deploymentId = dep.id;
-          ipfsHash = dep.ipfsHash;
-          signalledTokens = dep.signalledTokens;
-          stakedTokens = dep.stakedTokens;
-          displayName = dep.versions?.[0]?.subgraph?.metadata?.displayName ?? null;
         }
 
         // 2. Fetch indexers with active allocations on this deployment
         let allocations: AllocationRow[];
-        if (useNest) {
+        {
           const r = await nuthatchSqlReady<NestDeploymentAllocationRow>(allocationsByDeploymentSql(deploymentId, 100), INDEXERS_BASE_PATH);
           if (!r.ok) throw Object.assign(new Error(r.error), { nest: r });
           allocations = r.data.rows.map((a) => ({ indexer: { id: a.indexer, url: a.url, account: { defaultDisplayName: null, metadata: null } }, allocatedTokens: a.allocated_tokens }));
-        } else {
-          const allocResult = await subgraphQuery<{
-            allocations: AllocationRow[];
-          }>(allocationsQuery(deploymentId));
-          allocations = allocResult.allocations;
         }
 
         // 3. Query each indexer's /status endpoint in parallel (with timeout)

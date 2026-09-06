@@ -192,11 +192,38 @@ vi.mock('@/lib/cache', () => ({
   hasRedis: vi.fn(() => false),
 }));
 
-const mockSubgraphQuery = vi.fn();
-vi.mock('@/lib/subgraph', () => ({
-  subgraphQuery: (...a: unknown[]) => (mockSubgraphQuery as (...x: unknown[]) => unknown)(...a),
-  hasSubgraphAccess: vi.fn(() => true),
+const mockNuthatchSql = vi.fn();
+const mockHasNuthatch = vi.fn(() => true);
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => mockHasNuthatch(),
+  nuthatchSqlReady: async (...a: unknown[]) => {
+    const rows = await mockNuthatchSql(...a);
+    return { ok: true, data: { rows, count: rows.length } };
+  },
 }));
+/**
+ * Feed the route's two nest queries from a gateway-shaped fixture: the indexer's URL from
+ * `lodestar_indexers`, the active allocations from `lodestar_allocations`. A deployment's
+ * `subgraph_deployment` is handed over as the Qm hash so the route's bytes32 decode falls back to it,
+ * which is how the fixture's hash reaches the indexer's /status matching unchanged.
+ */
+function indexerStatusNest(gw: {
+  indexer: { url: string | null } | null;
+  allocations: Array<{ id: string; allocatedTokens: string; createdAtEpoch: number; subgraphDeployment: { id: string; ipfsHash: string; signalledTokens: string; stakedTokens: string; versions?: unknown } }>;
+}) {
+  mockNuthatchSql.mockImplementation(async (sql: string) => {
+    if (sql.includes('FROM lodestar_indexers WHERE id')) return gw.indexer ? [{ url: gw.indexer.url }] : [];
+    if (sql.includes('FROM lodestar_allocations')) {
+      return gw.allocations.map((a) => ({
+        id: a.id, allocated_tokens: a.allocatedTokens, created_at_epoch: a.createdAtEpoch,
+        subgraph_deployment: a.subgraphDeployment.ipfsHash, signalled_tokens: a.subgraphDeployment.signalledTokens,
+        deployment_staked_tokens: a.subgraphDeployment.stakedTokens,
+      }));
+    }
+    return [];
+  });
+}
+
 
 vi.mock('@/lib/logger', () => ({
   log: { api: { error: vi.fn(), info: vi.fn() } },
@@ -238,7 +265,7 @@ describe('indexer-status route SSRF guard (isSafeIndexerUrl)', () => {
   });
 
   it('does not fetch /status for a loopback (127.0.0.1) indexer URL', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce(allocResult('http://127.0.0.1:8030'));
+    indexerStatusNest(allocResult('http://127.0.0.1:8030'));
     const res = await callRoute();
     const body = await res.json();
     // No status fetch should have fired
@@ -248,19 +275,19 @@ describe('indexer-status route SSRF guard (isSafeIndexerUrl)', () => {
   });
 
   it('does not fetch /status for a private 10.x indexer URL', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce(allocResult('http://10.0.0.5:8030'));
+    indexerStatusNest(allocResult('http://10.0.0.5:8030'));
     await callRoute();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('does not fetch /status for localhost or a non-http scheme', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce(allocResult('http://localhost:8030'));
+    indexerStatusNest(allocResult('http://localhost:8030'));
     await callRoute();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('does fetch /status for a public indexer URL', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce(allocResult('https://indexer.public.example.com'));
+    indexerStatusNest(allocResult('https://indexer.public.example.com'));
     mockFetch.mockResolvedValueOnce(
       new Response(
         JSON.stringify({

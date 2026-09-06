@@ -324,21 +324,20 @@ describe('/api/subgraph-curation/[hash]', () => {
     GET = mod.GET as typeof GET;
   });
 
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
+  it('returns 503 when no nest is configured', async () => {
+    mockHasNuthatch.mockReturnValue(false);
     const req = makeRequest('/api/subgraph-curation/QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT');
     const res = await GET(req, { params: Promise.resolve({ hash: 'QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT' }) });
     expect(res.status).toBe(503);
   });
 
   it('returns { data } with curation info', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      subgraphDeployments: [{
-        signalledTokens: '100000000000000000000000',
-        queryFeesAmount: '5000000000000000000',
-        curatorSignals: [],
-      }],
-    });
+    mockHasNuthatch.mockReturnValue(true);
+    mockNuthatchSql.mockResolvedValueOnce([{
+      id: 'c1', curator: '0xcurator', signalled_tokens: '100000000000000000000000', unsignalled_tokens: '0', signal: '1',
+      last_signal_change: 1700000000, realized_rewards: '0',
+      deployment_signalled_tokens: '100000000000000000000000', deployment_query_fees_amount: '5000000000000000000',
+    }]);
 
     const req = makeRequest('/api/subgraph-curation/QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT');
     const res = await GET(req, { params: Promise.resolve({ hash: 'QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT' }) });
@@ -348,43 +347,6 @@ describe('/api/subgraph-curation/[hash]', () => {
     expect(json).toHaveProperty('data');
     expect(json.data).toHaveProperty('signals');
     expect(json.data).toHaveProperty('totalSignalledTokens');
-  });
-});
-
-// ============================================================
-// /api/subgraph-history/[hash]
-// ============================================================
-
-describe('/api/subgraph-history/[hash]', () => {
-  let GET: (req: NextRequest, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/subgraph-history/[hash]/route');
-    GET = mod.GET as typeof GET;
-  });
-
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/subgraph-history/QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT');
-    const res = await GET(req, { params: Promise.resolve({ hash: 'QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT' }) });
-    expect(res.status).toBe(503);
-  });
-
-  it('returns { data } with history (empty when no transactions)', async () => {
-    // Route makes one subgraph call: signalTransactions + allocations
-    mockSubgraphQuery.mockResolvedValueOnce({
-      signalTransactions: [],
-      allocations: [],
-    });
-
-    const req = makeRequest('/api/subgraph-history/QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT');
-    const res = await GET(req, { params: Promise.resolve({ hash: 'QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT' }) });
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('history');
-    expect(Array.isArray(json.data.history)).toBe(true);
   });
 });
 
@@ -407,18 +369,6 @@ describe('/api/subgraph-fees-30d', () => {
     expect(res.status).toBe(503);
   });
 
-  it('returns { data: [] } when no allocations found', async () => {
-    // Route paginates allocations; empty first page → early return of []
-    mockSubgraphQuery.mockResolvedValue({ allocations: [] });
-
-    const req = makeRequest('/api/subgraph-fees-30d');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(Array.isArray(json.data)).toBe(true);
-  });
 });
 
 // ============================================================

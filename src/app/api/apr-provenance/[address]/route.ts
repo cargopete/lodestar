@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
 import { db, hasDbAccess } from '@/lib/db';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { resolveEnsNames } from '@/lib/ens';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { indexerDetailSql, type NestIndexerDetailRow } from '@/lib/nest-queries';
 
 const INDEXERS_BASE_PATH = process.env.NUTHATCH_INDEXERS_BASE_PATH || '/alloc';
@@ -54,33 +53,15 @@ export async function GET(
       // 1. On-chain reconcile — needs the current subgraph pool figures as the
       //    comparison baseline. Degrades gracefully if either side is missing.
       let reconcile: PoolReconciliation | null = null;
-      // Behind NUTHATCH_INDEXERS (nuthatch#1160) the baseline pool figures come from the nest's
-      // `lodestar_indexers`, measured exact against the contract; the gateway is not consulted.
-      if (nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch()) {
+      // The baseline pool figures come from the nest's `lodestar_indexers`, measured exact against the
+      // contract (nuthatch#1160). The gateway path this once fell back to left with the key.
+      if (hasNuthatch()) {
         try {
           const r = await nuthatchSqlReady<NestIndexerDetailRow>(indexerDetailSql(addr), INDEXERS_BASE_PATH);
           const row = r.ok ? r.data.rows[0] : undefined;
           if (row) reconcile = await reconcileDelegationPool(addr, row.delegated_tokens, row.delegated_thawing_tokens ?? '0');
         } catch (e) {
           log.api.warn({ err: e }, 'apr-provenance reconcile from the nest failed (non-critical)');
-        }
-      } else if (hasSubgraphAccess()) {
-        try {
-          const sg = await subgraphQuery<{ indexer: { delegatedTokens: string; delegatedThawingTokens: string } | null }>(`{
-            indexer(id: "${addr}") {
-              delegatedTokens
-              delegatedThawingTokens
-            }
-          }`);
-          if (sg.indexer) {
-            reconcile = await reconcileDelegationPool(
-              addr,
-              sg.indexer.delegatedTokens,
-              sg.indexer.delegatedThawingTokens ?? '0',
-            );
-          }
-        } catch (e) {
-          log.api.warn({ err: e }, 'apr-provenance reconcile failed (non-critical)');
         }
       }
 

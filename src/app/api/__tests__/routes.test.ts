@@ -7,6 +7,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 
 // ---------- Mocks ----------
 
@@ -37,6 +38,19 @@ vi.mock('@/lib/nuthatch', () => ({
 const mockHasSubgraphAccess = vi.fn(() => true);
 
 const mockResolveEnsName = vi.fn<(a: string) => Promise<string | null>>();
+// The group-B routes read the gns nest and IPFS through these helpers (nuthatch#1160); the
+// helpers' own logic is tested in lib/__tests__/subgraph-metadata-search.test.ts.
+const mockSearchByName = vi.fn();
+const mockSearchByHashPrefix = vi.fn();
+const mockSearchByManifestAddress = vi.fn();
+const mockIpfsJson = vi.fn();
+vi.mock('@/lib/subgraph-metadata', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/subgraph-metadata')>()),
+  searchSubgraphsByName: (...a: unknown[]) => mockSearchByName(...a),
+  searchDeploymentsByHashPrefix: (...a: unknown[]) => mockSearchByHashPrefix(...a),
+  searchDeploymentsByManifestAddress: (...a: unknown[]) => mockSearchByManifestAddress(...a),
+  ipfsJson: (...a: unknown[]) => mockIpfsJson(...a),
+}));
 vi.mock('@/lib/ens', () => ({
   resolveEnsName: (a: string) => mockResolveEnsName(a),
   resolveEnsNames: vi.fn(async () => ({})),
@@ -425,63 +439,20 @@ describe('/api/reo', () => {
 });
 
 // ============================================================
-// /api/poi
-// ============================================================
-
-// ============================================================
-// /api/subgraph-deployments
-// ============================================================
-
-describe('/api/subgraph-deployments', () => {
-  let GET: (req: NextRequest) => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/subgraph-deployments/route');
-    GET = mod.GET as (req: NextRequest) => Promise<Response>;
-  });
-
-  it('returns { data } with deployments array', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      subgraphDeployments: [
-        { id: 'd1', ipfsHash: 'Qm1', signalledTokens: '100', stakedTokens: '200', queryFeesAmount: '50', indexerAllocations: [], curatorSignals: [] },
-      ],
-    });
-
-    const req = makeRequest('/api/subgraph-deployments');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(Array.isArray(json.data)).toBe(true);
-  });
-
-  it('validates orderBy against allowlist', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ subgraphDeployments: [] });
-
-    const req = makeRequest('/api/subgraph-deployments?orderBy=malicious_field');
-    await GET(req);
-
-    const query = mockSubgraphQuery.mock.calls[0][0] as string;
-    expect(query).toContain('orderBy: signalledTokens'); // Falls back to default
-  });
-
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/subgraph-deployments');
-    const res = await GET(req);
-    expect(res.status).toBe(503);
-  });
-});
-
-// ============================================================
 // /api/subgraph-search
 // ============================================================
 
 describe('/api/subgraph-search', () => {
   let GET: (req: NextRequest) => Promise<Response>;
 
+  const HIT = {
+    id: 's1',
+    metadata: { displayName: 'Uniswap V3', description: null },
+    currentVersion: { subgraphDeployment: { ipfsHash: 'QmTest', signalledTokens: '100', stakedTokens: '200' } },
+  };
+
   beforeEach(async () => {
+    mockHasNuthatch.mockReturnValue(true);
     const mod = await import('@/app/api/subgraph-search/route');
     GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
@@ -497,15 +468,7 @@ describe('/api/subgraph-search', () => {
   });
 
   it('returns search results for name query', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      subgraphs: [
-        {
-          id: 's1',
-          metadata: { displayName: 'Uniswap V3', description: null },
-          currentVersion: { subgraphDeployment: { ipfsHash: 'QmTest', signalledTokens: '100', stakedTokens: '200' } },
-        },
-      ],
-    });
+    mockSearchByName.mockResolvedValueOnce([HIT]);
 
     const req = makeRequest('/api/subgraph-search?q=uniswap');
     const res = await GET(req);
@@ -515,20 +478,11 @@ describe('/api/subgraph-search', () => {
     expect(json.data).toHaveLength(1);
     expect(json.data[0]).toHaveProperty('metadata');
     expect(json.data[0]).toHaveProperty('currentVersion');
+    expect(mockSearchByName).toHaveBeenCalledWith('uniswap', 10);
   });
 
   it('handles Qm hash search differently', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      subgraphDeployments: [
-        {
-          id: 'd1',
-          ipfsHash: 'QmTestHash123',
-          signalledTokens: '100',
-          stakedTokens: '200',
-          versions: [{ subgraph: { id: 's1', metadata: { displayName: 'Test', description: null } } }],
-        },
-      ],
-    });
+    mockSearchByHashPrefix.mockResolvedValueOnce([HIT]);
 
     const req = makeRequest('/api/subgraph-search?q=QmTestHash');
     const res = await GET(req);
@@ -538,74 +492,26 @@ describe('/api/subgraph-search', () => {
     expect(Array.isArray(json.data)).toBe(true);
   });
 
-  it('searches by contract address via manifest substring', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      subgraphDeploymentManifests: [
-        {
-          deployment: {
-            ipfsHash: 'QmDeployA',
-            signalledTokens: '100',
-            stakedTokens: '200',
-            versions: [{ subgraph: { id: 'sA', metadata: { displayName: 'Pool A', description: null } } }],
-          },
-        },
-      ],
-    });
+  it('searches by contract address through the manifest index', async () => {
+    const addr = '0x1f98431c8ad98523631ae4a59f267346ea31f984';
+    mockSearchByManifestAddress.mockResolvedValueOnce([{ ...HIT, id: 'sA', currentVersion: { subgraphDeployment: { ipfsHash: 'QmDeployA', signalledTokens: '1', stakedTokens: '1' } } }]);
 
-    const req = makeRequest('/api/subgraph-search?q=0x1f98431c8ad98523631ae4a59f267346ea31f984');
+    const req = makeRequest(`/api/subgraph-search?q=${addr}`);
     const res = await GET(req);
     const json = await getJson(res);
 
-    // Uses the manifest substring filter, not the name/hash branches
-    const query = mockSubgraphQuery.mock.calls[0][0] as string;
-    expect(query).toContain('subgraphDeploymentManifests');
-    expect(query).toContain('manifest_contains_nocase');
-
+    expect(mockSearchByManifestAddress).toHaveBeenCalledWith(addr, 20);
+    expect(mockSearchByName).not.toHaveBeenCalled();
     expect(res.status).toBe(200);
     expect(json.data).toHaveLength(1);
     expect(json.data[0].id).toBe('sA');
     expect(json.data[0].currentVersion.subgraphDeployment.ipfsHash).toBe('QmDeployA');
   });
 
-  it('sorts contract-address results by signal desc and dedupes by deployment', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      subgraphDeploymentManifests: [
-        { deployment: { ipfsHash: 'QmLow', signalledTokens: '10', stakedTokens: '0', versions: [] } },
-        { deployment: { ipfsHash: 'QmHigh', signalledTokens: '9000', stakedTokens: '0', versions: [] } },
-        // duplicate of QmLow — should be dropped
-        { deployment: { ipfsHash: 'QmLow', signalledTokens: '10', stakedTokens: '0', versions: [] } },
-      ],
-    });
 
-    const req = makeRequest('/api/subgraph-search?q=0xabcdefabcdefabcdefabcdefabcdefabcdefabcd');
-    const res = await GET(req);
-    const json = await getJson(res);
 
-    expect(res.status).toBe(200);
-    expect(json.data).toHaveLength(2);
-    expect(json.data[0].currentVersion.subgraphDeployment.ipfsHash).toBe('QmHigh');
-    expect(json.data[1].currentVersion.subgraphDeployment.ipfsHash).toBe('QmLow');
-  });
-
-  it('skips manifests with no live deployment', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      subgraphDeploymentManifests: [
-        { deployment: null },
-        { deployment: { ipfsHash: 'QmLive', signalledTokens: '5', stakedTokens: '0', versions: [] } },
-      ],
-    });
-
-    const req = makeRequest('/api/subgraph-search?q=0x0000000000000000000000000000000000000001');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json.data).toHaveLength(1);
-    expect(json.data[0].currentVersion.subgraphDeployment.ipfsHash).toBe('QmLive');
-  });
-
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
+  it('returns 503 when no nest is configured', async () => {
+    mockHasNuthatch.mockReturnValue(false);
     const req = makeRequest('/api/subgraph-search?q=uniswap');
     const res = await GET(req);
     expect(res.status).toBe(503);
@@ -620,7 +526,20 @@ describe('/api/subgraph-versions/[hash]', () => {
   const VALID_HASH = 'QmNNqSFDNDhWPhscvpsyjAXTbHbpLpzyvhw51SxTx5mtwg';
   let GET: (req: NextRequest, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
 
+  const OLD_HASH = 'QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT';
+  const META = '0x' + '11'.repeat(32); // any non-zero bytes32 decodes to a CID for the version document
+  /** The gns nest's owner and version rows, and the allocations nest's per-deployment figures (nuthatch#1160). */
+  function nest(subgraphId: string | null, versions: Array<{ version: number; hash: string; created_at: number }>) {
+    mockNuthatchSql.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM deployment_subgraphs')) return subgraphId ? [{ subgraph_id: subgraphId }] : [];
+      if (sql.includes('FROM subgraph_versions')) return versions.map((v) => ({ deployment_id: ipfsHashToBytes32(v.hash).toLowerCase(), version_metadata: META, version_number: v.version, created_at: v.created_at }));
+      if (sql.includes('GROUP BY 1')) return versions.map((v) => ({ subgraph_deployment: ipfsHashToBytes32(v.hash).toLowerCase(), signalled_tokens: '100', staked_tokens: '200' }));
+      return [];
+    });
+  }
+
   beforeEach(async () => {
+    mockHasNuthatch.mockReturnValue(true);
     const mod = await import('@/app/api/subgraph-versions/[hash]/route');
     GET = mod.GET as typeof GET;
   });
@@ -631,41 +550,16 @@ describe('/api/subgraph-versions/[hash]', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
+  it('returns 503 when no nest is configured', async () => {
+    mockHasNuthatch.mockReturnValue(false);
     const req = makeRequest(`/api/subgraph-versions/${VALID_HASH}`);
     const res = await GET(req, { params: Promise.resolve({ hash: VALID_HASH }) });
     expect(res.status).toBe(503);
   });
 
   it('maps versions and flags the current deployment', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      subgraphDeployments: [
-        {
-          versions: [
-            {
-              subgraph: {
-                id: 'sg-1',
-                versions: [
-                  {
-                    version: 1,
-                    createdAt: 1711047781,
-                    metadata: { label: '0.0.3', description: 'd' },
-                    subgraphDeployment: { ipfsHash: VALID_HASH, signalledTokens: '100', stakedTokens: '200' },
-                  },
-                  {
-                    version: 0,
-                    createdAt: 1701215330,
-                    metadata: { label: '0.0.2', description: 'd' },
-                    subgraphDeployment: { ipfsHash: 'QmOldDeploymentHashAAAAAAAAAAAAAAAAAAAAAAAAAAA', signalledTokens: '50', stakedTokens: '60' },
-                  },
-                ],
-              },
-            },
-          ],
-        },
-      ],
-    });
+    nest('sg-1', [{ version: 1, hash: VALID_HASH, created_at: 1711047781 }, { version: 0, hash: OLD_HASH, created_at: 1701215330 }]);
+    mockIpfsJson.mockResolvedValueOnce({ label: '0.0.3', description: 'd' }).mockResolvedValueOnce({ label: '0.0.2', description: 'd' });
 
     const req = makeRequest(`/api/subgraph-versions/${VALID_HASH}`);
     const res = await GET(req, { params: Promise.resolve({ hash: VALID_HASH }) });
@@ -679,35 +573,9 @@ describe('/api/subgraph-versions/[hash]', () => {
     expect(json.data.versions[1].isCurrent).toBe(false);
   });
 
-  it('filters out versions with no deployment', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      subgraphDeployments: [
-        {
-          versions: [
-            {
-              subgraph: {
-                id: 'sg-1',
-                versions: [
-                  { version: 1, createdAt: 1, metadata: { label: 'a', description: null }, subgraphDeployment: { ipfsHash: VALID_HASH, signalledTokens: '1', stakedTokens: '1' } },
-                  { version: 0, createdAt: 0, metadata: null, subgraphDeployment: null },
-                ],
-              },
-            },
-          ],
-        },
-      ],
-    });
-
-    const req = makeRequest(`/api/subgraph-versions/${VALID_HASH}`);
-    const res = await GET(req, { params: Promise.resolve({ hash: VALID_HASH }) });
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json.data.versions).toHaveLength(1);
-  });
 
   it('returns an empty list when the deployment has no parent subgraph', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ subgraphDeployments: [] });
+    nest(null, []);
 
     const req = makeRequest(`/api/subgraph-versions/${VALID_HASH}`);
     const res = await GET(req, { params: Promise.resolve({ hash: VALID_HASH }) });
@@ -730,21 +598,25 @@ describe('/api/subgraph-versions/[hash]', () => {
 describe('/api/indexing-status/[hash]', () => {
   let GET: (req: NextRequest, ctx: { params: Promise<{ hash: string }> }) => Promise<Response>;
 
+  const QM = 'QmNRuGkzXYPd75LbqHfx6Ksu8n7eDHwD18VCU3UEoxAZxT';
+  /** The deployment's figures and its allocations from the nest (nuthatch#1160); `null` is an unknown deployment. */
+  function nest(deployment: { signalled_tokens: string; staked_tokens: string } | null, allocations: Array<{ indexer: string; url: string | null; allocated_tokens: string }>) {
+    mockNuthatchSql.mockImplementation(async (sql: string) => {
+      if (sql.includes('GROUP BY 1')) return deployment ? [{ subgraph_deployment: '0xdep', ...deployment, allocations: allocations.length }] : [];
+      if (sql.includes('LEFT JOIN lodestar_indexers')) return allocations;
+      return [];
+    });
+  }
+
   beforeEach(async () => {
+    mockHasNuthatch.mockReturnValue(true);
     const mod = await import('@/app/api/indexing-status/[hash]/route');
     GET = mod.GET as typeof GET;
   });
 
   it('returns deployment indexing status for bytes32 ID', async () => {
-    // When hash doesn't start with Qm/bafy, it's treated as a bytes32 ID — skips resolution
-    mockSubgraphQuery.mockResolvedValueOnce({
-      allocations: [
-        {
-          indexer: { id: '0x1', url: null, account: { defaultDisplayName: 'Test', metadata: null } },
-          allocatedTokens: '1000000000000000000000000',
-        },
-      ],
-    });
+    // A 0x hash is the bytes32 id itself - no resolution step
+    nest({ signalled_tokens: '100', staked_tokens: '200' }, [{ indexer: '0x1', url: null, allocated_tokens: '1000000000000000000000000' }]);
 
     const req = makeRequest('/api/indexing-status/0xdep1');
     const res = await GET(req, { params: Promise.resolve({ hash: '0xdep1' }) });
@@ -758,37 +630,30 @@ describe('/api/indexing-status/[hash]', () => {
     expect(json.data).toHaveProperty('syncedCount');
   });
 
-  it('resolves Qm hash and returns status', async () => {
-    // First call: resolve hash
-    mockSubgraphQuery.mockResolvedValueOnce({
-      subgraphDeployments: [
-        { id: '0xdep1', ipfsHash: 'QmTest', signalledTokens: '100', stakedTokens: '200' },
-      ],
-    });
-    // Second call: allocations
-    mockSubgraphQuery.mockResolvedValueOnce({
-      allocations: [],
-    });
+  it('turns a Qm hash into its bytes32 id and returns status', async () => {
+    nest({ signalled_tokens: '100', staked_tokens: '200' }, []);
 
-    const req = makeRequest('/api/indexing-status/QmTest');
-    const res = await GET(req, { params: Promise.resolve({ hash: 'QmTest' }) });
+    const req = makeRequest(`/api/indexing-status/${QM}`);
+    const res = await GET(req, { params: Promise.resolve({ hash: QM }) });
 
     expect(res.status).toBe(200);
+    const asked = mockNuthatchSql.mock.calls.map((c) => String(c[0])).join(' ');
+    expect(asked).toContain(ipfsHashToBytes32(QM).toLowerCase());
   });
 
-  it('returns 404 when Qm deployment not found', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ subgraphDeployments: [] });
+  it('returns 404 when the deployment is unknown to the nest', async () => {
+    nest(null, []);
 
-    const req = makeRequest('/api/indexing-status/QmNotFound');
-    const res = await GET(req, { params: Promise.resolve({ hash: 'QmNotFound' }) });
+    const req = makeRequest(`/api/indexing-status/${QM}`);
+    const res = await GET(req, { params: Promise.resolve({ hash: QM }) });
     // The route throws 'Deployment not found' which is caught and returns 404
     expect(res.status).toBe(404);
   });
 
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/indexing-status/QmTest');
-    const res = await GET(req, { params: Promise.resolve({ hash: 'QmTest' }) });
+  it('returns 503 when no nest is configured', async () => {
+    mockHasNuthatch.mockReturnValue(false);
+    const req = makeRequest(`/api/indexing-status/${QM}`);
+    const res = await GET(req, { params: Promise.resolve({ hash: QM }) });
     expect(res.status).toBe(503);
   });
 });

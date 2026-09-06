@@ -1,16 +1,31 @@
 /**
- * Tests for /api/subgraph-history/[hash] — hash validation, access guard,
- * empty result, cumulative signal/stake aggregation, and error path.
+ * Tests for /api/subgraph-history/[hash] - hash validation, the nest guard, empty result,
+ * cumulative signal/stake aggregation, and error path. Inputs are the nest's two row sets
+ * (nuthatch#1160); the gateway path left with the key.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const subgraphQuery = vi.fn();
-const hasSubgraphAccess = vi.fn(() => true);
-vi.mock('@/lib/subgraph', () => ({
-  subgraphQuery: (...a: unknown[]) => subgraphQuery(...a),
-  hasSubgraphAccess: () => hasSubgraphAccess(),
+const nuthatchSql = vi.fn();
+const hasNuthatch = vi.fn(() => true);
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => hasNuthatch(),
+  nuthatchSqlReady: async (...a: unknown[]) => {
+    const rows = await nuthatchSql(...a);
+    return { ok: true, data: { rows, count: rows.length } };
+  },
 }));
+/** Route the nest mock's two queries: signal transactions (curation events) and allocations. */
+function nest(
+  signals: { timestamp: number; type: string; tokens: string }[],
+  allocations: { allocated_tokens: string; created_at: number; closed_at: number | null }[],
+) {
+  nuthatchSql.mockImplementation(async (sql: string) => {
+    if (sql.includes('curation__signalled')) return signals;
+    if (sql.includes('FROM lodestar_allocations')) return allocations;
+    return [];
+  });
+}
 vi.mock('@/lib/cache', () => ({
   cached: vi.fn((_k: string, _t: number, f: () => unknown) => f()),
 }));
@@ -34,7 +49,7 @@ function call(GET: Awaited<ReturnType<typeof load>>, hash: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  hasSubgraphAccess.mockReturnValue(true);
+  hasNuthatch.mockReturnValue(true);
 });
 
 describe('/api/subgraph-history validation', () => {
@@ -44,22 +59,22 @@ describe('/api/subgraph-history validation', () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toMatch(/Invalid deployment hash/i);
-    expect(subgraphQuery).not.toHaveBeenCalled();
+    expect(nuthatchSql).not.toHaveBeenCalled();
   });
 
-  it('503 when no subgraph access', async () => {
-    hasSubgraphAccess.mockReturnValue(false);
+  it('503 when no nest is configured', async () => {
+    hasNuthatch.mockReturnValue(false);
     const GET = await load();
     const res = await call(GET, VALID_HASH);
     expect(res.status).toBe(503);
     const json = await res.json();
-    expect(json.error).toMatch(/No API key/i);
+    expect(json.error).toMatch(/Nuthatch is not configured/i);
   });
 });
 
 describe('/api/subgraph-history aggregation', () => {
   it('returns empty history when no signal txs and no allocations', async () => {
-    subgraphQuery.mockResolvedValueOnce({ signalTransactions: [], allocations: [] });
+    nest([], []);
     const GET = await load();
     const res = await call(GET, VALID_HASH);
     expect(res.status).toBe(200);
@@ -71,15 +86,13 @@ describe('/api/subgraph-history aggregation', () => {
     const now = Math.floor(Date.now() / 1000);
     const sixWeeks = 6 * 7 * 24 * 3600;
     const start = now - sixWeeks;
-    subgraphQuery.mockResolvedValueOnce({
-      signalTransactions: [
+    nest(
+      [
         { timestamp: start, type: 'MintSignal', tokens: '100000000000000000000' }, // +100 GRT
         { timestamp: start + 7 * 24 * 3600, type: 'BurnSignal', tokens: '40000000000000000000' }, // -40
       ],
-      allocations: [
-        { allocatedTokens: '500000000000000000000', createdAt: start, closedAt: null }, // 500 GRT, still open
-      ],
-    });
+      [{ allocated_tokens: '500000000000000000000', created_at: start, closed_at: null }], // 500 GRT, still open
+    );
     const GET = await load();
     const res = await call(GET, VALID_HASH);
     expect(res.status).toBe(200);
@@ -102,14 +115,10 @@ describe('/api/subgraph-history aggregation', () => {
   it('excludes allocations closed before the bucket timestamp', async () => {
     const now = Math.floor(Date.now() / 1000);
     const start = now - 4 * 7 * 24 * 3600;
-    subgraphQuery.mockResolvedValueOnce({
-      signalTransactions: [
-        { timestamp: start, type: 'MintSignal', tokens: '100000000000000000000' },
-      ],
-      allocations: [
-        { allocatedTokens: '500000000000000000000', createdAt: start, closedAt: start + 1 },
-      ],
-    });
+    nest(
+      [{ timestamp: start, type: 'MintSignal', tokens: '100000000000000000000' }],
+      [{ allocated_tokens: '500000000000000000000', created_at: start, closed_at: start + 1 }],
+    );
     const GET = await load();
     const res = await call(GET, VALID_HASH);
     const json = await res.json();
@@ -118,8 +127,8 @@ describe('/api/subgraph-history aggregation', () => {
     expect(history[history.length - 1].stakeGrt).toBe(0);
   });
 
-  it('500 when subgraphQuery throws', async () => {
-    subgraphQuery.mockRejectedValueOnce(new Error('boom'));
+  it('500 when the nest query throws', async () => {
+    nuthatchSql.mockRejectedValueOnce(new Error('boom'));
     const GET = await load();
     const res = await call(GET, VALID_HASH);
     expect(res.status).toBe(500);

@@ -20,6 +20,33 @@ vi.mock('@/lib/cache', () => ({
   hasRedis: vi.fn(() => false),
 }));
 
+const mockNuthatchSql = vi.fn();
+const mockHasNuthatch = vi.fn(() => true);
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => mockHasNuthatch(),
+  nuthatchSql: (...a: unknown[]) => mockNuthatchSql(...a),
+  nuthatchSqlReady: async (...a: unknown[]) => {
+    const rows = await mockNuthatchSql(...a);
+    return { ok: true, data: { rows, count: rows.length } };
+  },
+}));
+/** Feed indexer-status's two nest queries from a gateway-shaped fixture (nuthatch#1160). */
+function indexerStatusNest(gw: {
+  indexer: { url: string | null } | null;
+  allocations: Array<{ id: string; allocatedTokens: string; createdAtEpoch: number; subgraphDeployment: { id: string; ipfsHash: string; signalledTokens: string; stakedTokens: string; versions?: unknown } }>;
+}) {
+  mockNuthatchSql.mockImplementation(async (sql: string) => {
+    if (sql.includes('FROM lodestar_indexers WHERE id')) return gw.indexer ? [{ url: gw.indexer.url }] : [];
+    if (sql.includes('FROM lodestar_allocations')) {
+      return gw.allocations.map((a) => ({
+        id: a.id, allocated_tokens: a.allocatedTokens, created_at_epoch: a.createdAtEpoch,
+        subgraph_deployment: a.subgraphDeployment.ipfsHash, signalled_tokens: a.subgraphDeployment.signalledTokens,
+        deployment_staked_tokens: a.subgraphDeployment.stakedTokens,
+      }));
+    }
+    return [];
+  });
+}
 const mockSubgraphQuery = vi.fn();
 const mockHasSubgraphAccess = vi.fn(() => true);
 vi.mock('@/lib/subgraph', () => ({
@@ -75,6 +102,7 @@ beforeEach(() => {
   mockCacheGet.mockResolvedValue(null);
   mockCacheSet.mockResolvedValue(undefined);
   mockHasSubgraphAccess.mockReturnValue(true);
+  mockHasNuthatch.mockReturnValue(true);
   mockHasDbAccess.mockReturnValue(true);
   mockHasTapSigner.mockReturnValue(true);
   mockDb.mockResolvedValue([]);
@@ -463,8 +491,8 @@ describe('/api/indexer-status/[address]', () => {
     GET = mod.GET as typeof GET;
   });
 
-  it('returns 503 when no subgraph API key is configured', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
+  it('returns 503 when no nest is configured', async () => {
+    mockHasNuthatch.mockReturnValue(false);
     const res = await GET(plainRequest(`/api/indexer-status/${VALID}`), { params: Promise.resolve({ address: VALID }) });
     expect(res.status).toBe(503);
   });
@@ -475,7 +503,7 @@ describe('/api/indexer-status/[address]', () => {
   });
 
   it('returns an empty deployment summary when the indexer has no allocations', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ indexer: { url: null }, allocations: [] });
+    indexerStatusNest({ indexer: { url: null }, allocations: [] });
     const res = await GET(plainRequest(`/api/indexer-status/${VALID}`), { params: Promise.resolve({ address: VALID }) });
     const json = await res.json();
     expect(res.status).toBe(200);
@@ -484,7 +512,7 @@ describe('/api/indexer-status/[address]', () => {
   });
 
   it('marks deployments unreachable when the indexer URL is unsafe (SSRF) — no status fetch', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
+    indexerStatusNest({
       indexer: { url: 'http://127.0.0.1:8030' }, // unsafe → status fetch skipped
       allocations: [{
         id: 'alloc1',
@@ -505,7 +533,7 @@ describe('/api/indexer-status/[address]', () => {
   });
 
   it('merges live status: synced / syncing / failed classification', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
+    indexerStatusNest({
       indexer: { url: 'https://node.example.com' },
       allocations: [
         { id: 'a1', allocatedTokens: '1', createdAtEpoch: 1, subgraphDeployment: { id: 'd1', ipfsHash: 'QmSynced', signalledTokens: '0', stakedTokens: '0', versions: [] } },
@@ -534,7 +562,7 @@ describe('/api/indexer-status/[address]', () => {
   });
 
   it('returns 500 when the subgraph query throws', async () => {
-    mockSubgraphQuery.mockRejectedValueOnce(new Error('subgraph down'));
+    mockNuthatchSql.mockRejectedValueOnce(new Error('subgraph down'));
     const res = await GET(plainRequest(`/api/indexer-status/${VALID}`), { params: Promise.resolve({ address: VALID }) });
     expect(res.status).toBe(500);
   });

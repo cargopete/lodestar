@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { weiToGRT } from '@/lib/utils';
 import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { delegatorStakesSql, type NestDelegatorStakeRow } from '@/lib/nest-queries';
 
 const PORTFOLIO_BASE_PATH = process.env.NUTHATCH_PORTFOLIO_BASE_PATH || '/alloc';
@@ -47,10 +46,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
-  // The positions come from the nest behind NUTHATCH_PORTFOLIO (nuthatch#1160); the key gates the gateway path only.
-  const useNest = nuthatchEnabled('NUTHATCH_PORTFOLIO') && hasNuthatch();
-  if (!useNest && !hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
+  // The positions come from the nest (nuthatch#1160); the gateway path this once fell back to left with the key.
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
 
   const sql = db; // narrow for closure
@@ -58,17 +56,7 @@ export async function GET(request: NextRequest) {
   try {
     const result = await cached(`lodestar:rewards-history:${address}:${days}`, 300, async () => {
       // 1. Fetch delegator positions from subgraph
-      const data: SubgraphResponse = useNest
-        ? { delegator: { stakes: await stakesFromNest(address) } }
-        : await subgraphQuery<SubgraphResponse>(`{
-        delegator(id: "${address}") {
-          stakes(first: 100, where: { stakedTokens_gt: "0" }) {
-            stakedTokens
-            shareAmount
-            indexer { id }
-          }
-        }
-      }`);
+      const data: SubgraphResponse = { delegator: { stakes: await stakesFromNest(address) } };
 
       if (!data.delegator || data.delegator.stakes.length === 0) {
         return { history: [] };

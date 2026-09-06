@@ -22,15 +22,16 @@ vi.mock('@/lib/db', () => ({
   db: (...a: unknown[]) => db(...a),
 }));
 
-const hasSubgraphAccess = vi.fn(() => true);
-const subgraphQuery = vi.fn();
-const ensQuery = vi.fn();
+const hasNuthatch = vi.fn(() => true);
+const nuthatchSql = vi.fn();
 const resolveEnsNames = vi.fn<(addrs: string[]) => Promise<Record<string, string>>>();
 vi.mock('@/lib/ens', () => ({ resolveEnsNames: (addrs: string[]) => resolveEnsNames(addrs) }));
-vi.mock('@/lib/subgraph', () => ({
-  hasSubgraphAccess: () => hasSubgraphAccess(),
-  subgraphQuery: (...a: unknown[]) => subgraphQuery(...a),
-  ensQuery: (...a: unknown[]) => ensQuery(...a),
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => hasNuthatch(),
+  nuthatchSqlReady: async (...a: unknown[]) => {
+    const rows = await nuthatchSql(...a);
+    return { ok: true, data: { rows, count: rows.length } };
+  },
 }));
 
 const reconcileDelegationPool = vi.fn();
@@ -65,10 +66,9 @@ const RECONCILE = { subgraphGRT: 100, chainGRT: 100, driftGRT: 0 };
 beforeEach(() => {
   vi.clearAllMocks();
   hasDbAccess.mockReturnValue(true);
-  hasSubgraphAccess.mockReturnValue(true);
-  subgraphQuery.mockResolvedValue({ indexer: { delegatedTokens: '1', delegatedThawingTokens: '0' } });
+  hasNuthatch.mockReturnValue(true);
+  nuthatchSql.mockResolvedValue([{ delegated_tokens: '1', delegated_thawing_tokens: '0' }]);
   reconcileDelegationPool.mockResolvedValue(RECONCILE);
-  ensQuery.mockResolvedValue({ domains: [] });
   resolveEnsNames.mockResolvedValue({});
   cached.mockImplementation((_k: string, _t: number, f: () => Promise<unknown>) => f());
   // The standing default: both reads return nothing. `rows()` queues ahead of it.
@@ -81,7 +81,7 @@ describe('address validation', () => {
     expect(res.status).toBe(400);
     expect((await res.json()).error).toMatch(/invalid address/i);
     expect(db).not.toHaveBeenCalled();
-    expect(subgraphQuery).not.toHaveBeenCalled();
+    expect(nuthatchSql).not.toHaveBeenCalled();
   });
 
   it('rejects an address of the wrong length', async () => {
@@ -91,35 +91,35 @@ describe('address validation', () => {
   it('accepts a checksummed address by lowercasing it first', async () => {
     const res = await call('0x0000000000000000000000000000000000000ABC');
     expect(res.status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalledWith(expect.stringContaining(ADDR));
+    expect(nuthatchSql).toHaveBeenCalledWith(expect.stringContaining(ADDR), expect.anything());
   });
 });
 
 describe('the on-chain reconcile', () => {
-  it('is included when the subgraph knows the indexer', async () => {
+  it('is included when the nest knows the indexer', async () => {
     const { data } = await body();
     expect(data.reconcile).toEqual(RECONCILE);
     expect(reconcileDelegationPool).toHaveBeenCalledWith(ADDR, '1', '0');
   });
 
-  it('defaults a missing delegatedThawingTokens to zero rather than passing undefined on', async () => {
-    subgraphQuery.mockResolvedValue({ indexer: { delegatedTokens: '5' } });
+  it('defaults a missing delegated_thawing_tokens to zero rather than passing undefined on', async () => {
+    nuthatchSql.mockResolvedValue([{ delegated_tokens: '5' }]);
     await body();
     expect(reconcileDelegationPool).toHaveBeenCalledWith(ADDR, '5', '0');
   });
 
-  it('is null, not an error, for an indexer the subgraph has never seen', async () => {
-    subgraphQuery.mockResolvedValue({ indexer: null });
+  it('is null, not an error, for an indexer the nest has never seen', async () => {
+    nuthatchSql.mockResolvedValue([]);
     const { data } = await body();
     expect(data.reconcile).toBeNull();
     expect(reconcileDelegationPool).not.toHaveBeenCalled();
   });
 
-  it('is skipped entirely when there is no subgraph access', async () => {
-    hasSubgraphAccess.mockReturnValue(false);
+  it('is skipped entirely when no nest is configured', async () => {
+    hasNuthatch.mockReturnValue(false);
     const { data } = await body();
     expect(data.reconcile).toBeNull();
-    expect(subgraphQuery).not.toHaveBeenCalled();
+    expect(nuthatchSql).not.toHaveBeenCalled();
   });
 
   it('failing does not cost the event trail', async () => {
@@ -268,14 +268,13 @@ describe('the ENS pass', () => {
     expect(data.events[0].delegatorName).toBeNull();
   });
 
-  it('runs without any subgraph access: names come from a mainnet RPC, never the gateway', async () => {
-    hasSubgraphAccess.mockReturnValue(false);
+  it('runs without a nest: names come from a mainnet RPC, never a gateway', async () => {
+    hasNuthatch.mockReturnValue(false);
     rows([{ event_type: 'delegation', delegator: '0xa', tokens_grt: '1', timestamp: '2026-01-01T00:00:00Z' }]);
     resolveEnsNames.mockResolvedValue({ '0xa': 'pete.eth' });
 
     const { data } = await body();
     expect(resolveEnsNames).toHaveBeenCalledTimes(1);
-    expect(ensQuery).not.toHaveBeenCalled();
     expect(data.events[0].delegatorName).toBe('pete.eth');
   });
 });

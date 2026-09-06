@@ -18,10 +18,8 @@ const readContract = vi.fn();
 vi.mock('@/lib/reo-contract', () => ({ arbitrumClient: { readContract: (...a: unknown[]) => readContract(...a) } }));
 vi.mock('@/lib/bountyBoard', () => ({ BOUNTY_BOARD_ABI: [] }));
 
-const subgraphQuery = vi.fn();
-vi.mock('@/lib/subgraph', () => ({ subgraphQuery: (...a: unknown[]) => subgraphQuery(...a) }));
 const nuthatchSql = vi.fn();
-let nuthatchConfigured = false;
+let nuthatchConfigured = true;
 vi.mock('@/lib/nuthatch', () => ({
   hasNuthatch: () => nuthatchConfigured,
   nuthatchEnabled: (flag: string) => nuthatchConfigured && process.env[flag] === 'true',
@@ -139,7 +137,7 @@ describe('main path', () => {
     mockSql.mockResolvedValueOnce([{ chain_bounty_id: '1', deployment_id: 'Qm1' }]);
     // resolveIndexers: getBounty returns a winner with a URL in the subgraph
     readContract.mockResolvedValueOnce({ winner: '0x00000000000000000000000000000000000000a1' });
-    subgraphQuery.mockResolvedValueOnce({ indexer: { url: 'https://idx.example.com' } });
+    nuthatchSql.mockResolvedValueOnce([{ url: 'https://idx.example.com' }]);
     getEscrowBalance.mockResolvedValueOnce(2_000_000_000_000_000_000n); // 2 GRT >= 1
     const GET = await load();
     const res = await GET(req(`Bearer ${SECRET}`));
@@ -152,7 +150,7 @@ describe('main path', () => {
   it('deposits when balance below the minimum', async () => {
     mockSql.mockResolvedValueOnce([{ chain_bounty_id: '1', deployment_id: 'Qm1' }]);
     readContract.mockResolvedValueOnce({ winner: '0x00000000000000000000000000000000000000a1' });
-    subgraphQuery.mockResolvedValueOnce({ indexer: { url: 'https://idx.example.com' } });
+    nuthatchSql.mockResolvedValueOnce([{ url: 'https://idx.example.com' }]);
     getEscrowBalance.mockResolvedValueOnce(0n);
     ensureEscrow.mockResolvedValueOnce(undefined);
     const GET = await load();
@@ -165,7 +163,7 @@ describe('main path', () => {
   it('records an error string when provisioning throws', async () => {
     mockSql.mockResolvedValueOnce([{ chain_bounty_id: '1', deployment_id: 'Qm1' }]);
     readContract.mockResolvedValueOnce({ winner: '0x00000000000000000000000000000000000000a1' });
-    subgraphQuery.mockResolvedValueOnce({ indexer: { url: 'https://idx.example.com' } });
+    nuthatchSql.mockResolvedValueOnce([{ url: 'https://idx.example.com' }]);
     getEscrowBalance.mockRejectedValueOnce(new Error('rpc timeout'));
     const GET = await load();
     const res = await GET(req(`Bearer ${SECRET}`));
@@ -177,12 +175,10 @@ describe('main path', () => {
     mockSql.mockResolvedValueOnce([{ chain_bounty_id: '1', deployment_id: 'Qm1' }]);
     readContract.mockResolvedValueOnce({ winner: '0x00000000000000000000000000000000000000a1' });
     // winner has no url
-    subgraphQuery
-      .mockResolvedValueOnce({ indexer: { url: null } })
+    nuthatchSql
+      .mockResolvedValueOnce([{ url: null }])
       // active-allocation scan returns one indexer with a URL
-      .mockResolvedValueOnce({
-        allocations: [{ indexer: { id: '0x00000000000000000000000000000000000000B2', url: 'https://b2.example.com' } }],
-      });
+      .mockResolvedValueOnce([{ id: '0x00000000000000000000000000000000000000B2', url: 'https://b2.example.com' }]);
     getEscrowBalance.mockResolvedValue(5_000_000_000_000_000_000n);
     const GET = await load();
     const res = await GET(req(`Bearer ${SECRET}`));
@@ -210,9 +206,6 @@ describe('main path', () => {
     readContract
       .mockResolvedValueOnce({ winner: '0x00000000000000000000000000000000000000a1' })
       .mockResolvedValueOnce({ winner: '0x00000000000000000000000000000000000000a1' });
-    subgraphQuery
-      .mockResolvedValueOnce({ indexer: { url: 'https://idx.example.com' } })
-      .mockResolvedValueOnce({ indexer: { url: 'https://idx.example.com' } });
     getEscrowBalance.mockResolvedValue(5_000_000_000_000_000_000n);
     const GET = await load();
     await GET(req(`Bearer ${SECRET}`));
@@ -232,7 +225,6 @@ describe('main path', () => {
       const GET = await load();
       const res = await GET(req(`Bearer ${SECRET}`));
       const json = await res.json();
-      expect(subgraphQuery).not.toHaveBeenCalled();
       expect(nuthatchSql).toHaveBeenCalledTimes(2);
       expect(nuthatchSql.mock.calls[0][0]).toBe("SELECT url FROM lodestar_indexers WHERE id = '0x00000000000000000000000000000000000000a1'");
       expect(nuthatchSql.mock.calls[1][0]).toContain("LOWER(a.subgraph_deployment) = '0xqm1'");

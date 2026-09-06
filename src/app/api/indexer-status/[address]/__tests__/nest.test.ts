@@ -45,16 +45,6 @@ describe('api/indexer-status from the nest', () => {
     delete process.env.NUTHATCH_INDEXERS;
   });
 
-  it('with the flag off, the gateway path is untouched', async () => {
-    delete process.env.NUTHATCH_INDEXERS;
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValue({ indexer: { url: null }, allocations: [] });
-    const res = await req();
-    expect(res.status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalledTimes(1);
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-  });
-
   it('the URL and allocations come from two views, the key is not consulted, deployments carry CIDs', async () => {
     nuthatchSqlReady.mockImplementation((sql: string) =>
       sql.includes('FROM lodestar_indexers WHERE id')

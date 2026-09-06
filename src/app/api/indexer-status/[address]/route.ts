@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { indexerDetailSql, indexerActiveAllocationsSql, type NestIndexerDetailRow, type NestActiveAllocationRow } from '@/lib/nest-queries';
 import { bytes32ToIpfsHash } from '@/lib/studio/ipfs';
 
@@ -136,9 +135,10 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ address: string }> },
 ) {
-  // The key gates the gateway path only (nuthatch#1160).
-  if (!(nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch()) && !hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
+  // The URL and the allocations come from the nest (nuthatch#1160); the gateway path this once fell
+  // back to left with the key. The indexers' own /status endpoints are probed as before.
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
 
   const { address } = await params;
@@ -156,11 +156,7 @@ export async function GET(
         // 1. Fetch indexer URL and all active allocations with ipfsHash
         let allAllocations: Allocation[] = [];
         let indexerUrl: string | null = null;
-        let lastId = '';
-        // Behind NUTHATCH_INDEXERS (nuthatch#1160) the URL and the allocations come from the nest and the
-        // gateway is not consulted; the indexers' own /status endpoints are then probed as before.
-        const useNest = nuthatchEnabled('NUTHATCH_INDEXERS') && hasNuthatch();
-        if (useNest) {
+        {
           const [me, active] = await Promise.all([
             nuthatchSqlReady<NestIndexerDetailRow>(indexerDetailSql(addr), INDEXERS_BASE_PATH),
             nuthatchSqlReady<NestActiveAllocationRow>(indexerActiveAllocationsSql(addr), INDEXERS_BASE_PATH),
@@ -176,44 +172,6 @@ export async function GET(
               subgraphDeployment: { id: a.subgraph_deployment, ipfsHash, signalledTokens: a.signalled_tokens, stakedTokens: a.deployment_staked_tokens ?? '0', versions: [] },
             };
           });
-        }
-
-        // First batch also grabs the indexer URL
-        while (!useNest) {
-          const result = await subgraphQuery<{
-            indexer: { url: string | null } | null;
-            allocations: Allocation[];
-          }>(`{
-            ${lastId === '' ? `indexer(id: "${addr}") { url }` : ''}
-            allocations(
-              first: 1000
-              where: { indexer: "${addr}", status: Active${lastId ? `, id_gt: "${lastId}"` : ''} }
-              orderBy: id
-              orderDirection: asc
-            ) {
-              id
-              allocatedTokens
-              createdAtEpoch
-              subgraphDeployment {
-                id
-                ipfsHash
-                signalledTokens
-                stakedTokens
-                versions(first: 1, orderBy: createdAt, orderDirection: desc) {
-                  subgraph { metadata { displayName } }
-                }
-              }
-            }
-          }`);
-
-          if (lastId === '' && result.indexer) {
-            indexerUrl = result.indexer.url;
-          }
-
-          const batch = result.allocations ?? [];
-          allAllocations = allAllocations.concat(batch);
-          if (batch.length < 1000) break;
-          lastId = batch[batch.length - 1].id;
         }
 
         if (allAllocations.length === 0) {
