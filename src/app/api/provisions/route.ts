@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
-import { resolveEnsNames } from '@/lib/ens';
 import type { IndexerProvisionsResponse, ServiceProvisionsResponse, Provision, ProvisionWithIndexer } from '@/lib/queries';
 import { log } from '@/lib/logger';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import {
   provisionsByIndexerSql, provisionsByServiceSql, dataServiceTotalsSql, networkParamsSql,
   type NestProvisionRow, type NestDataServiceTotalsRow, type NestNetworkParamsRow,
@@ -103,129 +101,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid service address' }, { status: 400 });
   }
 
-  // Off by default (nuthatch#1160). On the nest path the gateway key is not consulted at all.
-  if (nuthatchEnabled('NUTHATCH_PROVISIONS')) {
-    if (!hasNuthatch()) {
-      return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
-    }
-    const ix = indexer ? indexer.toLowerCase() : null; const sv = service ? service.toLowerCase() : null;
-    try {
-      const data = await cached(`lodestar:provisions:nuthatch:v1:${ix ?? ''}:${sv ?? ''}:${first}:${skip}`, 300, () => provisionsFromNest(ix, sv, first, skip));
-      return NextResponse.json({ data, source: 'nuthatch' }, {
-        headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
-      });
-    } catch (error) {
-      log.api.error({ err: error }, 'Provisions from the nest failed');
-      return NextResponse.json({ error: 'Failed to load provisions from Nuthatch' }, { status: 503 });
-    }
+  // From the nest, always (nuthatch#1160). The gateway path this once fell back to left with the key.
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
-
-  if (!hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
-  }
-
+  const ix = indexer ? indexer.toLowerCase() : null; const sv = service ? service.toLowerCase() : null;
   try {
-    if (indexer) {
-      const addr = indexer.toLowerCase();
-      const data = await cached(`lodestar:provisions:indexer:${addr}`, 300, () =>
-        subgraphQuery<IndexerProvisionsResponse>(`{
-          provisions(
-            where: { indexer: "${addr}" }
-            orderBy: tokensProvisioned
-            orderDirection: desc
-          ) {
-            id
-            tokensProvisioned
-            tokensAllocated
-            tokensThawing
-            maxVerifierCut
-            thawingPeriod
-            createdAt
-            allocationCount
-            rewardsEarned
-            queryFeesCollected
-            dataService {
-              id
-              totalTokensProvisioned
-              totalTokensAllocated
-              minimumThawingPeriod
-              maximumThawingPeriod
-            }
-          }
-        }`)
-      );
-
-      return NextResponse.json({ data }, {
-        headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-        },
-      });
-    }
-
-    // Service provisions
-    const addr = service!.toLowerCase();
-    const data = await cached(`lodestar:provisions:service:${addr}:${first}:${skip}`, 300, async () => {
-      const result = await subgraphQuery<ServiceProvisionsResponse>(`{
-        provisions(
-          where: { dataService: "${addr}" }
-          first: ${first}
-          skip: ${skip}
-          orderBy: tokensProvisioned
-          orderDirection: desc
-        ) {
-          id
-          tokensProvisioned
-          tokensAllocated
-          tokensThawing
-          maxVerifierCut
-          thawingPeriod
-          createdAt
-          allocationCount
-          indexer {
-            id
-            account {
-              defaultDisplayName
-              metadata {
-                displayName
-                description
-              }
-            }
-            stakedTokens
-            delegatedTokens
-          }
-        }
-      }`);
-
-      // ENS fallback: look up names for indexers the subgraph didn't resolve
-      const missing = result.provisions
-        .filter((p) => !p.indexer.account?.defaultDisplayName && !p.indexer.account?.metadata?.displayName)
-        .map((p) => p.indexer.id);
-
-      if (missing.length > 0) {
-        try {
-          // Primary names over a mainnet RPC (nuthatch#1160), not the ENS subgraph.
-          const ensMap = await resolveEnsNames(missing);
-          for (const p of result.provisions) {
-            const ens = ensMap[p.indexer.id.toLowerCase()];
-            if (ens) {
-              if (!p.indexer.account) (p.indexer as Record<string, unknown>).account = {};
-              p.indexer.account!.defaultDisplayName = ens;
-            }
-          }
-        } catch {
-          // ENS lookup failed — names just won't resolve, not fatal
-        }
-      }
-      return result;
-    });
-
-    return NextResponse.json({ data }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-      },
+    const data = await cached(`lodestar:provisions:nuthatch:v1:${ix ?? ''}:${sv ?? ''}:${first}:${skip}`, 300, () => provisionsFromNest(ix, sv, first, skip));
+    return NextResponse.json({ data, source: 'nuthatch' }, {
+      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
     });
   } catch (error) {
-    log.api.error({ err: error }, 'Provisions error');
-    return NextResponse.json({ error: 'Failed to fetch provisions' }, { status: 500 });
+    log.api.error({ err: error }, 'Provisions from the nest failed');
+    return NextResponse.json({ error: 'Failed to load provisions from Nuthatch' }, { status: 503 });
   }
 }

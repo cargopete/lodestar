@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import type { Indexer, IndexersResponse } from '@/lib/queries';
 import { log } from '@/lib/logger';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { indexersSql, type NestIndexerRow } from '@/lib/nest-queries';
 
 const INDEXERS_BASE_PATH = process.env.NUTHATCH_INDEXERS_BASE_PATH || '/alloc';
@@ -51,81 +50,25 @@ export async function GET(request: NextRequest) {
   const orderDirRaw = request.nextUrl.searchParams.get('orderDirection') ?? 'desc';
   const orderDirection = VALID_ORDER_DIR.has(orderDirRaw) ? orderDirRaw : 'desc';
 
-  // Off by default. nuthatch#1160 wants each surface switchable and revertible on its own. On the
-  // nest path the gateway key is not consulted at all.
-  if (nuthatchEnabled('NUTHATCH_INDEXERS')) {
-    if (!hasNuthatch()) {
-      return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
-    }
-    const nestKey = `lodestar:indexers:${first}:${skip}:${orderBy}:${orderDirection}:nuthatch:v1`;
-    try {
-      const data = await cached(nestKey, 300, async (): Promise<IndexersResponse> => {
-        const r = await nuthatchSqlReady<NestIndexerRow>(
-          indexersSql(first, skip, orderBy, orderDirection as 'asc' | 'desc'),
-          INDEXERS_BASE_PATH,
-        );
-        if (!r.ok) throw Object.assign(new Error(r.error), { nest: r });
-        return { indexers: r.data.rows.map(indexerFromNest) };
-      });
-      return NextResponse.json({ data, source: 'nuthatch' }, {
-        headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
-      });
-    } catch (error) {
-      log.api.error({ err: error }, 'Indexers from the nest failed');
-      return NextResponse.json({ error: 'Failed to load indexers from Nuthatch' }, { status: 503 });
-    }
+  // From the nest, always (nuthatch#1160). The gateway path this once fell back to left with the key.
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
-
-  if (!hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
-  }
-
-  const cacheKey = `lodestar:indexers:${first}:${skip}:${orderBy}:${orderDirection}`;
-
+  const nestKey = `lodestar:indexers:${first}:${skip}:${orderBy}:${orderDirection}:nuthatch:v1`;
   try {
-    const data = await cached(cacheKey, 300, () =>
-      subgraphQuery<IndexersResponse>(`{
-        indexers(
-          first: ${first}
-          skip: ${skip}
-          orderBy: ${orderBy}
-          orderDirection: ${orderDirection}
-          where: { stakedTokens_gt: "0", id_not: "0xb43b2cccceada5292732a8c58ae134adefce09bb" }
-        ) {
-          id
-          account {
-            id
-            defaultDisplayName
-            metadata {
-              displayName
-              description
-            }
-          }
-          stakedTokens
-          lockedTokens
-          delegatedTokens
-          allocatedTokens
-          allocationCount
-          indexingRewardCut
-          queryFeeCut
-          delegatorParameterCooldown
-          lastDelegationParameterUpdate
-          rewardsEarned
-          delegatorShares
-          url
-          geoHash
-          createdAt
-        }
-      }`)
-    );
-
-    return NextResponse.json({ data }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-      },
+    const data = await cached(nestKey, 300, async (): Promise<IndexersResponse> => {
+      const r = await nuthatchSqlReady<NestIndexerRow>(
+        indexersSql(first, skip, orderBy, orderDirection as 'asc' | 'desc'),
+        INDEXERS_BASE_PATH,
+      );
+      if (!r.ok) throw Object.assign(new Error(r.error), { nest: r });
+      return { indexers: r.data.rows.map(indexerFromNest) };
+    });
+    return NextResponse.json({ data, source: 'nuthatch' }, {
+      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
     });
   } catch (error) {
-    log.api.error({ err: error }, 'Indexers error');
-    return NextResponse.json({ error: 'Failed to fetch indexers' }, { status: 500 });
+    log.api.error({ err: error }, 'Indexers from the nest failed');
+    return NextResponse.json({ error: 'Failed to load indexers from Nuthatch' }, { status: 503 });
   }
 }

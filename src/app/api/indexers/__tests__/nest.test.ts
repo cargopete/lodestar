@@ -62,16 +62,6 @@ describe('api/indexers from the nest', () => {
     delete process.env.NUTHATCH_INDEXERS;
   });
 
-  it('with the flag off, the gateway path is untouched and the nest is never asked', async () => {
-    delete process.env.NUTHATCH_INDEXERS;
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValue({ indexers: [] });
-    const res = await GET(req());
-    expect(res.status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalledTimes(1);
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-  });
-
   it('on the nest path the gateway key is not consulted and the rows arrive in the Indexer shape', async () => {
     nuthatchSqlReady.mockResolvedValue(ok([row]));
     const res = await GET(req('?first=50&skip=100&orderBy=delegatedTokens&orderDirection=asc'));
@@ -136,15 +126,11 @@ describe('api/indexers from the nest', () => {
     expect(subgraphQuery).not.toHaveBeenCalled();
   });
 
-  it('the flag on without a configured nest is a 503, not a silent gateway read', async () => {
+  it('without a configured nest the route is a 503, never a silent gateway read', async () => {
     nuthatchConfigured = false;
-    process.env.NUTHATCH_INDEXERS = 'true';
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValue({ indexers: [] });
     const res = await GET(req());
-    // nuthatchEnabled() is false without a configured nest, so this falls through to the gateway path
-    // by design: the flag gates a nest that exists. Pinned so a change to that rule is a deliberate one.
-    expect(res.status).toBe(200);
+    // There is no gateway path any more (nuthatch#1160): a dashboard with no nest configured says so.
+    expect(res.status).toBe(503);
     expect(nuthatchSqlReady).not.toHaveBeenCalled();
   });
 });

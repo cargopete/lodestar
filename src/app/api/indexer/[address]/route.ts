@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
 import { log } from '@/lib/logger';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import {
   indexerDetailSql, indexerOperatorsSql, indexerDelegatorsSql, indexerActiveAllocationsSql,
   indexerClosedAllocationsSql, delegationRatioSql,
@@ -89,181 +88,17 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  // Off by default (nuthatch#1160), the same flag as /api/indexers. On the nest path the gateway
-  // key is not consulted at all.
-  if (nuthatchEnabled('NUTHATCH_INDEXERS')) {
-    if (!hasNuthatch()) {
-      return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
-    }
-    try {
-      const data = await cached(`lodestar:indexer:${addr}:nuthatch:v1`, 300, () => indexerFromNest(addr));
-      return NextResponse.json({ data, source: 'nuthatch' }, {
-        headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
-      });
-    } catch (error) {
-      log.api.error({ err: error }, 'Indexer detail from the nest failed');
-      return NextResponse.json({ error: 'Failed to load indexer from Nuthatch' }, { status: 503 });
-    }
+  // From the nest, always (nuthatch#1160). The gateway path this once fell back to left with the key.
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
-
-  if (!hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
-  }
-
   try {
-    const data = await cached(`lodestar:indexer:${addr}`, 300, async () => {
-      // Fetch indexer details
-      const result = await subgraphQuery<{ indexer: Record<string, unknown> | null }>(`{
-        indexer(id: "${addr}") {
-          id
-          account {
-            id
-            defaultDisplayName
-            operators { id }
-            metadata {
-              displayName
-              description
-              website
-            }
-          }
-          stakedTokens
-          lockedTokens
-          delegatedTokens
-          delegatedThawingTokens
-          allocatedTokens
-          tokenCapacity
-          allocationCount
-          indexingRewardCut
-          queryFeeCut
-          rewardsEarned
-          queryFeesCollected
-          delegatorShares
-          delegatorParameterCooldown
-          lastDelegationParameterUpdate
-          url
-          geoHash
-          createdAt
-          indexingRewardEffectiveCut
-          overDelegationDilution
-          ownStakeRatio
-          delegatedStakeRatio
-          indexerRewardsOwnGenerationRatio
-          provisionedTokens
-          delegators(first: 100, orderBy: stakedTokens, orderDirection: desc) {
-            id
-            stakedTokens
-            shareAmount
-            delegator {
-              id
-            }
-          }
-        }
-      }`);
-
-      if (!result.indexer) return { indexer: null };
-
-      // Paginate through ALL active allocations (subgraph caps at 1000 per query)
-      interface Allocation {
-        id: string;
-        allocatedTokens: string;
-        createdAtEpoch: number;
-        subgraphDeployment: {
-          id: string;
-          ipfsHash: string;
-          signalledTokens: string;
-          stakedTokens: string;
-          versions: Array<{ subgraph: { metadata: { displayName: string } | null } | null }>;
-        };
-      }
-      let allAllocations: Allocation[] = [];
-      let lastId = '';
-      while (true) {
-        const allocResult = await subgraphQuery<{ allocations: Allocation[] }>(`{
-          allocations(
-            first: 1000,
-            where: { indexer: "${addr}", status: Active${lastId ? `, id_gt: "${lastId}"` : ''} }
-            orderBy: id
-            orderDirection: asc
-          ) {
-            id
-            allocatedTokens
-            createdAtEpoch
-            subgraphDeployment {
-              id
-              ipfsHash
-              signalledTokens
-              stakedTokens
-              versions(first: 1, orderBy: createdAt, orderDirection: desc) {
-                subgraph { metadata { displayName } }
-              }
-            }
-          }
-        }`);
-        const batch = allocResult.allocations ?? [];
-        allAllocations = allAllocations.concat(batch);
-        if (batch.length < 1000) break;
-        lastId = batch[batch.length - 1].id;
-      }
-
-      // Fetch the most recent closed allocations (history can be huge — cap at 50).
-      interface ClosedAllocation {
-        id: string;
-        allocatedTokens: string;
-        createdAtEpoch: number;
-        closedAtEpoch: number | null;
-        closedAt: number | null;
-        indexingRewards: string;
-        queryFeesCollected: string;
-        poi: string | null;
-        forceClosed: boolean;
-        subgraphDeployment: {
-          id: string;
-          ipfsHash: string;
-          versions: Array<{ subgraph: { metadata: { displayName: string } | null } | null }>;
-        };
-      }
-      const closedResult = await subgraphQuery<{ allocations: ClosedAllocation[] }>(`{
-        allocations(
-          first: 50,
-          where: { indexer: "${addr}", status: Closed }
-          orderBy: closedAt
-          orderDirection: desc
-        ) {
-          id
-          allocatedTokens
-          createdAtEpoch
-          closedAtEpoch
-          closedAt
-          indexingRewards
-          queryFeesCollected
-          poi
-          forceClosed
-          subgraphDeployment {
-            id
-            ipfsHash
-            versions(first: 1, orderBy: createdAt, orderDirection: desc) {
-              subgraph { metadata { displayName } }
-            }
-          }
-        }
-      }`);
-
-      return {
-        indexer: {
-          ...result.indexer,
-          allocations: allAllocations,
-          closedAllocations: closedResult.allocations ?? [],
-        },
-      };
-    });
-
-    return NextResponse.json({ data }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-      },
+    const data = await cached(`lodestar:indexer:${addr}:nuthatch:v1`, 300, () => indexerFromNest(addr));
+    return NextResponse.json({ data, source: 'nuthatch' }, {
+      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
     });
   } catch (error) {
-    log.api.error({ err: error }, 'Indexer detail error');
-    return NextResponse.json({ error: 'Failed to fetch indexer' }, { status: 500 });
+    log.api.error({ err: error }, 'Indexer detail from the nest failed');
+    return NextResponse.json({ error: 'Failed to load indexer from Nuthatch' }, { status: 503 });
   }
 }

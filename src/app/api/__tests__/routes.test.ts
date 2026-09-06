@@ -101,6 +101,9 @@ vi.stubGlobal('fetch', mockFetch);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // `clearAllMocks` keeps queued `mockResolvedValueOnce` answers; a case that queues a gateway
+  // answer no route consumes any more would otherwise hand it to the next case's call.
+  mockSubgraphQuery.mockReset();
   mockHasSubgraphAccess.mockReturnValue(true);
   mockCacheGet.mockResolvedValue(null);
   mockFetch.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
@@ -216,107 +219,9 @@ describe('/api/tvl', () => {
 // /api/network-stats
 // ============================================================
 
-describe('/api/network-stats', () => {
-  let GET: () => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/network-stats/route');
-    GET = mod.GET;
-  });
-
-  it('returns { data } with network stats', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      graphNetwork: {
-        totalTokensStaked: '1000000000000000000000000',
-        currentEpoch: 1247,
-        delegationRatio: 16,
-      },
-      _meta: { block: { number: 46000000 } },
-    });
-
-    const res = await GET();
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('graphNetwork');
-    expect(json.data).toHaveProperty('_meta');
-  });
-
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-
-    const res = await GET();
-    expect(res.status).toBe(503);
-  });
-
-  it('returns 500 on subgraph error', async () => {
-    mockSubgraphQuery.mockRejectedValueOnce(new Error('subgraph down'));
-
-    const res = await GET();
-    expect(res.status).toBe(500);
-    const json = await getJson(res);
-    expect(json).toHaveProperty('error');
-  });
-});
-
 // ============================================================
 // /api/indexers
 // ============================================================
-
-describe('/api/indexers', () => {
-  let GET: (req: NextRequest) => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/indexers/route');
-    GET = mod.GET as (req: NextRequest) => Promise<Response>;
-  });
-
-  it('returns { data } with indexers array', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      indexers: [
-        { id: '0x1', stakedTokens: '1000000000000000000000000', allocationCount: 5 },
-      ],
-    });
-
-    const req = makeRequest('/api/indexers');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('indexers');
-    expect(Array.isArray(json.data.indexers)).toBe(true);
-  });
-
-  it('respects pagination params', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ indexers: [] });
-
-    const req = makeRequest('/api/indexers?first=10&skip=20');
-    await GET(req);
-
-    const query = mockSubgraphQuery.mock.calls[0][0] as string;
-    expect(query).toContain('first: 10');
-    expect(query).toContain('skip: 20');
-  });
-
-  it('caps first at 500', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ indexers: [] });
-
-    const req = makeRequest('/api/indexers?first=9999');
-    await GET(req);
-
-    const query = mockSubgraphQuery.mock.calls[0][0] as string;
-    expect(query).toContain('first: 500');
-  });
-
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/indexers');
-    const res = await GET(req);
-    expect(res.status).toBe(503);
-  });
-});
 
 // ============================================================
 // /api/indexers-enriched
@@ -365,45 +270,6 @@ describe('/api/indexers-enriched', () => {
 // ============================================================
 // /api/epochs
 // ============================================================
-
-describe('/api/epochs', () => {
-  let GET: (req: NextRequest) => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/epochs/route');
-    GET = mod.GET as (req: NextRequest) => Promise<Response>;
-  });
-
-  it('returns { data } with epochs array', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      epoches: [{ id: '1247', startBlock: 45000000, endBlock: 45006646 }],
-    });
-
-    const req = makeRequest('/api/epochs');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('epoches');
-  });
-
-  it('caps count at 400', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ epoches: [] });
-    const req = makeRequest('/api/epochs?count=999');
-    await GET(req);
-
-    const query = mockSubgraphQuery.mock.calls[0][0] as string;
-    expect(query).toContain('first: 400');
-  });
-
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/epochs');
-    const res = await GET(req);
-    expect(res.status).toBe(503);
-  });
-});
 
 // ============================================================
 // /api/ens
@@ -561,104 +427,6 @@ describe('/api/reo', () => {
 // ============================================================
 // /api/poi
 // ============================================================
-
-describe('/api/poi', () => {
-  let GET: (req: NextRequest) => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/poi/route');
-    GET = mod.GET as (req: NextRequest) => Promise<Response>;
-  });
-
-  it('returns overview with { data.summary, data.deployments }', async () => {
-    const poi = '0x' + 'a'.repeat(64);
-    mockSubgraphQuery.mockResolvedValueOnce({
-      allocations: [
-        {
-          id: 'a1',
-          poi,
-          indexer: { id: '0x1', account: { defaultDisplayName: 'Test', metadata: null } },
-          allocatedTokens: '1000000000000000000000000',
-          closedAtEpoch: 100,
-          closedAt: 1700000000,
-          subgraphDeployment: { id: 'd1', ipfsHash: 'Qm1', signalledTokens: '100000000000000000000000', stakedTokens: '100000000000000000000000' },
-        },
-      ],
-    });
-
-    const req = makeRequest('/api/poi');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('summary');
-    expect(json.data).toHaveProperty('deployments');
-    expect(json.data.summary).toHaveProperty('totalAllocations');
-    expect(json.data.summary).toHaveProperty('deploymentsTracked');
-    expect(json.data.summary).toHaveProperty('overallConsensusRate');
-    expect(json.data.summary).toHaveProperty('divergentDeployments');
-  });
-
-  it('returns deployment detail when ?deployment= specified', async () => {
-    const poi = '0x' + 'a'.repeat(64);
-    mockSubgraphQuery.mockResolvedValueOnce({
-      allocations: [
-        {
-          id: 'a1',
-          poi,
-          indexer: { id: '0x1', account: { defaultDisplayName: 'Test', metadata: null } },
-          allocatedTokens: '1000000000000000000000000',
-          closedAtEpoch: 100,
-          closedAt: 1700000000,
-          subgraphDeployment: { id: '0xdep1', ipfsHash: 'Qm1', signalledTokens: '100000000000000000000000', stakedTokens: '100000000000000000000000' },
-        },
-      ],
-    });
-
-    const req = makeRequest('/api/poi?deployment=0xdep1');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('deploymentId');
-    expect(json.data).toHaveProperty('epochs');
-  });
-
-  it('resolves Qm hash to bytes32 ID', async () => {
-    // First call: resolve hash
-    mockSubgraphQuery.mockResolvedValueOnce({
-      subgraphDeployments: [{ id: '0xbytes32id' }],
-    });
-    // Second call: get allocations
-    const poi = '0x' + 'a'.repeat(64);
-    mockSubgraphQuery.mockResolvedValueOnce({
-      allocations: [
-        {
-          id: 'a1',
-          poi,
-          indexer: { id: '0x1', account: { defaultDisplayName: 'Test', metadata: null } },
-          allocatedTokens: '1000000000000000000000000',
-          closedAtEpoch: 100,
-          closedAt: 1700000000,
-          subgraphDeployment: { id: '0xbytes32id', ipfsHash: 'QmTest', signalledTokens: '100000000000000000000000', stakedTokens: '100000000000000000000000' },
-        },
-      ],
-    });
-
-    const req = makeRequest('/api/poi?deployment=QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG');
-    const res = await GET(req);
-    expect(res.status).toBe(200);
-  });
-
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/poi');
-    const res = await GET(req);
-    expect(res.status).toBe(503);
-  });
-});
 
 // ============================================================
 // /api/subgraph-deployments
@@ -954,89 +722,6 @@ describe('/api/subgraph-versions/[hash]', () => {
 // ============================================================
 // /api/indexer/[address]
 // ============================================================
-
-describe('/api/indexer/[address]', () => {
-  let GET: (req: NextRequest, ctx: { params: Promise<{ address: string }> }) => Promise<Response>;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/indexer/[address]/route');
-    GET = mod.GET as typeof GET;
-  });
-
-  it('returns { data } with indexer detail', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      indexer: {
-        id: '0x1234',
-        stakedTokens: '1000000000000000000000000',
-        allocations: [],
-        delegators: [],
-      },
-    });
-    // Second call: active allocation pagination loop (returns empty = exits loop)
-    mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
-    // Third call: recent closed allocations
-    mockSubgraphQuery.mockResolvedValueOnce({
-      allocations: [
-        {
-          id: '0xalloc1',
-          allocatedTokens: '5000000000000000000000',
-          createdAtEpoch: 100,
-          closedAtEpoch: 120,
-          closedAt: 1700000000,
-          indexingRewards: '1000000000000000000',
-          queryFeesCollected: '0',
-          poi: '0xpoi',
-          forceClosed: false,
-          subgraphDeployment: { id: '0xdep', ipfsHash: 'QmHash', versions: [] },
-        },
-      ],
-    });
-
-    const req = makeRequest('/api/indexer/0x1234000000000000000000000000000000001234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('indexer');
-    expect(json.data.indexer.closedAllocations).toHaveLength(1);
-    expect(json.data.indexer.closedAllocations[0].id).toBe('0xalloc1');
-  });
-
-  it('queries closed allocations ordered by closedAt desc', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ indexer: { id: '0x1234', allocations: [], delegators: [] } });
-    mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
-    mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
-
-    const req = makeRequest('/api/indexer/0x1234000000000000000000000000000000001234');
-    await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
-
-    // Third subgraph call is the closed-allocations query
-    const closedQuery = mockSubgraphQuery.mock.calls[2][0] as string;
-    expect(closedQuery).toContain('status: Closed');
-    expect(closedQuery).toContain('orderBy: closedAt');
-    expect(closedQuery).toContain('orderDirection: desc');
-  });
-
-  it('lowercases the address', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ indexer: { id: '0xabc', allocations: [], delegators: [] } });
-    mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
-    mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
-
-    const req = makeRequest('/api/indexer/0xABC0000000000000000000000000000000001234');
-    await GET(req, { params: Promise.resolve({ address: '0xABC0000000000000000000000000000000001234' }) });
-
-    const query = mockSubgraphQuery.mock.calls[0][0] as string;
-    expect(query).toContain('0xabc');
-  });
-
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/indexer/0x1234000000000000000000000000000000001234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
-    expect(res.status).toBe(503);
-  });
-});
 
 // ============================================================
 // /api/indexing-status/[hash]

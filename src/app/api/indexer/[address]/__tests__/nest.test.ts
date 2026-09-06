@@ -61,16 +61,6 @@ describe('api/indexer/[address] from the nest', () => {
     delete process.env.NUTHATCH_INDEXERS;
   });
 
-  it('with the flag off, the gateway path is untouched', async () => {
-    delete process.env.NUTHATCH_INDEXERS;
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValue({ indexer: null });
-    const res = await req();
-    expect(res.status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalledTimes(1);
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-  });
-
   it('six queries assemble the page shape; the key is not consulted; deployment ids become CIDs', async () => {
     nuthatchSqlReady.mockImplementation(answer);
     const res = await req();

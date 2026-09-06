@@ -62,16 +62,6 @@ describe('api/portfolio from the nest', () => {
     delete process.env.NUTHATCH_PORTFOLIO;
   });
 
-  it('with the flag off, the gateway path is untouched', async () => {
-    delete process.env.NUTHATCH_PORTFOLIO;
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValue({ delegator: null });
-    const res = await req(`?address=${D}&type=delegator`);
-    expect(res.status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalledTimes(1);
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-  });
-
   it('delegator: totals and stakes in the subgraph shape; neither the key nor ENS is consulted', async () => {
     nuthatchSqlReady.mockImplementation(answer);
     const res = await req(`?address=${D}&type=delegator`);

@@ -1,88 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { poiAllocationsSql } from '@/lib/nest-queries';
 import { bytes32ToIpfsHash, ipfsHashToBytes32 } from '@/lib/studio/ipfs';
 import { computeOverview, computeDeploymentDetail } from '@/lib/poi';
 import type { ClosedAllocation } from '@/lib/poi';
 import { log } from '@/lib/logger';
-
-interface AllocationsResponse {
-  allocations: ClosedAllocation[];
-}
-
-const OVERVIEW_QUERY = `{
-  allocations(
-    first: 1000
-    where: { status: Closed, poi_not: "0x0000000000000000000000000000000000000000000000000000000000000000" }
-    orderBy: closedAt
-    orderDirection: desc
-  ) {
-    id
-    poi
-    indexer {
-      id
-      account {
-        defaultDisplayName
-        metadata {
-          displayName
-          description
-        }
-      }
-    }
-    allocatedTokens
-    closedAtEpoch
-    closedAt
-    subgraphDeployment {
-      id
-      ipfsHash
-      signalledTokens
-      stakedTokens
-    }
-  }
-}`;
-
-function deploymentQuery(deploymentId: string) {
-  return `{
-    allocations(
-      first: 1000
-      where: { status: Closed, poi_not: "0x0000000000000000000000000000000000000000000000000000000000000000", subgraphDeployment: "${deploymentId}" }
-      orderBy: closedAt
-      orderDirection: desc
-    ) {
-      id
-      poi
-      indexer {
-        id
-        account {
-          defaultDisplayName
-          metadata {
-            displayName
-            description
-          }
-        }
-      }
-      allocatedTokens
-      closedAtEpoch
-      closedAt
-      subgraphDeployment {
-        id
-        ipfsHash
-        signalledTokens
-        stakedTokens
-      }
-    }
-  }`;
-}
-
-function resolveDeploymentQuery(ipfsHash: string) {
-  return `{
-    subgraphDeployments(first: 1, where: { ipfsHash: "${ipfsHash}" }) {
-      id
-    }
-  }`;
-}
 
 /** The nest carrying the Lodestar views. `/alloc` reverse-proxies to graph-allocations-nest. */
 const NEST_BASE_PATH = process.env.NUTHATCH_POI_BASE_PATH || '/alloc';
@@ -159,69 +82,14 @@ async function getFromNest(deployment: string | null) {
 export async function GET(request: NextRequest) {
   const deployment = request.nextUrl.searchParams.get('deployment');
 
-  // Off by default. #1078 wants each surface switchable and revertible on its own. On the nest path
-  // the gateway key is not consulted at all.
-  if (nuthatchEnabled('NUTHATCH_POI')) {
-    if (!hasNuthatch()) {
-      return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
-    }
-    try {
-      return await getFromNest(deployment);
-    } catch (error) {
-      log.api.error({ err: error }, 'POI from the nest failed');
-      return NextResponse.json({ error: 'Failed to load POI data from Nuthatch' }, { status: 503 });
-    }
+  // From the nest, always (nuthatch#1160). The gateway path this once fell back to left with the key.
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
-
-  if (!hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
-  }
-
   try {
-    if (deployment) {
-      // Deployment detail — resolve ipfsHash to bytes32 ID if needed
-      let deploymentId = deployment;
-      if (deployment.startsWith('Qm')) {
-        const resolved = await cached(
-          `lodestar:poi:resolve:${deployment}`,
-          86400,
-          () => subgraphQuery<{ subgraphDeployments: { id: string }[] }>(resolveDeploymentQuery(deployment)),
-        );
-        if (!resolved.subgraphDeployments.length) {
-          return NextResponse.json({ error: 'Deployment not found' }, { status: 404 });
-        }
-        deploymentId = resolved.subgraphDeployments[0].id;
-      }
-
-      const data = await cached(`lodestar:poi:detail:${deploymentId}`, 300, async () => {
-        const result = await subgraphQuery<AllocationsResponse>(deploymentQuery(deploymentId));
-        return computeDeploymentDetail(result.allocations);
-      });
-
-      if (!data) {
-        return NextResponse.json({ error: 'No POI data for this deployment' }, { status: 404 });
-      }
-
-      return NextResponse.json({ data }, {
-        headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-        },
-      });
-    }
-
-    // Overview
-    const data = await cached('lodestar:poi:overview', 300, async () => {
-      const result = await subgraphQuery<AllocationsResponse>(OVERVIEW_QUERY);
-      return computeOverview(result.allocations);
-    });
-
-    return NextResponse.json({ data }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-      },
-    });
+    return await getFromNest(deployment);
   } catch (error) {
-    log.api.error({ err: error }, 'POI query error');
-    return NextResponse.json({ error: 'Failed to fetch POI data' }, { status: 500 });
+    log.api.error({ err: error }, 'POI from the nest failed');
+    return NextResponse.json({ error: 'Failed to load POI data from Nuthatch' }, { status: 503 });
   }
 }

@@ -85,6 +85,7 @@ vi.stubGlobal('fetch', mockFetch);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockSubgraphQuery.mockReset();
   // Re-establish defaults after clearAllMocks (which may clear implementations)
   mockDb.mockResolvedValue([]);
   mockHasSubgraphAccess.mockReturnValue(true);
@@ -129,58 +130,6 @@ describe('/api/portfolio', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/portfolio?address=0x1234000000000000000000000000000000001234&type=delegator');
-    const res = await GET(req);
-    expect(res.status).toBe(503);
-  });
-
-  it('returns { data } for delegator portfolio', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      delegator: {
-        id: '0x1234',
-        totalStakedTokens: '1000000000000000000000',
-        stakes: [],
-      },
-    });
-
-    const req = makeRequest('/api/portfolio?address=0x1234000000000000000000000000000000001234&type=delegator');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('delegator');
-  });
-
-  it('returns { data } for curator portfolio', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      curator: {
-        id: '0x1234',
-        totalSignalledTokens: '500000000000000000000',
-        signals: [],
-      },
-    });
-
-    const req = makeRequest('/api/portfolio?address=0x1234000000000000000000000000000000001234&type=curator');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('curator');
-  });
-
-  it('lowercases address', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ delegator: null });
-
-    const req = makeRequest('/api/portfolio?address=0xABCD000000000000000000000000000000001234&type=delegator');
-    await GET(req);
-
-    const query = mockSubgraphQuery.mock.calls[0][0] as string;
-    expect(query).toContain('0xabcd');
-  });
 });
 
 // ============================================================
@@ -201,43 +150,6 @@ describe('/api/provisions', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/provisions?indexer=0x1234000000000000000000000000000000001234');
-    const res = await GET(req);
-    expect(res.status).toBe(503);
-  });
-
-  it('returns indexer provisions when indexer param provided', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      provisions: [
-        { id: 'p1', tokensProvisioned: '500000000000000000000000', dataService: { id: '0xservice' } },
-      ],
-    });
-
-    const req = makeRequest('/api/provisions?indexer=0x1234000000000000000000000000000000001234');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('provisions');
-  });
-
-  it('returns service provisions when service param provided', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      provisions: [
-        { id: 'p1', tokensProvisioned: '500000000000000000000000', indexer: { id: '0xindexer' } },
-      ],
-    });
-
-    const req = makeRequest('/api/provisions?service=0x1234000000000000000000000000000000002345');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-  });
 });
 
 // ============================================================
@@ -317,44 +229,6 @@ describe('/api/payments', () => {
   beforeEach(async () => {
     const mod = await import('@/app/api/payments/route');
     GET = mod.GET as (req: NextRequest) => Promise<Response>;
-  });
-
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/payments');
-    const res = await GET(req);
-    expect(res.status).toBe(503);
-  });
-
-  it('returns network-wide overview', async () => {
-    const emptyResponse = { paymentsEscrowAccounts: [], paymentsEscrowTransactions: [], graphTallyTokensCollecteds: [] };
-    mockSubgraphQuery
-      .mockResolvedValueOnce({ paymentsEscrowAccounts: [] })
-      .mockResolvedValueOnce({ paymentsEscrowTransactions: [] })
-      .mockResolvedValueOnce({ graphTallyTokensCollecteds: [] });
-
-    const req = makeRequest('/api/payments');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('totalEscrowBalance');
-    expect(json.data).toHaveProperty('activePayers');
-  });
-
-  it('returns receiver-filtered data when receiver param provided', async () => {
-    mockSubgraphQuery
-      .mockResolvedValueOnce({ paymentsEscrowAccounts: [] })
-      .mockResolvedValueOnce({ paymentsEscrowTransactions: [] })
-      .mockResolvedValueOnce({ graphTallyTokensCollecteds: [] });
-
-    const req = makeRequest('/api/payments?receiver=0x1234000000000000000000000000000000001234');
-    const res = await GET(req);
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
   });
 
   it('returns 400 for invalid receiver address format', async () => {

@@ -40,16 +40,6 @@ describe('api/indexer-stake-history from the nest', () => {
     delete process.env.NUTHATCH_INDEXERS;
   });
 
-  it('with the flag off, the gateway path is untouched', async () => {
-    delete process.env.NUTHATCH_INDEXERS;
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValueOnce({ _meta: { block: { number: 500_000_000 } } }).mockResolvedValueOnce({});
-    const res = await req();
-    expect(res.status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalledTimes(2);
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-  });
-
   it('27 weekly cutoffs reach the SQL and come back as dated GRT points, oldest first', async () => {
     nuthatchSqlReady.mockImplementation((sql: string) => {
       const cutoffs = [...sql.matchAll(/\((\d{9,})\)/g)].map((m) => Number(m[1]));
