@@ -136,7 +136,6 @@ async function getItems(): Promise<FeedItem[]> {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.resetModules();
-  delete process.env.GRAPH_API_KEY; // keep epoch fetcher inert by default
   mockFetch.mockImplementation((url: string) => Promise.resolve(routeFetch(url)));
 });
 

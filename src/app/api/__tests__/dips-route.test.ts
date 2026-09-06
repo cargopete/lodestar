@@ -24,7 +24,7 @@ vi.mock('@/lib/logger', () => ({
 const mockEnabled = vi.fn(() => true);
 const mockSqlReady = vi.fn();
 vi.mock('@/lib/nuthatch', () => ({
-  nuthatchEnabled: () => mockEnabled(),
+  hasNuthatch: () => mockEnabled(),
   nuthatchSqlReady: (...args: unknown[]) => mockSqlReady(...args),
 }));
 
@@ -114,7 +114,7 @@ beforeEach(() => {
 });
 
 describe('/api/dips', () => {
-  it('reports unavailable and never touches the nest when the flag is off', async () => {
+  it('reports unavailable and never touches the nest when no nest is configured', async () => {
     mockEnabled.mockReturnValue(false);
 
     const body = await (await GET()).json();

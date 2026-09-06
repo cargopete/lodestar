@@ -4,10 +4,9 @@ import newsData from '@/data/news.json';
 
 import { cached } from '@/lib/cache';
 import { log } from '@/lib/logger';
-import { graphNetworkUrl } from '@/lib/graph-network';
-import { nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
-import { epochFeedItems, fromNestEpoch, fromSubgraphEpoch, nestEpochsSql } from '@/lib/feed-epochs';
-import type { NestEpoch, SubgraphEpoch } from '@/lib/feed-epochs';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
+import { epochFeedItems, fromNestEpoch, nestEpochsSql } from '@/lib/feed-epochs';
+import type { NestEpoch } from '@/lib/feed-epochs';
 
 // ── Forum config ─────────────────────────────────────────────────
 const FORUM_BASE = 'https://forum.thegraph.com';
@@ -37,8 +36,7 @@ const TRACKED_REPOS = [
   'graphprotocol/graph-tooling',
 ];
 
-// ── Subgraph config ──────────────────────────────────────────────
-const SUBGRAPH_URL = graphNetworkUrl(process.env.GRAPH_API_KEY);
+// ── Nest config ──────────────────────────────────────────────────
 /** The nest carrying `lodestar_epochs`; `/alloc` fronts graph-allocations-nest. */
 const FEED_BASE_PATH = process.env.NUTHATCH_FEED_BASE_PATH || '/alloc';
 
@@ -380,50 +378,18 @@ async function fetchSnapshotProposals(): Promise<FeedItem[]> {
 }
 
 /**
- * Epoch summaries, from the nest behind `NUTHATCH_FEED` or from the Graph Network subgraph. Both
- * sources are shaped by `feed-epochs.ts`, so the wording and the maths cannot differ between them
- * (nightswatchhq/nuthatch#1078). Off by default; on the nest path the gateway key is not consulted.
+ * Epoch summaries from the nest's `lodestar_epochs`, shaped by `feed-epochs.ts`
+ * (nightswatchhq/nuthatch#1078, #1160). The Graph Network subgraph this once fell back to left with
+ * the key; without a nest there are no epoch items, and the rest of the feed still renders.
  */
 async function fetchEpochSummaries(): Promise<FeedItem[]> {
-  if (nuthatchEnabled('NUTHATCH_FEED')) {
-    const res = await nuthatchSqlReady<NestEpoch>(nestEpochsSql(5), FEED_BASE_PATH);
-    if (!res.ok) {
-      log.api.warn({ status: res.status, error: res.error }, 'Epoch summaries from the nest failed');
-      return [];
-    }
-    return epochFeedItems(res.data.rows.map(fromNestEpoch));
-  }
-
-  if (!SUBGRAPH_URL) return [];
-
-  try {
-    const query = `{
-      epoches(first: 5, orderBy: startBlock, orderDirection: desc) {
-        id
-        startBlock
-        endBlock
-        totalRewards
-        totalIndexerRewards
-        totalDelegatorRewards
-        totalQueryFees
-        queryFeeRebates
-      }
-    }`;
-
-    const res = await fetch(SUBGRAPH_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
-    });
-
-    if (!res.ok) return [];
-
-    const json = await res.json();
-    const epochs: SubgraphEpoch[] = json?.data?.epoches ?? [];
-    return epochFeedItems(epochs.map(fromSubgraphEpoch));
-  } catch {
+  if (!hasNuthatch()) return [];
+  const res = await nuthatchSqlReady<NestEpoch>(nestEpochsSql(5), FEED_BASE_PATH);
+  if (!res.ok) {
+    log.api.warn({ status: res.status, error: res.error }, 'Epoch summaries from the nest failed');
     return [];
   }
+  return epochFeedItems(res.data.rows.map(fromNestEpoch));
 }
 
 // ── Route handler ────────────────────────────────────────────────

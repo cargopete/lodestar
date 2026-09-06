@@ -21,16 +21,6 @@ export function hasNuthatch(): boolean {
 }
 
 /**
- * Whether a nest behind its own staging flag is live. The panels migrated in 4.26.0 no longer
- * consult this — they need a configured Nuthatch origin and fail visibly without one, with no
- * alternate Graph source. It remains for nests still being staged in, currently only the
- * dips-nest behind `NUTHATCH_DIPS`.
- */
-export function nuthatchEnabled(flag: string): boolean {
-  return hasNuthatch() && process.env[flag] === 'true';
-}
-
-/**
  * Run one SQL query against a nest's `/sql` surface and return its rows. `basePath` selects which nest
  * behind the shared host (empty = the default `graph-staking-nest` on `/sql`; `"/gns"` = the
  * `graph-gns-nest` reverse-proxied under `/gns/sql`). One URL + credential fronts both.

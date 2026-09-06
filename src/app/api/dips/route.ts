@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { log } from '@/lib/logger';
 
 // No request argument, so Next would statically cache this at build time and freeze the data
@@ -135,7 +135,7 @@ export interface DipsStep {
 }
 
 export async function GET() {
-  if (!nuthatchEnabled('NUTHATCH_DIPS')) {
+  if (!hasNuthatch()) {
     return NextResponse.json({ data: { available: false } });
   }
 

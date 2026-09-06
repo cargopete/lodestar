@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import {
   AGREEMENT_TABLES,
   buildAgreements,
@@ -41,7 +41,7 @@ const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const BASE_PATH = process.env.NUTHATCH_DIPS_BASE_PATH || '/dips';
 
 export async function GET(request: NextRequest) {
-  if (!nuthatchEnabled('NUTHATCH_DIPS')) {
+  if (!hasNuthatch()) {
     return NextResponse.json({ data: { available: false } });
   }
 

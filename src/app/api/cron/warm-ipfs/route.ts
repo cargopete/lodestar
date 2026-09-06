@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
-import { hasNuthatch, nuthatchEnabled } from '@/lib/nuthatch';
+import { hasNuthatch } from '@/lib/nuthatch';
 import { warmIpfsCache } from '@/lib/subgraph-metadata';
 import { log } from '@/lib/logger';
 
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
   if (!hasDbAccess() || !db) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
-  if (!nuthatchEnabled('NUTHATCH_SUBGRAPHS') || !hasNuthatch()) {
-    return NextResponse.json({ ok: true, skipped: 'NUTHATCH_SUBGRAPHS is off' });
+  if (!hasNuthatch()) {
+    return NextResponse.json({ ok: true, skipped: 'no nest configured' });
   }
   try {
     const result = await warmIpfsCache(150);

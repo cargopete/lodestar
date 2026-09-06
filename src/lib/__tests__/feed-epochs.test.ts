@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { epochFeedItems, fromNestEpoch, fromSubgraphEpoch, nestEpochsSql } from '../feed-epochs';
+import { epochFeedItems, fromNestEpoch, nestEpochsSql } from '../feed-epochs';
 
 const GRT = (n: number) => `${BigInt(n) * 10n ** 18n}`;
 
 describe('feed-epochs (nuthatch#1078)', () => {
-  it('shapes a nest row and a subgraph row to the same summary', () => {
+  it('shapes a nest row to the summary the feed renders, every figure as a string', () => {
+    // The shape the subgraph's `epoches(...)` used to be mapped to; the subgraph left with the key
+    // (nuthatch#1160), the summary did not.
     const fromNest = fromNestEpoch({
       id: 1371,
       start_block: 501000000,
@@ -13,17 +15,14 @@ describe('feed-epochs (nuthatch#1078)', () => {
       total_delegator_rewards: GRT(300),
       query_fees_collected: GRT(50),
     });
-    const fromSubgraph = fromSubgraphEpoch({
+    expect(fromNest).toEqual({
       id: '1371',
       startBlock: '501000000',
       endBlock: '501007199',
       totalRewards: GRT(1200),
-      totalIndexerRewards: GRT(900),
       totalDelegatorRewards: GRT(300),
       totalQueryFees: GRT(50),
-      queryFeeRebates: '0',
     });
-    expect(fromNest).toEqual(fromSubgraph);
   });
 
   it('yields n - 1 items, each comparing an epoch with the one before it', () => {

@@ -1,18 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-  GRAPH_NETWORK_SUBGRAPH_ID,
-  GRAPH_NETWORK_EXPLORER_URL,
-  gatewayUrl,
-  graphNetworkUrl,
-} from '../graph-network';
+import { GRAPH_NETWORK_SUBGRAPH_ID, GRAPH_NETWORK_EXPLORER_URL } from '../graph-network';
 
 /**
- * nightswatchhq/nuthatch#1078 proposes `lib/subgraph.ts` as the seam for moving these surfaces onto
- * a nest. That only works if the deployment id has one home. It had five, and `api/feed/route.ts`
- * builds its own client rather than importing the shared one - so a change made behind
- * `subgraphQuery` would have silently missed the feed.
+ * The deployment id has one home. It had five, and a migration made behind the shared client
+ * silently missed the feed, which built its own. The dashboard no longer queries the subgraph
+ * (nuthatch#1160); the id remains for the explorer link, and a second copy would still be a second
+ * thing to keep in step.
  */
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -31,24 +26,11 @@ describe('the Graph Network subgraph id has exactly one home', () => {
 
     expect(
       offenders,
-      'a second copy of the deployment id defeats the seam: a migration made behind subgraphQuery ' +
-        'would miss whichever surface holds the duplicate, which is exactly how api/feed was missed'
+      'a second copy of the deployment id is a second thing to keep in step, which is exactly how ' +
+        'api/feed was once missed'
     ).toEqual([]);
   });
 
-  it('builds the gateway url the four call sites used to build by hand', () => {
-    expect(gatewayUrl('KEY', GRAPH_NETWORK_SUBGRAPH_ID)).toBe(
-      `https://gateway-arbitrum.network.thegraph.com/api/KEY/subgraphs/id/${GRAPH_NETWORK_SUBGRAPH_ID}`
-    );
-    // A placeholder key is kept verbatim, for documentation that shows the shape of the url.
-    expect(gatewayUrl('[api-key]', GRAPH_NETWORK_SUBGRAPH_ID)).toContain('/api/[api-key]/');
-  });
-
-  it('returns null without a key, so hasSubgraphAccess stays false rather than 200-ing on absence', () => {
-    expect(graphNetworkUrl(undefined)).toBeNull();
-    expect(graphNetworkUrl('')).toBeNull();
-    expect(graphNetworkUrl('k')).toContain('/api/k/');
-  });
 
   it('points the explorer link at the same deployment', () => {
     expect(GRAPH_NETWORK_EXPLORER_URL).toBe(

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, hasDbAccess } from '@/lib/db';
 import { withCronTracking } from '@/lib/cron-runs';
 import { dispatchDipsNotifications } from '@/lib/notifications/dips';
-import { nuthatchEnabled } from '@/lib/nuthatch';
+import { hasNuthatch } from '@/lib/nuthatch';
 import { isCronAuthorized } from '@/lib/cron-auth';
 import { log } from '@/lib/logger';
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   if (!hasDbAccess() || !db) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
-  if (!nuthatchEnabled('NUTHATCH_DIPS')) {
+  if (!hasNuthatch()) {
     return NextResponse.json({ ok: true, skipped: 'dips-nest not configured' });
   }
 
