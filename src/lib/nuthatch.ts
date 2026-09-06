@@ -76,29 +76,29 @@ function nuthatchHeaders(): Record<string, string> {
 /**
  * A nest's `/sql` surface caps concurrent queries, and this is the gate that keeps us under it.
  *
- * The cap is real and small: measured against both dips nests on 2026-09-02, **two** queries are
- * admitted and every further one is refused with `503 server busy: too many concurrent SQL
- * queries`. It is the node protecting itself (nuthatch RFC-0013), so the answer is to ask for less,
- * never to raise it.
+ * The cap is real, and it is the node protecting itself (nuthatch RFC-0013), so the answer is
+ * always to ask for less rather than to raise it.
  *
  * This lives here rather than at the call sites because the call sites cannot be trusted to
  * remember, and the evidence is that they did not. `/api/dips/agreements` fired nine reads in one
- * `Promise.all` and had therefore never once worked against a nest with rows — seven refusals, and
- * the route returned one of them. `/api/dips` fires four, which is over the cap and survives only
- * because the client happens to stagger them enough; that is not a property anyone chose.
- * `delegation-flows` and the DIPS notification both fire exactly two, which is the whole budget.
- * With the gate here, a `Promise.all` at a call site is correct again and nobody has to know this.
+ * `Promise.all` and had therefore never once worked against a nest with rows - seven refusals, and
+ * the route returned one of them. With the gate here, a `Promise.all` at a call site is correct
+ * again and nobody has to know this.
  *
- * **One slot, not two.** The cap is a shared resource: the public SQL playground, `check-nest-health`
- * and every other Vercel instance draw on the same two. Taking one means our own composition can
- * never be the cause of a refusal. The cost is that four tiny reads serialise, which behind a
- * five-minute cache is worth roughly a hundred milliseconds once per TTL.
+ * **Two slots, not one.** One was sized against a nest admitting **two** concurrent queries, measured
+ * on 2026-09-02; the allocations nest that serves the dashboard has admitted **four** since
+ * 2026-09-06, and one slot now costs more than it protects. `/api/indexer/[address]` composes six
+ * statements in a `Promise.all` and had them run one after another: measured against the production
+ * nest, the page is 7.1 s serialised and 4.6 s at two, and does not improve past that because one
+ * statement dominates. Two leaves half the nest's budget for everything else that draws on it - the
+ * public SQL playground, `check-nest-health`, and every other Vercel instance - so our own
+ * composition still cannot be the sole cause of a refusal, and the retry below covers the case where
+ * several instances arrive together.
  *
- * **What it does not do.** This bounds one Node process. Serverless runs many, so three instances
- * asking at once still exceed the cap — which is what the retry below is for. The gate makes us
- * not the cause; it cannot make the cap larger, and nothing here should try to.
+ * Raising this again is a decision about a *measured* nest cap, not a guess: check
+ * `NUTHATCH_SQL_MAX_CONCURRENCY` on the nest first, and leave headroom for the other callers.
  */
-const SQL_SLOTS = 1;
+export const SQL_SLOTS = 2;
 
 interface SqlGate {
   active: number;
