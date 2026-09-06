@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
-import { resolveEnsNames } from '@/lib/ens';
 import type { DelegatorPortfolioResponse, CuratorPortfolioResponse, DelegatedStake, Signal } from '@/lib/queries';
 import { log } from '@/lib/logger';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import {
   delegatorSql, delegatorStakesSql, curatorSql, curatorSignalsSql,
   type NestDelegatorTotalsRow, type NestDelegatorStakeRow, type NestCuratorTotalsRow, type NestCuratorSignalRow,
@@ -115,134 +113,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'type must be delegator or curator' }, { status: 400 });
   }
 
-  // Off by default (nuthatch#1160). On the nest path neither the gateway key nor the ENS subgraph is consulted.
-  if (nuthatchEnabled('NUTHATCH_PORTFOLIO')) {
-    if (!hasNuthatch()) {
-      return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
-    }
-    try {
-      const data = await cached(`lodestar:portfolio:${type}:${address}:nuthatch:v1`, 120, () => portfolioFromNest(address, type));
-      return NextResponse.json({ data, source: 'nuthatch' }, {
-        headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300' },
-      });
-    } catch (error) {
-      log.api.error({ err: error }, 'Portfolio from the nest failed');
-      return NextResponse.json({ error: 'Failed to load portfolio from Nuthatch' }, { status: 503 });
-    }
+  // From the nest, always (nuthatch#1160). The gateway path this once fell back to left with the key.
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
-
-  if (!hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
-  }
-
   try {
-    if (type === 'delegator') {
-      const data = await cached(`lodestar:portfolio:delegator:${address}`, 120, () =>
-        subgraphQuery<DelegatorPortfolioResponse>(`{
-          delegator(id: "${address}") {
-            id
-            totalStakedTokens
-            totalUnstakedTokens
-            totalRealizedRewards
-            stakesCount
-            activeStakesCount
-            stakes(first: 100, orderBy: stakedTokens, orderDirection: desc) {
-              id
-              stakedTokens
-              shareAmount
-              lockedTokens
-              lockedUntil
-              realizedRewards
-              unstakedTokens
-              createdAt
-              lastUndelegatedAt
-              indexer {
-                id
-                account {
-                  id
-                  defaultDisplayName
-                  metadata {
-                    displayName
-                    description
-                  }
-                }
-                stakedTokens
-                delegatedTokens
-                delegatorShares
-                indexingRewardCut
-                queryFeeCut
-                delegatorParameterCooldown
-                allocationCount
-                indexingRewardEffectiveCut
-              }
-            }
-          }
-        }`)
-      );
-
-      // ENS enrichment: fill in names for indexers the subgraph has no metadata for
-      const nameless = (data?.delegator?.stakes ?? [])
-        .map((s) => s.indexer)
-        .filter((ix) => !ix.account?.defaultDisplayName && !ix.account?.metadata?.displayName);
-
-      if (nameless.length > 0) {
-        // Primary names over a mainnet RPC (nuthatch#1160); a failed lookup leaves the address.
-        const names = await resolveEnsNames(nameless.map((ix) => ix.id));
-        for (const ix of nameless) {
-          const ens = names[ix.id.toLowerCase()];
-          if (ens) {
-            if (!ix.account) ix.account = { id: ix.id, defaultDisplayName: null };
-            ix.account.defaultDisplayName = ens;
-          }
-        }
-      }
-
-      return NextResponse.json({ data }, {
-        headers: {
-          'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300',
-        },
-      });
-    }
-
-    // Curator
-    const data = await cached(`lodestar:portfolio:curator:${address}`, 120, () =>
-      subgraphQuery<CuratorPortfolioResponse>(`{
-        curator(id: "${address}") {
-          id
-          totalSignalledTokens
-          totalUnsignalledTokens
-          totalNameSignalledTokens
-          totalNameUnsignalledTokens
-          totalWithdrawnTokens
-          realizedRewards
-          signalCount
-          activeSignalCount
-          signals(first: 100, orderBy: signalledTokens, orderDirection: desc) {
-            id
-            signalledTokens
-            unsignalledTokens
-            signal
-            lastSignalChange
-            realizedRewards
-            subgraphDeployment {
-              id
-              ipfsHash
-              signalledTokens
-              queryFeesAmount
-              stakedTokens
-            }
-          }
-        }
-      }`)
-    );
-
-    return NextResponse.json({ data }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300',
-      },
+    const data = await cached(`lodestar:portfolio:${type}:${address}:nuthatch:v1`, 120, () => portfolioFromNest(address, type));
+    return NextResponse.json({ data, source: 'nuthatch' }, {
+      headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300' },
     });
   } catch (error) {
-    log.api.error({ err: error }, 'Portfolio error');
-    return NextResponse.json({ error: 'Failed to fetch portfolio' }, { status: 500 });
+    log.api.error({ err: error }, 'Portfolio from the nest failed');
+    return NextResponse.json({ error: 'Failed to load portfolio from Nuthatch' }, { status: 503 });
   }
 }

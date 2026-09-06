@@ -56,16 +56,6 @@ describe('api/network-stats from the nest', () => {
     delete process.env.NUTHATCH_NETWORK;
   });
 
-  it('with the flag off, the gateway path is untouched and the nest is never asked', async () => {
-    delete process.env.NUTHATCH_NETWORK;
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValue({ graphNetwork: {}, _meta: { block: { number: 1 } } });
-    const res = await GET();
-    expect(res.status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalledTimes(1);
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-  });
-
   it('two rows become the GraphNetwork shape; the key is not consulted; the block is the provenance', async () => {
     nuthatchSqlReady.mockImplementation(answer);
     const res = await GET();

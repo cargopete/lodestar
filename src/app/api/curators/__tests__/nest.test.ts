@@ -50,16 +50,6 @@ describe('api/curators from the nest', () => {
     delete process.env.NUTHATCH_CURATORS;
   });
 
-  it('with the flag off, the gateway path is untouched and the nest is never asked', async () => {
-    delete process.env.NUTHATCH_CURATORS;
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValue({ curators: [] });
-    const res = await GET(req());
-    expect(res.status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalledTimes(1);
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-  });
-
   it('on the nest path the key is not consulted and rows arrive in the leaderboard shape', async () => {
     nuthatchSqlReady.mockResolvedValue(ok([row]));
     const res = await GET(req('?first=20&skip=40'));

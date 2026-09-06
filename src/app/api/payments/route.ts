@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cached } from '@/lib/cache';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { escrowAccountsSql, escrowTransactionsSql, tallyCollectedSql } from '@/lib/nest-queries';
 import { subgraphEscrowTxId } from '@/lib/ingest/rav';
 import type {
@@ -12,103 +11,6 @@ import type {
 } from '@/lib/queries';
 import { log } from '@/lib/logger';
 import { GATEWAY_CANONICAL } from '@/lib/utils';
-
-const ESCROW_ACCOUNTS_QUERY = `{
-  paymentsEscrowAccounts(
-    first: 100
-    orderBy: balance
-    orderDirection: desc
-    where: { balance_gt: "0" }
-  ) {
-    id
-    payer { id }
-    receiver { id }
-    balance
-    totalAmountThawing
-    thawEndTimestamp
-  }
-}`;
-
-const RECENT_TRANSACTIONS_QUERY = `{
-  paymentsEscrowTransactions(
-    first: 50
-    orderBy: timestamp
-    orderDirection: desc
-  ) {
-    id
-    type
-    payer { id }
-    receiver { id }
-    allocationId
-    amount
-    timestamp
-  }
-}`;
-
-const TOP_COLLECTORS_QUERY = `{
-  graphTallyTokensCollecteds(
-    first: 50
-    orderBy: tokens
-    orderDirection: desc
-  ) {
-    id
-    payer { id }
-    receiver { id }
-    collectionId
-    tokens
-  }
-}`;
-
-function receiverQuery(receiver: string) {
-  const addr = receiver.toLowerCase();
-  return {
-    escrow: `{
-      paymentsEscrowAccounts(
-        first: 100
-        where: { receiver: "${addr}" }
-        orderBy: balance
-        orderDirection: desc
-      ) {
-        id
-        payer { id }
-        receiver { id }
-        balance
-        totalAmountThawing
-        thawEndTimestamp
-      }
-    }`,
-    transactions: `{
-      paymentsEscrowTransactions(
-        first: 100
-        where: { receiver: "${addr}" }
-        orderBy: timestamp
-        orderDirection: desc
-      ) {
-        id
-        type
-        payer { id }
-        receiver { id }
-        allocationId
-        amount
-        timestamp
-      }
-    }`,
-    collected: `{
-      graphTallyTokensCollecteds(
-        first: 50
-        where: { receiver: "${addr}" }
-        orderBy: tokens
-        orderDirection: desc
-      ) {
-        id
-        payer { id }
-        receiver { id }
-        collectionId
-        tokens
-      }
-    }`,
-  };
-}
 
 function aggregateOverview(
   escrow: PaymentsEscrowAccountsResponse,
@@ -224,63 +126,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid receiver address format' }, { status: 400 });
   }
 
-  // Off by default. #1078 wants each surface switchable and revertible on its own. On the nest path
-  // the gateway key is not consulted at all.
-  if (nuthatchEnabled('NUTHATCH_PAYMENTS')) {
-    if (!hasNuthatch()) {
-      return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
-    }
-    const addr = receiver ? receiver.toLowerCase() : null;
-    const cacheKey = addr ? `lodestar:payments:receiver:${addr}:nuthatch:v1` : 'lodestar:payments:overview:nuthatch:v1';
-    try {
-      const data = await cached(cacheKey, 300, () => overviewFromNests(addr));
-      return NextResponse.json({ data, source: 'nuthatch' }, {
-        headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
-      });
-    } catch (error) {
-      log.api.error({ err: error }, 'Payments from the nests failed');
-      return NextResponse.json({ error: 'Failed to load payment data from Nuthatch' }, { status: 503 });
-    }
+  // From the nest, always (nuthatch#1160). The gateway path this once fell back to left with the key.
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
-
-  if (!hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
-  }
-
+  const addr = receiver ? receiver.toLowerCase() : null;
+  const cacheKey = addr ? `lodestar:payments:receiver:${addr}:nuthatch:v1` : 'lodestar:payments:overview:nuthatch:v1';
   try {
-    if (receiver) {
-      const queries = receiverQuery(receiver);
-      const cacheKey = `lodestar:payments:receiver:${receiver.toLowerCase()}`;
-
-      const data = await cached(cacheKey, 300, async () => {
-        const [escrow, txns, collected] = await Promise.all([
-          subgraphQuery<PaymentsEscrowAccountsResponse>(queries.escrow),
-          subgraphQuery<PaymentsEscrowTransactionsResponse>(queries.transactions),
-          subgraphQuery<GraphTallyTokensCollectedResponse>(queries.collected),
-        ]);
-        return aggregateOverview(escrow, txns, collected);
-      });
-
-      return NextResponse.json({ data }, {
-        headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
-      });
-    }
-
-    // Network-wide overview
-    const data = await cached('lodestar:payments:overview', 300, async () => {
-      const [escrow, txns, collectors] = await Promise.all([
-        subgraphQuery<PaymentsEscrowAccountsResponse>(ESCROW_ACCOUNTS_QUERY),
-        subgraphQuery<PaymentsEscrowTransactionsResponse>(RECENT_TRANSACTIONS_QUERY),
-        subgraphQuery<GraphTallyTokensCollectedResponse>(TOP_COLLECTORS_QUERY),
-      ]);
-      return aggregateOverview(escrow, txns, collectors);
-    });
-
-    return NextResponse.json({ data }, {
+    const data = await cached(cacheKey, 300, () => overviewFromNests(addr));
+    return NextResponse.json({ data, source: 'nuthatch' }, {
       headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
     });
   } catch (error) {
-    log.api.error({ err: error }, 'Payments API error');
-    return NextResponse.json({ error: 'Failed to fetch payment data' }, { status: 500 });
+    log.api.error({ err: error }, 'Payments from the nests failed');
+    return NextResponse.json({ error: 'Failed to load payment data from Nuthatch' }, { status: 503 });
   }
 }

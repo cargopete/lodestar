@@ -55,16 +55,6 @@ describe('api/provisions from the nest', () => {
     delete process.env.NUTHATCH_PROVISIONS;
   });
 
-  it('with the flag off, the gateway path is untouched', async () => {
-    delete process.env.NUTHATCH_PROVISIONS;
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValue({ provisions: [] });
-    const res = await req(`?indexer=${IX}`);
-    expect(res.status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalledTimes(1);
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-  });
-
   it('indexer form: provisions with data-service totals and the thawing ceiling; no key, no ENS', async () => {
     nuthatchSqlReady.mockImplementation(answer);
     const res = await req(`?indexer=${IX}`);

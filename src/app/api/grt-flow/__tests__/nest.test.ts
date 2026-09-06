@@ -56,16 +56,6 @@ describe('api/grt-flow from the nest', () => {
     delete process.env.NUTHATCH_NETWORK;
   });
 
-  it('with the flag off, the gateway path is untouched', async () => {
-    delete process.env.NUTHATCH_NETWORK;
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValue({ graphNetwork: { totalSupply: '0' }, _meta: { block: { number: 1 } } });
-    const res = await GET();
-    expect(res.status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalledTimes(1);
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-  });
-
   it('minted and burned are assembled from the bridge and protocol halves; the key is not consulted', async () => {
     nuthatchSqlReady.mockImplementation(answer);
     const res = await GET();

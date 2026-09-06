@@ -59,14 +59,6 @@ describe('api/poi from the nest', () => {
   });
   afterEach(() => vi.unstubAllEnvs());
 
-  it('is off by default, so the gateway path and its key gate are unchanged', async () => {
-    vi.stubEnv('NUTHATCH_POI', 'false');
-    const res = await GET(req());
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: 'No API key configured' });
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-  });
-
   it('never consults the gateway key on the nest path', async () => {
     nuthatchSqlReady.mockResolvedValueOnce(ok([]));
     const res = await GET(req());

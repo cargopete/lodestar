@@ -91,6 +91,7 @@ vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 20
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockSubgraphQuery.mockReset();
   mockHasSubgraphAccess.mockReturnValue(true);
   mockHasAmpAccess.mockReturnValue(false);
   mockHasDbAccess.mockReturnValue(false);
@@ -309,27 +310,6 @@ describe('/api/indexer-stake-history/[address]', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 503 when no API key (valid address)', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
-    const req = makeRequest('/api/indexer-stake-history/0x1234000000000000000000000000000000001234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
-    expect(res.status).toBe(503);
-  });
-
-  it('returns { data } with stake history', async () => {
-    // Route makes 2 subgraph calls: _meta first, then weekly alias block-query
-    mockSubgraphQuery.mockResolvedValueOnce({ _meta: { block: { number: 10_000_000 } } });
-    mockSubgraphQuery.mockResolvedValueOnce({}); // all week aliases null → empty history
-
-    const req = makeRequest('/api/indexer-stake-history/0x1234000000000000000000000000000000001234');
-    const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
-    const json = await getJson(res);
-
-    expect(res.status).toBe(200);
-    expect(json).toHaveProperty('data');
-    expect(json.data).toHaveProperty('history');
-    expect(Array.isArray(json.data.history)).toBe(true);
-  });
 });
 
 // ============================================================

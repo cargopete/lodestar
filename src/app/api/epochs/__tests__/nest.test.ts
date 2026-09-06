@@ -48,16 +48,6 @@ describe('api/epochs from the nest', () => {
     delete process.env.NUTHATCH_EPOCHS;
   });
 
-  it('with the flag off, the gateway path is untouched', async () => {
-    delete process.env.NUTHATCH_EPOCHS;
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValue({ epoches: [] });
-    const res = await GET(req());
-    expect(res.status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalledTimes(1);
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-  });
-
   it('rows arrive in the Epoch shape, gross fees rebuilt, key not consulted, count in the SQL', async () => {
     nuthatchSqlReady.mockResolvedValue(ok([row]));
     const res = await GET(req('?count=7'));
