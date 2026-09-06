@@ -1,22 +1,7 @@
 import type { DbClient } from '../db';
-import { getIngestionState, updateIngestionState } from '../db';
-import { subgraphQuery } from '../subgraph';
-import { nuthatchEnabled, nuthatchSqlReady } from '../nuthatch';
+import { updateIngestionState } from '../db';
+import { nuthatchSqlReady } from '../nuthatch';
 import { log } from '../logger';
-
-interface SubgraphDispute {
-  id: string;
-  type: string;
-  indexer: { id: string };
-  fisherman: { id: string };
-  allocation: { id: string } | null;
-  subgraphDeployment: { id: string };
-  status: string;
-  tokensSlashed: string;
-  tokensBurned: string;
-  createdAt: number;
-  closedAt: number;
-}
 
 /** The nest carrying the Lodestar views. `/alloc` reverse-proxies to graph-allocations-nest. */
 const NEST_BASE_PATH = process.env.NUTHATCH_DISPUTES_BASE_PATH || '/alloc';
@@ -130,121 +115,12 @@ async function ingestDisputesFromNest(
   return { ingested: rows.length };
 }
 
-const DISPUTE_FIELDS = `
-        id
-        type
-        indexer { id }
-        fisherman { id }
-        allocation { id }
-        subgraphDeployment { id }
-        status
-        tokensSlashed
-        tokensBurned
-        createdAt
-        closedAt`;
-
-async function upsertSubgraphDisputes(sql: DbClient, disputes: SubgraphDispute[]): Promise<number> {
-  if (disputes.length === 0) return 0;
-  const rows = disputes.map((d) => ({
-    id: d.id,
-    dispute_type: d.type?.toLowerCase() ?? null,
-    indexer_address: d.indexer.id.toLowerCase(),
-    fisherman: d.fisherman.id.toLowerCase(),
-    allocation_id: d.allocation?.id ?? null,
-    deployment_id: d.subgraphDeployment.id,
-    status: d.status?.toLowerCase() ?? null,
-    tokens_slashed_grt: parseFloat(d.tokensSlashed) || 0,
-    tokens_burned_grt: parseFloat(d.tokensBurned) || 0,
-    created_at: d.createdAt ? new Date(d.createdAt * 1000).toISOString() : null,
-    closed_at: d.closedAt ? new Date(d.closedAt * 1000).toISOString() : null,
-  }));
-  await sql`
-    INSERT INTO disputes ${sql(rows)}
-    ON CONFLICT (id) DO UPDATE SET
-      status = EXCLUDED.status,
-      tokens_slashed_grt = EXCLUDED.tokens_slashed_grt,
-      tokens_burned_grt = EXCLUDED.tokens_burned_grt,
-      closed_at = EXCLUDED.closed_at
-  `;
-  return rows.length;
-}
-
-/**
- * The second pass the cursor cannot do (lodestar#57). `createdAt_gt` only ever returns disputes
- * newer than the newest already seen, so a dispute ingested while `undecided` is never fetched
- * again and its status, close time and slash are frozen at first sight. Measured on the primary on
- * 2026-09-03: six disputes sat `undecided` in Postgres for up to three and a half months after the
- * chain had drawn them. So every dispute Postgres still calls undecided is re-fetched by id and
- * re-upserted; the set is small (single digits), so one query in batches of 100 is the whole cost.
- */
-async function revisitOpenDisputes(sql: DbClient): Promise<number> {
-  const open = await sql<{ id: string }[]>`SELECT id FROM disputes WHERE status = 'undecided'`;
-  const ids = open.map((r) => r.id);
-  let refreshed = 0;
-  for (let i = 0; i < ids.length; i += 100) {
-    const batch = ids.slice(i, i + 100);
-    const result = await subgraphQuery<{ disputes: SubgraphDispute[] }>(`{
-      disputes(first: ${batch.length}, where: { id_in: [${batch.map((id) => `"${id}"`).join(', ')}] }) {${DISPUTE_FIELDS}
-      }
-    }`);
-    refreshed += await upsertSubgraphDisputes(sql, result.disputes);
-  }
-  return refreshed;
-}
-
 /**
  * Ingest disputes from the network subgraph.
  * Uses id_gt cursor — disputes are infrequent.
  */
 export async function ingestDisputes(sql: DbClient): Promise<{ ingested: number }> {
-  // Off by default. #1078 wants each surface switchable and revertible on its own, and this one is
-  // not yet approved as safe - the flag is how that decision gets taken per environment rather than
-  // per deploy.
-  if (nuthatchEnabled('NUTHATCH_DISPUTES')) {
-    log.api.info('disputes: reading from the nest');
-    return ingestDisputesFromNest(sql);
-  }
-
-  const state = await getIngestionState(sql, 'disputes');
-  // Use createdAt_gt (numeric timestamp) instead of id_gt — dispute IDs are hashes
-  // and lexicographic ordering on random hex strings causes the cursor to get stuck
-  // once it lands on a high-value hash (same bug as delegation_events).
-  const lastCreatedAt = state.last_block ?? 0;
-
-  let totalIngested = 0;
-  let cursor = lastCreatedAt;
-
-  while (true) {
-    const result = await subgraphQuery<{ disputes: SubgraphDispute[] }>(`{
-      disputes(
-        first: 1000
-        orderBy: createdAt
-        orderDirection: asc
-        ${cursor ? `where: { createdAt_gt: ${cursor} }` : ''}
-      ) {${DISPUTE_FIELDS}
-      }
-    }`);
-
-    const disputes = result.disputes;
-    if (disputes.length === 0) break;
-
-    totalIngested += await upsertSubgraphDisputes(sql, disputes);
-    cursor = Math.max(...disputes.map((d) => d.createdAt));
-
-    if (disputes.length < 1000) break;
-  }
-
-  // Open disputes already in Postgres are outside the cursor's reach; refresh them by id. Counted
-  // separately from the cursor walk because they are re-reads, not new rows, and the cursor must
-  // not move on their account.
-  const revisited = await revisitOpenDisputes(sql);
-
-  // Always update updated_at so health checks can distinguish "running idle" from "stuck".
-  await updateIngestionState(
-    sql,
-    'disputes',
-    totalIngested > 0 ? { last_block: cursor } : {},
-  );
-
-  return { ingested: totalIngested + revisited };
+  // From the nest, always (nuthatch#1160). The gateway path this once fell back to left with the key.
+  log.api.info('disputes: reading from the nest');
+  return ingestDisputesFromNest(sql);
 }

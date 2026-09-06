@@ -39,35 +39,6 @@ describe('writeNetworkSnapshot', () => {
     mockSubgraphQuery.mockResolvedValue(networkStats);
   });
 
-  it('inserts a network snapshot into the database', async () => {
-    const sql = vi.fn(() => Promise.resolve([]));
-    await writeNetworkSnapshot(sql as never);
-    expect(sql).toHaveBeenCalled();
-  });
-
-  it('passes grtPriceUsd option to the insert', async () => {
-    const sql = vi.fn(() => Promise.resolve([]));
-    await writeNetworkSnapshot(sql as never, { grtPriceUsd: 0.15 });
-    expect(sql).toHaveBeenCalled();
-  });
-
-  it('passes networkTvlUsd option to the insert', async () => {
-    const sql = vi.fn(() => Promise.resolve([]));
-    await writeNetworkSnapshot(sql as never, { networkTvlUsd: 1_500_000 });
-    expect(sql).toHaveBeenCalled();
-  });
-
-  it('calls subgraphQuery to fetch network stats', async () => {
-    const sql = vi.fn(() => Promise.resolve([]));
-    await writeNetworkSnapshot(sql as never);
-    expect(mockSubgraphQuery).toHaveBeenCalledOnce();
-  });
-
-  it('resolves without error with defaults', async () => {
-    const sql = vi.fn(() => Promise.resolve([]));
-    await expect(writeNetworkSnapshot(sql as never)).resolves.toBeUndefined();
-  });
-
   it('behind NUTHATCH_NETWORK the figures come off the nest and the gateway is not asked (nuthatch#1160)', async () => {
     nuthatchConfigured = true;
     process.env.NUTHATCH_NETWORK = 'true';

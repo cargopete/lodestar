@@ -1,6 +1,5 @@
 import { log } from './logger';
-import { cacheSet, cached } from './cache';
-import { subgraphQuery, delegationEventsQuery, hasSubgraphAccess } from './subgraph';
+import { cacheSet } from './cache';
 import { resolveEnsNames } from './ens';
 import { weiToGRT, resolveIndexerName } from './utils';
 import { batchCheckEligibility, type OracleEligibility } from './reo-contract';
@@ -16,7 +15,7 @@ import type { EnrichedIndexer } from './enriched';
 import type { DbClient } from './db';
 import { updateIngestionState } from './db';
 import { writeIndexers } from './ingest/indexers';
-import { hasNuthatch, nuthatchEnabled, nuthatchSql } from './nuthatch';
+import { nuthatchSql } from './nuthatch';
 import {
   indexersAllSql, activeAllocationsAllSql, delegationEventsSinceSql, closedAllocationsSinceSql, exchangeRatesAsOfSql,
   dataServiceCountsSql, networkSql, networkParamsSql,
@@ -68,14 +67,6 @@ interface AllocationData {
   };
 }
 
-interface DelegationEventData {
-  eventType: string;
-  indexer: string;
-  delegator: string;
-  tokens: string;
-  timestamp: string;
-}
-
 /** ENS for the whole indexer set; a failure costs the names and nothing else, as the subgraph step's did. */
 async function resolveEnsNamesForRefresh(ids: string[]): Promise<Record<string, string>> {
   try {
@@ -98,340 +89,6 @@ export interface RefreshInputs {
   closedAllocsByIndexer: Map<string, Array<{ delegator_rewards_grt: number; closed_at: number }>>;
   exchangeRateHistory: Map<string, { rate30d: number | null; rate90d: number | null }>;
   dataServiceCountMap: Map<string, number>;
-}
-
-/**
- * The gateway gatherer: three subgraphs through the key, as it has always worked. Steps 1 to 5d.
- */
-export async function gatherFromGateway(): Promise<RefreshInputs> {
-  if (!hasSubgraphAccess()) {
-    throw new Error('No GRAPH_API_KEY configured');
-  }
-  // Step 1: Fetch ALL indexers (paginated) + network stats
-  const networkResult = await subgraphQuery<{
-    graphNetwork: {
-      totalTokensSignalled: string;
-      networkGRTIssuancePerBlock?: string;
-      delegationRatio: number;
-      currentEpoch: number;
-    };
-  }>(`{
-    graphNetwork(id: "1") {
-      totalTokensSignalled
-      networkGRTIssuancePerBlock
-      delegationRatio
-      currentEpoch
-    }
-  }`);
-
-  const indexers: SubgraphIndexer[] = [];
-  let lastId = '';
-  while (true) {
-    const page = await subgraphQuery<{ indexers: SubgraphIndexer[] }>(`{
-      indexers(
-        first: 1000
-        orderBy: id
-        orderDirection: asc
-        where: { stakedTokens_gt: "0"${lastId ? `, id_gt: "${lastId}"` : ''} }
-      ) {
-        id
-        account {
-          id
-          defaultDisplayName
-          metadata {
-            displayName
-            description
-          }
-        }
-        stakedTokens
-        lockedTokens
-        delegatedTokens
-        allocatedTokens
-        allocationCount
-        indexingRewardCut
-        queryFeeCut
-        delegatorParameterCooldown
-        lastDelegationParameterUpdate
-        rewardsEarned
-        queryFeesCollected
-        delegatorShares
-        delegatedThawingTokens
-        url
-        geoHash
-        createdAt
-        indexingRewardEffectiveCut
-        overDelegationDilution
-        ownStakeRatio
-        delegatedStakeRatio
-        indexerRewardsOwnGenerationRatio
-        provisionedTokens
-      }
-    }`);
-    indexers.push(...page.indexers);
-    if (page.indexers.length < 1000) break;
-    lastId = page.indexers[page.indexers.length - 1].id;
-  }
-  const network = networkResult.graphNetwork;
-
-  // Step 2: Fetch allocations in batches of 10 indexer IDs
-  const indexerIds = indexers.map((i) => i.id);
-  const allocationMap = new Map<string, AllocationData[]>();
-
-  const BATCH_SIZE = 10;
-  const batches: string[][] = [];
-  for (let i = 0; i < indexerIds.length; i += BATCH_SIZE) {
-    batches.push(indexerIds.slice(i, i + BATCH_SIZE));
-  }
-
-  const batchResults = await Promise.all(batches.map(async (batch) => {
-    const batchMap = new Map<string, AllocationData[]>();
-    const idList = batch.map((id) => `"${id}"`).join(', ');
-    let lastId = '';
-    while (true) {
-      const result = await subgraphQuery<{ allocations: AllocationData[] }>(`{
-        allocations(
-          first: 1000
-          orderBy: id
-          orderDirection: asc
-          where: { indexer_in: [${idList}], status: Active${lastId ? `, id_gt: "${lastId}"` : ''} }
-        ) {
-          id
-          allocatedTokens
-          indexer { id }
-          subgraphDeployment {
-            signalledTokens
-            stakedTokens
-          }
-        }
-      }`);
-
-      for (const alloc of result.allocations) {
-        const existing = batchMap.get(alloc.indexer.id) ?? [];
-        existing.push(alloc);
-        batchMap.set(alloc.indexer.id, existing);
-      }
-
-      if (result.allocations.length < 1000) break;
-      lastId = result.allocations[result.allocations.length - 1].id;
-    }
-    return batchMap;
-  }));
-
-  for (const batchMap of batchResults) {
-    for (const [k, v] of batchMap) {
-      allocationMap.set(k, v);
-    }
-  }
-
-  // Step 3: Fetch recent delegation events (7d)
-  const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
-  const delegationActivity: Record<string, { delegations: number; undelegations: number; netFlowGRT: number }> = {};
-  try {
-    let allEvents: DelegationEventData[] = [];
-    let lastTimestamp = '999999999999';
-    let hasMore = true;
-
-    while (hasMore) {
-      const result = await delegationEventsQuery<{ delegationEvents: DelegationEventData[] }>(`{
-        delegationEvents(
-          first: 1000
-          orderBy: timestamp
-          orderDirection: desc
-          where: { timestamp_gt: "${sevenDaysAgo}", timestamp_lt: "${lastTimestamp}" }
-        ) {
-          eventType
-          indexer
-          delegator
-          tokens
-          timestamp
-        }
-      }`);
-
-      const events = result.delegationEvents;
-      allEvents = allEvents.concat(events);
-      hasMore = events.length === 1000;
-      if (hasMore) {
-        lastTimestamp = events[events.length - 1].timestamp;
-      }
-    }
-
-    for (const event of allEvents) {
-      const id = event.indexer.toLowerCase();
-      if (!delegationActivity[id]) delegationActivity[id] = { delegations: 0, undelegations: 0, netFlowGRT: 0 };
-      const tokens = weiToGRT(event.tokens);
-
-      if (event.eventType === 'delegation') {
-        delegationActivity[id].delegations++;
-        delegationActivity[id].netFlowGRT += tokens;
-      } else if (event.eventType === 'undelegation') {
-        delegationActivity[id].undelegations++;
-        delegationActivity[id].netFlowGRT -= tokens;
-      }
-    }
-  } catch (e) {
-    log.refresh.warn({ err: e }, 'Delegation events fetch failed, continuing without');
-  }
-
-  // Step 4: Resolve ENS names - primary names over a mainnet RPC, never the ENS subgraph (nuthatch#1160).
-  const ensNames = await resolveEnsNamesForRefresh(indexerIds);
-
-  // Step 5b: Fetch closed allocations (last 90d) for rolling APY
-  const closedAllocsByIndexer = new Map<string, Array<{ delegator_rewards_grt: number; closed_at: number }>>();
-  try {
-    const ninetyDaysAgoUnix = Math.floor(Date.now() / 1000) - 90 * 86400;
-    let lastAllocId = '';
-    let totalRows = 0;
-
-    while (true) {
-      const result = await subgraphQuery<{
-        allocations: Array<{
-          id: string;
-          indexer: { id: string };
-          indexingDelegatorRewards: string;
-          closedAt: number;
-        }>;
-      }>(`{
-        allocations(
-          first: 1000
-          orderBy: id
-          orderDirection: asc
-          where: {
-            status: Closed
-            closedAt_gte: ${ninetyDaysAgoUnix}
-            ${lastAllocId ? `id_gt: "${lastAllocId}"` : ''}
-          }
-        ) {
-          id
-          indexer { id }
-          indexingDelegatorRewards
-          closedAt
-        }
-      }`);
-
-      if (result.allocations.length === 0) break;
-
-      for (const alloc of result.allocations) {
-        const delegatorRewards = weiToGRT(alloc.indexingDelegatorRewards);
-        if (delegatorRewards <= 0) continue;
-        const addr = alloc.indexer.id.toLowerCase();
-        const existing = closedAllocsByIndexer.get(addr) ?? [];
-        existing.push({
-          delegator_rewards_grt: delegatorRewards,
-          closed_at: alloc.closedAt,
-        });
-        closedAllocsByIndexer.set(addr, existing);
-      }
-
-      totalRows += result.allocations.length;
-      lastAllocId = result.allocations[result.allocations.length - 1].id;
-      if (result.allocations.length < 1000) break;
-    }
-
-    log.refresh.info({ rows: totalRows, indexers: closedAllocsByIndexer.size }, 'Rolling APY loaded');
-  } catch (e) {
-    log.refresh.warn({ err: e }, 'Rolling APY subgraph query failed (non-fatal)');
-  }
-
-  // Step 5c: Fetch historical exchange rates via subgraph time-travel.
-  // This is always available and covers all indexers regardless of Postgres snapshot history.
-  const exchangeRateHistory = new Map<string, { rate30d: number | null; rate90d: number | null }>();
-  try {
-    // Get current block to anchor time-travel
-    const metaResult = await subgraphQuery<{ _meta: { block: { number: number } } }>(`{ _meta { block { number } } }`);
-    const currentBlock = metaResult._meta.block.number;
-
-    // Arbitrum avg block time ~0.25s (4 blocks/sec)
-    const BLOCKS_PER_DAY = 86400 * 4;
-    const block30d = currentBlock - Math.floor(30 * BLOCKS_PER_DAY);
-    const block90d = currentBlock - Math.floor(90 * BLOCKS_PER_DAY);
-
-    async function fetchRatesAtBlock(blockNum: number): Promise<Record<string, number>> {
-      const rateMap: Record<string, number> = {};
-      let lastId = '';
-      while (true) {
-        const result = await subgraphQuery<{
-          indexers: Array<{ id: string; delegatedTokens: string; delegatedThawingTokens?: string; delegatorShares: string }>;
-        }>(`{
-          indexers(
-            first: 1000
-            orderBy: id
-            orderDirection: asc
-            block: { number: ${blockNum} }
-            where: { stakedTokens_gt: "0"${lastId ? `, id_gt: "${lastId}"` : ''} }
-          ) {
-            id
-            delegatedTokens
-            delegatedThawingTokens
-            delegatorShares
-          }
-        }`);
-
-        for (const idx of result.indexers) {
-          const rate = calculatePoolExchangeRate(
-            idx.delegatedTokens,
-            idx.delegatedThawingTokens ?? '0',
-            idx.delegatorShares
-          );
-          if (rate > 0) rateMap[idx.id] = rate;
-        }
-
-        if (result.indexers.length < 1000) break;
-        lastId = result.indexers[result.indexers.length - 1].id;
-      }
-      return rateMap;
-    }
-
-    const TTL_6H = 6 * 3600;
-    const [rates30d, rates90d] = await Promise.all([
-      cached<Record<string, number>>(`lodestar:er-history:30d:${block30d}`, TTL_6H, () => fetchRatesAtBlock(block30d)),
-      cached<Record<string, number>>(`lodestar:er-history:90d:${block90d}`, TTL_6H, () => fetchRatesAtBlock(block90d)),
-    ]);
-
-    for (const [id, rate] of Object.entries(rates30d)) {
-      exchangeRateHistory.set(id, { rate30d: rate, rate90d: null });
-    }
-    for (const [id, rate] of Object.entries(rates90d)) {
-      const existing = exchangeRateHistory.get(id) ?? { rate30d: null, rate90d: null };
-      existing.rate90d = rate;
-      exchangeRateHistory.set(id, existing);
-    }
-
-    log.refresh.info({ count: exchangeRateHistory.size, block30d, block90d }, 'Exchange rate history loaded via time-travel');
-  } catch (e) {
-    log.refresh.warn({ err: e }, 'Time-travel exchange rate fetch failed (non-fatal)');
-  }
-
-  // Step 5d: Count distinct Horizon data services per indexer
-  const dataServiceCountMap = new Map<string, number>();
-  try {
-    const PROV_BATCH = 50;
-    for (let i = 0; i < indexerIds.length; i += PROV_BATCH) {
-      const batch = indexerIds.slice(i, i + PROV_BATCH);
-      const idList = batch.map((id) => `"${id}"`).join(', ');
-      const result = await subgraphQuery<{
-        provisions: Array<{ indexer: { id: string }; dataService: { id: string } }>;
-      }>(`{
-        provisions(first: 1000, where: { indexer_in: [${idList}] }) {
-          indexer { id }
-          dataService { id }
-        }
-      }`);
-      const servicesByIndexer = new Map<string, Set<string>>();
-      for (const p of result.provisions) {
-        const addr = p.indexer.id.toLowerCase();
-        if (!servicesByIndexer.has(addr)) servicesByIndexer.set(addr, new Set());
-        servicesByIndexer.get(addr)!.add(p.dataService.id.toLowerCase());
-      }
-      for (const [addr, services] of servicesByIndexer) {
-        dataServiceCountMap.set(addr, services.size);
-      }
-    }
-    log.refresh.info({ count: dataServiceCountMap.size }, 'Data service counts loaded');
-  } catch (e) {
-    log.refresh.warn({ err: e }, 'Provisions fetch failed (non-fatal), data service counts will be 0');
-  }
-
-  return { network, indexers, allocationMap, delegationActivity, ensNames, closedAllocsByIndexer, exchangeRateHistory, dataServiceCountMap };
 }
 
 /**
@@ -498,7 +155,7 @@ export async function gatherFromNest(): Promise<RefreshInputs> {
 
 /**
  * Core indexer enrichment pipeline.
- * Gathers from the nest behind NUTHATCH_REFRESH (nuthatch#1160) or from the subgraphs, computes
+ * Gathers from the nest (nuthatch#1160; the gateway gatherer left with the key), computes
  * scores, writes to Redis + Postgres. Extracted so it can be called from both the Next.js route and
  * the standalone cron runner.
  */
@@ -509,7 +166,7 @@ export async function refreshIndexers(opts: {
   const { sql, writeToRedis = true } = opts;
   const startTime = Date.now();
 
-  const inputs = nuthatchEnabled('NUTHATCH_REFRESH') && hasNuthatch() ? await gatherFromNest() : await gatherFromGateway();
+  const inputs = await gatherFromNest();
   const { network, indexers, allocationMap, delegationActivity, ensNames, closedAllocsByIndexer, exchangeRateHistory, dataServiceCountMap } = inputs;
   const indexerIds = indexers.map((i) => i.id);
   const totalNetworkSignal = weiToGRT(network.totalTokensSignalled);

@@ -216,7 +216,7 @@ Build the first unified, Horizon-native dashboard that solves the fragmentation 
 - [x] Self-hosted Postgres ingestion pipeline (DigitalOcean droplet)
 - [x] Tables: `network_snapshots`, `epochs`, `indexers`, `allocations`, `delegations`, `disputes`, `parameter_changes`, `indexer_scores`
 - [x] Chunked upserts to avoid statement timeouts
-- [x] Standalone cron runner (`scripts/cron-runner.ts`) for droplet execution
+- [x] ~~Standalone cron runner (`scripts/cron-runner.ts`) for droplet execution~~ removed 2026-09-06 with the gateway key (nuthatch#1160); the Vercel crons are the pipeline
 
 ---
 
@@ -329,8 +329,10 @@ Upstash Redis       # Edge-friendly cache layer for Vercel
 Tailwind CSS        # Styling (mobile-first responsive)
 ```
 
-### Data Pipeline (DigitalOcean Droplet)
-```
+### Data Pipeline
+
+The pipeline is the Vercel cron routes under `src/app/api/cron/`, reading the nests (nuthatch#1160). The
+standalone droplet runner and the two backfill scripts were removed on 2026-09-06 with the gateway key.
 # Standalone cron runner — scripts/cron-runner.ts
 npx tsx scripts/cron-runner.ts refresh        # Full enrichment → Redis + Postgres
 npx tsx scripts/cron-runner.ts epochs         # Ingest epochs

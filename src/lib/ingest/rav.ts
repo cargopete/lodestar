@@ -1,7 +1,6 @@
 import type { DbClient } from '../db';
 import { getIngestionState, updateIngestionState } from '../db';
-import { subgraphQuery } from '../subgraph';
-import { nuthatchEnabled, nuthatchSqlReady } from '../nuthatch';
+import { nuthatchSqlReady } from '../nuthatch';
 import { weiToGRT } from '../utils';
 import { log } from '../logger';
 
@@ -29,32 +28,9 @@ interface PaymentsTx {
   timestamp: string;
 }
 
-const TX_FIELDS = `
-  id
-  type
-  payer { id }
-  receiver { id }
-  allocationId
-  amount
-  timestamp
-`;
-
 // Re-scan this much wall-clock on every delta run so late-arriving / reordered
 // transactions near the cursor boundary are not missed (upserts dedupe them).
 const OVERLAP_SECONDS = 3600;
-const PAGE = 1000;
-
-/**
- * Redemption classifier.
- *
- * Confirmed against the live payments subgraph (2026-06-10): the `paymentsEscrowTransaction`
- * `type` enum is exactly `deposit` | `redeem`. Redemptions are the query-fee revenue rows
- * (each carries an allocationId; deposits do not). The ingest still logs distinct `type`
- * values as a cheap guard, so a future enum change surfaces instead of silently dropping rows.
- */
-function isRedemption(type: string): boolean {
-  return type === 'redeem';
-}
 
 /** The nest carrying the Lodestar views. `/alloc` reverse-proxies to graph-allocations-nest. */
 const NEST_BASE_PATH = process.env.NUTHATCH_RAV_BASE_PATH || '/alloc';
@@ -222,72 +198,9 @@ export async function ingestRav(
   sql: DbClient,
   opts: { backfill?: boolean } = {},
 ): Promise<{ ingested: number }> {
-  // Off by default. #1078 wants each surface switchable and revertible on its own, and the flag is
-  // how that decision gets taken per environment rather than per deploy.
-  if (nuthatchEnabled('NUTHATCH_RAV')) {
-    log.ingest.info({ step: 'rav' }, 'rav: reading from the nest');
-    return ingestRavFromNest(sql, opts);
-  }
-
-  const state = await getIngestionState(sql, 'rav');
-  const since = opts.backfill ? 0 : Math.max(0, (state.last_block ?? 0) - OVERLAP_SECONDS);
-
-  let lastId = '';
-  let totalIngested = 0;
-  let maxTimestamp = state.last_block ?? 0;
-  const typeCounts: Record<string, number> = {};
-
-  while (true) {
-    const where: string[] = [];
-    if (since > 0) where.push(`timestamp_gte: "${since}"`);
-    if (lastId) where.push(`id_gt: "${lastId}"`);
-    const whereClause = where.length ? `where: { ${where.join(', ')} }` : '';
-
-    const result = await subgraphQuery<{ paymentsEscrowTransactions: PaymentsTx[] }>(`{
-      paymentsEscrowTransactions(
-        first: ${PAGE}
-        orderBy: id
-        orderDirection: asc
-        ${whereClause}
-      ) {
-        ${TX_FIELDS}
-      }
-    }`);
-
-    const txs = result.paymentsEscrowTransactions;
-    if (txs.length === 0) break;
-
-    const redemptions: PaymentsTx[] = [];
-    for (const tx of txs) {
-      typeCounts[tx.type] = (typeCounts[tx.type] ?? 0) + 1;
-      const ts = Number(tx.timestamp);
-      if (ts > maxTimestamp) maxTimestamp = ts;
-      if (isRedemption(tx.type) && tx.receiver?.id) redemptions.push(tx);
-    }
-
-    if (redemptions.length > 0) {
-      totalIngested += await upsertRedemptions(sql, redemptions);
-    }
-
-    lastId = txs[txs.length - 1].id;
-    if (txs.length < PAGE) break;
-
-    if (opts.backfill && totalIngested > 0 && totalIngested % 5000 < PAGE) {
-      log.ingest.info({ step: 'rav', totalIngested }, 'RAV backfill progress');
-    }
-  }
-
-  if (maxTimestamp > (state.last_block ?? 0)) {
-    await updateIngestionState(sql, 'rav', { last_block: maxTimestamp });
-  }
-
-  // Surfaces the real `type` enum so isRedemption() can be tightened — see note above.
-  log.ingest.info(
-    { step: 'rav', ingested: totalIngested, typeCounts },
-    'RAV ingestion complete',
-  );
-
-  return { ingested: totalIngested };
+  // From the nest, always (nuthatch#1160). The gateway path this once fell back to left with the key.
+  log.ingest.info({ step: 'rav' }, 'rav: reading from the nest');
+  return ingestRavFromNest(sql, opts);
 }
 
 async function upsertRedemptions(sql: DbClient, redemptions: PaymentsTx[]): Promise<number> {
