@@ -28,6 +28,10 @@ export function RewardSplitDonut() {
 
   const total = totalStaked + totalDelegated + totalSignalled;
 
+  // No payload once loading has settled means the fetch failed. Recharts is perfectly happy to draw
+  // a donut from three zeros, and the result reads as a real distribution that happens to be empty.
+  const unavailable = !isLoading && !network;
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -36,6 +40,15 @@ export function RewardSplitDonut() {
       <CardContent>
         {isLoading ? (
           <ChartSkeleton height="315px" />
+        ) : unavailable ? (
+          <div className="h-[280px] flex items-center justify-center text-center px-4">
+            <div>
+              <p className="text-sm text-[var(--text-faint)]">Token distribution unavailable</p>
+              <p className="text-xs text-[var(--text-faint)] mt-1">
+                Network stats could not be loaded, so there is nothing to divide up.
+              </p>
+            </div>
+          </div>
         ) : (
           <div className="h-[280px] relative">
             <ResponsiveContainer width="100%" height="100%">
@@ -80,7 +93,7 @@ export function RewardSplitDonut() {
         )}
 
         {/* Legend */}
-        <div className="flex justify-center gap-6 mt-4">
+        <div className={`flex justify-center gap-6 mt-4 ${unavailable ? 'opacity-40' : ''}`}>
           {chartData.map((item) => (
             <div key={item.name} className="flex items-center gap-2">
               <div
