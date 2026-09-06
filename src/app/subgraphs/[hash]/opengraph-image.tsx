@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { subgraphQuery, hasSubgraphAccess } from '@/lib/subgraph';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { deploymentsByIdSql, type NestDeploymentListRow } from '@/lib/nest-queries';
 import { ipfsText, manifestFacts, subgraphMetadataForDeployments } from '@/lib/subgraph-metadata';
 import { ipfsHashToBytes32 } from '@/lib/studio/ipfs';
@@ -131,12 +130,12 @@ export default async function OGImage({
   let curators = 0;
   let network: string | null = null;
   let createdAt = 0;
-  let denied = false;
+  const denied = false;
   let substreams = false;
   let found = false;
 
   try {
-    if (nuthatchEnabled('NUTHATCH_SUBGRAPHS') && hasNuthatch()) {
+    if (hasNuthatch()) {
       // From the nests (nuthatch#1160, group B). `deniedAt` is the rewards-eligibility oracle's
       // verdict and is not on chain in any event the nests carry, so the "Rewards denied" chip is
       // never shown on this path; network and substreams come off the manifest on IPFS.
@@ -159,52 +158,6 @@ export default async function OGImage({
           substreams = facts.poweredBySubstreams;
           createdAt = Number(dep.created_at);
         }
-      }
-    } else if (hasSubgraphAccess()) {
-      const data = await subgraphQuery<{
-        subgraphDeployments: Array<{
-          ipfsHash: string;
-          createdAt: number;
-          signalledTokens: string;
-          stakedTokens: string;
-          queryFeesAmount: string;
-          deniedAt: number;
-          manifest: { network: string | null; poweredBySubstreams: boolean } | null;
-          indexerAllocations: { id: string }[];
-          curatorSignals: { id: string }[];
-          versions: { subgraph: { metadata: { displayName: string } | null } | null }[];
-        }>;
-      }>(`{
-        subgraphDeployments(first: 1, where: { ipfsHash: "${hash}" }) {
-          ipfsHash
-          createdAt
-          signalledTokens
-          stakedTokens
-          queryFeesAmount
-          deniedAt
-          manifest { network poweredBySubstreams }
-          indexerAllocations(where: { status: Active }) { id }
-          curatorSignals(first: 500) { id }
-          versions(first: 1, orderBy: createdAt, orderDirection: desc) {
-            subgraph { metadata { displayName } }
-          }
-        }
-      }`);
-
-      const dep = data.subgraphDeployments?.[0];
-      if (dep) {
-        found = true;
-        name =
-          dep.versions?.[0]?.subgraph?.metadata?.displayName ?? shortenHash(dep.ipfsHash);
-        signal = weiToGRT(dep.signalledTokens);
-        allocated = weiToGRT(dep.stakedTokens);
-        queryFees = weiToGRT(dep.queryFeesAmount);
-        activeIndexers = dep.indexerAllocations?.length ?? 0;
-        curators = dep.curatorSignals?.length ?? 0;
-        network = dep.manifest?.network ?? null;
-        substreams = dep.manifest?.poweredBySubstreams ?? false;
-        createdAt = dep.createdAt ?? 0;
-        denied = (dep.deniedAt ?? 0) > 0;
       }
     }
   } catch {
