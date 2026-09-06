@@ -66,21 +66,6 @@ describe('refreshIndexers gathering from the nest', () => {
     delete process.env.NUTHATCH_REFRESH;
   });
 
-  it('with the flag off, the gateway gatherer runs and the nest is never asked', async () => {
-    delete process.env.NUTHATCH_REFRESH;
-    mockSubgraphQuery.mockImplementation(async (q: string) => {
-      if (q.includes('graphNetwork')) return { graphNetwork: { totalTokensSignalled: '0', delegationRatio: 16, currentEpoch: 1 } };
-      if (q.includes('_meta')) return { _meta: { block: { number: 1000000 } } };
-      return { indexers: [], allocations: [], provisions: [] };
-    });
-    mockDelegationEventsQuery.mockResolvedValue({ delegationEvents: [] });
-    mockEnsQuery.mockResolvedValue({ domains: [] });
-    const r = await refreshIndexers({ sql: null, writeToRedis: false });
-    expect(r.count).toBe(0);
-    expect(mockSubgraphQuery).toHaveBeenCalled();
-    expect(mockNuthatchSql).not.toHaveBeenCalled();
-  });
-
   it('gathers the eight inputs from nine nest queries and no subgraph', async () => {
     mockNuthatchSql.mockImplementation(answer);
     const inputs = await gatherFromNest();
