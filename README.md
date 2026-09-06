@@ -19,11 +19,10 @@ Analytics dashboard for The Graph Protocol on Arbitrum One. Real-time network me
 - **Delegator Portfolio** — Position tracking with Active/Thawing/Withdrawable status badges, rebalancing insights, underperforming position detection, CSV export
 - **Curator Portfolio** — Signal positions and query-fee-to-signal ratio analysis across all curators
 - **Curate** — Wallet-connected curation tool: signal and unsignal on subgraphs, manage your own signal portfolio, search deployments by name or IPFS hash, and track per-position query-fee yield
-- **Subgraph Dock** — Developer studio for subgraph publishers: connect with your Studio account, view published subgraphs and sync status, manage metadata (name, description, image, website), generate deploy keys, query live deployments, and interact with the Sync Bounty Board. Full on-chain lifecycle for published subgraphs — update metadata (`GNS.updateSubgraphMetadata`), transfer ownership and deprecate, each behind a typed irreversibility confirmation. Plus a non-custodial metered query gateway — mint `lod_live_` API keys with a free monthly query allowance, route GraphQL through Lodestar's gateway, and track per-key usage (no deposits, no billing). Plus per-subgraph health alerts — wire a Discord/Slack webhook and get notified when a deployment falls behind, fails, or recovers
+- **Subgraph Dock** — Developer studio for subgraph publishers: connect with your Studio account, view published subgraphs and sync status, manage metadata (name, description, image, website), generate deploy keys, query live deployments, and interact with the Sync Bounty Board. Full on-chain lifecycle for published subgraphs — update metadata (`GNS.updateSubgraphMetadata`), transfer ownership and deprecate, each behind a typed irreversibility confirmation.
 - **Subgraph Directory** — Browsable subgraph list with signal/stake ratio highlighting, IPFS manifest complexity scoring (Light→Extreme), category filter (DeFi/NFT/DAO), contract-address search (find subgraphs indexing a given contract), and sorting by signal/stake/query fees or recently created
 - **Subgraph Detail** — Embedded GraphiQL playground (schema browser, autocomplete) with the real copyable gateway query URL, deployment version history (semver labels + IPFS hashes), and an activity timeline (version publishes + curator signal events)
-- **Horizon Activity Feed** — Live on-chain events from the Horizon staking contract — delegations, self-stakes, provisions, slashing, and withdrawals. Refreshes every 30 seconds. Powered by a self-hosted Amp node querying raw Arbitrum One logs. Gracefully degrades if the node is unreachable.
-- **QoS Performance Charts** — Query count, success rate, latency, and blocks-behind timeseries on indexer profiles, sourced from the E&N QoS oracle subgraph
+- **Horizon Activity Feed** — Live on-chain events from the Horizon staking contract: delegations, self-stakes, provisions, slashing, and withdrawals. Refreshes every 30 seconds. Built from `graph-allocations-nest` (delegation events and provisions in one pass). Reports unavailable if the nest is unreachable.
 - **Stake History Charts** — Self-stake and delegation history with cumulative rewards tab
 - **Push Protocol Notifications** — Opt-in delegator alerts for reward cut changes and inactive indexer detection. EIP-191 signed subscription; notifications sent via Push Protocol channel
 - **One-Click Delegation** — Algorithmically selected indexer with optional preference tuning; smart default with override. See [below](#one-click-delegation).
@@ -157,35 +156,51 @@ Code: [`src/app/delegate/`](src/app/delegate/) · API: [`src/app/api/delegate/re
 - Recharts (area charts, donut charts)
 - Self-hosted Postgres 16 (postgres.js, forced TLS) + self-hosted Redis (TLS / `rediss://`), with an in-memory cache fallback
 - CoinGecko + DefiLlama (price/TVL data)
-- The Graph Network subgraph (Arbitrum, inline fetch)
-- [**nuthatch**](https://www.nuthatch-indexer.com) — our own self-hosted indexer, serving a growing subset of the event-derived panels instead of The Graph gateway (see [Data from nuthatch](#data-from-nuthatch))
-- Alchemy — Arbitrum One RPC for on-chain contract reads
-- Amp (`ampd`) — optional self-hosted on-chain event indexer for Horizon event history
+- [**nuthatch**](https://www.nuthatch-indexer.com) — our own self-hosted indexer, serving every piece of Graph Protocol data on the dashboard. No Graph API key, no gateway client, no fallback (see [Data from nuthatch](#data-from-nuthatch))
+- Arbitrum One RPC for on-chain contract reads (`ARBITRUM_RPC_URL`, with public endpoints as fallback)
+- Amp (`ampd`) — optional self-hosted on-chain event indexer, retained for `/api/horizon/*`
 - Push Protocol — opt-in delegator notifications via on-chain channel
 
 ## Data from nuthatch
 
-The migrated panels are served by [**nuthatch**](https://www.nuthatch-indexer.com), a self-hosted,
-single-binary indexer we run ourselves. It indexes the relevant Graph Protocol contracts on Arbitrum One
-directly and exposes the data over SQL — no third-party data API in the path. These routes are
-Nuthatch-only: an unavailable nest is reported as an error rather than silently changing the source.
+Every piece of Graph Protocol data on this dashboard comes from [**nuthatch**](https://www.nuthatch-indexer.com),
+a self-hosted, single-binary indexer we run ourselves. It indexes the protocol contracts on Arbitrum One
+directly and exposes them over SQL. There is no Graph API key in Lodestar, no gateway client and no
+fallback path: an unavailable nest is reported as an error rather than silently changing the source.
 
-Lodestar currently queries exactly three Nuthatch data sources in production. Each shows an
-**"⚡ Indexed by nuthatch"** badge in the UI when live:
+Lodestar reads five nests. They sit behind one host and one basic-auth credential, selected by base path:
 
-| Panel | Route | Nest | Source contract(s) |
+| Base path | Nest | What it holds | What it serves |
 |---|---|---|---|
-| **Delegation Activity** feed | `/api/delegation-events` | `graph-staking-nest` | HorizonStaking delegation events |
-| **Developer Activity** chart (subgraphs published/week) | `/api/developer-activity` | `graph-gns-nest` | L2GNS `SubgraphPublished` |
-| **Delegation Flows** chart | `/api/delegation-flows` | `graph-staking-legacy-history` + `graph-staking-nest` | Legacy `StakeDelegated`/`StakeDelegatedLocked`, then HorizonStaking delegation events |
+| `/alloc` | `graph-allocations-nest` | The whole protocol: staking, delegation, curation, allocations, epochs, disputes, RAVs, GRT supply | Network stats, indexers, curators, epochs, payments, portfolio, provisions, POI, rewards history, feed, token metrics, the subgraph routes, both OpenGraph images and every ingest cron |
+| `/gns` | `graph-gns-nest` | L2GNS publish and metadata events | Subgraph names and versions, the Developer Activity chart |
+| `/dips` | DIPS (Arbitrum One) | Indexing-agreement lifecycle | `/api/dips/agreements` |
+| `/dips-sepolia` | DIPS (Arbitrum Sepolia) | The same lifecycle on testnet, where there are rows | `/api/dips/agreements` when `NUTHATCH_DIPS_BASE_PATH` selects it |
+| `/legacy-flows` | `graph-staking-legacy-readonly` | Pre-Horizon and Horizon delegation together, which neither staking contract gives you alone | Delegation Flows |
 
-Lodestar does **not** currently query `horizon-nest` or `graph-staking-history`. The remaining
-Graph-backed panels are being ported one contract and query at a time; they are not yet covered by the
-three live Nuthatch sources above. The historical Delegation Flows dataset is served read-only and does
-not poll an RPC. The checked-in
-[Nuthatch migration checklist](docs/nuthatch-migration.md) records live cutovers, parity work,
-blockers and every remaining Graph route. Nuthatch connection configuration lives in `.env` (see
-[`.env.example`](.env.example)).
+`/legacy-flows` is archival by design. It answers from sealed segments and does not advance, so its head
+never moves and nest-health alerting excludes it deliberately: a frozen archive reports `stalled` for
+ever and is correct to.
+
+All five are also exposed publicly and read-only at [`/sql`](https://www.lodestar-dashboard.com/sql),
+where every answer carries its own provenance block.
+
+### One nest carries almost everything
+
+The horizon and staking nests were folded into `graph-allocations-nest`, so `/alloc` now fronts what used
+to be three. Of the 34 files in `src/` that name a base path, 33 name `/alloc`. Two name `/gns` and one
+names `/dips`, and both of the `/gns` readers also read `/alloc`.
+
+That concentration matters operationally. A nest's `/sql` surface admits **two** concurrent queries and
+refuses the rest with `503 server busy: too many concurrent SQL queries`, which is the node protecting
+itself. `src/lib/nuthatch.ts` holds a one-slot gate and a short retry ladder so our own composition is
+never the cause of a refusal, but that gate bounds one Node process and serverless runs many. When
+`/alloc` saturates, every panel it feeds reports unavailable at the same moment while the other four
+nests carry on answering perfectly well.
+
+Connection configuration is `NUTHATCH_URL`, `NUTHATCH_USER` and `NUTHATCH_PASSWORD`, with optional
+`NUTHATCH_*_BASE_PATH` overrides to point an individual surface at a different nest. The checked-in
+[migration checklist](docs/nuthatch-migration.md) records the cutovers and the parity work behind them.
 
 ## Getting Started
 
@@ -204,10 +219,11 @@ Open [http://localhost:3000](http://localhost:3000).
 | `REDIS_URL` | Redis connection string (`rediss://` for TLS — self-hosted or managed). Falls back to a process-local in-memory cache when unset | No |
 | `CRON_SECRET` | Random string to protect cron endpoints (auth fails closed if unset) | Yes |
 | `ARBITRUM_RPC_URL` | Arbitrum One RPC URL (Alchemy, Infura, etc.) | Yes |
+| `NUTHATCH_URL` | Base URL of the nuthatch host fronting every nest. Without it, every protocol route returns 503 | Yes |
+| `NUTHATCH_USER` / `NUTHATCH_PASSWORD` | Basic-auth credential for that host | Yes |
+| `NUTHATCH_*_BASE_PATH` | Per-surface overrides to point one route at a different nest. Defaults are `/alloc`, except `/gns` and `/dips` (see [Data from nuthatch](#data-from-nuthatch)) | No |
 | `GITHUB_TOKEN` | GitHub PAT for the Intel Feed (forum/GIP data) | Yes |
 | `NEXT_PUBLIC_SITE_URL` | Production URL e.g. `https://lodestar-dashboard.com` | Yes |
-| `GRAPH_NODE_FREE_QUERY_KEY` | Graph Node API key for free-tier queries | No |
-| `TOKEN_API_KEY` | Token metadata API key | No |
 | `SESSION_SECRET` | Secret for Studio session HMAC | No |
 | `TAP_SIGNER_PRIVATE_KEY` | Private key for TAP receipt signing | No |
 | `NEXT_PUBLIC_BOUNTY_BOARD_ADDRESS` | Deployed BountyBoard contract address | No |
@@ -256,8 +272,8 @@ Restores are periodically test-verified against a throwaway Postgres container. 
 ```
 src/
   app/           # Next.js pages and API routes
-    api/         # Price, subgraph proxy, TVL, feed, cron, Horizon, Push, studio endpoints
-    activity/    # Live Horizon on-chain event feed (Amp-powered)
+    api/         # Nest-backed data routes, price, TVL, feed, cron, Push, studio endpoints
+    activity/    # Live Horizon on-chain event feed
     ai/          # AI / MCP tool directory
     blog/        # Technical blog (Markdown posts)
     calculator/  # Redelegation calculator
@@ -266,18 +282,19 @@ src/
     curators/    # Curator directory
     delegators/  # Delegator portfolio
     dock/        # Subgraph developer studio (publish, metadata, deploy keys, bounties)
+    grt-flow/    # GRT supply and flow views
     indexers/    # Indexer directory + profiles
     indexing/    # Chain health and subgraph indexing status
+    network/     # State of the Network overview
     payments/    # GraphTally / TAP payment pipeline
     poi/         # POI consensus dashboard
     profile/     # Connected wallet portfolio
-    protocols/   # Protocol list and details
+    sql/         # Public read-only SQL surface over the nests
     subgraphs/   # Subgraph directory
-    tokens/      # Token analytics
   components/    # UI components, layout, charts, tables, feed
   content/       # Blog posts (Markdown)
   hooks/         # React Query hooks
-  lib/           # API clients, queries, utilities, wallet config
+  lib/           # Nest clients, SQL builders, utilities, wallet config
     ingest/      # Postgres ingestion pipeline (indexers, allocations, epochs)
 ```
 

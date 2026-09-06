@@ -8,6 +8,7 @@ import { annualIssuancePercent } from '@/lib/network-math';
 import { CIRCULATING_SUPPLY_APPROX } from '@/lib/grt-flow-data';
 import { weiToGRT, formatGRT, formatUSD, formatNumber, formatPPM } from '@/lib/utils';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
+import { SourceUnavailable } from '@/components/ui/SourceUnavailable';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { HorizonParameters } from '@/components/ui/HorizonParameters';
@@ -32,6 +33,12 @@ export default function ProtocolOverview() {
   const { data: subgraphs30d, isLoading: subgraphsLoading } = useSubgraphDeployments30d();
 
   const network = networkData?.graphNetwork;
+
+  // Settled loading with no payload means the fetch failed (`/api/network-stats` 503s when the nest
+  // is unreachable) or came back empty. Either way we do not know these figures, and the zeros the
+  // `network ? … : 0` fallbacks below produce must never be rendered as if we did.
+  const networkUnavailable = !networkLoading && !network;
+  const tvlUnavailable = !tvlLoading && tvlData?.tvl == null;
 
   const totalStaked = network ? weiToGRT(network.totalTokensStaked) : 0;
   const totalDelegated = network ? weiToGRT(network.totalDelegatedTokens) : 0;
@@ -67,22 +74,32 @@ export default function ProtocolOverview() {
         </p>
       </div>
 
+      {networkUnavailable && (
+        <SourceUnavailable
+          what="Live network data"
+          detail="The indexer behind /api/network-stats did not answer."
+        />
+      )}
+
       {/* KPI stat cards */}
       <StatGrid>
         <StatCard
           label="Total Staked"
-          value={networkLoading ? '—' : `${formatGRT(totalStaked)} GRT`}
+          value={`${formatGRT(totalStaked)} GRT`}
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
         <StatCard
           label="Total Delegated"
-          value={networkLoading ? '—' : `${formatGRT(totalDelegated)} GRT`}
+          value={`${formatGRT(totalDelegated)} GRT`}
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
         <StatCard
           label="Total Signalled"
-          value={networkLoading ? '—' : `${formatGRT(totalSignalled)} GRT`}
+          value={`${formatGRT(totalSignalled)} GRT`}
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
         <StatCard
           label="GRT Price"
@@ -99,25 +116,29 @@ export default function ProtocolOverview() {
         />
         <StatCard
           label="Network TVL"
-          value={tvlLoading ? '—' : formatUSD(tvlData?.tvl ?? 0)}
+          value={formatUSD(tvlData?.tvl ?? 0)}
           loading={tvlLoading}
+          unavailable={tvlUnavailable}
         />
         <StatCard
           label="Lifetime Query Fees"
-          value={networkLoading ? '—' : `${formatGRT(totalQueryFees)} GRT`}
+          value={`${formatGRT(totalQueryFees)} GRT`}
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
         <StatCard
           label="Total Supply"
-          value={networkLoading || globalSupply === 0 ? '—' : `${formatGRT(globalSupply)} GRT`}
+          value={globalSupply === 0 ? '—' : `${formatGRT(globalSupply)} GRT`}
           subtitle="L1 + L2 − bridge escrow"
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
         <StatCard
           label="Annual Issuance (est.)"
           value={issuancePct == null ? '—' : `≈${issuancePct.toFixed(2)}%`}
           subtitle={issuancePerBlockGrt > 0 ? `${issuancePerBlockGrt.toFixed(1)} GRT / L1 block` : undefined}
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
       </StatGrid>
 
@@ -297,7 +318,7 @@ export default function ProtocolOverview() {
               <div className="flex justify-between items-center py-3">
                 <span className="text-[13px] text-[var(--text-muted)]">Total Allocated</span>
                 <span className="font-mono text-[var(--text)]">
-                  {formatGRT(totalAllocated)} GRT
+                  {network ? `${formatGRT(totalAllocated)} GRT` : '—'}
                 </span>
               </div>
             </div>

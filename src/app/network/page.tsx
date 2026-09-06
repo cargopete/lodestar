@@ -10,6 +10,7 @@ import {
 } from '@/hooks/useNetworkStats';
 import { weiToGRT, formatGRT, formatNumber } from '@/lib/utils';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
+import { SourceUnavailable } from '@/components/ui/SourceUnavailable';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 
 const QueryFeesChart = dynamic(() => import('@/components/charts/QueryFeesChart').then(m => ({ default: m.QueryFeesChart })), { ssr: false });
@@ -33,6 +34,11 @@ export default function NetworkStatePage() {
   const { epoch } = useEpochInfo();
 
   const network = networkData?.graphNetwork;
+
+  // See the note on the overview page: settled loading with no payload means the fetch failed, and
+  // the zeros below are our fallbacks rather than the network's figures. Say so.
+  const networkUnavailable = !networkLoading && !network;
+  const paymentsUnavailable = !paymentsLoading && !payments;
 
   const totalStaked = network ? weiToGRT(network.totalTokensStaked) : 0;
   const totalDelegated = network ? weiToGRT(network.totalDelegatedTokens) : 0;
@@ -65,32 +71,42 @@ export default function NetworkStatePage() {
         title="Protocol utilization"
         blurb="Capital committed and participants active across the network right now."
       />
+      {networkUnavailable && (
+        <SourceUnavailable
+          what="Live network data"
+          detail="The indexer behind /api/network-stats did not answer."
+        />
+      )}
       <StatGrid>
-        <StatCard label="Total Staked" value={networkLoading ? '—' : `${formatGRT(totalStaked)} GRT`} loading={networkLoading} />
-        <StatCard label="Total Delegated" value={networkLoading ? '—' : `${formatGRT(totalDelegated)} GRT`} loading={networkLoading} />
-        <StatCard label="Total Signalled" value={networkLoading ? '—' : `${formatGRT(totalSignalled)} GRT`} loading={networkLoading} />
+        <StatCard label="Total Staked" value={`${formatGRT(totalStaked)} GRT`} loading={networkLoading} unavailable={networkUnavailable} />
+        <StatCard label="Total Delegated" value={`${formatGRT(totalDelegated)} GRT`} loading={networkLoading} unavailable={networkUnavailable} />
+        <StatCard label="Total Signalled" value={`${formatGRT(totalSignalled)} GRT`} loading={networkLoading} unavailable={networkUnavailable} />
         <StatCard label="Current Epoch" value={epoch ? formatNumber(epoch) : '—'} loading={networkLoading} />
         <StatCard
           label="Indexers"
           value={network?.stakedIndexersCount != null ? formatNumber(network.stakedIndexersCount) : '—'}
           subtitle={network?.indexerCount != null ? `${formatNumber(network.indexerCount)} total` : undefined}
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
         <StatCard
           label="Delegators"
           value={network?.activeDelegatorCount != null ? formatNumber(network.activeDelegatorCount) : '—'}
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
         <StatCard
           label="Curators"
           value={network?.activeCuratorCount != null ? formatNumber(network.activeCuratorCount) : '—'}
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
         <StatCard
           label="Active Subgraphs"
           value={network?.activeSubgraphCount != null ? formatNumber(network.activeSubgraphCount) : '—'}
           subtitle={network?.subgraphCount != null ? `${formatNumber(network.subgraphCount)} total` : undefined}
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
       </StatGrid>
       <QueryFeesChart />
@@ -110,25 +126,29 @@ export default function NetworkStatePage() {
       <StatGrid>
         <StatCard
           label="Lifetime Query Fees"
-          value={networkLoading ? '—' : `${formatGRT(lifetimeQueryFees)} GRT`}
+          value={`${formatGRT(lifetimeQueryFees)} GRT`}
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
         <StatCard
           label="Lifetime Indexing Rewards"
-          value={networkLoading ? '—' : `${formatGRT(lifetimeRewards)} GRT`}
+          value={`${formatGRT(lifetimeRewards)} GRT`}
           loading={networkLoading}
+          unavailable={networkUnavailable}
         />
         <StatCard
           label="Fees Collected (TAP)"
-          value={paymentsLoading ? '—' : `${formatGRT(totalCollected)} GRT`}
+          value={`${formatGRT(totalCollected)} GRT`}
           subtitle="via GraphTally escrow"
           loading={paymentsLoading}
+          unavailable={paymentsUnavailable}
         />
         <StatCard
           label="Active Payers"
           value={payments?.activePayers != null ? formatNumber(payments.activePayers) : '—'}
           subtitle={payments?.activeReceivers != null ? `${formatNumber(payments.activeReceivers)} receivers` : undefined}
           loading={paymentsLoading}
+          unavailable={paymentsUnavailable}
         />
       </StatGrid>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

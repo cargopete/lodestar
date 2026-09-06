@@ -15,6 +15,13 @@ interface StatCardProps {
   tooltip?: string;
   icon?: React.ReactNode;
   loading?: boolean;
+  /**
+   * The figure could not be fetched. Renders "Unavailable" instead of `value`, because a stat card
+   * whose source is down must not be allowed to render 0 — a dashboard reporting zero staked GRT
+   * with no visible complaint is indistinguishable from a network that has actually emptied.
+   * Suppresses `delta` and `subtitle` too: both are derived from the same absent payload.
+   */
+  unavailable?: boolean;
   className?: string;
 }
 
@@ -27,6 +34,7 @@ export function StatCard({
   tooltip,
   icon,
   loading = false,
+  unavailable = false,
   className,
 }: StatCardProps) {
   return (
@@ -56,12 +64,16 @@ export function StatCard({
           </p>
           {loading ? (
             <div className="h-8 w-24 shimmer rounded" />
+          ) : unavailable ? (
+            <p className="font-semibold font-mono text-[var(--text-faint)] tracking-tight text-[20px]" title="This figure's data source could not be reached">
+              Unavailable
+            </p>
           ) : (
             <p className={cn('font-semibold font-mono text-[var(--text)] tracking-tight', value.length > 9 ? 'text-[20px]' : 'text-[24px]')}>
               {value}
             </p>
           )}
-          {delta && !loading && (
+          {delta && !loading && !unavailable && (
             <p
               className={cn(
                 'text-[11px] font-mono mt-3 px-1.5 py-0.5 rounded-[var(--radius-badge)] inline-block',
@@ -71,7 +83,7 @@ export function StatCard({
               {delta.positive ? '+' : ''}{delta.value}
             </p>
           )}
-          {subtitle && !loading && (
+          {subtitle && !loading && !unavailable && (
             <p className="text-[11px] font-mono mt-1.5 text-[var(--text-muted)]">
               {subtitle}
             </p>
