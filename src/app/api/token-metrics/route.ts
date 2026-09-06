@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     // Never a successful empty series: a subgraph outage, a malformed response and a genuinely
     // empty range would all have been one flat line on the chart.
     if (error instanceof NoNestConfigured) {
-      return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
+      return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
     }
     return NextResponse.json({ error: 'Failed to load token metrics' }, { status: 500 });
   }

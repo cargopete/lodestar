@@ -9,14 +9,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const subgraphQuery = vi.fn();
-const hasSubgraphAccess = vi.fn(() => true);
+const nuthatchSql = vi.fn();
+const hasNuthatch = vi.fn(() => true);
 const hasDbAccess = vi.fn(() => false);
 const dbTag = vi.fn();
 
-vi.mock('@/lib/subgraph', () => ({
-  subgraphQuery: (...a: unknown[]) => subgraphQuery(...a),
-  hasSubgraphAccess: () => hasSubgraphAccess(),
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => hasNuthatch(),
+  nuthatchSqlReady: async (...a: unknown[]) => {
+    const rows = await nuthatchSql(...a);
+    return { ok: true, data: { rows, count: rows.length } };
+  },
 }));
 vi.mock('@/lib/db', () => ({
   hasDbAccess: () => hasDbAccess(),
@@ -34,31 +37,31 @@ import { GET } from '../route';
 const call = (qs = '') => GET(new NextRequest(`http://localhost/api/token-metrics${qs}`));
 
 const EPOCH = {
-  id: '700',
-  totalRewards: '2000000000000000000',
-  taxedQueryFees: '500000000000000000',
+  id: 700,
+  total_rewards: '2000000000000000000',
+  taxed_query_fees: '500000000000000000',
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  hasSubgraphAccess.mockReturnValue(true);
+  hasNuthatch.mockReturnValue(true);
   hasDbAccess.mockReturnValue(false);
 });
 
 describe('/api/token-metrics', () => {
-  it('503s rather than returning an empty series when there is no gateway key', async () => {
-    hasSubgraphAccess.mockReturnValue(false);
+  it('503s rather than returning an empty series when no nest is configured', async () => {
+    hasNuthatch.mockReturnValue(false);
     const res = await call();
 
     expect(res.status).toBe(503);
     const json = await res.json();
-    expect(json.error).toMatch(/No API key/i);
+    expect(json.error).toMatch(/Nuthatch is not configured/i);
     expect(json.data).toBeUndefined();
-    expect(subgraphQuery).not.toHaveBeenCalled();
+    expect(nuthatchSql).not.toHaveBeenCalled();
   });
 
   it('500s rather than returning an empty series when the source fails', async () => {
-    subgraphQuery.mockRejectedValue(new Error('gateway exploded'));
+    nuthatchSql.mockRejectedValue(new Error('gateway exploded'));
     const res = await call();
 
     expect(res.status).toBe(500);
@@ -68,22 +71,22 @@ describe('/api/token-metrics', () => {
   });
 
   it('does not leak the underlying error to the caller', async () => {
-    subgraphQuery.mockRejectedValue(new Error('connect ECONNREFUSED 10.0.0.5:5432'));
+    nuthatchSql.mockRejectedValue(new Error('connect ECONNREFUSED 10.0.0.5:5432'));
     const body = await (await call()).json();
     expect(JSON.stringify(body)).not.toContain('10.0.0.5');
   });
 
   it('serves a genuinely empty series as a successful empty array', async () => {
     // The case the two failures above exist to stay distinguishable from.
-    subgraphQuery.mockResolvedValue({ epoches: [] });
+    nuthatchSql.mockResolvedValue([]);
     const res = await call();
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ data: [] });
   });
 
-  it('shapes a datapoint from the subgraph, converting out of wei', async () => {
-    subgraphQuery.mockResolvedValue({ epoches: [EPOCH] });
+  it('shapes a datapoint from the nest, converting out of wei', async () => {
+    nuthatchSql.mockResolvedValue([EPOCH]);
     const { data } = await (await call()).json();
 
     expect(data).toHaveLength(1);
@@ -100,19 +103,19 @@ describe('/api/token-metrics', () => {
   it.each(['999999', '-1', 'abc', '', '101'])(
     'falls back to 100 for count=%s rather than interpolating it',
     async (bad) => {
-      // The count reaches a GraphQL string by interpolation, so the allowlist is the only thing
-      // between a caller and an arbitrary `first:` value.
-      subgraphQuery.mockResolvedValue({ epoches: [] });
+      // The count reaches the SQL by interpolation, so the allowlist is the only thing between a
+      // caller and an arbitrary `LIMIT`.
+      nuthatchSql.mockResolvedValue([]);
       await call(`?count=${bad}`);
 
-      expect(subgraphQuery.mock.calls[0][0]).toContain('first: 100');
-      expect(subgraphQuery.mock.calls[0][0]).not.toContain(bad === '' ? 'first: NaN' : `first: ${bad}`);
+      expect(nuthatchSql.mock.calls[0][0]).toContain('LIMIT 100');
+      expect(nuthatchSql.mock.calls[0][0]).not.toContain(bad === '' ? 'LIMIT NaN' : `LIMIT ${bad}`);
     },
   );
 
   it('accepts an allowed count', async () => {
-    subgraphQuery.mockResolvedValue({ epoches: [] });
+    nuthatchSql.mockResolvedValue([]);
     await call('?count=200');
-    expect(subgraphQuery.mock.calls[0][0]).toContain('first: 200');
+    expect(nuthatchSql.mock.calls[0][0]).toContain('LIMIT 200');
   });
 });

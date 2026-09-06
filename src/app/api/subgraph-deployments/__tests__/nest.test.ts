@@ -59,18 +59,6 @@ describe('group B lists and search from the nests', () => {
     delete process.env.NUTHATCH_SUBGRAPHS;
   });
 
-  it('with the flag off, the gateway paths are untouched', async () => {
-    delete process.env.NUTHATCH_SUBGRAPHS;
-    hasSubgraphAccess.mockReturnValue(true);
-    subgraphQuery.mockResolvedValue({ subgraphDeployments: [], allocations: [], subgraphs: [] });
-    expect((await deployments(new NextRequest('http://localhost/api/subgraph-deployments'))).status).toBe(200);
-    expect((await fees30d()).status).toBe(200);
-    expect((await search(new NextRequest('http://localhost/api/subgraph-search?q=demo'))).status).toBe(200);
-    expect(subgraphQuery).toHaveBeenCalled();
-    expect(nuthatchSqlReady).not.toHaveBeenCalled();
-    expect(byName).not.toHaveBeenCalled();
-  });
-
   it('deployments list: ordering and paging reach the SQL; rows come back in the page shape; no key', async () => {
     nuthatchSqlReady.mockResolvedValue(ok([dep(ID)]));
     const res = await deployments(new NextRequest('http://localhost/api/subgraph-deployments?first=50&skip=100&orderBy=queryFeesAmount&orderDirection=asc'));

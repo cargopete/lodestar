@@ -9,16 +9,15 @@ import { NextRequest } from 'next/server';
 vi.mock('@/lib/cache', () => ({
   cached: vi.fn((_k: string, _t: number, f: () => Promise<unknown>) => f()),
 }));
-vi.mock('@/lib/subgraph', () => ({
-  hasSubgraphAccess: () => true,
-  subgraphQuery: vi.fn(async () => ({
-    allocations: [
-      {
-        indexer: { id: '0xonlyindexer', url: 'https://indexer.example', account: { defaultDisplayName: 'Only', metadata: null } },
-        allocatedTokens: '1000000000000000000000',
-      },
-    ],
-  })),
+// The deployment and its one allocation come from the nest (nuthatch#1160).
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => true,
+  nuthatchSqlReady: async (sql: string) => {
+    const rows = sql.includes('GROUP BY 1')
+      ? [{ subgraph_deployment: '0x' + 'ab'.repeat(32), signalled_tokens: '0', staked_tokens: '1000000000000000000000', allocations: 1 }]
+      : [{ indexer: '0xonlyindexer', url: 'https://indexer.example', allocated_tokens: '1000000000000000000000' }];
+    return { ok: true, data: { rows, count: rows.length } };
+  },
 }));
 const probeServing = vi.fn();
 vi.mock('@/lib/indexing-status', () => ({

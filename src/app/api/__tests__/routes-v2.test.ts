@@ -25,6 +25,35 @@ vi.mock('@/lib/cache', () => ({
 // @/lib/subgraph
 const mockSubgraphQuery = vi.fn();
 const mockHasSubgraphAccess = vi.fn(() => true);
+const mockNuthatchSql = vi.fn();
+const mockHasNuthatch = vi.fn(() => true);
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => mockHasNuthatch(),
+  // Routes still behind a plain flag (feed, dips) see it off here, as before this mock existed.
+  nuthatchEnabled: () => false,
+  nuthatchSql: (...a: unknown[]) => mockNuthatchSql(...a),
+  nuthatchSqlReady: async (...a: unknown[]) => {
+    const rows = await mockNuthatchSql(...a);
+    return { ok: true, data: { rows, count: rows.length } };
+  },
+}));
+/** Feed indexer-status's two nest queries from a gateway-shaped fixture (nuthatch#1160). */
+function indexerStatusNest(gw: {
+  indexer: { url: string | null } | null;
+  allocations: Array<{ id: string; allocatedTokens: string; createdAtEpoch: number; subgraphDeployment: { id: string; ipfsHash: string; signalledTokens: string; stakedTokens: string; versions?: unknown } }>;
+}) {
+  mockNuthatchSql.mockImplementation(async (sql: string) => {
+    if (sql.includes('FROM lodestar_indexers WHERE id')) return gw.indexer ? [{ url: gw.indexer.url }] : [];
+    if (sql.includes('FROM lodestar_allocations')) {
+      return gw.allocations.map((a) => ({
+        id: a.id, allocated_tokens: a.allocatedTokens, created_at_epoch: a.createdAtEpoch,
+        subgraph_deployment: a.subgraphDeployment.ipfsHash, signalled_tokens: a.subgraphDeployment.signalledTokens,
+        deployment_staked_tokens: a.subgraphDeployment.stakedTokens,
+      }));
+    }
+    return [];
+  });
+}
 vi.mock('@/lib/subgraph', () => ({
   subgraphQuery: (...args: unknown[]) => mockSubgraphQuery(...args),
   ensQuery: vi.fn(),
@@ -85,6 +114,7 @@ vi.stubGlobal('fetch', mockFetch);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockHasNuthatch.mockReturnValue(true);
   mockSubgraphQuery.mockReset();
   // Re-establish defaults after clearAllMocks (which may clear implementations)
   mockDb.mockResolvedValue([]);
@@ -164,8 +194,8 @@ describe('/api/indexer-status/[address]', () => {
     GET = mod.GET as typeof GET;
   });
 
-  it('returns 503 when no API key', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
+  it('returns 503 when no nest is configured', async () => {
+    mockHasNuthatch.mockReturnValue(false);
     const req = makeRequest('/api/indexer-status/0x1234000000000000000000000000000000001234');
     const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
     expect(res.status).toBe(503);
@@ -173,7 +203,7 @@ describe('/api/indexer-status/[address]', () => {
 
   it('returns empty deployment list when indexer has no allocations', async () => {
     // Pagination: first call returns empty allocations → loop exits
-    mockSubgraphQuery.mockResolvedValueOnce({
+    indexerStatusNest({
       indexer: { url: null },
       allocations: [],
     });
@@ -189,7 +219,7 @@ describe('/api/indexer-status/[address]', () => {
   });
 
   it('returns deployment status for indexer with allocations (unreachable — no indexer URL)', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
+    indexerStatusNest({
       indexer: { url: null },
       allocations: [
         {
@@ -206,7 +236,6 @@ describe('/api/indexer-status/[address]', () => {
       ],
     });
     // Second pagination call: empty = exits loop
-    mockSubgraphQuery.mockResolvedValueOnce({ allocations: [] });
 
     const req = makeRequest('/api/indexer-status/0x1234000000000000000000000000000000001234');
     const res = await GET(req, { params: Promise.resolve({ address: '0x1234000000000000000000000000000000001234' }) });
@@ -620,14 +649,14 @@ describe('/api/token-metrics', () => {
     GET = mod.GET as (req: NextRequest) => Promise<Response>;
   });
 
-  it('falls back to the subgraph when the DB is not configured', async () => {
+  it('falls back to the nest when the DB is not configured', async () => {
     // Previously this asserted a bare `200 { data: [] }`, which was the route answering
     // successfully with nothing whatever went wrong (#36). It must actually reach the fallback.
     //
     // `mockReset` rather than `mockResolvedValueOnce` alone: the suite's `vi.clearAllMocks()`
     // clears recorded calls but not queued one-shot implementations, so an unconsumed `Once`
     // from an earlier test would be served here instead.
-    mockSubgraphQuery.mockReset().mockResolvedValue({ epoches: [] });
+    mockNuthatchSql.mockReset().mockResolvedValue([]);
 
     const req = makeRequest('/api/token-metrics');
     const res = await GET(req);
@@ -635,11 +664,11 @@ describe('/api/token-metrics', () => {
 
     expect(res.status).toBe(200);
     expect(json.data).toEqual([]);
-    expect(mockSubgraphQuery).toHaveBeenCalled();
+    expect(mockNuthatchSql).toHaveBeenCalled();
   });
 
-  it('503s instead of an empty series when there is no gateway key either', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
+  it('503s instead of an empty series when there is no nest either', async () => {
+    mockHasNuthatch.mockReturnValue(false);
 
     const res = await GET(makeRequest('/api/token-metrics'));
     const json = await getJson(res);
@@ -682,13 +711,13 @@ describe('/api/token-metrics', () => {
   it('only allows whitelisted count values', async () => {
     mockHasDbAccess.mockReturnValue(true);
     mockDb.mockResolvedValue([]);
-    mockSubgraphQuery.mockReset().mockResolvedValue({ epoches: [] });
+    mockNuthatchSql.mockReset().mockResolvedValue([]);
 
     // Count 999 is not in the allowlist — should silently use 100
     const req = makeRequest('/api/token-metrics?count=999');
     const res = await GET(req);
     expect(res.status).toBe(200);
-    expect(mockSubgraphQuery.mock.calls[0][0]).toContain('first: 100');
+    expect(mockNuthatchSql.mock.calls[0][0]).toContain('LIMIT 100');
   });
 });
 
@@ -716,9 +745,9 @@ describe('/api/rewards-history', () => {
     expect(res.status).toBe(503);
   });
 
-  it('returns 503 when no API key', async () => {
+  it('returns 503 when no nest is configured', async () => {
     mockHasDbAccess.mockReturnValue(true);
-    mockHasSubgraphAccess.mockReturnValue(false);
+    mockHasNuthatch.mockReturnValue(false);
     const req = makeRequest('/api/rewards-history?address=0x1234000000000000000000000000000000001234');
     const res = await GET(req);
     expect(res.status).toBe(503);
@@ -726,7 +755,7 @@ describe('/api/rewards-history', () => {
 
   it('returns empty history when delegator has no stakes', async () => {
     mockHasDbAccess.mockReturnValue(true);
-    mockSubgraphQuery.mockResolvedValueOnce({ delegator: null });
+    mockNuthatchSql.mockResolvedValueOnce([]);
 
     const req = makeRequest('/api/rewards-history?address=0x1234000000000000000000000000000000001234');
     const res = await GET(req);
@@ -739,13 +768,9 @@ describe('/api/rewards-history', () => {
 
   it('returns empty history when no exchange rate snapshots', async () => {
     mockHasDbAccess.mockReturnValue(true);
-    mockSubgraphQuery.mockResolvedValueOnce({
-      delegator: {
-        stakes: [
-          { stakedTokens: '1000000000000000000000', shareAmount: '900000000000000000000', indexer: { id: '0xindexer' } },
-        ],
-      },
-    });
+    mockNuthatchSql.mockResolvedValueOnce([
+      { staked_tokens: '1000000000000000000000', share_amount: '900000000000000000000', indexer: '0xindexer' },
+    ]);
     // DB returns no snapshots
     mockDb.mockResolvedValueOnce([]);
 
@@ -762,13 +787,9 @@ describe('/api/rewards-history', () => {
     // The computation logic (exchange rate → value) is covered by the rewards
     // lib unit tests. Here we verify the API surface and error handling.
     mockHasDbAccess.mockReturnValue(true);
-    mockSubgraphQuery.mockResolvedValueOnce({
-      delegator: {
-        stakes: [
-          { stakedTokens: '1000000000000000000000', shareAmount: '900000000000000000000', indexer: { id: '0xindexer' } },
-        ],
-      },
-    });
+    mockNuthatchSql.mockResolvedValueOnce([
+      { staked_tokens: '1000000000000000000000', share_amount: '900000000000000000000', indexer: '0xindexer' },
+    ]);
     // DB mock returns empty snapshots (no snapshots yet for this delegator) →
     // route gracefully returns { history: [] }
     // (Full computation path tested via the route returning non-empty data
@@ -785,7 +806,7 @@ describe('/api/rewards-history', () => {
 
   it('clamps days between 7 and 365', async () => {
     mockHasDbAccess.mockReturnValue(true);
-    mockSubgraphQuery.mockResolvedValueOnce({ delegator: null });
+    mockNuthatchSql.mockResolvedValueOnce([]);
 
     // days=1 should be clamped to 7
     const req = makeRequest('/api/rewards-history?address=0x1234000000000000000000000000000000001234&days=1');

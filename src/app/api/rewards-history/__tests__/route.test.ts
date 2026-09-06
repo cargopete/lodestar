@@ -12,11 +12,14 @@ vi.mock('@/lib/db', () => ({
   hasDbAccess: () => mockHasDbAccess(),
 }));
 
-const mockSubgraphQuery = vi.fn();
-const mockHasSubgraphAccess = vi.fn(() => true);
-vi.mock('@/lib/subgraph', () => ({
-  subgraphQuery: (...args: unknown[]) => mockSubgraphQuery(...args),
-  hasSubgraphAccess: () => mockHasSubgraphAccess(),
+const mockNuthatchSql = vi.fn();
+const mockHasNuthatch = vi.fn(() => true);
+vi.mock('@/lib/nuthatch', () => ({
+  hasNuthatch: () => mockHasNuthatch(),
+  nuthatchSqlReady: async (...args: unknown[]) => {
+    const rows = await mockNuthatchSql(...args);
+    return { ok: true, data: { rows, count: rows.length } };
+  },
 }));
 
 vi.mock('@/lib/cache', () => ({
@@ -40,7 +43,7 @@ describe('/api/rewards-history', () => {
     vi.clearAllMocks();
     dbResults.length = 0;
     mockHasDbAccess.mockReturnValue(true);
-    mockHasSubgraphAccess.mockReturnValue(true);
+    mockHasNuthatch.mockReturnValue(true);
     const mod = await import('@/app/api/rewards-history/route');
     GET = mod.GET as typeof GET;
   });
@@ -68,14 +71,14 @@ describe('/api/rewards-history', () => {
     expect(res.status).toBe(503);
   });
 
-  it('returns 503 when subgraph access is unavailable', async () => {
-    mockHasSubgraphAccess.mockReturnValue(false);
+  it('returns 503 when no nest is configured', async () => {
+    mockHasNuthatch.mockReturnValue(false);
     const res = await GET(makeRequest(`?address=${VALID}`));
     expect(res.status).toBe(503);
   });
 
   it('returns empty history when delegator has no stakes', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ delegator: null });
+    mockNuthatchSql.mockResolvedValueOnce([]);
     const res = await GET(makeRequest(`?address=${VALID}`));
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -83,20 +86,16 @@ describe('/api/rewards-history', () => {
   });
 
   it('returns empty history when delegator stakes array is empty', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ delegator: { stakes: [] } });
+    mockNuthatchSql.mockResolvedValueOnce([]);
     const res = await GET(makeRequest(`?address=${VALID}`));
     const json = await res.json();
     expect(json.history).toEqual([]);
   });
 
   it('returns empty history when no snapshots exist for the positions', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({
-      delegator: {
-        stakes: [
-          { stakedTokens: '1000000000000000000000', shareAmount: '1000000000000000000000', indexer: { id: '0xidx1' } },
-        ],
-      },
-    });
+    mockNuthatchSql.mockResolvedValueOnce([
+      { staked_tokens: '1000000000000000000000', share_amount: '1000000000000000000000', indexer: '0xidx1' },
+    ]);
     dbResults.push([]); // snapshots query => empty
     const res = await GET(makeRequest(`?address=${VALID}`));
     const json = await res.json();
@@ -105,13 +104,9 @@ describe('/api/rewards-history', () => {
 
   it('transforms snapshots into a per-date portfolio timeseries with rewards', async () => {
     // 1000 GRT principal, 1000 GRT shares. Exchange rate climbs 1.0 -> 1.1 => +100 GRT rewards.
-    mockSubgraphQuery.mockResolvedValueOnce({
-      delegator: {
-        stakes: [
-          { stakedTokens: '1000000000000000000000', shareAmount: '1000000000000000000000', indexer: { id: '0xidx1' } },
-        ],
-      },
-    });
+    mockNuthatchSql.mockResolvedValueOnce([
+      { staked_tokens: '1000000000000000000000', share_amount: '1000000000000000000000', indexer: '0xidx1' },
+    ]);
     dbResults.push([
       { indexer_address: '0xidx1', snapshot_date: new Date('2026-05-01T00:00:00Z'), delegation_exchange_rate: 1.0 },
       { indexer_address: '0xidx1', snapshot_date: new Date('2026-05-02T00:00:00Z'), delegation_exchange_rate: 1.1 },
@@ -142,14 +137,10 @@ describe('/api/rewards-history', () => {
   it('forward-fills missing rates across dates per indexer', async () => {
     // Two indexers; idx2 only has a snapshot on day 1, idx1 on both days.
     // On day 2 idx2's rate should be forward-filled from day 1.
-    mockSubgraphQuery.mockResolvedValueOnce({
-      delegator: {
-        stakes: [
-          { stakedTokens: '1000000000000000000000', shareAmount: '1000000000000000000000', indexer: { id: '0xidx1' } },
-          { stakedTokens: '1000000000000000000000', shareAmount: '1000000000000000000000', indexer: { id: '0xidx2' } },
-        ],
-      },
-    });
+    mockNuthatchSql.mockResolvedValueOnce([
+      { staked_tokens: '1000000000000000000000', share_amount: '1000000000000000000000', indexer: '0xidx1' },
+      { staked_tokens: '1000000000000000000000', share_amount: '1000000000000000000000', indexer: '0xidx2' },
+    ]);
     dbResults.push([
       { indexer_address: '0xidx1', snapshot_date: new Date('2026-05-01T00:00:00Z'), delegation_exchange_rate: 1.0 },
       { indexer_address: '0xidx1', snapshot_date: new Date('2026-05-02T00:00:00Z'), delegation_exchange_rate: 1.0 },
@@ -165,7 +156,7 @@ describe('/api/rewards-history', () => {
   });
 
   it('clamps the days param into [7, 365]', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ delegator: null });
+    mockNuthatchSql.mockResolvedValueOnce([]);
     const res = await GET(makeRequest(`?address=${VALID}&days=99999`));
     expect(res.status).toBe(200);
     // The cache key encodes the clamped value; we just assert the route did not error.
@@ -173,8 +164,8 @@ describe('/api/rewards-history', () => {
     expect(json.history).toEqual([]);
   });
 
-  it('returns 500 when the subgraph query throws', async () => {
-    mockSubgraphQuery.mockRejectedValueOnce(new Error('subgraph down'));
+  it('returns 500 when the nest query throws', async () => {
+    mockNuthatchSql.mockRejectedValueOnce(new Error('nest down'));
     const res = await GET(makeRequest(`?address=${VALID}`));
     expect(res.status).toBe(500);
     const json = await res.json();
