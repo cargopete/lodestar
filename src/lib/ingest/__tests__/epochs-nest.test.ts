@@ -56,15 +56,6 @@ describe('ingestEpochs from the nest', () => {
     delete process.env.NUTHATCH_EPOCHS;
   });
 
-  it('with the flag off, the gateway path runs and the nest is never asked', async () => {
-    delete process.env.NUTHATCH_EPOCHS;
-    mockSubgraphQuery.mockResolvedValue({ epoches: [] });
-    const r = await ingestEpochs(makeSql() as never);
-    expect(r.ingested).toBe(0);
-    expect(mockSubgraphQuery).toHaveBeenCalledTimes(1);
-    expect(mockNuthatchSql).not.toHaveBeenCalled();
-  });
-
   it('reads the view after the cursor, re-reading the newest epoch, and never the gateway', async () => {
     // A full page of 100 forces a second page; the second page is short and ends the loop.
     const page = Array.from({ length: 100 }, (_, i) => row(500 + i));

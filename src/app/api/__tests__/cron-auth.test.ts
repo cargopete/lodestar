@@ -147,15 +147,6 @@ describe('/api/cron/ingest-epochs', () => {
     vi.unstubAllEnvs();
   });
 
-  it('returns 503 when subgraph not configured (auth + DB pass)', async () => {
-    vi.stubEnv('CRON_SECRET', 'test-secret');
-    mockHasDbAccess.mockReturnValue(true);
-    const { GET } = await import('@/app/api/cron/ingest-epochs/route');
-    const res = await GET(authedRequest('/api/cron/ingest-epochs'));
-    expect(res.status).toBe(503);
-    vi.unstubAllEnvs();
-  });
-
   it('returns 200 when fully configured', async () => {
     vi.stubEnv('CRON_SECRET', 'test-secret');
     mockHasDbAccess.mockReturnValue(true);
@@ -178,15 +169,6 @@ describe('/api/cron/ingest-allocations', () => {
 
   it('returns 503 when DB not configured', async () => {
     vi.stubEnv('CRON_SECRET', 'test-secret');
-    const { GET } = await import('@/app/api/cron/ingest-allocations/route');
-    const res = await GET(authedRequest('/api/cron/ingest-allocations'));
-    expect(res.status).toBe(503);
-    vi.unstubAllEnvs();
-  });
-
-  it('returns 503 when subgraph not configured', async () => {
-    vi.stubEnv('CRON_SECRET', 'test-secret');
-    mockHasDbAccess.mockReturnValue(true);
     const { GET } = await import('@/app/api/cron/ingest-allocations/route');
     const res = await GET(authedRequest('/api/cron/ingest-allocations'));
     expect(res.status).toBe(503);
@@ -316,15 +298,6 @@ describe('/api/cron/snapshot-network', () => {
     vi.unstubAllEnvs();
   });
 
-  it('returns 503 when subgraph not configured', async () => {
-    vi.stubEnv('CRON_SECRET', 'test-secret');
-    mockHasDbAccess.mockReturnValue(true);
-    const { GET } = await import('@/app/api/cron/snapshot-network/route');
-    const res = await GET(authedRequest('/api/cron/snapshot-network'));
-    expect(res.status).toBe(503);
-    vi.unstubAllEnvs();
-  });
-
   it('returns 200 when fully configured', async () => {
     vi.stubEnv('CRON_SECRET', 'test-secret');
     mockHasDbAccess.mockReturnValue(true);
@@ -371,15 +344,6 @@ describe('/api/cron/ingest-rav', () => {
     const res = await GET(authedRequest('/api/cron/ingest-rav'));
     expect(res.status).toBe(503);
     expect(mockIngestRav).not.toHaveBeenCalled();
-    vi.unstubAllEnvs();
-  });
-
-  it('returns 503 when subgraph not configured', async () => {
-    vi.stubEnv('CRON_SECRET', 'test-secret');
-    mockHasDbAccess.mockReturnValue(true);
-    const { GET } = await import('@/app/api/cron/ingest-rav/route');
-    const res = await GET(authedRequest('/api/cron/ingest-rav'));
-    expect(res.status).toBe(503);
     vi.unstubAllEnvs();
   });
 

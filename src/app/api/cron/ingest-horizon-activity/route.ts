@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cacheSet } from '@/lib/cache';
-import { subgraphQuery, delegationEventsQuery, hasSubgraphAccess } from '@/lib/subgraph';
-import { hasNuthatch, nuthatchEnabled, nuthatchSqlReady } from '@/lib/nuthatch';
+import { hasNuthatch, nuthatchSqlReady } from '@/lib/nuthatch';
 import { delegationEventsSql, newestProvisionsSql } from '@/lib/nest-queries';
 import { log } from '@/lib/logger';
 import type { ActivityEvent } from '@/app/api/horizon/activity/route';
@@ -27,14 +26,6 @@ interface DelegationEventRaw {
   tokens: string;
   timestamp: string;
   txHash: string;
-}
-
-interface ProvisionRaw {
-  id: string;
-  tokensProvisioned: string;
-  createdAt: string;
-  dataService: { id: string };
-  indexer: { id: string };
 }
 
 function mapDelegationType(eventType: string): ActivityEvent['type'] {
@@ -115,88 +106,18 @@ export async function GET(request: NextRequest) {
   }
   const t0 = Date.now();
 
-  // Off by default. #1078 wants each surface switchable and revertible on its own. On the nest path
-  // the gateway key is not consulted at all - that is the point of the switch (lodestar#49).
-  if (nuthatchEnabled('NUTHATCH_HORIZON_ACTIVITY')) {
-    if (!hasNuthatch()) {
-      return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
-    }
-    try {
-      const events = await activityFromNests();
-      await cacheSet(CACHE_KEY, events, CACHE_TTL);
-      const durationMs = Date.now() - t0;
-      log.cron.info({ step: 'horizon-activity', count: events.length, durationMs, source: 'nuthatch' }, 'Horizon activity cached');
-      return NextResponse.json({ ok: true, count: events.length, durationMs, source: 'nuthatch' });
-    } catch (error) {
-      log.cron.error({ err: error, step: 'horizon-activity' }, 'Horizon activity from the nests failed');
-      return NextResponse.json({ error: 'Horizon activity from the nests failed' }, { status: 503 });
-    }
+  // From the nests, always (nuthatch#1160). The gateway path this once fell back to left with the key.
+  if (!hasNuthatch()) {
+    return NextResponse.json({ error: 'Nuthatch is not configured' }, { status: 503 });
   }
-
-  if (!hasSubgraphAccess()) {
-    return NextResponse.json({ error: 'Subgraph not configured' }, { status: 503 });
+  try {
+    const events = await activityFromNests();
+    await cacheSet(CACHE_KEY, events, CACHE_TTL);
+    const durationMs = Date.now() - t0;
+    log.cron.info({ step: 'horizon-activity', count: events.length, durationMs, source: 'nuthatch' }, 'Horizon activity cached');
+    return NextResponse.json({ ok: true, count: events.length, durationMs, source: 'nuthatch' });
+  } catch (error) {
+    log.cron.error({ err: error, step: 'horizon-activity' }, 'Horizon activity from the nests failed');
+    return NextResponse.json({ error: 'Horizon activity from the nests failed' }, { status: 503 });
   }
-
-  const [delegationResult, provisionResult] = await Promise.all([
-    delegationEventsQuery<{ delegationEvents: DelegationEventRaw[] }>(`{
-      delegationEvents(
-        first: 20
-        orderBy: timestamp
-        orderDirection: desc
-      ) {
-        id
-        eventType
-        indexer
-        delegator
-        tokens
-        timestamp
-        txHash
-      }
-    }`),
-    subgraphQuery<{ provisions: ProvisionRaw[] }>(`{
-      provisions(
-        first: 10
-        orderBy: createdAt
-        orderDirection: desc
-      ) {
-        id
-        tokensProvisioned
-        createdAt
-        dataService { id }
-        indexer { id }
-      }
-    }`),
-  ]);
-
-  const delegationEvents: ActivityEvent[] = delegationResult.delegationEvents.map((e) => ({
-    id: `d-${e.id}`,
-    type: mapDelegationType(e.eventType),
-    block: 0,
-    txHash: e.txHash,
-    timestamp: parseInt(e.timestamp),
-    serviceProvider: e.indexer.toLowerCase(),
-    delegator: e.delegator.toLowerCase(),
-    tokensGRT: toGRT(e.tokens),
-  }));
-
-  const provisionEvents: ActivityEvent[] = provisionResult.provisions.map((p) => ({
-    id: `p-${p.id}`,
-    type: 'provision' as const,
-    block: 0,
-    txHash: '',
-    timestamp: parseInt(p.createdAt),
-    serviceProvider: p.indexer.id.toLowerCase(),
-    verifier: p.dataService.id.toLowerCase(),
-    tokensGRT: toGRT(p.tokensProvisioned),
-  }));
-
-  const events = [...delegationEvents, ...provisionEvents]
-    .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
-    .slice(0, 25);
-
-  await cacheSet(CACHE_KEY, events, CACHE_TTL);
-
-  const durationMs = Date.now() - t0;
-  log.cron.info({ step: 'horizon-activity', count: events.length, durationMs }, 'Horizon activity cached');
-  return NextResponse.json({ ok: true, count: events.length, durationMs });
 }

@@ -13,20 +13,6 @@ vi.mock('@/lib/nuthatch', () => ({
 
 import { ingestDisputes } from '../disputes';
 
-const makeDispute = (id: string, status = 'undecided') => ({
-  id,
-  type: 'Indexing',
-  indexer: { id: '0xIndexer' },
-  fisherman: { id: '0xFisherman' },
-  allocation: { id: '0xAlloc' },
-  subgraphDeployment: { id: '0xDeployment' },
-  status,
-  tokensSlashed: '1000000000000000000000',
-  tokensBurned: '100000000000000000000',
-  createdAt: 1700000000,
-  closedAt: 0,
-});
-
 // sql mock: first call returns ingestion state, rest return []
 function makeSql(lastId = '') {
   let calls = 0;
@@ -36,156 +22,6 @@ function makeSql(lastId = '') {
     return Promise.resolve([]);
   });
 }
-
-describe('ingestDisputes', () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-  });
-
-  it('returns 0 when no disputes', async () => {
-    mockSubgraphQuery.mockResolvedValue({ disputes: [] });
-    const result = await ingestDisputes(makeSql() as never);
-    expect(result.ingested).toBe(0);
-  });
-
-  it('ingests a batch of disputes', async () => {
-    const disputes = ['d-1', 'd-2', 'd-3'].map((id) => makeDispute(id));
-    mockSubgraphQuery
-      .mockResolvedValueOnce({ disputes })
-      .mockResolvedValueOnce({ disputes: [] });
-
-    const result = await ingestDisputes(makeSql() as never);
-    expect(result.ingested).toBe(3);
-  });
-
-  it('stops pagination when batch < 1000', async () => {
-    const disputes = Array.from({ length: 3 }, (_, i) => makeDispute(`d-${i}`));
-    mockSubgraphQuery.mockResolvedValueOnce({ disputes });
-
-    const result = await ingestDisputes(makeSql() as never);
-    expect(result.ingested).toBe(3);
-    expect(mockSubgraphQuery).toHaveBeenCalledTimes(1);
-  });
-
-  it('handles dispute with null allocation', async () => {
-    const dispute = { ...makeDispute('d-null'), allocation: null };
-    mockSubgraphQuery.mockResolvedValueOnce({ disputes: [dispute] });
-
-    const result = await ingestDisputes(makeSql() as never);
-    expect(result.ingested).toBe(1);
-  });
-
-  it('handles closed dispute with closedAt timestamp', async () => {
-    const dispute = { ...makeDispute('d-closed', 'accepted'), closedAt: 1700001000 };
-    mockSubgraphQuery.mockResolvedValueOnce({ disputes: [dispute] });
-
-    const result = await ingestDisputes(makeSql() as never);
-    expect(result.ingested).toBe(1);
-  });
-
-  it('uses last_id from ingestion state as cursor', async () => {
-    mockSubgraphQuery.mockResolvedValue({ disputes: [] });
-    const sql = makeSql('d-500');
-    await ingestDisputes(sql as never);
-    expect(sql).toHaveBeenCalled();
-  });
-
-  it('handles dispute with zero createdAt (null created_at)', async () => {
-    const dispute = { ...makeDispute('d-zerocreated'), createdAt: 0, closedAt: 0 };
-    mockSubgraphQuery.mockResolvedValueOnce({ disputes: [dispute] });
-
-    const result = await ingestDisputes(makeSql() as never);
-    expect(result.ingested).toBe(1);
-  });
-
-  it('handles dispute with empty tokensSlashed (parseFloat returns NaN → 0)', async () => {
-    const dispute = { ...makeDispute('d-empty-tokens'), tokensSlashed: '', tokensBurned: '' };
-    mockSubgraphQuery.mockResolvedValueOnce({ disputes: [dispute] });
-
-    const result = await ingestDisputes(makeSql() as never);
-    expect(result.ingested).toBe(1);
-  });
-
-  it('paginates through exactly 1000 disputes', async () => {
-    const page1 = Array.from({ length: 1000 }, (_, i) => makeDispute(`d-${i}`));
-    const page2 = [makeDispute('d-final')];
-    mockSubgraphQuery
-      .mockResolvedValueOnce({ disputes: page1 })
-      .mockResolvedValueOnce({ disputes: page2 });
-
-    const result = await ingestDisputes(makeSql() as never);
-    expect(result.ingested).toBe(1001);
-  });
-});
-
-/**
- * nightswatchhq/nuthatch#1078 - disputes from the nest.
- *
- * Parity was measured before this was written: at a pinned block the nest and the subgraph hold the
- * same 8 live disputes with identical ids, and all eight comparable fields agree on all eight rows.
- */
-describe('ingestDisputes revisits open disputes (lodestar#57)', () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-  });
-
-  // sql mock: ingestion state, then the cursor-walk upserts, then the open-id read, then upserts.
-  function makeSqlWithOpen(openIds: string[]) {
-    return vi.fn((...args: unknown[]) => {
-      const first = args[0];
-      const text = Array.isArray(first) && 'raw' in (first as object) ? (first as string[]).join('?') : '';
-      if (text.includes('FROM ingestion_state')) return Promise.resolve([]);
-      if (text.includes("status = 'undecided'")) return Promise.resolve(openIds.map((id) => ({ id })));
-      return Promise.resolve([]);
-    });
-  }
-
-  it('re-fetches every dispute Postgres still calls undecided, by id, after the cursor walk', async () => {
-    mockSubgraphQuery
-      .mockResolvedValueOnce({ disputes: [] })                                  // cursor walk: nothing new
-      .mockResolvedValueOnce({ disputes: [makeDispute('d-open-1', 'draw'), makeDispute('d-open-2', 'accepted')] });
-    const sql = makeSqlWithOpen(['d-open-1', 'd-open-2']);
-    const result = await ingestDisputes(sql as never);
-    expect(mockSubgraphQuery).toHaveBeenCalledTimes(2);
-    const q = String(mockSubgraphQuery.mock.calls[1][0]);
-    expect(q).toMatch(/id_in: \["d-open-1", "d-open-2"\]/);
-    expect(q).toMatch(/first: 2/);
-    expect(result.ingested).toBe(2);
-    // The refreshed rows reach the same upsert, with the chain's status.
-    const upsert = sql.mock.calls.find((c) => Array.isArray(c[0]) && typeof c[0][0] === 'object' && c[0][0] !== null && 'status' in c[0][0]);
-    expect(upsert).toBeDefined();
-    expect((upsert![0] as Array<{ id: string; status: string }>).map((r) => [r.id, r.status])).toEqual([['d-open-1', 'draw'], ['d-open-2', 'accepted']]);
-  });
-
-  it('asks the gateway nothing extra when no dispute is open', async () => {
-    mockSubgraphQuery.mockResolvedValueOnce({ disputes: [] });
-    await ingestDisputes(makeSqlWithOpen([]) as never);
-    expect(mockSubgraphQuery).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not move the cursor on the strength of revisited rows alone', async () => {
-    mockSubgraphQuery
-      .mockResolvedValueOnce({ disputes: [] })
-      .mockResolvedValueOnce({ disputes: [makeDispute('d-open-1', 'draw')] });
-    const sql = makeSqlWithOpen(['d-open-1']);
-    await ingestDisputes(sql as never);
-    const state = sql.mock.calls.find((c) => c[0] && !Array.isArray(c[0]) && typeof c[0] === 'object' && 'updated_at' in (c[0] as object));
-    expect(state).toBeDefined();
-    expect(state![0]).not.toHaveProperty('last_block');
-  });
-
-  it('batches the id list at one hundred', async () => {
-    const ids = Array.from({ length: 150 }, (_, i) => `d-${i}`);
-    mockSubgraphQuery
-      .mockResolvedValueOnce({ disputes: [] })
-      .mockResolvedValueOnce({ disputes: [] })
-      .mockResolvedValueOnce({ disputes: [] });
-    await ingestDisputes(makeSqlWithOpen(ids) as never);
-    expect(mockSubgraphQuery).toHaveBeenCalledTimes(3);
-    expect(String(mockSubgraphQuery.mock.calls[1][0])).toMatch(/first: 100/);
-    expect(String(mockSubgraphQuery.mock.calls[2][0])).toMatch(/first: 50/);
-  });
-});
 
 describe('ingestDisputes from the nest', () => {
   const nestRow = (over: Record<string, unknown> = {}) => ({
@@ -207,14 +43,6 @@ describe('ingestDisputes from the nest', () => {
   });
   afterEach(() => {
     delete process.env.NUTHATCH_DISPUTES;
-  });
-
-  it('is off by default, so the subgraph path is unchanged until someone opts in', async () => {
-    delete process.env.NUTHATCH_DISPUTES;
-    mockSubgraphQuery.mockResolvedValue({ disputes: [] });
-    await ingestDisputes(makeSql() as never);
-    expect(mockSubgraphQuery).toHaveBeenCalled();
-    expect(mockNuthatchSql).not.toHaveBeenCalled();
   });
 
   it('reads the nest instead of the gateway when the flag is on', async () => {
