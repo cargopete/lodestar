@@ -2,9 +2,16 @@
  * The `/sql` concurrency gate.
  *
  * A nest caps concurrent queries and refuses the rest with `503 server busy: too many concurrent
- * SQL queries`. Measured against both dips nests on 2026-09-02, that cap is **two**. This was not
- * theoretical: `/api/dips/agreements` fired nine reads in one `Promise.all` and had consequently
- * never worked against a nest with rows, and `/api/dips` still fires four.
+ * SQL queries`. This was not theoretical: `/api/dips/agreements` fired nine reads in one
+ * `Promise.all` and had consequently never worked against a nest with rows, and `/api/dips` still
+ * fires four.
+ *
+ * What these tests pin is the gate, not a particular number. `SQL_SLOTS` is a measured property of
+ * the nest we are pointed at - two when this gate was written against the dips nests, two again now
+ * against an allocations nest admitting four - so asserting a literal `1` here would mean the number
+ * could only ever be changed by editing tests that appear to be about something else. They assert
+ * instead that the peak in flight never exceeds `SQL_SLOTS`, and that under enough callers it
+ * actually reaches it: a gate stuck at one passes the first assertion and fails the second.
  *
  * The gate lives in `nuthatch.ts` rather than at the call sites, so what these tests pin is that
  * no composition a caller can write gets past it — and, just as importantly, the three ways a gate
@@ -24,6 +31,8 @@
  * saying so. The implementation avoids the window by construction instead: see `withSqlSlot`.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+import { SQL_SLOTS } from '../nuthatch';
 
 const ORIGIN = 'https://nest.example';
 
@@ -95,8 +104,8 @@ function stubNest(reply: (url: string, call: number) => Reply) {
 const rows = (n = 1) => ({ count: n, rows: Array.from({ length: n }, (_, i) => ({ i })) });
 const BUSY = { status: 503, body: { error: 'server busy: too many concurrent SQL queries' } };
 
-describe('one slot per nest', () => {
-  it('never lets two queries reach the same nest at once, however they are composed', async () => {
+describe('the slot gate', () => {
+  it('never lets more than SQL_SLOTS queries reach the same nest at once, however they are composed', async () => {
     const nest = stubNest(() => ({ status: 200, body: rows() }));
     const { nuthatchSqlReady } = await load();
 
@@ -106,8 +115,28 @@ describe('one slot per nest', () => {
     );
 
     expect(results.every((r) => r.ok)).toBe(true);
-    expect(nest.peak.get('/dips')).toBe(1);
+    expect(nest.peak.get('/dips')).toBeLessThanOrEqual(SQL_SLOTS);
     expect(nest.sqlCalls).toBe(9);
+  });
+
+  it('actually runs two at once, which is the whole reason the gate is not one', async () => {
+    // **A literal two, deliberately.** Asserting `toBe(SQL_SLOTS)` here would be a tautology: mutate
+    // the constant and both sides of the comparison move, which is exactly what happened when this
+    // was written that way - the gate was set back to one slot and all thirteen tests still passed.
+    //
+    // The claim being pinned is a property of the composition, not of the constant: a page that
+    // fires six statements in a `Promise.all` must get parallelism out of them. Serialising them is
+    // what made `/api/indexer/[address]` 7.1 s instead of 4.6 s against the production nest. If this
+    // fails because someone lowered the gate, that is the test doing its job and the change needs a
+    // measured reason, not a quiet edit.
+    const nest = stubNest(() => ({ status: 200, body: rows() }));
+    const { nuthatchSqlReady } = await load();
+
+    await Promise.all(
+      Array.from({ length: 9 }, (_, i) => nuthatchSqlReady(`SELECT ${i}`, '/dips'))
+    );
+
+    expect(nest.peak.get('/dips')).toBeGreaterThanOrEqual(2);
   });
 
   it('runs every query, in the order it was asked for', async () => {
@@ -137,7 +166,7 @@ describe('one slot per nest', () => {
     expect(fast.ok).toBe(true);
     release();
     expect((await slow).ok).toBe(true);
-    expect(nest.peak.get('/gns')).toBe(1);
+    expect(nest.peak.get('/gns')).toBeLessThanOrEqual(SQL_SLOTS);
   });
 });
 
@@ -176,7 +205,7 @@ describe('releasing the slot', () => {
 
     expect(bad.ok).toBe(false);
     expect(good.ok).toBe(true);
-    expect(nest.peak.get('/dips')).toBe(1);
+    expect(nest.peak.get('/dips')).toBeLessThanOrEqual(SQL_SLOTS);
   });
 
   it('holds under a sustained burst arriving from varied microtask depths', async () => {
@@ -197,7 +226,7 @@ describe('releasing the slot', () => {
     await Promise.all(pending);
 
     expect(nest.sqlCalls).toBe(32);
-    expect(nest.peak.get('/dips')).toBe(1);
+    expect(nest.peak.get('/dips')).toBeLessThanOrEqual(SQL_SLOTS);
   });
 });
 
@@ -261,7 +290,7 @@ describe('nuthatchSql on the shared path', () => {
     const out = await Promise.all([nuthatchSql('SELECT 1'), nuthatchSql('SELECT 2')]);
 
     expect(out[0]).toHaveLength(2);
-    expect(nest.peak.get('')).toBe(1);
+    expect(nest.peak.get('')).toBeLessThanOrEqual(SQL_SLOTS);
   });
 
   it('throws with the nest\'s message rather than a bare status', async () => {
