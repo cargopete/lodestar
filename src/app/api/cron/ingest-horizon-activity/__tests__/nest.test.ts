@@ -106,10 +106,10 @@ describe('ingest-horizon-activity from the nests', () => {
     const [delegationCall, provisionCall] = nuthatchSqlReady.mock.calls;
     expect(String(delegationCall[0])).toMatch(/staking__tokens_delegated/);
     expect(String(delegationCall[0])).toMatch(/LIMIT 20$/);
-    expect(delegationCall[1]).toBeUndefined();
+    expect(delegationCall[1]).toBe('/alloc');
     expect(String(provisionCall[0])).toMatch(/staking__provision_created/);
     expect(String(provisionCall[0])).toMatch(/LIMIT 10$/);
-    expect(provisionCall[1]).toBe('/horizon');
+    expect(provisionCall[1]).toBe('/alloc');
   });
 
   it('caches the newest twenty-five across both sources, with a provision carrying its transaction and block', async () => {

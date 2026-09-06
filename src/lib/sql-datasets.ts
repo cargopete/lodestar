@@ -50,10 +50,10 @@ export const SQL_DATASETS: SqlDataset[] = [
   {
     id: 'staking',
     label: 'Horizon staking',
-    basePath: '',
+    basePath: '/alloc',
     chain: 'Arbitrum One',
     description:
-      'Four delegation events from HorizonStaking: TokensDelegated, TokensUndelegated, DelegatedTokensWithdrawn and StakeDelegatedWithdrawn. The source behind the delegation feed on this dashboard.',
+      'The delegation events from HorizonStaking - TokensDelegated, TokensUndelegated, DelegatedTokensWithdrawn and StakeDelegatedWithdrawn - on the nest that indexes the whole protocol. The source behind the delegation feed on this dashboard.',
     sample:
       'SELECT block_number, serviceProvider, delegator, tokens\nFROM staking__tokens_delegated\nORDER BY block_number DESC\nLIMIT 20',
   },

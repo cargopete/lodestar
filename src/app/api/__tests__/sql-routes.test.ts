@@ -84,7 +84,7 @@ describe('/api/sql/catalog', () => {
 
   it('does not claim a broken dataset is fine just because a sibling answered', async () => {
     mockTables.mockImplementation((basePath: string) =>
-      basePath === '' ? Promise.resolve([TABLE]) : Promise.reject(new Error('down'))
+      basePath === '/alloc' ? Promise.resolve([TABLE]) : Promise.reject(new Error('down'))
     );
     const body = await (await catalogGET()).json();
     const byId = Object.fromEntries(

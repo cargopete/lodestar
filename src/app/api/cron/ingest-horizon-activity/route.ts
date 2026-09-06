@@ -43,8 +43,13 @@ function mapDelegationType(eventType: string): ActivityEvent['type'] {
   return 'delegated';
 }
 
-/** The nest carrying `ProvisionCreated`. `/horizon` reverse-proxies to the horizon nest. */
-const HORIZON_BASE_PATH = process.env.NUTHATCH_HORIZON_BASE_PATH || '/horizon';
+/**
+ * The nests carrying `ProvisionCreated` and the delegation events. Both live on graph-allocations-nest
+ * behind `/alloc` since the separate horizon and staking nests retired (2026-09-06); the knobs stay
+ * for an operator who splits them again.
+ */
+const HORIZON_BASE_PATH = process.env.NUTHATCH_HORIZON_BASE_PATH || '/alloc';
+const DELEGATIONS_BASE_PATH = process.env.NUTHATCH_DELEGATIONS_BASE_PATH || '/alloc';
 
 interface NestProvision {
   tx_hash: string;
@@ -67,7 +72,7 @@ interface NestProvision {
  */
 async function activityFromNests(): Promise<ActivityEvent[]> {
   const [delegations, provisions] = await Promise.all([
-    nuthatchSqlReady<DelegationEventRaw>(delegationEventsSql(null, 20, 0)),
+    nuthatchSqlReady<DelegationEventRaw>(delegationEventsSql(null, 20, 0), DELEGATIONS_BASE_PATH),
     nuthatchSqlReady<NestProvision>(newestProvisionsSql(10), HORIZON_BASE_PATH),
   ]);
   if (!delegations.ok) {
